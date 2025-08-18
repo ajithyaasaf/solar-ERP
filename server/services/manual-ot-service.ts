@@ -414,10 +414,31 @@ export class ManualOTService {
         hour12: true
       }).format(deptEndTime);
 
+      // Debug logging
+      console.log('OT AVAILABILITY DEBUG:', {
+        userId,
+        department: user.department,
+        currentTime: currentTime.toISOString(),
+        checkInTime,
+        checkOutTime,
+        deptStartTime: deptStartTime.toISOString(),
+        deptEndTime: deptEndTime.toISOString(),
+        indianTime,
+        currentIST: new Intl.DateTimeFormat('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(currentTime)
+      });
+
       return {
         available: false,
         reason: 'OT not available during regular work hours',
-        nextAvailableTime: indianTime
+        nextAvailableTime: `Available after ${checkOutTime}`
       };
 
     } catch (error) {
