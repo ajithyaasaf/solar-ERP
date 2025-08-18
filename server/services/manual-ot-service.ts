@@ -87,6 +87,7 @@ export class ManualOTService {
 
       // If no attendance record exists, create one for OT
       if (!todayAttendance) {
+        const otType = await this.determineOTType(user.department, new Date());
         const newAttendanceData = {
           userId: request.userId,
           date: today,
@@ -100,12 +101,13 @@ export class ManualOTService {
           otStartImageUrl: request.imageUrl,
           otStartAddress: request.address,
           otReason: request.reason,
-          otType: this.determineOTType(user.department, new Date()),
+          otType,
         };
 
         todayAttendance = await storage.createAttendance(newAttendanceData);
       } else {
         // Update existing attendance record with OT start
+        const otType = await this.determineOTType(user.department, new Date());
         const updateData = {
           otStatus: 'in_progress' as const,
           isManualOT: true,
@@ -115,7 +117,7 @@ export class ManualOTService {
           otStartImageUrl: request.imageUrl,
           otStartAddress: request.address,
           otReason: request.reason,
-          otType: this.determineOTType(user.department, new Date()),
+          otType,
         };
 
         todayAttendance = await storage.updateAttendance(todayAttendance.id, updateData);
@@ -252,8 +254,7 @@ export class ManualOTService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const attendanceRecords = await storage.getAttendanceByUserAndDate(userId, today);
-      const todayAttendance = attendanceRecords?.[0];
+      const todayAttendance = await storage.getAttendanceByUserAndDate(userId, today);
 
       if (!todayAttendance) {
         return {
