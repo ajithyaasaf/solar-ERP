@@ -1351,6 +1351,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual Overtime APIs
+  
+  // Start manual OT session
+  app.post("/api/attendance/ot-start", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
+    try {
+      const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
+      
+      if (!userId || userId !== req.user.uid) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!latitude || !longitude || !imageUrl) {
+        return res.status(400).json({ message: "Location and photo are required for OT start" });
+      }
+
+      // Import ManualOTService
+      const { ManualOTService } = await import('./services/manual-ot-service');
+      
+      const result = await ManualOTService.startOTSession({
+        userId,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        accuracy: parseFloat(accuracy) || 0,
+        imageUrl,
+        address,
+        reason
+      });
+
+      if (result.success) {
+        // Log activity
+        const user = await storage.getUser(userId);
+        await storage.createActivityLog({
+          type: 'attendance',
+          title: `Manual OT Started (${result.otType})`,
+          description: `${user?.displayName} started ${result.otType} overtime session`,
+          entityId: result.otSessionId || '',
+          entityType: 'attendance',
+          userId
+        });
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error starting OT session:", error);
+      res.status(500).json({ message: "Failed to start OT session" });
+    }
+  });
+
+  // End manual OT session
+  app.post("/api/attendance/ot-end", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
+    try {
+      const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
+      
+      if (!userId || userId !== req.user.uid) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!latitude || !longitude || !imageUrl) {
+        return res.status(400).json({ message: "Location and photo are required for OT end" });
+      }
+
+      // Import ManualOTService
+      const { ManualOTService } = await import('./services/manual-ot-service');
+      
+      const result = await ManualOTService.endOTSession({
+        userId,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        accuracy: parseFloat(accuracy) || 0,
+        imageUrl,
+        address,
+        reason
+      });
+
+      if (result.success) {
+        // Log activity
+        const user = await storage.getUser(userId);
+        await storage.createActivityLog({
+          type: 'attendance',
+          title: 'Manual OT Completed',
+          description: `${user?.displayName} completed overtime session (${result.otHours} hours)`,
+          entityId: '', // Would need attendance ID
+          entityType: 'attendance',
+          userId
+        });
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error ending OT session:", error);
+      res.status(500).json({ message: "Failed to end OT session" });
+    }
+  });
+
+  // Get OT status for user
+  app.get("/api/attendance/ot-status", verifyAuth, async (req, res) => {
+    try {
+      const userId = req.query.userId as string || req.user.uid;
+      
+      if (userId !== req.user.uid) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Import ManualOTService
+      const { ManualOTService } = await import('./services/manual-ot-service');
+      
+      const [otStatus, otButtonAvailability] = await Promise.all([
+        ManualOTService.getOTStatus(userId),
+        ManualOTService.isOTButtonAvailable(userId)
+      ]);
+
+      res.json({
+        ...otStatus,
+        buttonAvailable: otButtonAvailability.available,
+        buttonReason: otButtonAvailability.reason,
+        nextAvailableTime: otButtonAvailability.nextAvailableTime
+      });
+    } catch (error: any) {
+      console.error("Error getting OT status:", error);
+      res.status(500).json({ message: "Failed to get OT status" });
+    }
+  });
+
   // Department Timing Management APIs
   
   // Get all department timings

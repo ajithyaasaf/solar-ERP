@@ -634,6 +634,22 @@ export const insertAttendanceSchema = z.object({
   remarks: z.string().optional(),
   isWithinOfficeRadius: z.boolean().default(false),
   distanceFromOffice: z.number().optional(),
+  
+  // Manual OT System Fields
+  otStartTime: z.date().optional(),
+  otEndTime: z.date().optional(),
+  otStartLatitude: z.string().optional(),
+  otStartLongitude: z.string().optional(),
+  otStartImageUrl: z.string().optional(),
+  otEndLatitude: z.string().optional(),
+  otEndLongitude: z.string().optional(),
+  otEndImageUrl: z.string().optional(),
+  otStartAddress: z.string().optional(),
+  otEndAddress: z.string().optional(),
+  isManualOT: z.boolean().default(false),
+  manualOTHours: z.number().optional(),
+  otStatus: z.enum(["not_started", "in_progress", "completed"]).default("not_started"),
+  otType: z.enum(["early_arrival", "late_departure", "weekend", "holiday"]).optional(),
 });
 
 export const insertOfficeLocationSchema = z.object({

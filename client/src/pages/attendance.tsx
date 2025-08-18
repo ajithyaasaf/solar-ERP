@@ -21,6 +21,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { OvertimeExplanationCard } from "@/components/attendance/overtime-explanation-card";
 import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
 import { AttendanceCheckOut } from "@/components/attendance/attendance-check-out";
+import { ManualOTStart } from "@/components/attendance/manual-ot-start";
+import { ManualOTEnd } from "@/components/attendance/manual-ot-end";
 
 export default function Attendance() {
   const { user } = useAuthContext();
@@ -34,6 +36,10 @@ export default function Attendance() {
   // Check-in/out modal states
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showCheckOutModal, setShowCheckOutModal] = useState(false);
+  
+  // Manual OT modal states
+  const [showOTStartModal, setShowOTStartModal] = useState(false);
+  const [showOTEndModal, setShowOTEndModal] = useState(false);
 
   // Fetch current user's attendance records
   const { data: attendanceRecords = [], isLoading, refetch } = useQuery({
@@ -113,10 +119,25 @@ export default function Attendance() {
     refetchOnMount: true,
   });
 
+  // Fetch manual OT status
+  const { data: otStatus } = useQuery({
+    queryKey: ["/api/attendance/ot-status", user?.uid],
+    queryFn: async () => {
+      if (!user?.uid) return null;
+      const response = await apiRequest(`/api/attendance/ot-status?userId=${user.uid}`, 'GET');
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
+    },
+    enabled: !!user?.uid,
+    refetchInterval: 10000, // Check OT status every 10 seconds for real-time updates
+  });
+
   // Enhanced refresh functions with comprehensive invalidation
   const refreshAttendance = () => {
     console.log('ATTENDANCE: Refreshing all attendance data');
-    // Invalidate all attendance-related queries
+    // Invalidate all attendance-related queries including OT status
     queryClient.invalidateQueries({ 
       predicate: (query) => {
         const queryKey = query.queryKey[0];
@@ -441,6 +462,67 @@ export default function Attendance() {
                 </>
               )}
             </div>
+
+            {/* Manual OT Buttons */}
+            {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-orange-600" />
+                    <span className="font-medium text-orange-800">Manual Overtime</span>
+                    {otStatus?.hasActiveOT && (
+                      <Badge variant="destructive" className="animate-pulse">
+                        Active
+                      </Badge>
+                    )}
+                  </div>
+                  {otStatus?.currentOTHours && otStatus.currentOTHours > 0 && (
+                    <Badge variant="outline" className="text-orange-700 border-orange-300">
+                      {otStatus.currentOTHours.toFixed(1)}h
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  {!otStatus?.hasActiveOT ? (
+                    <Button
+                      onClick={() => setShowOTStartModal(true)}
+                      disabled={!otStatus?.buttonAvailable}
+                      variant="outline"
+                      className="flex-1 border-orange-300 text-orange-700 hover:bg-orange-100"
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Start OT
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setShowOTEndModal(true)}
+                      disabled={!otStatus?.canEndOT}
+                      variant="destructive"
+                      className="flex-1"
+                    >
+                      <Timer className="h-4 w-4 mr-2" />
+                      End OT
+                    </Button>
+                  )}
+                  
+                  {!otStatus?.buttonAvailable && otStatus?.buttonReason && (
+                    <div className="flex-1">
+                      <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
+                      {otStatus.nextAvailableTime && (
+                        <p className="text-xs text-orange-500">
+                          Available after {new Date(otStatus.nextAvailableTime).toLocaleTimeString('en-IN', { 
+                            hour: 'numeric', 
+                            minute: '2-digit', 
+                            hour12: true 
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -832,6 +914,23 @@ export default function Attendance() {
         onSuccess={refreshAttendance}
         currentAttendance={todayAttendance}
         departmentTiming={departmentTiming}
+      />
+
+      {/* Manual OT Start Modal */}
+      <ManualOTStart
+        isOpen={showOTStartModal}
+        onClose={() => setShowOTStartModal(false)}
+        onSuccess={refreshAttendance}
+        otType={otStatus?.otType}
+      />
+
+      {/* Manual OT End Modal */}
+      <ManualOTEnd
+        isOpen={showOTEndModal}
+        onClose={() => setShowOTEndModal(false)}
+        onSuccess={refreshAttendance}
+        otStartTime={otStatus?.otStartTime}
+        currentOTHours={otStatus?.currentOTHours}
       />
     </div>
   );
