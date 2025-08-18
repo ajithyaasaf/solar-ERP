@@ -168,8 +168,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
     const response = await apiRequest('/api/attendance/upload-photo', 'POST', {
       imageData: photoData,
       userId: user?.uid,
-      timestamp: new Date().toISOString(),
-      type: 'ot_end'
+      attendanceType: 'ot_end'
     });
 
     if (!response.ok) {

@@ -154,8 +154,7 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
     const response = await apiRequest('/api/attendance/upload-photo', 'POST', {
       imageData: photoData,
       userId: user?.uid,
-      timestamp: new Date().toISOString(),
-      type: 'ot_start'
+      attendanceType: 'ot_start'
     });
 
     if (!response.ok) {

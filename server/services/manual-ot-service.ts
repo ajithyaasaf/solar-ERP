@@ -360,20 +360,7 @@ export class ManualOTService {
       // Convert IST to UTC by subtracting the offset
       const utcTime = new Date(result.getTime() - istOffset);
       
-      console.log('PARSE TIME DEBUG:', {
-        timeStr,
-        hour,
-        minute,
-        period,
-        istTime: result.toISOString(),
-        utcTime: utcTime.toISOString(),
-        istDisplay: new Intl.DateTimeFormat('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        }).format(utcTime)
-      });
+      // Debug logging removed for production
       
       return utcTime;
     } catch (error) {
@@ -427,27 +414,6 @@ export class ManualOTService {
       }
 
       // Available after department end time (late departure OT)
-      console.log('COMPARING TIMES:', {
-        currentTimeUTC: currentTime.toISOString(),
-        currentTimeIST: new Intl.DateTimeFormat('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).format(currentTime),
-        deptEndTimeUTC: deptEndTime.toISOString(),
-        deptEndTimeIST: new Intl.DateTimeFormat('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        }).format(deptEndTime),
-        isCurrentGreater: currentTime > deptEndTime,
-        timeDifference: (currentTime.getTime() - deptEndTime.getTime()) / (1000 * 60) // minutes
-      });
       
       if (currentTime > deptEndTime) {
         return { available: true };
@@ -457,26 +423,7 @@ export class ManualOTService {
       // Use the original checkout time string instead of converting timezones
       const availableAfterTime = checkOutTime;
 
-      // Debug logging
-      console.log('OT AVAILABILITY DEBUG:', {
-        userId,
-        department: user.department,
-        currentTime: currentTime.toISOString(),
-        checkInTime,
-        checkOutTime,
-        deptStartTime: deptStartTime.toISOString(),
-        deptEndTime: deptEndTime.toISOString(),
-        indianTime,
-        currentIST: new Intl.DateTimeFormat('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).format(currentTime)
-      });
+      // Debug logging removed for production
 
       return {
         available: false,
