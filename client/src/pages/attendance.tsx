@@ -511,11 +511,7 @@ export default function Attendance() {
                       <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
                       {otStatus.nextAvailableTime && (
                         <p className="text-xs text-orange-500">
-                          Available after {new Date(otStatus.nextAvailableTime).toLocaleTimeString('en-IN', { 
-                            hour: 'numeric', 
-                            minute: '2-digit', 
-                            hour12: true 
-                          })}
+                          Available after {otStatus.nextAvailableTime}
                         </p>
                       )}
                     </div>

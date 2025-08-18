@@ -406,10 +406,18 @@ export class ManualOTService {
       }
 
       // Not available during regular department hours
+      // Format time in Indian timezone instead of ISO string
+      const indianTime = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).format(deptEndTime);
+
       return {
         available: false,
         reason: 'OT not available during regular work hours',
-        nextAvailableTime: deptEndTime.toISOString()
+        nextAvailableTime: indianTime
       };
 
     } catch (error) {
