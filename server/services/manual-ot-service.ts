@@ -329,7 +329,7 @@ export class ManualOTService {
   }
 
   /**
-   * Parse 12-hour time format to Date object
+   * Parse 12-hour time format to Date object in IST timezone
    */
   private static parseTime12Hour(timeStr: string, referenceDate: Date): Date | null {
     try {
@@ -347,9 +347,35 @@ export class ManualOTService {
         hour = 0;
       }
 
+      // Create date in IST timezone (UTC+5:30)
+      const istOffset = 5.5 * 60 * 60 * 1000; // 5:30 hours in milliseconds
       const result = new Date(referenceDate);
-      result.setHours(hour, minute, 0, 0);
-      return result;
+      
+      // Set the time in IST and then convert to UTC
+      result.setUTCFullYear(referenceDate.getUTCFullYear());
+      result.setUTCMonth(referenceDate.getUTCMonth());
+      result.setUTCDate(referenceDate.getUTCDate());
+      result.setUTCHours(hour, minute, 0, 0);
+      
+      // Convert IST to UTC by subtracting the offset
+      const utcTime = new Date(result.getTime() - istOffset);
+      
+      console.log('PARSE TIME DEBUG:', {
+        timeStr,
+        hour,
+        minute,
+        period,
+        istTime: result.toISOString(),
+        utcTime: utcTime.toISOString(),
+        istDisplay: new Intl.DateTimeFormat('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }).format(utcTime)
+      });
+      
+      return utcTime;
     } catch (error) {
       console.error('Error parsing time:', error);
       return null;
@@ -401,18 +427,35 @@ export class ManualOTService {
       }
 
       // Available after department end time (late departure OT)
+      console.log('COMPARING TIMES:', {
+        currentTimeUTC: currentTime.toISOString(),
+        currentTimeIST: new Intl.DateTimeFormat('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(currentTime),
+        deptEndTimeUTC: deptEndTime.toISOString(),
+        deptEndTimeIST: new Intl.DateTimeFormat('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }).format(deptEndTime),
+        isCurrentGreater: currentTime > deptEndTime,
+        timeDifference: (currentTime.getTime() - deptEndTime.getTime()) / (1000 * 60) // minutes
+      });
+      
       if (currentTime > deptEndTime) {
         return { available: true };
       }
 
-      // Not available during regular department hours
-      // Format time in Indian timezone instead of ISO string
-      const indianTime = new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }).format(deptEndTime);
+      // Not available during regular department hours  
+      // Use the original checkout time string instead of converting timezones
+      const availableAfterTime = checkOutTime;
 
       // Debug logging
       console.log('OT AVAILABILITY DEBUG:', {
@@ -438,7 +481,7 @@ export class ManualOTService {
       return {
         available: false,
         reason: 'OT not available during regular work hours',
-        nextAvailableTime: `Available after ${checkOutTime}`
+        nextAvailableTime: availableAfterTime
       };
 
     } catch (error) {
