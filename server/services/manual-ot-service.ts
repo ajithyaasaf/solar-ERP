@@ -81,8 +81,9 @@ export class ManualOTService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const attendanceRecords = await storage.getAttendanceByUserAndDate(request.userId, today);
-      let todayAttendance = attendanceRecords?.[0];
+      console.log('MANUAL OT SERVICE: Looking for attendance record for date:', today.toISOString().split('T')[0]);
+      let todayAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
+      console.log('MANUAL OT SERVICE: Found attendance record:', todayAttendance ? 'YES' : 'NO');
 
       // If no attendance record exists, create one for OT
       if (!todayAttendance) {
@@ -155,8 +156,7 @@ export class ManualOTService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const attendanceRecords = await storage.getAttendanceByUserAndDate(request.userId, today);
-      const todayAttendance = attendanceRecords?.[0];
+      const todayAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
 
       if (!todayAttendance) {
         return {
