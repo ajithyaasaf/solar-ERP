@@ -22,6 +22,7 @@ import { OvertimeExplanationCard } from "@/components/attendance/overtime-explan
 import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
 import { SmartUnifiedCheckout } from "@/components/attendance/smart-unified-checkout";
 import { ManualOTStart } from "@/components/attendance/manual-ot-start";
+import { ManualOTEnd } from "@/components/attendance/manual-ot-end";
 
 export default function Attendance() {
   const { user } = useAuthContext();
@@ -38,6 +39,7 @@ export default function Attendance() {
   
   // Manual OT modal states
   const [showOTStartModal, setShowOTStartModal] = useState(false);
+  const [showOTEndModal, setShowOTEndModal] = useState(false);
 
   // Fetch current user's attendance records
   const { data: attendanceRecords = [], isLoading, refetch } = useQuery({
@@ -440,30 +442,24 @@ export default function Attendance() {
                       Check In Now
                     </Button>
                   )}
-                  {(canCheckOut || otStatus?.hasActiveOT) && (
+                  {canCheckOut && !otStatus?.hasActiveOT && (
                     <Button 
                       onClick={() => setShowUnifiedCheckoutModal(true)} 
-                      className={`flex-1 h-12 ${otStatus?.hasActiveOT ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-600 hover:bg-red-700'}`}
+                      className="bg-red-600 hover:bg-red-700 flex-1 h-12"
                       size="lg"
                     >
-                      {otStatus?.hasActiveOT ? (
-                        <>
-                          <Zap className="h-5 w-5 mr-2" />
-                          End OT Session
-                        </>
-                      ) : (
-                        <>
-                          <Timer className="h-5 w-5 mr-2" />
-                          Check Out
-                        </>
-                      )}
+                      <Timer className="h-5 w-5 mr-2" />
+                      Check Out
                     </Button>
                   )}
-                  {!canCheckIn && !canCheckOut && !otStatus?.hasActiveOT && todayAttendance && (
+                  {!canCheckIn && !canCheckOut && todayAttendance && (
                     <div className="flex-1 text-center py-3">
                       <Badge variant="secondary" className="py-2 px-4">
-                        Attendance Complete for Today
+                        {otStatus?.hasActiveOT ? "Regular Attendance Complete" : "Attendance Complete for Today"}
                       </Badge>
+                      {otStatus?.hasActiveOT && (
+                        <p className="text-xs text-orange-600 mt-1">Use "End OT" button below to finish overtime</p>
+                      )}
                     </div>
                   )}
                 </>
@@ -503,7 +499,7 @@ export default function Attendance() {
                     </Button>
                   ) : (
                     <Button
-                      onClick={() => setShowUnifiedCheckoutModal(true)}
+                      onClick={() => setShowOTEndModal(true)}
                       disabled={!otStatus?.canEndOT}
                       variant="destructive"
                       className="flex-1"
@@ -925,6 +921,15 @@ export default function Attendance() {
         onClose={() => setShowOTStartModal(false)}
         onSuccess={refreshAttendance}
         otType={otStatus?.otType}
+      />
+
+      {/* Manual OT End Modal */}
+      <ManualOTEnd
+        isOpen={showOTEndModal}
+        onClose={() => setShowOTEndModal(false)}
+        onSuccess={refreshAttendance}
+        otStartTime={otStatus?.otStartTime}
+        currentOTHours={otStatus?.currentOTHours}
       />
     </div>
   );
