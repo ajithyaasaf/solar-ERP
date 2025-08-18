@@ -169,14 +169,23 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
   const startOTMutation = useMutation({
     mutationFn: async () => {
       if (!user?.uid || !location || !capturedPhoto) {
+        console.error('FRONTEND: Missing required data:', {
+          hasUser: !!user?.uid,
+          hasLocation: !!location,
+          hasPhoto: !!capturedPhoto
+        });
         throw new Error('Missing required data');
       }
 
+      console.log('FRONTEND: Starting OT process...');
+      
       // Upload photo first
+      console.log('FRONTEND: Uploading photo...');
       const imageUrl = await uploadPhoto(capturedPhoto);
+      console.log('FRONTEND: Photo uploaded successfully:', imageUrl);
 
       // Start OT session
-      const response = await apiRequest('/api/attendance/ot-start', 'POST', {
+      const requestData = {
         userId: user.uid,
         latitude: location.latitude,
         longitude: location.longitude,
@@ -184,14 +193,23 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
         imageUrl,
         address: currentAddress,
         reason: reason.trim() || undefined
-      });
+      };
+      
+      console.log('FRONTEND: Sending OT start request:', requestData);
+      
+      const response = await apiRequest('/api/attendance/ot-start', 'POST', requestData);
+      
+      console.log('FRONTEND: OT start response status:', response.status);
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('FRONTEND: OT start failed:', error);
         throw new Error(error.message || 'Failed to start OT session');
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('FRONTEND: OT start successful:', result);
+      return result;
     },
     onSuccess: (data) => {
       toast({
