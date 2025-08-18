@@ -176,7 +176,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
     }
 
     const result = await response.json();
-    return result.imageUrl;
+    return result.url;
   };
 
   // End OT mutation

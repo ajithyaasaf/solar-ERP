@@ -162,7 +162,7 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
     }
 
     const result = await response.json();
-    return result.imageUrl;
+    return result.url;
   };
 
   // Start OT mutation

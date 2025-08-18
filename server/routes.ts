@@ -1358,28 +1358,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
       
-      console.log('OT START REQUEST DEBUG:', {
-        userId,
-        latitude,
-        longitude,
-        accuracy,
-        imageUrl: imageUrl ? 'present' : 'missing',
-        address,
-        reason,
-        userFromToken: req.user.uid
-      });
-      
       if (!userId || userId !== req.user.uid) {
-        console.log('OT START ERROR: Access denied - userId mismatch');
         return res.status(403).json({ message: "Access denied" });
       }
 
       if (!latitude || !longitude || !imageUrl) {
-        console.log('OT START ERROR: Missing required fields:', {
-          hasLatitude: !!latitude,
-          hasLongitude: !!longitude,
-          hasImageUrl: !!imageUrl
-        });
         return res.status(400).json({ message: "Location and photo are required for OT start" });
       }
 
