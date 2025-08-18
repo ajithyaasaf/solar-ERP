@@ -131,7 +131,12 @@ export class ManualOTService {
       };
 
     } catch (error) {
-      console.error('Error starting OT session:', error);
+      console.error('MANUAL OT SERVICE ERROR:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId: request.userId
+      });
       return {
         success: false,
         message: 'Failed to start OT session. Please try again.',

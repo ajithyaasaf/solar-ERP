@@ -1394,7 +1394,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(result);
     } catch (error: any) {
-      console.error("Error starting OT session:", error);
+      console.error("ROUTES ERROR - OT START:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        body: req.body
+      });
       res.status(500).json({ message: "Failed to start OT session" });
     }
   });
