@@ -10,10 +10,8 @@ import { useOfflineHandler, callWithOfflineHandling } from "@/utils/offline-hand
 import { getUserFriendlyMessage } from "@/utils/user-friendly-messages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,21 +38,7 @@ export default function AttendanceManagement() {
   const offlineHandler = useOfflineHandler();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  
-  // Ensure calendar is closed on page load and handle escape key
-  useEffect(() => {
-    setCalendarOpen(false);
-    
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setCalendarOpen(false);
-      }
-    };
-    
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, []);
+  // Remove calendar popup completely to fix overlay issues
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -717,27 +701,26 @@ export default function AttendanceManagement() {
                   </SelectContent>
                 </Select>
 
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="border-gray-300 min-w-[140px]">
-                      <CalendarIcon className="h-4 w-4 mr-2" />
-                      {formatDate(selectedDate)}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          setSelectedDate(date);
-                          setCalendarOpen(false); // Close calendar after selection
-                        }
-                      }}
-                      className="rounded-md border-0"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-gray-50">
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium">{formatDate(selectedDate)}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedDate(new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000))}
+                    className="h-6 w-6 p-0"
+                  >
+                    ←
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedDate(new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000))}
+                    className="h-6 w-6 p-0"
+                  >
+                    →
+                  </Button>
+                </div>
               </>
             )}
           </div>
