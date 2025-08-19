@@ -253,19 +253,18 @@ export default function AttendanceManagement() {
   const incompleteRecords = filteredDailyAttendance.filter((record: any) => isIncompleteRecord(record));
   const completeRecords = filteredDailyAttendance.filter((record: any) => !isIncompleteRecord(record));
 
-  // Debug logging to help troubleshoot
-  console.log('Attendance Data Debug:', {
-    totalRecords: filteredDailyAttendance.length,
-    incompleteCount: incompleteRecords.length,
-    sampleRecord: filteredDailyAttendance[0],
-    incompleteRecords: incompleteRecords.map((r: any) => ({
-      name: r.userName,
-      checkIn: r.checkInTime,
-      checkOut: r.checkOutTime,
-      hasCheckIn: !!r.checkInTime,
-      hasCheckOut: !!r.checkOutTime
-    }))
-  });
+  // Debug logging for incomplete records (only when there are incomplete records)
+  if (incompleteRecords.length > 0) {
+    console.log('🚨 Found incomplete records:', {
+      count: incompleteRecords.length,
+      records: incompleteRecords.map((r: any) => ({
+        name: r.userName,
+        department: r.userDepartment,
+        checkIn: r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString() : 'None',
+        missingCheckout: !r.checkOutTime
+      }))
+    });
+  }
 
   // Filter live attendance - Fix TypeScript error
   const filteredLiveAttendance = (Array.isArray(liveAttendance) ? liveAttendance : []).filter((record: any) => {
@@ -687,7 +686,7 @@ export default function AttendanceManagement() {
               </SelectContent>
             </Select>
 
-            {activeTab === "daily" && (
+            {(activeTab === "daily" || activeTab === "incomplete") && (
               <>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-32">
@@ -705,17 +704,18 @@ export default function AttendanceManagement() {
 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="border-gray-300">
+                    <Button variant="outline" className="border-gray-300 min-w-[140px]">
                       <CalendarIcon className="h-4 w-4 mr-2" />
                       {formatDate(selectedDate)}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
                       onSelect={(date) => date && setSelectedDate(date)}
-                      className="rounded-md border"
+                      className="rounded-md border-0"
+                      disabled={false}
                     />
                   </PopoverContent>
                 </Popover>
