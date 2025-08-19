@@ -644,18 +644,14 @@ export default function AttendanceManagement() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="incomplete" className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              Incomplete
+            <TabsTrigger value="corrections" className="flex items-center gap-2">
+              <Edit className="h-4 w-4" />
+              Corrections
               {incompleteRecords.length > 0 && (
                 <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
                   {incompleteRecords.length}
                 </Badge>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="corrections" className="flex items-center gap-2">
-              <Edit className="h-4 w-4" />
-              Corrections
             </TabsTrigger>
           </TabsList>
           
@@ -685,7 +681,7 @@ export default function AttendanceManagement() {
               </SelectContent>
             </Select>
 
-            {(activeTab === "daily" || activeTab === "incomplete") && (
+            {(activeTab === "daily" || activeTab === "corrections") && (
               <>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-32">
@@ -916,8 +912,7 @@ export default function AttendanceManagement() {
           </Card>
         </TabsContent>
 
-        {/* Incomplete Records Tab */}
-        <TabsContent value="incomplete" className="space-y-4">
+        {/* OLD INCOMPLETE TAB REMOVED - NOW CONSOLIDATED INTO CORRECTIONS TAB */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1044,20 +1039,192 @@ export default function AttendanceManagement() {
           </Card>
         </TabsContent>
 
-        {/* Corrections Tab */}
+        {/* Corrections Tab - Now includes incomplete records */}
         <TabsContent value="corrections" className="space-y-4">
+          {/* Incomplete Records Section */}
+          {incompleteRecords.length > 0 && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-800">
+                  <AlertCircle className="h-5 w-5" />
+                  Incomplete Records - Urgent Action Required
+                </CardTitle>
+                <CardDescription className="text-amber-700">
+                  {incompleteRecords.length} employee(s) forgot to check out on {formatDate(selectedDate)}. 
+                  These records need immediate correction to maintain data accuracy.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex justify-between items-center">
+                  <p className="text-sm text-amber-700">
+                    Click "Quick Fix" to use department closing times, or "Edit" for custom times.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      incompleteRecords.forEach((record: any) => handleQuickFixCheckout(record));
+                    }}
+                    disabled={updateAttendanceMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {updateAttendanceMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Clock className="h-4 w-4 mr-2" />
+                    )}
+                    Quick Fix All
+                  </Button>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Check In</TableHead>
+                        <TableHead>Missing Checkout</TableHead>
+                        <TableHead>Suggested Time</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incompleteRecords.map((record: any) => (
+                        <TableRow key={record.id} className="bg-amber-50/30">
+                          <TableCell className="font-medium">
+                            <div>
+                              <div>{record.userName}</div>
+                              <div className="text-xs text-gray-500">{record.userEmail}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {record.userDepartment || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Missing
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {getSuggestedCheckoutTime(record)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleQuickFixCheckout(record)}
+                                disabled={updateAttendanceMutation.isPending}
+                                className="border-green-300 text-green-700 hover:bg-green-100"
+                                title="Quick fix with suggested time"
+                              >
+                                <Clock className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditAttendance(record)}
+                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                title="Edit with custom time"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* General Corrections Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Attendance Corrections</CardTitle>
+              <CardTitle>General Attendance Corrections</CardTitle>
               <CardDescription>
-                Review and approve attendance correction requests
+                All attendance records for {formatDate(selectedDate)} - Edit any record as needed
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4" />
-                <p>No pending correction requests</p>
-              </div>
+              {filteredDailyAttendance.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Check In</TableHead>
+                        <TableHead>Check Out</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDailyAttendance.map((record: any) => (
+                        <TableRow key={record.id} className={isIncompleteRecord(record) ? "bg-amber-50/30" : ""}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div>{record.userName}</div>
+                              <div className="text-xs text-gray-500">{record.userEmail}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {record.userDepartment || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {record.checkInTime ? (
+                              <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-50 text-gray-500">No check-in</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {record.checkOutTime ? (
+                              <TimeDisplay time={record.checkOutTime} format12Hour={true} />
+                            ) : (
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Missing
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={record.status === 'present' ? 'default' : record.status === 'absent' ? 'destructive' : 'secondary'}>
+                              {record.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditAttendance(record)}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No attendance records found for {formatDate(selectedDate)}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
