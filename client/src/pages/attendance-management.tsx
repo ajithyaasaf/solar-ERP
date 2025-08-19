@@ -210,6 +210,28 @@ export default function AttendanceManagement() {
     },
   });
 
+  // Helper function to check if record is incomplete (missing checkout)
+  const isIncompleteRecord = (record: any) => {
+    return record.checkInTime && !record.checkOutTime && 
+           new Date(record.date).toDateString() !== new Date().toDateString(); // Not today
+  };
+
+  // Helper function to get suggested checkout time for department
+  const getSuggestedCheckoutTime = (record: any) => {
+    if (!record.userDepartment) return "6:00 PM";
+    
+    // Get department closing time (default to 6:00 PM)
+    const departmentClosingTimes = {
+      'technical': '6:00 PM',
+      'marketing': '6:00 PM', 
+      'admin': '5:30 PM',
+      'hr': '5:30 PM',
+      'sales': '7:00 PM'
+    };
+    
+    return departmentClosingTimes[record.userDepartment as keyof typeof departmentClosingTimes] || "6:00 PM";
+  };
+
   // Filter attendance records
   const filteredDailyAttendance = dailyAttendance.filter((record: any) => {
     const matchesSearch = !searchQuery || 
@@ -224,8 +246,12 @@ export default function AttendanceManagement() {
     return matchesSearch && matchesDepartment && matchesStatus;
   });
 
-  // Filter live attendance
-  const filteredLiveAttendance = liveAttendance.filter((record: any) => {
+  // Separate incomplete records for easy identification
+  const incompleteRecords = filteredDailyAttendance.filter((record: any) => isIncompleteRecord(record));
+  const completeRecords = filteredDailyAttendance.filter((record: any) => !isIncompleteRecord(record));
+
+  // Filter live attendance - Fix TypeScript error
+  const filteredLiveAttendance = (Array.isArray(liveAttendance) ? liveAttendance : []).filter((record: any) => {
     const matchesSearch = !searchQuery || 
       record.userName.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -235,17 +261,48 @@ export default function AttendanceManagement() {
     return matchesSearch && matchesDepartment;
   });
 
-  // Handle edit attendance
+  // Handle edit attendance - Enhanced for forgotten checkouts
   const handleEditAttendance = (record: any) => {
+    const isIncomplete = isIncompleteRecord(record);
+    const suggestedCheckout = isIncomplete ? getSuggestedCheckoutTime(record) : '';
+    
     setEditingAttendance(record);
     setEditForm({
       checkInTime: record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
-      checkOutTime: record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
+      checkOutTime: record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : suggestedCheckout,
       status: record.status || 'present',
       overtimeHours: record.overtimeHours || 0,
-      remarks: record.remarks || ''
+      remarks: record.remarks || (isIncomplete ? 'Checkout time corrected by admin' : '')
     });
     setShowEditModal(true);
+  };
+
+  // Quick fix for incomplete checkout
+  const handleQuickFixCheckout = (record: any) => {
+    const suggestedTime = getSuggestedCheckoutTime(record);
+    const checkOutDate = new Date(record.date);
+    
+    // Parse suggested time (e.g., "6:00 PM")
+    const timeMatch = suggestedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (timeMatch) {
+      let [, hours, minutes, period] = timeMatch;
+      let hour24 = parseInt(hours);
+      if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
+      if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
+      checkOutDate.setHours(hour24, parseInt(minutes), 0, 0);
+    }
+
+    const updateData = {
+      checkOutTime: checkOutDate.toISOString(),
+      status: 'present',
+      remarks: `Auto-corrected checkout at department closing time (${suggestedTime}) by admin`,
+      approvedBy: user?.uid
+    };
+
+    updateAttendanceMutation.mutate({
+      id: record.id,
+      data: updateData
+    });
   };
 
   // Handle save edit
@@ -359,8 +416,23 @@ export default function AttendanceManagement() {
     setImageLoading(false);
   };
 
-  // Status badge styles
-  const getStatusBadge = (status: string) => {
+  // Enhanced status badge with incomplete detection
+  const getStatusBadge = (record: any) => {
+    const status = record?.status;
+    const isIncomplete = isIncompleteRecord(record);
+    
+    // Handle incomplete records (missing checkout)
+    if (isIncomplete) {
+      return (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Incomplete
+          </Badge>
+        </div>
+      );
+    }
+
     // Handle null/undefined status values
     if (!status) {
       return (
@@ -441,8 +513,9 @@ export default function AttendanceManagement() {
         </div>
       </div>
 
-      {/* Department Statistics Cards */}
+      {/* Summary and Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Department Statistics Cards */}
         {departmentStats.map((dept: any) => (
           <Card key={dept.department}>
             <CardContent className="p-4">
@@ -462,7 +535,76 @@ export default function AttendanceManagement() {
             </CardContent>
           </Card>
         ))}
+        
+        {/* Incomplete Records Alert Card */}
+        {incompleteRecords.length > 0 && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-amber-700 font-medium">Incomplete Records</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-amber-800 font-bold text-lg">{incompleteRecords.length}</span>
+                    <span className="text-xs text-amber-600">missing checkouts</span>
+                  </div>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-amber-200 flex items-center justify-center">
+                  <AlertCircle className="h-4 w-4 text-amber-700" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Forgotten Checkout Alert Banner */}
+      {incompleteRecords.length > 0 && (
+        <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-amber-200 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-amber-800">
+                    {incompleteRecords.length} Employee{incompleteRecords.length > 1 ? 's' : ''} Forgot to Check Out
+                  </h3>
+                  <p className="text-sm text-amber-700">
+                    These records need admin correction. System suggests department closing times as defaults.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveTab("incomplete")}
+                  className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View & Fix
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    incompleteRecords.forEach((record: any) => handleQuickFixCheckout(record));
+                  }}
+                  disabled={updateAttendanceMutation.isPending}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {updateAttendanceMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Clock className="h-4 w-4 mr-2" />
+                  )}
+                  Quick Fix All
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Content Tabs */}
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -473,8 +615,22 @@ export default function AttendanceManagement() {
               Live Tracking
             </TabsTrigger>
             <TabsTrigger value="daily" className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" />
+              <Calendar className="h-4 w-4" />
               Daily Records
+              {incompleteRecords.length > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
+                  {incompleteRecords.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="incomplete" className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Incomplete
+              {incompleteRecords.length > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
+                  {incompleteRecords.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="corrections" className="flex items-center gap-2">
               <Edit className="h-4 w-4" />
@@ -599,7 +755,7 @@ export default function AttendanceManagement() {
                             {record.location || 'office'}
                           </TableCell>
                           <TableCell>
-                            {getStatusBadge(record.status)}
+                            {getStatusBadge(record)}
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
@@ -694,7 +850,7 @@ export default function AttendanceManagement() {
                             {record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '-'}
                           </TableCell>
                           <TableCell>
-                            {getStatusBadge(record.status)}
+                            {getStatusBadge(record)}
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
@@ -731,6 +887,134 @@ export default function AttendanceManagement() {
                   </TableBody>
                 </Table>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Incomplete Records Tab */}
+        <TabsContent value="incomplete" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                Incomplete Attendance Records
+                {incompleteRecords.length > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {incompleteRecords.length} Records
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Employees who forgot to check out. These records need admin correction to complete the attendance.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {incompleteRecords.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <p className="text-lg font-medium">All Records Complete!</p>
+                  <p className="text-sm">No missing checkouts found for the selected date.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Quick Actions Bar */}
+                  <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-700">
+                        {incompleteRecords.length} employees forgot to check out
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          incompleteRecords.forEach((record: any) => handleQuickFixCheckout(record));
+                        }}
+                        className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                        disabled={updateAttendanceMutation.isPending}
+                      >
+                        {updateAttendanceMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Clock className="h-3 w-3 mr-1" />
+                        )}
+                        Fix All with Department Time
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Incomplete Records Table */}
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Missing Checkout</TableHead>
+                          <TableHead>Suggested Time</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {incompleteRecords.map((record: any) => (
+                          <TableRow key={record.id} className="bg-amber-50/30">
+                            <TableCell className="font-medium">
+                              <div>
+                                <div>{record.userName}</div>
+                                <div className="text-xs text-gray-500">{record.userEmail}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {record.userDepartment || 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Missing
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {getSuggestedCheckoutTime(record)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleQuickFixCheckout(record)}
+                                  disabled={updateAttendanceMutation.isPending}
+                                  className="border-green-300 text-green-700 hover:bg-green-100"
+                                  title="Quick fix with suggested time"
+                                >
+                                  <Clock className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                  title="Edit with custom time"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -869,9 +1153,31 @@ export default function AttendanceManagement() {
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Attendance Record</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {editingAttendance && isIncompleteRecord(editingAttendance) ? (
+                <>
+                  <AlertCircle className="h-5 w-5 text-amber-600" />
+                  Fix Incomplete Record
+                </>
+              ) : (
+                <>
+                  <Edit className="h-5 w-5" />
+                  Edit Attendance Record
+                </>
+              )}
+            </DialogTitle>
             <DialogDescription>
-              Modify attendance details for {editingAttendance?.userName}
+              {editingAttendance && isIncompleteRecord(editingAttendance) ? (
+                <div className="space-y-2">
+                  <p>Fixing missing checkout for {editingAttendance?.userName}</p>
+                  <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-700">
+                    <Clock className="h-4 w-4" />
+                    Suggested time: {getSuggestedCheckoutTime(editingAttendance)} (department closing)
+                  </div>
+                </div>
+              ) : (
+                `Modify attendance details for ${editingAttendance?.userName}`
+              )}
             </DialogDescription>
           </DialogHeader>
           
@@ -887,13 +1193,45 @@ export default function AttendanceManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="checkOutTime">Check Out Time</Label>
+                <Label htmlFor="checkOutTime" className="flex items-center gap-2">
+                  Check Out Time
+                  {editingAttendance && isIncompleteRecord(editingAttendance) && (
+                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                      Missing
+                    </Badge>
+                  )}
+                </Label>
                 <Input
                   id="checkOutTime"
                   type="time"
                   value={editForm.checkOutTime}
                   onChange={(e) => setEditForm({ ...editForm, checkOutTime: e.target.value })}
+                  className={editingAttendance && isIncompleteRecord(editingAttendance) ? "border-amber-300 bg-amber-50" : ""}
+                  placeholder={editingAttendance && isIncompleteRecord(editingAttendance) ? getSuggestedCheckoutTime(editingAttendance) : ""}
                 />
+                {editingAttendance && isIncompleteRecord(editingAttendance) && (
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, checkOutTime: getSuggestedCheckoutTime(editingAttendance) })}
+                      className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    >
+                      <Clock className="h-3 w-3 mr-1" />
+                      Use Department Time
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, checkOutTime: "6:00 PM" })}
+                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                    >
+                      Use 6:00 PM
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
             
