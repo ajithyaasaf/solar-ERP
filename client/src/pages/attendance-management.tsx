@@ -513,21 +513,22 @@ export default function AttendanceManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Attendance Management</h1>
-          <p className="text-gray-500">Complete control over employee attendance system</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Attendance Management</h1>
+          <p className="text-gray-500 text-sm md:text-base">Complete control over employee attendance system</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button 
             onClick={() => setShowPolicyModal(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 text-sm"
+            size="sm"
           >
             <Settings className="h-4 w-4 mr-2" />
             Policies
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button className="bg-green-600 hover:bg-green-700 text-sm" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -535,21 +536,30 @@ export default function AttendanceManagement() {
       </div>
 
       {/* Summary and Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Department Statistics Cards */}
         {departmentStats.map((dept: any) => (
           <Card key={dept.department}>
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-gray-500 capitalize">{dept.department}</p>
-                  <div className="flex space-x-2 mt-1">
-                    <span className="text-green-600 font-semibold">{dept.present}</span>
-                    <span className="text-red-600 font-semibold">{dept.absent}</span>
-                    <span className="text-orange-600 font-semibold">{dept.late}</span>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 capitalize font-medium">{dept.department}</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-green-600 font-semibold text-sm">{dept.present}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span className="text-red-600 font-semibold text-sm">{dept.absent}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="text-orange-600 font-semibold text-sm">{dept.late}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                   <Users className="h-4 w-4 text-blue-600" />
                 </div>
               </div>
@@ -629,24 +639,27 @@ export default function AttendanceManagement() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="live" className="flex items-center gap-2">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-4">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-none lg:flex">
+            <TabsTrigger value="live" className="flex items-center gap-2 text-xs sm:text-sm">
               <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-              Live Tracking
+              <span className="hidden sm:inline">Live Tracking</span>
+              <span className="sm:hidden">Live</span>
             </TabsTrigger>
-            <TabsTrigger value="daily" className="flex items-center gap-2">
+            <TabsTrigger value="daily" className="flex items-center gap-2 text-xs sm:text-sm">
               <FileText className="h-4 w-4" />
-              Daily Records
+              <span className="hidden sm:inline">Daily Records</span>
+              <span className="sm:hidden">Daily</span>
               {incompleteRecords.length > 0 && (
                 <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
                   {incompleteRecords.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="corrections" className="flex items-center gap-2">
+            <TabsTrigger value="corrections" className="flex items-center gap-2 text-xs sm:text-sm">
               <Edit className="h-4 w-4" />
-              Corrections
+              <span className="hidden sm:inline">Corrections</span>
+              <span className="sm:hidden">Fix</span>
               {incompleteRecords.length > 0 && (
                 <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
                   {incompleteRecords.length}
@@ -656,19 +669,19 @@ export default function AttendanceManagement() {
           </TabsList>
           
           {/* Filters */}
-          <div className="flex space-x-2">
-            <div className="relative w-64">
+          <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder="Search employees..."
-                className="pl-10"
+                className="pl-10 text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             
             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
               <SelectContent>
@@ -684,7 +697,7 @@ export default function AttendanceManagement() {
             {(activeTab === "daily" || activeTab === "corrections") && (
               <>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-full sm:w-32">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -697,25 +710,27 @@ export default function AttendanceManagement() {
                   </SelectContent>
                 </Select>
 
-                <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-gray-50">
-                  <CalendarIcon className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium">{formatDate(selectedDate)}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedDate(new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000))}
-                    className="h-6 w-6 p-0"
-                  >
-                    ←
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedDate(new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000))}
-                    className="h-6 w-6 p-0"
-                  >
-                    →
-                  </Button>
+                <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-gray-50 w-full sm:w-auto">
+                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                  <span className="text-sm font-medium flex-1 sm:flex-none">{formatDate(selectedDate)}</span>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedDate(new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000))}
+                      className="h-6 w-6 p-0"
+                    >
+                      ←
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedDate(new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000))}
+                      className="h-6 w-6 p-0"
+                    >
+                      →
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
@@ -726,85 +741,142 @@ export default function AttendanceManagement() {
         <TabsContent value="live" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                 <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
                 Live Attendance Tracking
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Real-time monitoring of employee check-ins and check-outs
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Check In</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingLive ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredLiveAttendance.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                          No active attendance records found
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredLiveAttendance.map((record: any) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium">
-                            {record.userName}
-                          </TableCell>
-                          <TableCell className="capitalize">
-                            {record.userDepartment || 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
-                          </TableCell>
-                          <TableCell className="capitalize">
-                            {record.location || 'office'}
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(record)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditAttendance(record)}
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              {record.checkInImageUrl && (
-                                <Button 
-                                  size="sm" 
+              {isLoadingLive ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <p className="text-muted-foreground mt-2">Loading live data...</p>
+                </div>
+              ) : filteredLiveAttendance.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No active attendance records found</p>
+                </div>
+              ) : (
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block md:hidden space-y-4">
+                    {filteredLiveAttendance.map((record: any) => (
+                      <Card key={record.id} className="border shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-medium text-base">{record.userName}</p>
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  {record.userDepartment?.toUpperCase() || 'N/A'}
+                                </Badge>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
                                   variant="outline"
-                                  onClick={() => handleViewImage(record)}
-                                  title="View Field Work Photo"
+                                  onClick={() => handleEditAttendance(record)}
                                 >
-                                  <Camera className="h-3 w-3" />
+                                  <Edit className="h-4 w-4" />
                                 </Button>
-                              )}
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                          </TableCell>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Check In</p>
+                                <p className="font-medium mt-1">
+                                  {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Location</p>
+                                <p className="font-medium mt-1 capitalize">{record.location || 'office'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t">
+                              {getStatusBadge(record)}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLiveAttendance.map((record: any) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="font-medium">
+                              {record.userName}
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {record.userDepartment || 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {record.location || 'office'}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(record)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -813,101 +885,192 @@ export default function AttendanceManagement() {
         <TabsContent value="daily" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Daily Attendance Records - {formatDate(selectedDate)}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg md:text-xl">Daily Attendance Records - {formatDate(selectedDate)}</CardTitle>
+              <CardDescription className="text-sm">
                 Comprehensive view of all employee attendance for the selected date
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Check In</TableHead>
-                      <TableHead>Check Out</TableHead>
-                      <TableHead>Working Hours</TableHead>
-                      <TableHead>Overtime</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingDaily ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredDailyAttendance.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                          No attendance records found for this date
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredDailyAttendance.map((record: any) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium">
-                            <div>
-                              <div>{record.userName}</div>
-                              <div className="text-xs text-gray-500">{record.userEmail}</div>
+              {isLoadingDaily ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <p className="text-muted-foreground mt-2">Loading attendance data...</p>
+                </div>
+              ) : filteredDailyAttendance.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No attendance records found for this date</p>
+                </div>
+              ) : (
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block md:hidden space-y-4">
+                    {filteredDailyAttendance.map((record: any) => (
+                      <Card key={record.id} className={`border shadow-sm ${isIncompleteRecord(record) ? 'border-amber-300 bg-amber-50/30' : ''}`}>
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-medium text-base">{record.userName}</p>
+                                <p className="text-sm text-muted-foreground">{record.userEmail}</p>
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  {record.userDepartment?.toUpperCase() || 'N/A'}
+                                </Badge>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                  title="Edit Attendance"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="capitalize">
-                            {record.userDepartment || 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.workingHours ? `${record.workingHours.toFixed(1)}h` : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(record)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditAttendance(record)}
-                                title="Edit Attendance"
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              {record.checkInImageUrl && (
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Check In</p>
+                                <p className="font-medium mt-1">
+                                  {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Check Out</p>
+                                <p className="font-medium mt-1">
+                                  {record.checkOutTime ? (
+                                    <TimeDisplay time={record.checkOutTime} format12Hour={true} />
+                                  ) : (
+                                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                                      Missing
+                                    </Badge>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Working Hours</p>
+                                <p className="font-medium mt-1">
+                                  {record.workingHours ? (
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {record.workingHours.toFixed(1)}h
+                                    </div>
+                                  ) : '-'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Overtime</p>
+                                <p className="font-medium mt-1">
+                                  {record.overtimeHours && record.overtimeHours > 0 ? (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {record.overtimeHours.toFixed(1)}h OT
+                                    </Badge>
+                                  ) : '-'}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t">
+                              {getStatusBadge(record)}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Check Out</TableHead>
+                          <TableHead>Working Hours</TableHead>
+                          <TableHead>Overtime</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredDailyAttendance.map((record: any) => (
+                          <TableRow key={record.id} className={isIncompleteRecord(record) ? "bg-amber-50/30" : ""}>
+                            <TableCell className="font-medium">
+                              <div>
+                                <div>{record.userName}</div>
+                                <div className="text-xs text-gray-500">{record.userEmail}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {record.userDepartment || 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.workingHours ? `${record.workingHours.toFixed(1)}h` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(record)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                  title="Edit Attendance"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-3 w-3" />
+                                  </Button>
+                                )}
                                 <Button 
                                   size="sm" 
                                   variant="outline"
-                                  onClick={() => handleViewImage(record)}
-                                  title="View Field Work Photo"
+                                  title="View Details"
                                 >
-                                  <Camera className="h-3 w-3" />
+                                  <Eye className="h-3 w-3" />
                                 </Button>
-                              )}
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                title="View Details"
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

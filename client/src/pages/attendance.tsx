@@ -259,7 +259,7 @@ export default function Attendance() {
   const canCheckOut = attendanceState.canCheckOut;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
       {/* Breadcrumb Navigation */}
       <div className="flex items-center space-x-2 text-sm text-muted-foreground">
         <span>Dashboard</span>
@@ -268,18 +268,18 @@ export default function Attendance() {
       </div>
 
       {/* Header Section with Clear Status */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Attendance</h1>
-          <div className="flex items-center gap-4 mt-2">
-            <p className="text-muted-foreground">Track your daily attendance and work hours</p>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Attendance</h1>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
+            <p className="text-muted-foreground text-sm md:text-base">Track your daily attendance and work hours</p>
             <Badge 
               variant={
                 attendanceState.state === 'completed' ? "default" : 
                 attendanceState.state === 'checked_in' ? "secondary" : 
                 attendanceState.state === 'not_started' ? "outline" : "destructive"
               } 
-              className="text-xs"
+              className="text-xs w-fit"
             >
               {
                 attendanceState.state === 'completed' ? "Day Complete" :
@@ -290,8 +290,8 @@ export default function Attendance() {
             </Badge>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={refreshAttendance} variant="outline" size="sm">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button onClick={refreshAttendance} variant="outline" size="sm" className="flex-1 sm:flex-initial">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -320,27 +320,27 @@ export default function Attendance() {
           <CardContent className="space-y-4">
             {/* Current Status Display */}
             {todayAttendance ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                  <div className="p-2 bg-green-100 rounded-full">
+                  <div className="p-2 bg-green-100 rounded-full flex-shrink-0">
                     <Clock className="h-4 w-4 text-green-600" />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">Check In</p>
-                    <p className="font-semibold"><TimeDisplay time={todayAttendance.checkInTime} format12Hour={true} /></p>
-                    <p className="text-xs text-muted-foreground">{todayAttendance.attendanceType || 'Office'}</p>
+                    <p className="font-semibold truncate"><TimeDisplay time={todayAttendance.checkInTime} format12Hour={true} /></p>
+                    <p className="text-xs text-muted-foreground truncate">{todayAttendance.attendanceType || 'Office'}</p>
                   </div>
                 </div>
                 
                 {todayAttendance.checkOutTime ? (
                   <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                    <div className="p-2 bg-red-100 rounded-full">
+                    <div className="p-2 bg-red-100 rounded-full flex-shrink-0">
                       <Timer className="h-4 w-4 text-red-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Check Out</p>
-                      <p className="font-semibold"><TimeDisplay time={todayAttendance.checkOutTime} format12Hour={true} /></p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-semibold truncate"><TimeDisplay time={todayAttendance.checkOutTime} format12Hour={true} /></p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {(() => {
                           const checkIn = new Date(todayAttendance.checkInTime);
                           const checkOut = new Date(todayAttendance.checkOutTime);
@@ -353,10 +353,10 @@ export default function Attendance() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-dashed">
-                    <div className="p-2 bg-gray-100 rounded-full">
+                    <div className="p-2 bg-gray-100 rounded-full flex-shrink-0">
                       <Timer className="h-4 w-4 text-gray-400" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Check Out</p>
                       <p className="font-semibold text-gray-400">Pending</p>
                       <p className="text-xs text-muted-foreground">Still working</p>
@@ -365,22 +365,22 @@ export default function Attendance() {
                 )}
 
                 {todayAttendance.overtimeHours && todayAttendance.overtimeHours > 0 ? (
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-orange-200">
-                    <div className="p-2 bg-orange-100 rounded-full">
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-orange-200 sm:col-span-2 lg:col-span-1">
+                    <div className="p-2 bg-orange-100 rounded-full flex-shrink-0">
                       <Zap className="h-4 w-4 text-orange-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Overtime</p>
                       <p className="font-semibold text-orange-600">{todayAttendance.overtimeHours.toFixed(1)}h</p>
                       <p className="text-xs text-muted-foreground">Extra hours</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-dashed">
-                    <div className="p-2 bg-gray-100 rounded-full">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-dashed sm:col-span-2 lg:col-span-1">
+                    <div className="p-2 bg-gray-100 rounded-full flex-shrink-0">
                       <Zap className="h-4 w-4 text-gray-400" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Overtime</p>
                       <p className="font-semibold text-gray-400">None</p>
                       <p className="text-xs text-muted-foreground">Regular hours</p>
@@ -397,13 +397,13 @@ export default function Attendance() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               {!departmentTiming || !departmentTiming.checkInTime || !departmentTiming.checkOutTime || 
                !(departmentTiming.checkInTime.includes('AM') || departmentTiming.checkInTime.includes('PM')) ||
                !(departmentTiming.checkOutTime.includes('AM') || departmentTiming.checkOutTime.includes('PM')) ? (
-                <div className="flex-1 text-center py-4">
+                <div className="sm:col-span-2 text-center py-4">
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <div className="text-orange-700 font-medium mb-2">
+                    <div className="text-orange-700 font-medium mb-2 text-sm md:text-base">
                       {!departmentTiming ? "Department Timing Not Configured" : "Invalid Timing Format"}
                     </div>
                     <div className="text-sm text-orange-600 mb-3">
@@ -421,7 +421,7 @@ export default function Attendance() {
                           variant="outline"
                           size="sm"
                           onClick={refreshTiming}
-                          className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                          className="text-orange-600 border-orange-300 hover:bg-orange-50 w-full sm:w-auto"
                         >
                           <RefreshCw className="h-3 w-3 mr-1" />
                           Refresh Timing
@@ -435,17 +435,18 @@ export default function Attendance() {
                   {canCheckIn && (
                     <Button 
                       onClick={() => setShowCheckInModal(true)} 
-                      className="bg-green-600 hover:bg-green-700 flex-1 h-12"
+                      className="bg-green-600 hover:bg-green-700 h-12 sm:col-span-1"
                       size="lg"
                     >
                       <UserCheck className="h-5 w-5 mr-2" />
-                      Check In Now
+                      <span className="hidden sm:inline">Check In Now</span>
+                      <span className="sm:hidden">Check In</span>
                     </Button>
                   )}
                   {canCheckOut && !otStatus?.hasActiveOT && (
                     <Button 
                       onClick={() => setShowUnifiedCheckoutModal(true)} 
-                      className="bg-red-600 hover:bg-red-700 flex-1 h-12"
+                      className="bg-red-600 hover:bg-red-700 h-12 sm:col-span-1"
                       size="lg"
                     >
                       <Timer className="h-5 w-5 mr-2" />
@@ -453,8 +454,8 @@ export default function Attendance() {
                     </Button>
                   )}
                   {!canCheckIn && !canCheckOut && todayAttendance && (
-                    <div className="flex-1 text-center py-3">
-                      <Badge variant="secondary" className="py-2 px-4">
+                    <div className="sm:col-span-2 text-center py-3">
+                      <Badge variant="secondary" className="py-2 px-4 text-xs sm:text-sm">
                         {otStatus?.hasActiveOT ? "Regular Attendance Complete" : "Attendance Complete for Today"}
                       </Badge>
                       {otStatus?.hasActiveOT && (
@@ -469,51 +470,55 @@ export default function Attendance() {
             {/* Manual OT Buttons */}
             {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
               <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
                     <Zap className="h-5 w-5 text-orange-600" />
-                    <span className="font-medium text-orange-800">Manual Overtime</span>
+                    <span className="font-medium text-orange-800 text-sm sm:text-base">Manual Overtime</span>
                     {otStatus?.hasActiveOT && (
-                      <Badge variant="destructive" className="animate-pulse">
+                      <Badge variant="destructive" className="animate-pulse text-xs">
                         Active
                       </Badge>
                     )}
                   </div>
                   {otStatus?.currentOTHours && otStatus.currentOTHours > 0 && (
-                    <Badge variant="outline" className="text-orange-700 border-orange-300">
+                    <Badge variant="outline" className="text-orange-700 border-orange-300 text-xs w-fit">
                       {otStatus.currentOTHours.toFixed(1)}h
                     </Badge>
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   {!otStatus?.hasActiveOT ? (
                     <Button
                       onClick={() => setShowOTStartModal(true)}
                       disabled={!otStatus?.buttonAvailable}
                       variant="outline"
-                      className="flex-1 border-orange-300 text-orange-700 hover:bg-orange-100"
+                      className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
+                      size="lg"
                     >
                       <Zap className="h-4 w-4 mr-2" />
-                      Start OT
+                      <span className="hidden sm:inline">Start Overtime</span>
+                      <span className="sm:hidden">Start OT</span>
                     </Button>
                   ) : (
                     <Button
                       onClick={() => setShowOTEndModal(true)}
                       disabled={!otStatus?.canEndOT}
                       variant="destructive"
-                      className="flex-1"
+                      className="w-full"
+                      size="lg"
                     >
                       <Timer className="h-4 w-4 mr-2" />
-                      End OT
+                      <span className="hidden sm:inline">End Overtime</span>
+                      <span className="sm:hidden">End OT</span>
                     </Button>
                   )}
                   
                   {!otStatus?.buttonAvailable && otStatus?.buttonReason && (
-                    <div className="flex-1">
+                    <div className="p-2 bg-orange-100 rounded text-center">
                       <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
                       {otStatus.nextAvailableTime && (
-                        <p className="text-xs text-orange-500">
+                        <p className="text-xs text-orange-500 mt-1">
                           Available after {otStatus.nextAvailableTime}
                         </p>
                       )}
