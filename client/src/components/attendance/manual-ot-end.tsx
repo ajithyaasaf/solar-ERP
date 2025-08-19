@@ -17,7 +17,7 @@ interface ManualOTEndProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  otStartTime?: string;
+  otStartTime?: string | { _seconds: number; _nanoseconds?: number };
   currentOTHours?: number;
 }
 
@@ -57,13 +57,40 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
   const formatOTDuration = () => {
     if (!otStartTime) return "0h 0m";
     
-    const start = new Date(otStartTime);
-    const now = new Date();
-    const diffMs = now.getTime() - start.getTime();
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
+    try {
+      let start: Date;
+      
+      // Handle Firestore Timestamp objects
+      if (typeof otStartTime === 'object' && '_seconds' in otStartTime) {
+        const timestamp = otStartTime as { _seconds: number; _nanoseconds?: number };
+        start = new Date(timestamp._seconds * 1000 + (timestamp._nanoseconds || 0) / 1000000);
+      } else {
+        start = new Date(otStartTime as string);
+      }
+      
+      const now = new Date();
+      
+      // Check if the start date is valid
+      if (isNaN(start.getTime())) {
+        console.error('Invalid otStartTime:', otStartTime);
+        return "Invalid Date";
+      }
+      
+      const diffMs = now.getTime() - start.getTime();
+      
+      // Ensure we don't have negative time
+      if (diffMs < 0) {
+        return "0h 0m";
+      }
+      
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      return `${hours}h ${minutes}m`;
+    } catch (error) {
+      console.error('Error formatting OT duration:', error, 'otStartTime:', otStartTime);
+      return "Error calculating time";
+    }
   };
 
   // Fetch address from location using Google Maps API
@@ -297,11 +324,30 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
                 </div>
                 {otStartTime && (
                   <div className="text-xs text-orange-700">
-                    Started at {new Date(otStartTime).toLocaleTimeString('en-IN', { 
-                      hour: 'numeric', 
-                      minute: '2-digit', 
-                      hour12: true 
-                    })}
+                    {(() => {
+                      try {
+                        let startDate: Date;
+                        
+                        // Handle Firestore Timestamp objects
+                        if (typeof otStartTime === 'object' && '_seconds' in otStartTime) {
+                          const timestamp = otStartTime as { _seconds: number; _nanoseconds?: number };
+                          startDate = new Date(timestamp._seconds * 1000 + (timestamp._nanoseconds || 0) / 1000000);
+                        } else {
+                          startDate = new Date(otStartTime as string);
+                        }
+                        
+                        if (isNaN(startDate.getTime())) {
+                          return "Started at Invalid Date";
+                        }
+                        return `Started at ${startDate.toLocaleTimeString('en-IN', { 
+                          hour: 'numeric', 
+                          minute: '2-digit', 
+                          hour12: true 
+                        })}`;
+                      } catch (error) {
+                        return "Started at Invalid Date";
+                      }
+                    })()}
                   </div>
                 )}
               </div>
