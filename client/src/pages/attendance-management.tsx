@@ -212,8 +212,11 @@ export default function AttendanceManagement() {
 
   // Helper function to check if record is incomplete (missing checkout)
   const isIncompleteRecord = (record: any) => {
-    return record.checkInTime && !record.checkOutTime && 
-           new Date(record.date).toDateString() !== new Date().toDateString(); // Not today
+    // Record is incomplete if there's check-in but no check-out time
+    // Also check for empty strings and null values
+    return record.checkInTime && 
+           record.checkInTime !== '' && 
+           (!record.checkOutTime || record.checkOutTime === '');
   };
 
   // Helper function to get suggested checkout time for department
@@ -250,6 +253,20 @@ export default function AttendanceManagement() {
   const incompleteRecords = filteredDailyAttendance.filter((record: any) => isIncompleteRecord(record));
   const completeRecords = filteredDailyAttendance.filter((record: any) => !isIncompleteRecord(record));
 
+  // Debug logging to help troubleshoot
+  console.log('Attendance Data Debug:', {
+    totalRecords: filteredDailyAttendance.length,
+    incompleteCount: incompleteRecords.length,
+    sampleRecord: filteredDailyAttendance[0],
+    incompleteRecords: incompleteRecords.map((r: any) => ({
+      name: r.userName,
+      checkIn: r.checkInTime,
+      checkOut: r.checkOutTime,
+      hasCheckIn: !!r.checkInTime,
+      hasCheckOut: !!r.checkOutTime
+    }))
+  });
+
   // Filter live attendance - Fix TypeScript error
   const filteredLiveAttendance = (Array.isArray(liveAttendance) ? liveAttendance : []).filter((record: any) => {
     const matchesSearch = !searchQuery || 
@@ -268,11 +285,17 @@ export default function AttendanceManagement() {
     
     setEditingAttendance(record);
     setEditForm({
-      checkInTime: record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
-      checkOutTime: record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : suggestedCheckout,
+      checkInTime: record.checkInTime ? 
+        (typeof record.checkInTime === 'string' ? 
+          new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 
+          record.checkInTime) : '',
+      checkOutTime: record.checkOutTime ? 
+        (typeof record.checkOutTime === 'string' ? 
+          new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 
+          record.checkOutTime) : suggestedCheckout,
       status: record.status || 'present',
       overtimeHours: record.overtimeHours || 0,
-      remarks: record.remarks || (isIncomplete ? 'Checkout time corrected by admin' : '')
+      remarks: record.remarks || (isIncomplete ? 'Checkout time corrected by admin - forgotten checkout detected' : '')
     });
     setShowEditModal(true);
   };
