@@ -40,6 +40,21 @@ export default function AttendanceManagement() {
   const offlineHandler = useOfflineHandler();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  
+  // Ensure calendar is closed on page load and handle escape key
+  useEffect(() => {
+    setCalendarOpen(false);
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setCalendarOpen(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -702,7 +717,7 @@ export default function AttendanceManagement() {
                   </SelectContent>
                 </Select>
 
-                <Popover>
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="border-gray-300 min-w-[140px]">
                       <CalendarIcon className="h-4 w-4 mr-2" />
@@ -713,9 +728,13 @@ export default function AttendanceManagement() {
                     <Calendar
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          setSelectedDate(date);
+                          setCalendarOpen(false); // Close calendar after selection
+                        }
+                      }}
                       className="rounded-md border-0"
-                      disabled={false}
                     />
                   </PopoverContent>
                 </Popover>
