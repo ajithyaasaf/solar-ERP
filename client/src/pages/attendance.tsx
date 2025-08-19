@@ -231,7 +231,7 @@ export default function Attendance() {
   const getAttendanceState = () => {
     // Check if department timing exists AND has valid timing values
     if (!departmentTiming || !departmentTiming.checkInTime || !departmentTiming.checkOutTime) {
-      return { state: 'no_timing', canCheckIn: false, canCheckOut: false };
+      return { state: 'no_timing', canCheckIn: false, canCheckOut: false, validTiming: false };
     }
     
     // Additional validation: Check if timing values are properly formatted (must contain AM/PM)
@@ -240,18 +240,17 @@ export default function Attendance() {
     
     // Validate that timing values are proper 12-hour format (contain AM or PM)
     const isValidTimeFormat = (time: string) => {
-      return time && (time.includes('AM') || time.includes('PM'));
+      return time && typeof time === 'string' && (time.includes('AM') || time.includes('PM') || time.includes('am') || time.includes('pm'));
     };
     
     if (!isValidTimeFormat(checkInTime) || !isValidTimeFormat(checkOutTime)) {
-      console.log('ATTENDANCE: Invalid timing format detected:', { checkInTime, checkOutTime });
-      return { state: 'no_timing', canCheckIn: false, canCheckOut: false };
+      return { state: 'no_timing', canCheckIn: false, canCheckOut: false, validTiming: false };
     }
     
-    if (!todayAttendance) return { state: 'not_started', canCheckIn: true, canCheckOut: false };
-    if (todayAttendance.checkInTime && !todayAttendance.checkOutTime) return { state: 'checked_in', canCheckIn: false, canCheckOut: true };
-    if (todayAttendance.checkInTime && todayAttendance.checkOutTime) return { state: 'completed', canCheckIn: false, canCheckOut: false };
-    return { state: 'unknown', canCheckIn: false, canCheckOut: false };
+    if (!todayAttendance) return { state: 'not_started', canCheckIn: true, canCheckOut: false, validTiming: true };
+    if (todayAttendance.checkInTime && !todayAttendance.checkOutTime) return { state: 'checked_in', canCheckIn: false, canCheckOut: true, validTiming: true };
+    if (todayAttendance.checkInTime && todayAttendance.checkOutTime) return { state: 'completed', canCheckIn: false, canCheckOut: false, validTiming: true };
+    return { state: 'unknown', canCheckIn: false, canCheckOut: false, validTiming: true };
   };
 
   const attendanceState = getAttendanceState();
@@ -398,9 +397,7 @@ export default function Attendance() {
 
             {/* Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {!departmentTiming || !departmentTiming.checkInTime || !departmentTiming.checkOutTime || 
-               !(departmentTiming.checkInTime.includes('AM') || departmentTiming.checkInTime.includes('PM')) ||
-               !(departmentTiming.checkOutTime.includes('AM') || departmentTiming.checkOutTime.includes('PM')) ? (
+              {!attendanceState.validTiming ? (
                 <div className="sm:col-span-2 text-center py-4">
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <div className="text-orange-700 font-medium mb-2 text-sm md:text-base">
