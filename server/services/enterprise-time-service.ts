@@ -138,9 +138,8 @@ export class EnterpriseTimeService {
       const workEnd = new Date(Math.min(checkOutTime.getTime(), expectedCheckOut.getTime()));
       const regularMinutes = Math.max(0, Math.floor((workEnd.getTime() - workStart.getTime()) / (1000 * 60)));
       
-      // Total working hours and overtime hours
-      const totalMinutes = regularMinutes + overtimeMinutes;
-      workingHours = Math.max(0, totalMinutes / 60);
+      // CRITICAL FIX: Separate regular working hours from overtime hours
+      workingHours = Math.max(0, regularMinutes / 60);
       overtimeHours = Math.max(0, overtimeMinutes / 60);
       
       if (overtimeHours > 0) {
