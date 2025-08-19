@@ -636,7 +636,7 @@ export default function AttendanceManagement() {
               Live Tracking
             </TabsTrigger>
             <TabsTrigger value="daily" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
               Daily Records
               {incompleteRecords.length > 0 && (
                 <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
