@@ -22,6 +22,7 @@ import { OvertimeExplanationCard } from "@/components/attendance/overtime-explan
 import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
 import { ManualOTStart } from "@/components/attendance/manual-ot-start";
 import { ManualOTEnd } from "@/components/attendance/manual-ot-end";
+import { SimpleCheckoutModal } from "@/components/attendance/simple-checkout-modal";
 
 export default function Attendance() {
   const { user } = useAuthContext();
@@ -38,6 +39,9 @@ export default function Attendance() {
   // Manual OT modal states
   const [showOTStartModal, setShowOTStartModal] = useState(false);
   const [showOTEndModal, setShowOTEndModal] = useState(false);
+  
+  // Simple checkout modal state
+  const [showSimpleCheckoutModal, setShowSimpleCheckoutModal] = useState(false);
 
   // Fetch current user's attendance records
   const { data: attendanceRecords = [], isLoading, refetch } = useQuery({
@@ -440,7 +444,7 @@ export default function Attendance() {
                   )}
                   {canCheckOut && !otStatus?.hasActiveOT && (
                     <Button 
-                      onClick={() => toast({ title: "Checkout Unavailable", description: "Checkout functionality is currently being updated", variant: "destructive" })}
+                      onClick={() => setShowSimpleCheckoutModal(true)}
                       className="bg-red-600 hover:bg-red-700 h-12 sm:col-span-1"
                       size="lg"
                     >
@@ -921,6 +925,14 @@ export default function Attendance() {
         onSuccess={refreshAttendance}
         otStartTime={otStatus?.otStartTime}
         currentOTHours={otStatus?.currentOTHours}
+      />
+      
+      {/* Simple Checkout Modal */}
+      <SimpleCheckoutModal
+        isOpen={showSimpleCheckoutModal}
+        onClose={() => setShowSimpleCheckoutModal(false)}
+        onSuccess={refreshAttendance}
+        currentAttendance={todayAttendance}
       />
     </div>
   );
