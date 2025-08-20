@@ -100,7 +100,7 @@ export default function Attendance() {
   });
 
   // Ultra-fast department timing with intelligent caching
-  const { data: departmentTiming, refetch: refetchTiming } = useQuery({
+  const { data: departmentTiming, refetch: refetchTiming, isLoading: isLoadingTiming } = useQuery({
     queryKey: ["/api/departments/timing", user?.department],
     queryFn: async () => {
       if (!user?.department) return null;
@@ -231,6 +231,11 @@ export default function Attendance() {
 
   // Enhanced attendance state logic with clear UX states
   const getAttendanceState = () => {
+    // If we're still loading department timing, show loading state instead of error
+    if (isLoadingTiming) {
+      return { state: 'loading', canCheckIn: false, canCheckOut: false, validTiming: true, isLoading: true };
+    }
+    
     // Check if department timing exists AND has valid timing values
     if (!departmentTiming || !departmentTiming.checkInTime || !departmentTiming.checkOutTime) {
       return { state: 'no_timing', canCheckIn: false, canCheckOut: false, validTiming: false };
@@ -399,7 +404,16 @@ export default function Attendance() {
 
             {/* Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {!attendanceState.validTiming ? (
+              {attendanceState.isLoading ? (
+                <div className="sm:col-span-2 text-center py-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-center gap-2 text-blue-700">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span className="text-sm font-medium">Loading department settings...</span>
+                    </div>
+                  </div>
+                </div>
+              ) : !attendanceState.validTiming ? (
                 <div className="sm:col-span-2 text-center py-4">
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <div className="text-orange-700 font-medium mb-2 text-sm md:text-base">
