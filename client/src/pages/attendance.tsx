@@ -20,7 +20,6 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { OvertimeExplanationCard } from "@/components/attendance/overtime-explanation-card";
 import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
-import { SmartUnifiedCheckout } from "@/components/attendance/smart-unified-checkout";
 import { ManualOTStart } from "@/components/attendance/manual-ot-start";
 import { ManualOTEnd } from "@/components/attendance/manual-ot-end";
 
@@ -35,7 +34,6 @@ export default function Attendance() {
   
   // Check-in/out modal states
   const [showCheckInModal, setShowCheckInModal] = useState(false);
-  const [showUnifiedCheckoutModal, setShowUnifiedCheckoutModal] = useState(false);
   
   // Manual OT modal states
   const [showOTStartModal, setShowOTStartModal] = useState(false);
@@ -442,9 +440,10 @@ export default function Attendance() {
                   )}
                   {canCheckOut && !otStatus?.hasActiveOT && (
                     <Button 
-                      onClick={() => setShowUnifiedCheckoutModal(true)} 
+                      onClick={() => toast({ title: "Checkout Unavailable", description: "Checkout functionality is currently being updated", variant: "destructive" })}
                       className="bg-red-600 hover:bg-red-700 h-12 sm:col-span-1"
                       size="lg"
+                      disabled
                     >
                       <Timer className="h-5 w-5 mr-2" />
                       Check Out
@@ -907,15 +906,6 @@ export default function Attendance() {
         onSuccess={refreshAttendance}
       />
 
-      {/* Smart Unified Checkout Modal */}
-      <SmartUnifiedCheckout
-        isOpen={showUnifiedCheckoutModal}
-        onClose={() => setShowUnifiedCheckoutModal(false)}
-        onSuccess={refreshAttendance}
-        currentAttendance={todayAttendance}
-        departmentTiming={departmentTiming}
-        otStatus={otStatus}
-      />
 
       {/* Manual OT Start Modal */}
       <ManualOTStart
