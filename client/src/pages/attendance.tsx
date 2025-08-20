@@ -443,7 +443,6 @@ export default function Attendance() {
                       onClick={() => toast({ title: "Checkout Unavailable", description: "Checkout functionality is currently being updated", variant: "destructive" })}
                       className="bg-red-600 hover:bg-red-700 h-12 sm:col-span-1"
                       size="lg"
-                      disabled
                     >
                       <Timer className="h-5 w-5 mr-2" />
                       Check Out
