@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { SiteVisitStartModal } from "@/components/site-visit/site-visit-start-modal";
 import { SiteVisitDetailsModal } from "@/components/site-visit/site-visit-details-modal";
-import { SiteVisitCheckoutModal } from "@/components/site-visit/site-visit-checkout-modal";
 import { FollowUpModal } from "@/components/site-visit/follow-up-modal";
 import { FollowUpDetailsModal } from "@/components/site-visit/follow-up-details-modal";
 import { formatDistanceToNow } from "date-fns";
@@ -163,7 +162,6 @@ export default function SiteVisitPage() {
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [selectedSiteVisit, setSelectedSiteVisit] = useState<SiteVisit | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [isFollowUpDetailsModalOpen, setIsFollowUpDetailsModalOpen] = useState(false);
   const [selectedFollowUpId, setSelectedFollowUpId] = useState<string>("");
@@ -337,17 +335,12 @@ export default function SiteVisitPage() {
   };
 
   const handleCheckoutSiteVisit = (siteVisit: SiteVisit) => {
-    // For follow-ups, we need to use the follow-up checkout endpoint
-    if (siteVisit.isFollowUp && siteVisit.id) {
-      // Set up for follow-up checkout
-      setSelectedFollowUpId(siteVisit.id);
-      setSelectedSiteVisit(siteVisit); // Still need this for the checkout modal
-      setIsCheckoutModalOpen(true);
-    } else {
-      // Regular site visit checkout
-      setSelectedSiteVisit(siteVisit);
-      setIsCheckoutModalOpen(true);
-    }
+    // Checkout functionality has been removed
+    toast({
+      title: "Checkout Unavailable",
+      description: "Checkout functionality is currently being updated",
+      variant: "destructive",
+    });
   };
 
   const handleFollowUpVisit = (siteVisit: SiteVisit) => {
@@ -378,35 +371,12 @@ export default function SiteVisitPage() {
   });
 
   const handleFollowUpCheckout = async (followUpId: string) => {
-    try {
-      // Fetch the follow-up data to get full details for checkout modal
-      const response = await apiRequest(`/api/follow-ups/${followUpId}`, 'GET');
-      const followUpData = await response.json();
-      const followUp = followUpData.data;
-      
-      if (followUp) {
-        // Set the isFollowUp flag and open the checkout modal with proper location/photo capture
-        const followUpForCheckout = {
-          ...followUp,
-          isFollowUp: true // Ensure this flag is set
-        };
-        
-        setSelectedSiteVisit(followUpForCheckout);
-        setIsCheckoutModalOpen(true);
-      } else {
-        toast({
-          title: "Error",
-          description: "Follow-up visit not found",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error", 
-        description: error.message || "Failed to load follow-up visit for checkout",
-        variant: "destructive",
-      });
-    }
+    // Follow-up checkout functionality has been removed
+    toast({
+      title: "Checkout Unavailable",
+      description: "Checkout functionality is currently being updated",
+      variant: "destructive",
+    });
   };
 
   if (!hasAccess) {
@@ -707,13 +677,6 @@ export default function SiteVisitPage() {
         siteVisit={selectedSiteVisit}
       />
 
-      {selectedSiteVisit && (
-        <SiteVisitCheckoutModal
-          isOpen={isCheckoutModalOpen}
-          onClose={() => setIsCheckoutModalOpen(false)}
-          siteVisit={selectedSiteVisit}
-        />
-      )}
 
       <FollowUpModal
         isOpen={isFollowUpModalOpen}
