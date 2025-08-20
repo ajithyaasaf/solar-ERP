@@ -26,9 +26,15 @@ class LocationService {
     this.apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 
                   import.meta.env.GOOGLE_MAPS_API_KEY || 
                   '';
-    console.log('Google Maps API Key configured:', this.apiKey ? 'Yes' : 'No');
+    console.log('🔑 LocationService: Google Maps API Key configured:', this.apiKey ? 'Yes' : 'No');
+    console.log('🔑 LocationService: Environment variables check:', {
+      VITE_GOOGLE_MAPS_API_KEY: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing',
+      GOOGLE_MAPS_API_KEY: import.meta.env.GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing'
+    });
     if (!this.apiKey) {
-      console.warn('⚠️ Google Maps API key not found - using coordinate-based location');
+      console.warn('⚠️ Google Maps API key not found in environment - will try backend fallback');
+    } else {
+      console.log('✅ Google Maps API key loaded from environment variables');
     }
   }
 
@@ -172,7 +178,7 @@ class LocationService {
   }> {
     let apiKey = this.apiKey;
     
-    // If no API key, try to fetch from backend
+    // If no API key, try to fetch from backend as fallback
     if (!apiKey) {
       try {
         console.log('🔑 Fetching Google Maps API key from backend...');
@@ -200,12 +206,16 @@ class LocationService {
           console.log('✅ API key fetched from backend successfully');
         } else {
           console.warn('❌ Failed to fetch API key from backend:', response.status);
-          throw new Error('Google Maps API key not available');
+          throw new Error('Google Maps API key not available from backend');
         }
       } catch (error) {
-        console.error('❌ Error fetching API key:', error);
-        throw new Error('Google Maps API key not available');
+        console.error('❌ Error fetching API key from backend:', error);
+        throw new Error('Google Maps API key not available from backend');
       }
+    }
+    
+    if (!apiKey) {
+      throw new Error('Google Maps API key not configured');
     }
     
     try {

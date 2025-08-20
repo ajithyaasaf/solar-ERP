@@ -626,6 +626,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Google Maps API key endpoint for frontend location services
+  app.get("/api/google-maps-key", verifyAuth, async (req, res) => {
+    try {
+      const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+      
+      if (!googleMapsApiKey) {
+        console.error("Google Maps API key not found in environment variables");
+        return res.status(404).json({ message: "Google Maps API key not configured" });
+      }
+      
+      console.log("🔑 Google Maps API key requested, providing to frontend");
+      res.json({ apiKey: googleMapsApiKey });
+    } catch (error) {
+      console.error("Error fetching Google Maps API key:", error);
+      res.status(500).json({ message: "Failed to fetch Google Maps API key" });
+    }
+  });
+
   app.get("/api/users/department/:department", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.user.uid);
