@@ -407,7 +407,16 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Duration:</span>
-                <span>{Math.round((Date.now() - new Date(currentAttendance.checkInTime).getTime()) / (1000 * 60 * 60))}h</span>
+                <span>
+                  {(() => {
+                    const checkInTime = new Date(currentAttendance.checkInTime);
+                    const currentTime = new Date();
+                    const diffMs = currentTime.getTime() - checkInTime.getTime();
+                    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                  })()}
+                </span>
               </div>
             </CardContent>
           </Card>
