@@ -20,9 +20,9 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { OvertimeExplanationCard } from "@/components/attendance/overtime-explanation-card";
 import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
+import { SmartUnifiedCheckout } from "@/components/attendance/smart-unified-checkout";
 import { ManualOTStart } from "@/components/attendance/manual-ot-start";
 import { ManualOTEnd } from "@/components/attendance/manual-ot-end";
-import { SimpleCheckoutModal } from "@/components/attendance/simple-checkout-modal";
 
 export default function Attendance() {
   const { user } = useAuthContext();
@@ -35,13 +35,11 @@ export default function Attendance() {
   
   // Check-in/out modal states
   const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [showUnifiedCheckoutModal, setShowUnifiedCheckoutModal] = useState(false);
   
   // Manual OT modal states
   const [showOTStartModal, setShowOTStartModal] = useState(false);
   const [showOTEndModal, setShowOTEndModal] = useState(false);
-  
-  // Simple checkout modal state
-  const [showSimpleCheckoutModal, setShowSimpleCheckoutModal] = useState(false);
 
   // Fetch current user's attendance records
   const { data: attendanceRecords = [], isLoading, refetch } = useQuery({
@@ -100,7 +98,7 @@ export default function Attendance() {
   });
 
   // Ultra-fast department timing with intelligent caching
-  const { data: departmentTiming, refetch: refetchTiming, isLoading: isLoadingTiming } = useQuery({
+  const { data: departmentTiming, refetch: refetchTiming } = useQuery({
     queryKey: ["/api/departments/timing", user?.department],
     queryFn: async () => {
       if (!user?.department) return null;
@@ -231,11 +229,6 @@ export default function Attendance() {
 
   // Enhanced attendance state logic with clear UX states
   const getAttendanceState = () => {
-    // If we're still loading department timing, show loading state instead of error
-    if (isLoadingTiming) {
-      return { state: 'loading', canCheckIn: false, canCheckOut: false, validTiming: true, isLoading: true };
-    }
-    
     // Check if department timing exists AND has valid timing values
     if (!departmentTiming || !departmentTiming.checkInTime || !departmentTiming.checkOutTime) {
       return { state: 'no_timing', canCheckIn: false, canCheckOut: false, validTiming: false };
@@ -404,16 +397,7 @@ export default function Attendance() {
 
             {/* Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {attendanceState.isLoading ? (
-                <div className="sm:col-span-2 text-center py-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center justify-center gap-2 text-blue-700">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-sm font-medium">Loading department settings...</span>
-                    </div>
-                  </div>
-                </div>
-              ) : !attendanceState.validTiming ? (
+              {!attendanceState.validTiming ? (
                 <div className="sm:col-span-2 text-center py-4">
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <div className="text-orange-700 font-medium mb-2 text-sm md:text-base">
@@ -458,7 +442,7 @@ export default function Attendance() {
                   )}
                   {canCheckOut && !otStatus?.hasActiveOT && (
                     <Button 
-                      onClick={() => setShowSimpleCheckoutModal(true)}
+                      onClick={() => setShowUnifiedCheckoutModal(true)} 
                       className="bg-red-600 hover:bg-red-700 h-12 sm:col-span-1"
                       size="lg"
                     >
@@ -923,6 +907,15 @@ export default function Attendance() {
         onSuccess={refreshAttendance}
       />
 
+      {/* Smart Unified Checkout Modal */}
+      <SmartUnifiedCheckout
+        isOpen={showUnifiedCheckoutModal}
+        onClose={() => setShowUnifiedCheckoutModal(false)}
+        onSuccess={refreshAttendance}
+        currentAttendance={todayAttendance}
+        departmentTiming={departmentTiming}
+        otStatus={otStatus}
+      />
 
       {/* Manual OT Start Modal */}
       <ManualOTStart
@@ -939,14 +932,6 @@ export default function Attendance() {
         onSuccess={refreshAttendance}
         otStartTime={otStatus?.otStartTime}
         currentOTHours={otStatus?.currentOTHours}
-      />
-      
-      {/* Simple Checkout Modal */}
-      <SimpleCheckoutModal
-        isOpen={showSimpleCheckoutModal}
-        onClose={() => setShowSimpleCheckoutModal(false)}
-        onSuccess={refreshAttendance}
-        currentAttendance={todayAttendance}
       />
     </div>
   );
