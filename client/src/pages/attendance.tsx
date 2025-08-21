@@ -914,7 +914,6 @@ export default function Attendance() {
         onSuccess={refreshAttendance}
         currentAttendance={todayAttendance}
         departmentTiming={departmentTiming}
-        otStatus={otStatus}
       />
 
       {/* Manual OT Start Modal */}

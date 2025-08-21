@@ -6,11 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
-  Camera, MapPin, Clock, AlertTriangle, CheckCircle, XCircle, 
-  Loader2, Timer, Zap, Wifi, WifiOff, RefreshCw
+  Camera, MapPin, Clock, CheckCircle, XCircle, 
+  Loader2, Timer, Wifi, WifiOff, RefreshCw
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { TimeDisplay } from "@/components/time/time-display";
@@ -21,7 +20,6 @@ interface SmartUnifiedCheckoutProps {
   onSuccess: () => void;
   currentAttendance: any;
   departmentTiming?: any;
-  otStatus?: any;
 }
 
 export function SmartUnifiedCheckout({ 
@@ -29,15 +27,13 @@ export function SmartUnifiedCheckout({
   onClose, 
   onSuccess, 
   currentAttendance, 
-  departmentTiming,
-  otStatus
+  departmentTiming
 }: SmartUnifiedCheckoutProps) {
   const { user } = useAuthContext();
   const { toast } = useToast();
 
   // Form states
   const [reason, setReason] = useState("");
-  const [otReason, setOtReason] = useState("");
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -56,131 +52,23 @@ export function SmartUnifiedCheckout({
   // Network status
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Determine checkout mode based on current state
-  const getCheckoutMode = () => {
-    if (otStatus?.hasActiveOT) {
-      return {
-        mode: 'ot_only',
-        title: 'End Overtime Session',
-        description: 'End your current overtime session. Your regular attendance will remain open.',
-        actionText: 'End OT Session',
-        requiresPhoto: true,
-        color: 'orange'
-      };
-    } else if (currentAttendance && !currentAttendance.checkOutTime) {
-      return {
-        mode: 'regular_checkout',
-        title: 'Check Out from Work',
-        description: 'Complete your work session. Overtime will be calculated automatically.',
-        actionText: 'Check Out',
-        requiresPhoto: false, // Will be determined by overtime calculation
-        color: 'red'
-      };
-    } else {
-      return {
-        mode: 'invalid',
-        title: 'Invalid State',
-        description: 'Cannot determine checkout action.',
-        actionText: 'Close',
-        requiresPhoto: false,
-        color: 'gray'
-      };
-    }
-  };
-
-  const checkoutMode = getCheckoutMode();
-
-  // Calculate real-time working hours preview (fixed calculation)
-  const calculateWorkingHoursPreview = () => {
-    if (!currentAttendance?.checkInTime || !departmentTiming) {
-      return { 
-        totalWorked: 0, 
-        regularHours: 0, 
-        overtimeHours: 0, 
-        isCurrentlyOvertime: false,
-        earlyCheckout: false 
-      };
+  // Calculate simple working hours for display
+  const calculateWorkingHours = () => {
+    if (!currentAttendance?.checkInTime) {
+      return { totalWorked: 0 };
     }
     
     const checkInTime = new Date(currentAttendance.checkInTime);
     const currentTime = new Date();
-    
-    // Parse department schedule
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const parseTime12Hour = (timeStr: string): Date => {
-      const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-      if (!timeMatch) {
-        const fallback = new Date(today);
-        fallback.setHours(timeStr.includes('out') ? 18 : 9, 0, 0, 0);
-        return fallback;
-      }
-      
-      let [, hours, minutes, period] = timeMatch;
-      let hour24 = parseInt(hours);
-      if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
-      if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
-      
-      const date = new Date(today);
-      date.setHours(hour24, parseInt(minutes), 0, 0);
-      return date;
-    };
-    
-    const departCheckIn = parseTime12Hour(departmentTiming.checkInTime);
-    const departCheckOut = parseTime12Hour(departmentTiming.checkOutTime);
-    
-    // Calculate total working time
     const totalWorkingMinutes = Math.floor((currentTime.getTime() - checkInTime.getTime()) / (1000 * 60));
     const totalWorked = totalWorkingMinutes / 60;
     
-    // Calculate regular vs overtime hours (early arrival + late departure)
-    let overtimeMinutes = 0;
-    
-    // Early arrival overtime
-    if (checkInTime < departCheckIn) {
-      overtimeMinutes += Math.floor((departCheckIn.getTime() - checkInTime.getTime()) / (1000 * 60));
-    }
-    
-    // Late departure overtime (only if currently past dept checkout time)
-    if (currentTime > departCheckOut) {
-      overtimeMinutes += Math.floor((currentTime.getTime() - departCheckOut.getTime()) / (1000 * 60));
-    }
-    
-    // Calculate regular working time (within department schedule)
-    const workStart = new Date(Math.max(checkInTime.getTime(), departCheckIn.getTime()));
-    const workEnd = new Date(Math.min(currentTime.getTime(), departCheckOut.getTime()));
-    const regularMinutes = Math.max(0, Math.floor((workEnd.getTime() - workStart.getTime()) / (1000 * 60)));
-    
-    const regularHours = regularMinutes / 60;
-    const overtimeHours = overtimeMinutes / 60;
-    const isCurrentlyOvertime = overtimeMinutes > 0;
-    
-    // Check if early checkout (less than department working hours)
-    const expectedWorkingHours = departmentTiming.workingHours || 8;
-    const earlyCheckout = regularHours < expectedWorkingHours && !isCurrentlyOvertime;
-    
     return {
-      totalWorked: Number(totalWorked.toFixed(2)),
-      regularHours: Number(regularHours.toFixed(2)),
-      overtimeHours: Number(overtimeHours.toFixed(2)),
-      isCurrentlyOvertime,
-      earlyCheckout,
-      overtimeMinutes
+      totalWorked: Number(totalWorked.toFixed(1))
     };
   };
 
-  const workingHours = calculateWorkingHoursPreview();
-
-  // Determine if photo is required
-  const requiresPhoto = () => {
-    if (checkoutMode.mode === 'ot_only') return true;
-    if (workingHours.isCurrentlyOvertime) return true;
-    if (workingHours.earlyCheckout) return true;
-    return false;
-  };
-
-  const needsPhoto = requiresPhoto();
+  const workingHours = calculateWorkingHours();
 
   // Camera management
   const startCamera = async () => {
@@ -291,7 +179,7 @@ export function SmartUnifiedCheckout({
     }
   };
 
-  // Handle unified checkout submission
+  // Simple checkout submission
   const handleCheckout = async () => {
     if (!location) {
       toast({
@@ -302,60 +190,28 @@ export function SmartUnifiedCheckout({
       return;
     }
 
-    if (needsPhoto && !capturedPhoto) {
-      toast({
-        title: "Photo Required",
-        description: "Please take a selfie photo for verification.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      if (checkoutMode.mode === 'ot_only') {
-        // End OT session only
-        const otResponse = await apiRequest('/api/attendance/ot-end', 'POST', {
-          userId: user?.uid,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          address: locationAddress,
-          photo: capturedPhoto,
-          reason: otReason || reason
-        });
+      // Simple checkout - just update attendance record with checkout time and location
+      const checkoutResponse = await apiRequest(`/api/attendance/${currentAttendance.id}`, 'PATCH', {
+        checkOutTime: new Date().toISOString(),
+        checkOutLatitude: location.latitude,
+        checkOutLongitude: location.longitude,
+        checkOutAddress: locationAddress,
+        checkOutImageUrl: capturedPhoto,
+        reason: reason || "Regular checkout"
+      });
 
-        if (!otResponse.ok) {
-          const errorData = await otResponse.json();
-          throw new Error(errorData.message || 'Failed to end overtime session');
-        }
-
-        toast({
-          title: "Overtime Session Ended",
-          description: "Your overtime session has been successfully ended.",
-        });
-      } else {
-        // Regular checkout
-        const checkoutResponse = await apiRequest(`/api/attendance/${currentAttendance.id}`, 'PATCH', {
-          checkOutTime: new Date().toISOString(),
-          checkOutLatitude: location.latitude,
-          checkOutLongitude: location.longitude,
-          checkOutAddress: locationAddress,
-          checkOutImageUrl: capturedPhoto,
-          reason: reason,
-          overtimeReason: workingHours.isCurrentlyOvertime ? (otReason || reason) : undefined
-        });
-
-        if (!checkoutResponse.ok) {
-          const errorData = await checkoutResponse.json();
-          throw new Error(errorData.message || 'Failed to check out');
-        }
-
-        toast({
-          title: "Successfully Checked Out",
-          description: `Total working time: ${workingHours.totalWorked.toFixed(1)} hours`,
-        });
+      if (!checkoutResponse.ok) {
+        const errorData = await checkoutResponse.json();
+        throw new Error(errorData.message || 'Failed to check out');
       }
+
+      toast({
+        title: "Successfully Checked Out",
+        description: `Total working time: ${workingHours.totalWorked} hours`,
+      });
 
       onSuccess();
       onClose();
@@ -395,14 +251,15 @@ export function SmartUnifiedCheckout({
     }
   }, [isOpen]);
 
-  if (checkoutMode.mode === 'invalid') {
+  // Validate current attendance
+  if (!currentAttendance || currentAttendance.checkOutTime) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="text-red-600">Invalid Action</DialogTitle>
             <DialogDescription>
-              Cannot determine the appropriate checkout action. Please refresh the page and try again.
+              Cannot check out: You are not currently checked in or have already checked out.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -415,70 +272,41 @@ export function SmartUnifiedCheckout({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className={`flex items-center gap-2 text-${checkoutMode.color}-600`}>
-            {checkoutMode.mode === 'ot_only' ? (
-              <Zap className="h-5 w-5" />
-            ) : (
-              <Timer className="h-5 w-5" />
-            )}
-            {checkoutMode.title}
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <Timer className="h-5 w-5" />
+            Check Out from Work
           </DialogTitle>
           <DialogDescription>
-            {checkoutMode.description}
+            Complete your work session and record your location.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Working Hours Preview */}
+          {/* Working Hours Summary */}
           <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                Working Hours Summary
+                Today's Work Session
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-white rounded-lg border">
-                  <div className="text-xs text-muted-foreground">Regular Hours</div>
+                  <div className="text-xs text-muted-foreground">Check In Time</div>
                   <div className="font-semibold text-green-600">
-                    {workingHours.regularHours.toFixed(1)}h
+                    <TimeDisplay time={currentAttendance.checkInTime} format12Hour={true} />
                   </div>
                 </div>
                 <div className="text-center p-3 bg-white rounded-lg border">
-                  <div className="text-xs text-muted-foreground">Overtime Hours</div>
-                  <div className={`font-semibold ${workingHours.isCurrentlyOvertime ? 'text-orange-600' : 'text-gray-400'}`}>
-                    {workingHours.overtimeHours.toFixed(1)}h
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-white rounded-lg border">
-                  <div className="text-xs text-muted-foreground">Total Time</div>
+                  <div className="text-xs text-muted-foreground">Hours Worked</div>
                   <div className="font-semibold text-blue-600">
-                    {workingHours.totalWorked.toFixed(1)}h
+                    {workingHours.totalWorked}h
                   </div>
                 </div>
               </div>
-
-              {/* Status indicators */}
-              {workingHours.isCurrentlyOvertime && (
-                <Alert className="mt-3 border-orange-200 bg-orange-50">
-                  <Zap className="h-4 w-4 text-orange-600" />
-                  <AlertDescription className="text-orange-700">
-                    Currently in overtime: {workingHours.overtimeMinutes} minutes beyond department schedule
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {workingHours.earlyCheckout && (
-                <Alert className="mt-3 border-yellow-200 bg-yellow-50">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                  <AlertDescription className="text-yellow-700">
-                    Early checkout detected: Less than {departmentTiming?.workingHours || 8} hours worked
-                  </AlertDescription>
-                </Alert>
-              )}
             </CardContent>
           </Card>
 
@@ -487,138 +315,130 @@ export function SmartUnifiedCheckout({
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Location Verification
+                Checkout Location
+                {!isOnline && <WifiOff className="h-4 w-4 text-red-500" />}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {!location ? (
-                <Button 
-                  onClick={getCurrentLocation} 
-                  disabled={isLoadingLocation}
-                  variant="outline" 
-                  className="w-full"
-                >
-                  {isLoadingLocation ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <MapPin className="h-4 w-4 mr-2" />
-                  )}
-                  {isLoadingLocation ? 'Getting Location...' : 'Get Current Location'}
-                </Button>
-              ) : (
+            <CardContent className="space-y-3">
+              {isLoadingLocation ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Getting your location...
+                </div>
+              ) : locationError ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium">Location captured</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {locationAddress || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
+                  <Alert className="border-red-200 bg-red-50">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-700">
+                      {locationError}
+                    </AlertDescription>
+                  </Alert>
+                  <Button onClick={getCurrentLocation} variant="outline" size="sm" className="w-full">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Try Again
+                  </Button>
+                </div>
+              ) : location ? (
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">Location captured</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {locationAddress || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
+                    </p>
                   </div>
                 </div>
-              )}
-              
-              {locationError && (
-                <Alert className="mt-2 border-red-200 bg-red-50">
-                  <XCircle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-700">{locationError}</AlertDescription>
-                </Alert>
+              ) : (
+                <Button onClick={getCurrentLocation} variant="outline" size="sm" className="w-full">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Get Location
+                </Button>
               )}
             </CardContent>
           </Card>
 
-          {/* Photo Section (only if required) */}
-          {needsPhoto && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  Photo Verification
-                  <Badge variant="secondary" className="text-xs">Required</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!capturedPhoto && !isCameraActive && (
-                  <Button onClick={startCamera} variant="outline" className="w-full">
-                    <Camera className="h-4 w-4 mr-2" />
-                    Take Selfie
-                  </Button>
-                )}
+          {/* Photo Section (Optional) */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Camera className="h-4 w-4" />
+                Checkout Photo (Optional)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!capturedPhoto && !isCameraActive && (
+                <Button onClick={startCamera} variant="outline" size="sm" className="w-full">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Take Photo
+                </Button>
+              )}
 
-                {/* Camera view */}
-                {isCameraActive && (
-                  <div className="space-y-2">
-                    <div className="relative bg-black rounded border overflow-hidden">
-                      <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        playsInline
-                        muted
-                        className="w-full h-64 object-cover"
-                        style={{ transform: 'scaleX(-1)' }}
-                      />
-                      <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                        LIVE
-                      </div>
+              {/* Camera view */}
+              {isCameraActive && !capturedPhoto && (
+                <div className="space-y-2">
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-48 object-cover"
+                      style={{ transform: 'scaleX(-1)' }}
+                    />
+                    <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                      LIVE
                     </div>
-                    <div className="flex gap-2">
-                      <Button onClick={capturePhoto} className="flex-1">
-                        <Camera className="h-4 w-4 mr-2" />
-                        Capture
-                      </Button>
-                      <Button onClick={resetPhoto} variant="outline">
-                        Cancel
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={capturePhoto} className="flex-1">
+                      <Camera className="h-4 w-4 mr-2" />
+                      Capture
+                    </Button>
+                    <Button onClick={resetPhoto} variant="outline">
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Captured photo */}
+              {capturedPhoto && (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <img 
+                      src={capturedPhoto} 
+                      alt="Checkout photo" 
+                      className="w-full h-32 object-cover rounded border"
+                    />
+                    <div className="absolute top-2 right-2">
+                      <Button onClick={resetPhoto} size="sm" variant="outline">
+                        Retake
                       </Button>
                     </div>
                   </div>
-                )}
-
-                {/* Captured photo */}
-                {capturedPhoto && (
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <img 
-                        src={capturedPhoto} 
-                        alt="Captured selfie" 
-                        className="w-full h-32 object-cover rounded border"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <Button onClick={resetPhoto} size="sm" variant="outline">
-                          Retake
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium">Photo captured</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Photo captured</span>
                   </div>
-                )}
+                </div>
+              )}
 
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
-              </CardContent>
-            </Card>
-          )}
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
+            </CardContent>
+          </Card>
 
           {/* Reason Section */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">
-                Reason {(workingHours.isCurrentlyOvertime || workingHours.earlyCheckout) && "(Required)"}
+                Checkout Notes (Optional)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
-                placeholder={
-                  checkoutMode.mode === 'ot_only' 
-                    ? "Reason for ending overtime session..."
-                    : workingHours.isCurrentlyOvertime 
-                      ? "Reason for overtime work..."
-                      : workingHours.earlyCheckout
-                        ? "Reason for early checkout..."
-                        : "Optional reason for checkout..."
-                }
-                value={checkoutMode.mode === 'ot_only' ? otReason : reason}
-                onChange={(e) => checkoutMode.mode === 'ot_only' ? setOtReason(e.target.value) : setReason(e.target.value)}
+                placeholder="Any notes about your work session today..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
                 rows={3}
               />
             </CardContent>
@@ -631,23 +451,15 @@ export function SmartUnifiedCheckout({
           </Button>
           <Button 
             onClick={handleCheckout} 
-            disabled={
-              isSubmitting || 
-              !location || 
-              (needsPhoto && !capturedPhoto) ||
-              ((workingHours.isCurrentlyOvertime || workingHours.earlyCheckout) && 
-               !(checkoutMode.mode === 'ot_only' ? otReason : reason))
-            }
-            className={`bg-${checkoutMode.color}-600 hover:bg-${checkoutMode.color}-700`}
+            disabled={isSubmitting || !location}
+            className="bg-red-600 hover:bg-red-700"
           >
             {isSubmitting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : checkoutMode.mode === 'ot_only' ? (
-              <Zap className="h-4 w-4 mr-2" />
             ) : (
               <Timer className="h-4 w-4 mr-2" />
             )}
-            {isSubmitting ? 'Processing...' : checkoutMode.actionText}
+            {isSubmitting ? 'Checking Out...' : 'Check Out'}
           </Button>
         </DialogFooter>
       </DialogContent>
