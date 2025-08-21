@@ -436,9 +436,6 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
                   <div className="text-xs text-muted-foreground break-words">
                     {location.address}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Accuracy: ±{Math.round(location.accuracy)}m
-                  </div>
                 </div>
               ) : locationError ? (
                 <div className="space-y-2">
