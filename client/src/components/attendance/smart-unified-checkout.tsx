@@ -236,21 +236,25 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
       let lineHeight = 14;
       let y = canvas.height - 30;
       
+      let isFirstLine = true;
+      
       for (let word of words) {
         const testLine = line + word + ' ';
         const metrics = context.measureText(testLine);
         
         if (metrics.width > maxWidth && line !== '') {
-          context.fillText(`Location: ${line.trim()}`, 10, y);
+          const prefix = isFirstLine ? 'Location: ' : '';
+          context.fillText(`${prefix}${line.trim()}`, 10, y);
           line = word + ' ';
           y += lineHeight;
+          isFirstLine = false;
         } else {
           line = testLine;
         }
       }
       
       if (line.trim()) {
-        const prefix = y === canvas.height - 30 ? 'Location: ' : '';
+        const prefix = isFirstLine ? 'Location: ' : '';
         context.fillText(`${prefix}${line.trim()}`, 10, y);
       }
     }
