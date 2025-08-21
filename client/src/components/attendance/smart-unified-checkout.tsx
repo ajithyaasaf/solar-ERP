@@ -218,22 +218,41 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
     
     // Add timestamp overlay
     context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    context.fillRect(0, canvas.height - 60, canvas.width, 60);
+    context.fillRect(0, canvas.height - 80, canvas.width, 80);
     
     context.fillStyle = 'white';
-    context.font = '16px Arial';
+    context.font = '14px Arial';
     context.fillText(
       `Checkout: ${new Date().toLocaleString()}`, 
       10, 
-      canvas.height - 30
+      canvas.height - 50
     );
     
     if (location) {
-      context.fillText(
-        `Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`, 
-        10, 
-        canvas.height - 10
-      );
+      // Handle long addresses by wrapping text
+      const maxWidth = canvas.width - 20;
+      const words = location.address.split(' ');
+      let line = '';
+      let lineHeight = 14;
+      let y = canvas.height - 30;
+      
+      for (let word of words) {
+        const testLine = line + word + ' ';
+        const metrics = context.measureText(testLine);
+        
+        if (metrics.width > maxWidth && line !== '') {
+          context.fillText(`Location: ${line.trim()}`, 10, y);
+          line = word + ' ';
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      
+      if (line.trim()) {
+        const prefix = y === canvas.height - 30 ? 'Location: ' : '';
+        context.fillText(`${prefix}${line.trim()}`, 10, y);
+      }
     }
     
     // Convert to base64
