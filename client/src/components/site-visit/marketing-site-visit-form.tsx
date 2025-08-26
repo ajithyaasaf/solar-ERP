@@ -35,7 +35,12 @@ import {
   panelWatts,
   inverterWatts,
   batteryBrands,
-  waterHeaterBrands
+  waterHeaterBrands,
+  floorLevels,
+  structureTypes,
+  monoRailOptions,
+  heightRange,
+  workScopeOptions
 } from "@shared/schema";
 
 interface MarketingSiteVisitFormProps {
@@ -71,6 +76,17 @@ interface OnGridConfig extends BaseConfig {
   floor?: string;
   panelCount: number;
   structureHeight: number;
+  // New fields from client specification
+  structureType?: string;
+  gpStructure?: {
+    lowerEndHeight?: string;
+    higherEndHeight?: string;
+  };
+  monoRail?: {
+    type?: string;
+  };
+  civilWorkScope?: string;
+  netMeterScope?: string;
 }
 
 interface OffGridConfig extends OnGridConfig {
@@ -78,14 +94,22 @@ interface OffGridConfig extends OnGridConfig {
   voltage: number;
   batteryCount: number;
   batteryStands?: string;
+  // Off-grid doesn't have net meter scope
 }
 
-interface HybridConfig extends OffGridConfig {}
+interface HybridConfig extends OffGridConfig {
+  electricalWorkScope?: string;
+  netMeterScope?: string; // Hybrid has net meter back
+}
 
 interface WaterHeaterConfig extends BaseConfig {
   brand: string;
   litre: number;
   heatingCoil?: string;
+  // New fields from client specification
+  floor?: string;
+  plumbingWorkScope?: string;
+  civilWorkScope?: string;
 }
 
 interface WaterPumpConfig extends BaseConfig {
@@ -95,6 +119,17 @@ interface WaterPumpConfig extends BaseConfig {
   structureHeight: number;
   panelBrand: string;
   panelCount: number;
+  // New fields from client specification
+  structureType?: string;
+  gpStructure?: {
+    lowerEndHeight?: string;
+    higherEndHeight?: string;
+  };
+  monoRail?: {
+    type?: string;
+  };
+  plumbingWorkScope?: string;
+  civilWorkScope?: string;
 }
 
 // Project type options with descriptions
@@ -137,11 +172,21 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         inverterPhase: 'single_phase',
         lightningArrest: false,
         earth: 'ac',
-        floor: '',
+        floor: '0',
         panelCount: 1,
         structureHeight: 0,
         projectValue: 0,
-        others: ''
+        others: '',
+        structureType: 'gp_structure',
+        gpStructure: {
+          lowerEndHeight: '0',
+          higherEndHeight: '0'
+        },
+        monoRail: {
+          type: 'mini_rail'
+        },
+        civilWorkScope: 'customer_scope',
+        netMeterScope: 'customer_scope'
       } : undefined,
       offGridConfig: projectType === 'off_grid' ? {
         solarPanelMake: 'premier',
@@ -151,7 +196,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         inverterPhase: 'single_phase',
         lightningArrest: false,
         earth: 'ac',
-        floor: '',
+        floor: '0',
         panelCount: 1,
         structureHeight: 0,
         batteryBrand: 'exide',
@@ -159,7 +204,16 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         batteryCount: 1,
         batteryStands: '',
         projectValue: 0,
-        others: ''
+        others: '',
+        structureType: 'gp_structure',
+        gpStructure: {
+          lowerEndHeight: '0',
+          higherEndHeight: '0'
+        },
+        monoRail: {
+          type: 'mini_rail'
+        },
+        civilWorkScope: 'customer_scope'
       } : undefined,
       hybridConfig: projectType === 'hybrid' ? {
         solarPanelMake: 'premier',
@@ -169,7 +223,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         inverterPhase: 'single_phase',
         lightningArrest: false,
         earth: 'ac',
-        floor: '',
+        floor: '0',
         panelCount: 1,
         structureHeight: 0,
         batteryBrand: 'exide',
@@ -177,14 +231,28 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         batteryCount: 1,
         batteryStands: '',
         projectValue: 0,
-        others: ''
+        others: '',
+        structureType: 'gp_structure',
+        gpStructure: {
+          lowerEndHeight: '0',
+          higherEndHeight: '0'
+        },
+        monoRail: {
+          type: 'mini_rail'
+        },
+        civilWorkScope: 'customer_scope',
+        electricalWorkScope: 'customer_scope',
+        netMeterScope: 'customer_scope'
       } : undefined,
       waterHeaterConfig: projectType === 'water_heater' ? {
         brand: 'venus',
         litre: 100,
         heatingCoil: '',
         projectValue: 0,
-        others: ''
+        others: '',
+        floor: '0',
+        plumbingWorkScope: 'customer_scope',
+        civilWorkScope: 'customer_scope'
       } : undefined,
       waterPumpConfig: projectType === 'water_pump' ? {
         hp: '1',
@@ -194,7 +262,17 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         panelBrand: 'premier',
         panelCount: 1,
         projectValue: 0,
-        others: ''
+        others: '',
+        structureType: 'gp_structure',
+        gpStructure: {
+          lowerEndHeight: '0',
+          higherEndHeight: '0'
+        },
+        monoRail: {
+          type: 'mini_rail'
+        },
+        plumbingWorkScope: 'customer_scope',
+        civilWorkScope: 'customer_scope'
       } : undefined
     }));
   };
@@ -433,12 +511,22 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Floor Details</Label>
-                    <Input
-                      value={formData.onGridConfig.floor || ''}
-                      onChange={(e) => updateConfig('onGridConfig', { floor: e.target.value })}
-                      placeholder="Ground floor, First floor, etc."
-                    />
+                    <Label>Floor Level *</Label>
+                    <Select 
+                      value={formData.onGridConfig.floor || '0'}
+                      onValueChange={(value) => updateConfig('onGridConfig', { floor: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select floor level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {floorLevels.map((floor) => (
+                          <SelectItem key={floor} value={floor}>
+                            {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -449,6 +537,152 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => updateConfig('onGridConfig', { projectValue: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
+                  </div>
+                </div>
+
+                {/* Structure Details Section */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Structure Type *</Label>
+                      <Select 
+                        value={formData.onGridConfig.structureType || 'gp_structure'}
+                        onValueChange={(value) => updateConfig('onGridConfig', { structureType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select structure type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {structureTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.onGridConfig.structureType === 'gp_structure' && (
+                      <>
+                        <div>
+                          <Label>Lower End Height (ft)</Label>
+                          <Select 
+                            value={formData.onGridConfig.gpStructure?.lowerEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('onGridConfig', { 
+                              gpStructure: { 
+                                ...formData.onGridConfig.gpStructure, 
+                                lowerEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Higher End Height (ft)</Label>
+                          <Select 
+                            value={formData.onGridConfig.gpStructure?.higherEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('onGridConfig', { 
+                              gpStructure: { 
+                                ...formData.onGridConfig.gpStructure, 
+                                higherEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
+                    {formData.onGridConfig.structureType === 'mono_rail' && (
+                      <div>
+                        <Label>Mono Rail Type</Label>
+                        <Select 
+                          value={formData.onGridConfig.monoRail?.type || 'mini_rail'}
+                          onValueChange={(value) => updateConfig('onGridConfig', { 
+                            monoRail: { 
+                              ...formData.onGridConfig.monoRail, 
+                              type: value 
+                            } 
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select mono rail type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {monoRailOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Work Scope Section */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Civil Work Scope</Label>
+                      <Select 
+                        value={formData.onGridConfig.civilWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('onGridConfig', { civilWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Net Meter Scope</Label>
+                      <Select 
+                        value={formData.onGridConfig.netMeterScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('onGridConfig', { netMeterScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select net meter scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -591,6 +825,25 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Floor Level *</Label>
+                    <Select 
+                      value={formData.offGridConfig.floor || '0'}
+                      onValueChange={(value) => updateConfig('offGridConfig', { floor: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select floor level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {floorLevels.map((floor) => (
+                          <SelectItem key={floor} value={floor}>
+                            {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
                     <Label>Project Value (₹)</Label>
                     <Input
                       type="number"
@@ -598,6 +851,133 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => updateConfig('offGridConfig', { projectValue: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
+                  </div>
+                </div>
+
+                {/* Structure Details Section for Off-Grid */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Structure Type *</Label>
+                      <Select 
+                        value={formData.offGridConfig.structureType || 'gp_structure'}
+                        onValueChange={(value) => updateConfig('offGridConfig', { structureType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select structure type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {structureTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.offGridConfig.structureType === 'gp_structure' && (
+                      <>
+                        <div>
+                          <Label>Lower End Height (ft)</Label>
+                          <Select 
+                            value={formData.offGridConfig.gpStructure?.lowerEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('offGridConfig', { 
+                              gpStructure: { 
+                                ...formData.offGridConfig.gpStructure, 
+                                lowerEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Higher End Height (ft)</Label>
+                          <Select 
+                            value={formData.offGridConfig.gpStructure?.higherEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('offGridConfig', { 
+                              gpStructure: { 
+                                ...formData.offGridConfig.gpStructure, 
+                                higherEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
+                    {formData.offGridConfig.structureType === 'mono_rail' && (
+                      <div>
+                        <Label>Mono Rail Type</Label>
+                        <Select 
+                          value={formData.offGridConfig.monoRail?.type || 'mini_rail'}
+                          onValueChange={(value) => updateConfig('offGridConfig', { 
+                            monoRail: { 
+                              ...formData.offGridConfig.monoRail, 
+                              type: value 
+                            } 
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select mono rail type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {monoRailOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Work Scope Section for Off-Grid */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Civil Work Scope</Label>
+                      <Select 
+                        value={formData.offGridConfig.civilWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('offGridConfig', { civilWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -692,6 +1072,25 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Floor Level *</Label>
+                    <Select 
+                      value={formData.hybridConfig.floor || '0'}
+                      onValueChange={(value) => updateConfig('hybridConfig', { floor: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select floor level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {floorLevels.map((floor) => (
+                          <SelectItem key={floor} value={floor}>
+                            {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
                     <Label>Project Value (₹)</Label>
                     <Input
                       type="number"
@@ -699,6 +1098,171 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => updateConfig('hybridConfig', { projectValue: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
+                  </div>
+                </div>
+
+                {/* Structure Details Section for Hybrid */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Structure Type *</Label>
+                      <Select 
+                        value={formData.hybridConfig.structureType || 'gp_structure'}
+                        onValueChange={(value) => updateConfig('hybridConfig', { structureType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select structure type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {structureTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.hybridConfig.structureType === 'gp_structure' && (
+                      <>
+                        <div>
+                          <Label>Lower End Height (ft)</Label>
+                          <Select 
+                            value={formData.hybridConfig.gpStructure?.lowerEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('hybridConfig', { 
+                              gpStructure: { 
+                                ...formData.hybridConfig.gpStructure, 
+                                lowerEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Higher End Height (ft)</Label>
+                          <Select 
+                            value={formData.hybridConfig.gpStructure?.higherEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('hybridConfig', { 
+                              gpStructure: { 
+                                ...formData.hybridConfig.gpStructure, 
+                                higherEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
+                    {formData.hybridConfig.structureType === 'mono_rail' && (
+                      <div>
+                        <Label>Mono Rail Type</Label>
+                        <Select 
+                          value={formData.hybridConfig.monoRail?.type || 'mini_rail'}
+                          onValueChange={(value) => updateConfig('hybridConfig', { 
+                            monoRail: { 
+                              ...formData.hybridConfig.monoRail, 
+                              type: value 
+                            } 
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select mono rail type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {monoRailOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Work Scope Section for Hybrid */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Civil Work Scope</Label>
+                      <Select 
+                        value={formData.hybridConfig.civilWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('hybridConfig', { civilWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Electrical Work Scope</Label>
+                      <Select 
+                        value={formData.hybridConfig.electricalWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('hybridConfig', { electricalWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select electrical work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Net Meter Scope</Label>
+                      <Select 
+                        value={formData.hybridConfig.netMeterScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('hybridConfig', { netMeterScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select net meter scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -765,6 +1329,25 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Floor Level *</Label>
+                    <Select 
+                      value={formData.waterHeaterConfig.floor || '0'}
+                      onValueChange={(value) => updateConfig('waterHeaterConfig', { floor: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select floor level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {floorLevels.map((floor) => (
+                          <SelectItem key={floor} value={floor}>
+                            {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
                     <Label>Project Value (₹)</Label>
                     <Input
                       type="number"
@@ -772,6 +1355,50 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => updateConfig('waterHeaterConfig', { projectValue: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
+                  </div>
+                </div>
+
+                {/* Work Scope Section for Water Heater */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Plumbing Work Scope</Label>
+                      <Select 
+                        value={formData.waterHeaterConfig.plumbingWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('waterHeaterConfig', { plumbingWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select plumbing work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Civil Work Scope</Label>
+                      <Select 
+                        value={formData.waterHeaterConfig.civilWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('waterHeaterConfig', { civilWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select civil work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -883,6 +1510,152 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => updateConfig('waterPumpConfig', { projectValue: parseInt(e.target.value) || 0 })}
                       min="0"
                     />
+                  </div>
+                </div>
+
+                {/* Structure Details Section for Water Pump */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Structure Type *</Label>
+                      <Select 
+                        value={formData.waterPumpConfig.structureType || 'gp_structure'}
+                        onValueChange={(value) => updateConfig('waterPumpConfig', { structureType: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select structure type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {structureTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.waterPumpConfig.structureType === 'gp_structure' && (
+                      <>
+                        <div>
+                          <Label>Lower End Height (ft)</Label>
+                          <Select 
+                            value={formData.waterPumpConfig.gpStructure?.lowerEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('waterPumpConfig', { 
+                              gpStructure: { 
+                                ...formData.waterPumpConfig.gpStructure, 
+                                lowerEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Higher End Height (ft)</Label>
+                          <Select 
+                            value={formData.waterPumpConfig.gpStructure?.higherEndHeight || '0'}
+                            onValueChange={(value) => updateConfig('waterPumpConfig', { 
+                              gpStructure: { 
+                                ...formData.waterPumpConfig.gpStructure, 
+                                higherEndHeight: value 
+                              } 
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select height" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {heightRange.map((height) => (
+                                <SelectItem key={height} value={height}>
+                                  {height} ft
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
+                    {formData.waterPumpConfig.structureType === 'mono_rail' && (
+                      <div>
+                        <Label>Mono Rail Type</Label>
+                        <Select 
+                          value={formData.waterPumpConfig.monoRail?.type || 'mini_rail'}
+                          onValueChange={(value) => updateConfig('waterPumpConfig', { 
+                            monoRail: { 
+                              ...formData.waterPumpConfig.monoRail, 
+                              type: value 
+                            } 
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select mono rail type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {monoRailOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Work Scope Section for Water Pump */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Plumbing Work Scope</Label>
+                      <Select 
+                        value={formData.waterPumpConfig.plumbingWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('waterPumpConfig', { plumbingWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select plumbing work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Civil Work Scope</Label>
+                      <Select 
+                        value={formData.waterPumpConfig.civilWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('waterPumpConfig', { civilWorkScope: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select civil work scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workScopeOptions.map((scope) => (
+                            <SelectItem key={scope} value={scope}>
+                              {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 

@@ -192,6 +192,31 @@ export const waterHeaterBrands = [
   "venus", "pressurised", "non_pressurised", "hykon"
 ] as const;
 
+// New schema additions for enhanced project specifications
+
+// Floor levels for installations
+export const floorLevels = [
+  "0", "1", "2", "3", "4"
+] as const;
+
+// Structure types
+export const structureTypes = [
+  "gp_structure", "mono_rail"
+] as const;
+
+// Mono rail options
+export const monoRailOptions = [
+  "mini_rail", "long_rail"
+] as const;
+
+// Height ranges for structures (0 to 14)
+export const heightRange = Array.from({ length: 15 }, (_, i) => i.toString()) as readonly string[];
+
+// Scope options for work assignments
+export const workScopeOptions = [
+  "customer_scope", "company_scope"
+] as const;
+
 // Project types for marketing department
 export const marketingProjectTypes = [
   "on_grid", "off_grid", "hybrid", "water_heater", "water_pump"
@@ -248,11 +273,22 @@ export const onGridConfigSchema = z.object({
   inverterPhase: z.enum(inverterPhases),
   lightningArrest: z.boolean().default(false),
   earth: z.enum(earthingTypes),
-  floor: z.string().optional(),
+  floor: z.enum(floorLevels).optional(),
   panelCount: z.number().min(1),
   structureHeight: z.number().min(0),
   projectValue: z.number().min(0),
-  others: z.string().optional()
+  others: z.string().optional(),
+  // New fields from client specification
+  structureType: z.enum(structureTypes).optional(),
+  gpStructure: z.object({
+    lowerEndHeight: z.enum(heightRange).optional(),
+    higherEndHeight: z.enum(heightRange).optional()
+  }).optional(),
+  monoRail: z.object({
+    type: z.enum(monoRailOptions).optional()
+  }).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  netMeterScope: z.enum(workScopeOptions).optional()
 });
 
 export const offGridConfigSchema = onGridConfigSchema.extend({
@@ -260,16 +296,23 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
   batteryStands: z.string().optional()
-});
+}).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
-export const hybridConfigSchema = offGridConfigSchema;
+export const hybridConfigSchema = offGridConfigSchema.extend({
+  electricalWorkScope: z.enum(workScopeOptions).optional(),
+  netMeterScope: z.enum(workScopeOptions).optional() // Hybrid has net meter back
+});
 
 export const waterHeaterConfigSchema = z.object({
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
   heatingCoil: z.string().optional(),
   projectValue: z.number().min(0),
-  others: z.string().optional()
+  others: z.string().optional(),
+  // New fields from client specification
+  floor: z.enum(floorLevels).optional(),
+  plumbingWorkScope: z.enum(workScopeOptions).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional()
 });
 
 export const waterPumpConfigSchema = z.object({
@@ -280,7 +323,18 @@ export const waterPumpConfigSchema = z.object({
   panelBrand: z.enum(solarPanelBrands),
   panelCount: z.number().min(1),
   projectValue: z.number().min(0),
-  others: z.string().optional()
+  others: z.string().optional(),
+  // New fields from client specification
+  structureType: z.enum(structureTypes).optional(),
+  gpStructure: z.object({
+    lowerEndHeight: z.enum(heightRange).optional(),
+    higherEndHeight: z.enum(heightRange).optional()
+  }).optional(),
+  monoRail: z.object({
+    type: z.enum(monoRailOptions).optional()
+  }).optional(),
+  plumbingWorkScope: z.enum(workScopeOptions).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional()
 });
 
 // Marketing site visit schema
