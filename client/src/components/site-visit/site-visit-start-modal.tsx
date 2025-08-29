@@ -737,8 +737,34 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
   // Map administration to admin for form logic
   const normalizedDepartment = userDepartment.toLowerCase() === 'administration' ? 'admin' : userDepartment;
   
+  // Enhanced validation functions
+  const validateMobileNumber = (mobile: string) => {
+    if (!mobile) return { isValid: false, message: "Mobile number is required" };
+    if (mobile.length < 10) return { isValid: false, message: "Mobile number must be at least 10 digits" };
+    if (mobile.length > 15) return { isValid: false, message: "Mobile number cannot exceed 15 digits" };
+    if (!/^\d+$/.test(mobile)) return { isValid: false, message: "Mobile number should contain only digits" };
+    return { isValid: true, message: "" };
+  };
+
+  const validateCustomerName = (name: string) => {
+    if (!name) return { isValid: false, message: "Customer name is required" };
+    if (name.length < 2) return { isValid: false, message: "Customer name must be at least 2 characters" };
+    return { isValid: true, message: "" };
+  };
+
+  const validateAddress = (address: string) => {
+    if (!address) return { isValid: false, message: "Address is required" };
+    if (address.length < 3) return { isValid: false, message: "Address must be at least 3 characters" };
+    return { isValid: true, message: "" };
+  };
+
+  // Validation states
+  const mobileValidation = validateMobileNumber(formData.customer.mobile);
+  const nameValidation = validateCustomerName(formData.customer.name);
+  const addressValidation = validateAddress(formData.customer.address);
+
   const canProceedToStep2 = locationCaptured && formData.visitPurpose;
-  const canProceedToStep3 = formData.customer.name && formData.customer.mobile && formData.customer.address && formData.customer.propertyType;
+  const canProceedToStep3 = nameValidation.isValid && mobileValidation.isValid && addressValidation.isValid && formData.customer.propertyType;
   const canProceedToStep4 = (normalizedDepartment === 'technical' && formData.technicalData) ||
                            (normalizedDepartment === 'marketing' && formData.marketingData) ||
                            (normalizedDepartment === 'admin' && formData.adminData);
@@ -889,9 +915,15 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                         ...prev,
                         customer: { ...prev.customer, mobile: e.target.value }
                       }))}
-                      placeholder="Enter mobile number"
-                      className="text-sm"
+                      placeholder="Enter 10-digit mobile number"
+                      className={`text-sm ${!mobileValidation.isValid && formData.customer.mobile ? 'border-red-500 focus:border-red-500' : ''}`}
                     />
+                    {!mobileValidation.isValid && formData.customer.mobile && (
+                      <p className="text-red-500 text-xs mt-1">{mobileValidation.message}</p>
+                    )}
+                    {mobileValidation.isValid && formData.customer.mobile && (
+                      <p className="text-green-600 text-xs mt-1">✓ Valid mobile number</p>
+                    )}
                   </div>
 
                   <div>
@@ -903,9 +935,15 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                         ...prev,
                         customer: { ...prev.customer, address: e.target.value }
                       }))}
-                      placeholder="Enter complete address"
-                      className="text-sm min-h-[60px] sm:min-h-[80px]"
+                      placeholder="Enter complete address (minimum 3 characters)"
+                      className={`text-sm min-h-[60px] sm:min-h-[80px] ${!addressValidation.isValid && formData.customer.address ? 'border-red-500 focus:border-red-500' : ''}`}
                     />
+                    {!addressValidation.isValid && formData.customer.address && (
+                      <p className="text-red-500 text-xs mt-1">{addressValidation.message}</p>
+                    )}
+                    {addressValidation.isValid && formData.customer.address && (
+                      <p className="text-green-600 text-xs mt-1">✓ Valid address</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
