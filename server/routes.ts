@@ -5415,10 +5415,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'administration': 'admin',
         'operations': 'admin', // Operations users are often admin users
         'technical': 'technical',
-        'marketing': 'marketing'
+        'marketing': 'marketing',
+        'sales': 'marketing', // Sales users work closely with marketing for site visits
+        'hr': 'admin', // HR users are admin for site visits
+        'housekeeping': 'admin' // Housekeeping users are admin for site visits
       };
       
-      const mappedDepartment = departmentMapping[user.department.toLowerCase()] || user.department;
+      const mappedDepartment = departmentMapping[user.department.toLowerCase()] || 'admin';
       
       // Prepare and validate input data
       const requestData = {
