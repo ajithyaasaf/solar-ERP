@@ -21,7 +21,15 @@ import {
   CheckCircle,
   AlertCircle,
   Eye,
-  ExternalLink
+  ExternalLink,
+  Battery,
+  Flame,
+  Waves,
+  Droplets,
+  CreditCard,
+  Wrench,
+  Users,
+  AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -1117,36 +1125,175 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                   Administrative Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
+                {/* Bank Process */}
                 {siteVisit.adminData.bankProcess && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Bank Process</p>
-                    <p className="font-medium">{siteVisit.adminData.bankProcess.step}</p>
-                    {siteVisit.adminData.bankProcess.description && (
-                      <p className="text-sm text-muted-foreground">{siteVisit.adminData.bankProcess.description}</p>
-                    )}
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-blue-700 flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Bank Process Details
+                    </h4>
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Process Step</p>
+                          <p className="font-medium capitalize">{siteVisit.adminData.bankProcess.step.replace(/_/g, ' ')}</p>
+                        </div>
+                        {siteVisit.adminData.bankProcess.description && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Description</p>
+                            <p className="text-sm bg-white p-2 rounded border">{siteVisit.adminData.bankProcess.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 
+                {/* EB Process */}
                 {siteVisit.adminData.ebProcess && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">EB Process</p>
-                    <p className="font-medium">{siteVisit.adminData.ebProcess.type}</p>
-                    {siteVisit.adminData.ebProcess.description && (
-                      <p className="text-sm text-muted-foreground">{siteVisit.adminData.ebProcess.description}</p>
-                    )}
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-yellow-700 flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      EB Office Process Details
+                    </h4>
+                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Process Type</p>
+                          <p className="font-medium capitalize">{siteVisit.adminData.ebProcess.type.replace(/_/g, ' ')}</p>
+                        </div>
+                        {siteVisit.adminData.ebProcess.description && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Description</p>
+                            <p className="text-sm bg-white p-2 rounded border">{siteVisit.adminData.ebProcess.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 
+                {/* Other Administrative Fields */}
                 {Object.entries(siteVisit.adminData).map(([key, value]) => {
                   if (key === 'bankProcess' || key === 'ebProcess' || !value) return null;
+                  
+                  const fieldLabels: Record<string, string> = {
+                    purchase: 'Purchase Details',
+                    driving: 'Driving/Transportation',
+                    officialCashTransactions: 'Official Cash Transactions',
+                    officialPersonalWork: 'Official Personal Work',
+                    others: 'Other Administrative Work'
+                  };
+                  
                   return (
-                    <div key={key}>
-                      <p className="text-sm text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                      <p className="font-medium">{value}</p>
+                    <div key={key} className="space-y-2">
+                      <h5 className="font-medium text-gray-700">{fieldLabels[key] || key.replace(/([A-Z])/g, ' $1')}</h5>
+                      <div className="bg-gray-50 p-3 rounded-lg border">
+                        <p className="text-sm whitespace-pre-wrap">{value as string}</p>
+                      </div>
                     </div>
                   );
                 })}
+              </CardContent>
+            </Card>
+          )}
+
+          {siteVisit.technicalData && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5" />
+                  Technical Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Service Types */}
+                {siteVisit.technicalData.serviceTypes && siteVisit.technicalData.serviceTypes.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-blue-700">Service Types</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {siteVisit.technicalData.serviceTypes.map((serviceType) => {
+                        const serviceLabels: Record<string, string> = {
+                          'on_grid': 'On-grid',
+                          'off_grid': 'Off-grid', 
+                          'hybrid': 'Hybrid',
+                          'solar_panel': 'Solar Panel',
+                          'camera': 'Camera',
+                          'water_pump': 'Water Pump',
+                          'water_heater': 'Water Heater',
+                          'lights_accessories': 'Lights & Accessories',
+                          'others': 'Others'
+                        };
+                        return (
+                          <Badge key={serviceType} variant="secondary" className="bg-blue-100 text-blue-800">
+                            {serviceLabels[serviceType] || serviceType.replace('_', ' ')}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Work Type and Status */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {siteVisit.technicalData.workType && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Type of Work</p>
+                      <p className="font-medium capitalize">{siteVisit.technicalData.workType.replace(/_/g, ' ')}</p>
+                    </div>
+                  )}
+                  {siteVisit.technicalData.workingStatus && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Working Status</p>
+                      <div className="flex items-center gap-2">
+                        {siteVisit.technicalData.workingStatus === 'completed' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                        )}
+                        <p className="font-medium capitalize">{siteVisit.technicalData.workingStatus}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pending Remarks */}
+                {siteVisit.technicalData.workingStatus === 'pending' && siteVisit.technicalData.pendingRemarks && (
+                  <div className="space-y-2">
+                    <h5 className="font-medium text-yellow-700">Pending Work Details</h5>
+                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                      <p className="text-sm whitespace-pre-wrap">{siteVisit.technicalData.pendingRemarks}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Team Members */}
+                {siteVisit.technicalData.teamMembers && siteVisit.technicalData.teamMembers.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-green-700 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Technical Team Members
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {siteVisit.technicalData.teamMembers.map((member, index) => (
+                        <Badge key={index} variant="outline" className="bg-green-50 text-green-800 border-green-200">
+                          {member}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Description */}
+                {siteVisit.technicalData.description && (
+                  <div className="space-y-2">
+                    <h5 className="font-medium text-gray-700">Additional Description</h5>
+                    <div className="bg-gray-50 p-3 rounded-lg border">
+                      <p className="text-sm whitespace-pre-wrap">{siteVisit.technicalData.description}</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
