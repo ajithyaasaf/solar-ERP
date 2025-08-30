@@ -478,10 +478,6 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* DEBUG: Show what marketing data is available */}
-                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                  Debug: Available marketing data keys: {Object.keys(siteVisit.marketingData).join(', ')}
-                </div>
                 <div className="flex items-center gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Update Requirements</p>
@@ -581,6 +577,91 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         </div>
                       )}
                     </div>
+
+                    {/* Structure Configuration */}
+                    {(siteVisit.marketingData.onGridConfig.structureType || 
+                      siteVisit.marketingData.onGridConfig.gpStructure || 
+                      siteVisit.marketingData.onGridConfig.monoRail) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-blue-600">Structure Configuration</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-25 p-3 rounded-lg border border-blue-200">
+                          {siteVisit.marketingData.onGridConfig.structureType && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Structure Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.onGridConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {siteVisit.marketingData.onGridConfig.structureType === 'gp_structure' && siteVisit.marketingData.onGridConfig.gpStructure && (
+                            <>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Lower End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.onGridConfig.gpStructure.lowerEndHeight} ft</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Higher End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.onGridConfig.gpStructure.higherEndHeight} ft</p>
+                              </div>
+                            </>
+                          )}
+                          
+                          {siteVisit.marketingData.onGridConfig.structureType === 'mono_rail' && siteVisit.marketingData.onGridConfig.monoRail && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Mono Rail Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.onGridConfig.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Work Scope Configuration */}
+                    {(siteVisit.marketingData.onGridConfig.civilWorkScope || 
+                      siteVisit.marketingData.onGridConfig.netMeterScope ||
+                      siteVisit.marketingData.onGridConfig.electricalWorkScope ||
+                      siteVisit.marketingData.onGridConfig.plumbingWorkScope) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-blue-600">Work Scope</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-25 p-3 rounded-lg border border-blue-200">
+                          {siteVisit.marketingData.onGridConfig.civilWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Civil Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.onGridConfig.civilWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.onGridConfig.netMeterScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Net Meter Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.onGridConfig.netMeterScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.onGridConfig.electricalWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Electrical Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.onGridConfig.electricalWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.onGridConfig.plumbingWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Plumbing Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.onGridConfig.plumbingWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -637,6 +718,69 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.offGridConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
                     </div>
+
+                    {/* Structure Configuration */}
+                    {(siteVisit.marketingData.offGridConfig.structureType || 
+                      siteVisit.marketingData.offGridConfig.gpStructure || 
+                      siteVisit.marketingData.offGridConfig.monoRail) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-purple-600">Structure Configuration</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-purple-25 p-3 rounded-lg border border-purple-200">
+                          {siteVisit.marketingData.offGridConfig.structureType && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Structure Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.offGridConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {siteVisit.marketingData.offGridConfig.structureType === 'gp_structure' && siteVisit.marketingData.offGridConfig.gpStructure && (
+                            <>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Lower End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.offGridConfig.gpStructure.lowerEndHeight} ft</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Higher End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.offGridConfig.gpStructure.higherEndHeight} ft</p>
+                              </div>
+                            </>
+                          )}
+                          
+                          {siteVisit.marketingData.offGridConfig.structureType === 'mono_rail' && siteVisit.marketingData.offGridConfig.monoRail && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Mono Rail Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.offGridConfig.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Work Scope Configuration */}
+                    {siteVisit.marketingData.offGridConfig.civilWorkScope && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-purple-600">Work Scope</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-purple-25 p-3 rounded-lg border border-purple-200">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Civil Work Scope</p>
+                            <p className="font-medium capitalize">
+                              {siteVisit.marketingData.offGridConfig.civilWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {siteVisit.marketingData.offGridConfig.others && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Additional Notes</p>
+                        <p className="text-sm bg-gray-50 p-3 rounded-lg border">{siteVisit.marketingData.offGridConfig.others}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -679,6 +823,106 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.hybridConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
                     </div>
+
+                    {/* Structure Configuration */}
+                    {(siteVisit.marketingData.hybridConfig.structureType || 
+                      siteVisit.marketingData.hybridConfig.gpStructure || 
+                      siteVisit.marketingData.hybridConfig.monoRail) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-orange-600">Structure Configuration</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-orange-25 p-3 rounded-lg border border-orange-200">
+                          {siteVisit.marketingData.hybridConfig.structureType && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Structure Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.hybridConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {siteVisit.marketingData.hybridConfig.structureType === 'gp_structure' && siteVisit.marketingData.hybridConfig.gpStructure && (
+                            <>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Lower End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.hybridConfig.gpStructure.lowerEndHeight} ft</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Higher End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.hybridConfig.gpStructure.higherEndHeight} ft</p>
+                              </div>
+                            </>
+                          )}
+                          
+                          {siteVisit.marketingData.hybridConfig.structureType === 'mono_rail' && siteVisit.marketingData.hybridConfig.monoRail && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Mono Rail Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.hybridConfig.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Work Scope Configuration */}
+                    {(siteVisit.marketingData.hybridConfig.civilWorkScope || 
+                      siteVisit.marketingData.hybridConfig.netMeterScope ||
+                      siteVisit.marketingData.hybridConfig.electricalWorkScope ||
+                      siteVisit.marketingData.hybridConfig.plumbingWorkScope) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-orange-600">Work Scope</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-orange-25 p-3 rounded-lg border border-orange-200">
+                          {siteVisit.marketingData.hybridConfig.civilWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Civil Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.hybridConfig.civilWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.hybridConfig.netMeterScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Net Meter Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.hybridConfig.netMeterScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.hybridConfig.electricalWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Electrical Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.hybridConfig.electricalWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.hybridConfig.plumbingWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Plumbing Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.hybridConfig.plumbingWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Features */}
+                    {siteVisit.marketingData.hybridConfig.lightningArrest && (
+                      <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <Zap className="h-4 w-4 text-yellow-600" />
+                        <span className="text-sm font-medium text-yellow-700">Lightning Arrestor Required</span>
+                      </div>
+                    )}
+
+                    {siteVisit.marketingData.hybridConfig.others && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Additional Notes</p>
+                        <p className="text-sm bg-gray-50 p-3 rounded-lg border">{siteVisit.marketingData.hybridConfig.others}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
