@@ -5,6 +5,7 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { locationService } from "@/lib/location-service";
+import { capturePhotoWithOverlay } from "@/lib/photo-overlay-utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -137,27 +138,10 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           allowFieldWork: policies.allowFieldWork,
           fullPolicies: policies
         });
-        setDepartmentPolicies(policies);
-        
-        // Pre-select attendance type based on policies and context
-        selectBestAttendanceType(policies);
+        // Policies fetched but not stored since we're using simplified attendance
       }
     } catch (error) {
       console.error('Failed to fetch department policies:', error);
-    }
-  };
-
-  const selectBestAttendanceType = (policies: any) => {
-    // Smart default selection based on location and policies
-    if (location && location.accuracy <= 100) {
-      // Good GPS accuracy suggests office location
-      setAttendanceType("office");
-    } else if (policies?.allowRemoteWork) {
-      // Poor GPS accuracy but remote work allowed
-      setAttendanceType("remote");
-    } else {
-      // Default to office
-      setAttendanceType("office");
     }
   };
 
@@ -462,7 +446,6 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
       
       console.log('CAMERA: Capturing photo...', {
         videoWidth: video.videoWidth,
@@ -470,28 +453,44 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
         readyState: video.readyState
       });
       
-      if (context && video.videoWidth > 0 && video.videoHeight > 0) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
-        
-        const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedPhoto(photoDataUrl);
-        
-        console.log('CAMERA: Photo captured successfully, size:', photoDataUrl.length);
-        
-        // Stop camera after capture
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          setStream(null);
-          setIsCameraActive(false);
-        }
-        
-        toast({
-          title: "Photo Captured",
-          description: "Photo captured successfully and ready for upload",
-          variant: "default",
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        // Use the new overlay utility to capture photo with timestamp and location
+        const photoDataUrl = capturePhotoWithOverlay(video, canvas, {
+          timestamp: new Date(),
+          location: location ? {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            address: currentAddress || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
+            accuracy: location.accuracy
+          } : undefined,
+          overlayType: 'checkin'
         });
+        
+        if (photoDataUrl) {
+          setCapturedPhoto(photoDataUrl);
+          
+          console.log('CAMERA: Photo captured successfully with overlay, size:', photoDataUrl.length);
+          
+          // Stop camera after capture
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+            setIsCameraActive(false);
+          }
+          
+          toast({
+            title: "Photo Captured",
+            description: "Check-in photo captured with timestamp and location",
+            variant: "default",
+          });
+        } else {
+          console.error('CAMERA: Failed to capture photo with overlay');
+          toast({
+            title: "Capture Failed",
+            description: "Failed to process photo. Please try again.",
+            variant: "destructive",
+          });
+        }
       } else {
         console.error('CAMERA: Video not ready for capture');
         toast({
