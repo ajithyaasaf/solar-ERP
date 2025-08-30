@@ -33,13 +33,39 @@ interface SiteVisit {
   status: 'in_progress' | 'completed' | 'cancelled';
   siteInTime: string;
   siteOutTime?: string;
+  // Location tracking fields
+  siteInLocation?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    address?: string;
+  };
+  siteOutLocation?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    address?: string;
+  };
+  // Photo URLs
+  siteInPhotoUrl?: string;
+  siteOutPhotoUrl?: string;
+  siteOutPhotos?: string[]; // Checkout photos array
+  // Customer with location
   customer: {
     name: string;
     mobile: string;
     address: string;
     propertyType: string;
     ebServiceNumber?: string;
+    location?: string; // Additional customer location field
   };
+  // Follow-up system fields
+  isFollowUp?: boolean;
+  followUpOf?: string;
+  hasFollowUps?: boolean;
+  followUpCount?: number;
+  followUpReason?: string;
+  followUpDescription?: string;
   technicalData?: {
     serviceTypes: string[];
     workType: string;
@@ -70,6 +96,12 @@ interface SiteVisit {
     url: string;
     timestamp: string;
     description?: string;
+    location?: { // Photo location data
+      latitude: number;
+      longitude: number;
+      accuracy?: number;
+      address?: string;
+    };
   }>;
   notes?: string;
   createdAt: string;
@@ -161,6 +193,120 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
             </div>
           </div>
 
+          {/* Location Tracking Section */}
+          {(siteVisit.siteInLocation || siteVisit.siteOutLocation) && (
+            <Card className="col-span-1 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Location Tracking
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {siteVisit.siteInLocation && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-green-700 flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Check-in Location
+                      </h4>
+                      <div className="text-sm space-y-1 bg-green-50 p-3 rounded-lg">
+                        <p><span className="text-muted-foreground">Coordinates:</span> {siteVisit.siteInLocation.latitude.toFixed(6)}, {siteVisit.siteInLocation.longitude.toFixed(6)}</p>
+                        {siteVisit.siteInLocation.accuracy && (
+                          <p><span className="text-muted-foreground">Accuracy:</span> ±{siteVisit.siteInLocation.accuracy}m</p>
+                        )}
+                        {siteVisit.siteInLocation.address && (
+                          <p><span className="text-muted-foreground">Address:</span> {siteVisit.siteInLocation.address}</p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => window.open(`https://maps.google.com/?q=${siteVisit.siteInLocation!.latitude},${siteVisit.siteInLocation!.longitude}`, '_blank')}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View on Maps
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {siteVisit.siteOutLocation && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-red-700 flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Check-out Location
+                      </h4>
+                      <div className="text-sm space-y-1 bg-red-50 p-3 rounded-lg">
+                        <p><span className="text-muted-foreground">Coordinates:</span> {siteVisit.siteOutLocation.latitude.toFixed(6)}, {siteVisit.siteOutLocation.longitude.toFixed(6)}</p>
+                        {siteVisit.siteOutLocation.accuracy && (
+                          <p><span className="text-muted-foreground">Accuracy:</span> ±{siteVisit.siteOutLocation.accuracy}m</p>
+                        )}
+                        {siteVisit.siteOutLocation.address && (
+                          <p><span className="text-muted-foreground">Address:</span> {siteVisit.siteOutLocation.address}</p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => window.open(`https://maps.google.com/?q=${siteVisit.siteOutLocation!.latitude},${siteVisit.siteOutLocation!.longitude}`, '_blank')}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View on Maps
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Follow-up System Section */}
+          {(siteVisit.isFollowUp || siteVisit.hasFollowUps || siteVisit.followUpReason) && (
+            <Card className="col-span-1 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Follow-up Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {siteVisit.isFollowUp && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-blue-700">This is a Follow-up Visit</h4>
+                      {siteVisit.followUpOf && (
+                        <p className="text-sm text-muted-foreground">Original Visit ID: {siteVisit.followUpOf}</p>
+                      )}
+                      {siteVisit.followUpReason && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Reason:</p>
+                          <p className="text-sm font-medium">{siteVisit.followUpReason}</p>
+                        </div>
+                      )}
+                      {siteVisit.followUpDescription && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Description:</p>
+                          <p className="text-sm">{siteVisit.followUpDescription}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {siteVisit.hasFollowUps && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-purple-700">Has Follow-up Visits</h4>
+                      {siteVisit.followUpCount && (
+                        <p className="text-sm text-muted-foreground">Total Follow-ups: {siteVisit.followUpCount}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Customer Information */}
             <Card>
@@ -195,6 +341,16 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <div className="min-w-0 flex-1">
                       <p className="text-xs sm:text-sm text-muted-foreground">EB Service Number</p>
                       <p className="font-medium break-all">{siteVisit.customer.ebServiceNumber}</p>
+                    </div>
+                  </div>
+                )}
+
+                {siteVisit.customer.location && (
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Customer Location</p>
+                      <p className="font-medium break-all">{siteVisit.customer.location}</p>
                     </div>
                   </div>
                 )}
@@ -634,12 +790,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
           )}
 
           {/* Site Photos - Check-in, Check-out, and Additional Photos */}
-          {(siteVisit.siteInPhotoUrl || siteVisit.siteOutPhotoUrl || siteVisit.sitePhotos.length > 0) && (
+          {(siteVisit.siteInPhotoUrl || siteVisit.siteOutPhotoUrl || siteVisit.siteOutPhotos?.length || siteVisit.sitePhotos.length > 0) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Camera className="h-5 w-5" />
-                  Site Photos ({(siteVisit.siteInPhotoUrl ? 1 : 0) + (siteVisit.siteOutPhotoUrl ? 1 : 0) + siteVisit.sitePhotos.length})
+                  Site Photos ({(siteVisit.siteInPhotoUrl ? 1 : 0) + (siteVisit.siteOutPhotoUrl ? 1 : 0) + (siteVisit.siteOutPhotos?.length || 0) + siteVisit.sitePhotos.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -696,6 +852,36 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                   </div>
                 )}
 
+                {/* Checkout Photos Gallery - Multiple Checkout Photos */}
+                {siteVisit.siteOutPhotos && siteVisit.siteOutPhotos.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-sm text-red-700 mb-2 flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      Checkout Photos ({siteVisit.siteOutPhotos.length})
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {siteVisit.siteOutPhotos.map((photoUrl, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={photoUrl}
+                            alt={`Checkout photo ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border transition-transform hover:scale-105 cursor-pointer"
+                            onClick={() => window.open(photoUrl, '_blank')}
+                          />
+                          <Badge className="absolute top-1 right-1 text-xs bg-red-600 text-white">
+                            {index + 1}
+                          </Badge>
+                          
+                          {/* Eye icon overlay for viewing */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                            <Eye className="h-6 w-6 text-white" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Site Photos Gallery - Enhanced for Multiple Photos */}
                 {siteVisit.sitePhotos.length > 0 && (
                   <div>
@@ -718,6 +904,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         const photoUrl = typeof photo === 'string' ? photo : photo.url;
                         const photoTimestamp = typeof photo === 'object' ? photo.timestamp : null;
                         const photoDescription = typeof photo === 'object' ? photo.description : null;
+                        const photoLocation = typeof photo === 'object' ? photo.location : null;
                         
                         return (
                           <div key={index} className="space-y-2">
@@ -760,6 +947,20 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                                   <Badge variant="secondary" className="text-xs bg-white/90 text-black">
                                     {format(new Date(photoTimestamp), 'MMM d')}
                                   </Badge>
+                                )}
+                                {photoLocation && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="bg-blue-600/90 hover:bg-blue-700 text-white text-xs h-6"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(`https://maps.google.com/?q=${photoLocation.latitude},${photoLocation.longitude}`, '_blank');
+                                    }}
+                                  >
+                                    <MapPin className="h-3 w-3 mr-1" />
+                                    GPS
+                                  </Button>
                                 )}
                               </div>
                             </div>

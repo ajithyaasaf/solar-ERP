@@ -210,7 +210,7 @@ export const monoRailOptions = [
 ] as const;
 
 // Height ranges for structures (0 to 14)
-export const heightRange = Array.from({ length: 15 }, (_, i) => i.toString()) as readonly string[];
+export const heightRange = Array.from({ length: 15 }, (_, i) => i.toString()) as [string, ...string[]];
 
 // Scope options for work assignments
 export const workScopeOptions = [
@@ -281,8 +281,8 @@ export const onGridConfigSchema = z.object({
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange).optional(),
-    higherEndHeight: z.enum(heightRange).optional()
+    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
+    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -327,8 +327,8 @@ export const waterPumpConfigSchema = z.object({
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange).optional(),
-    higherEndHeight: z.enum(heightRange).optional()
+    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
+    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -722,8 +722,8 @@ export const insertDepartmentTimingSchema = z.object({
   workingHours: z.number().min(1).max(24).default(8), // Standard working hours per day
   checkInTime: z.string().regex(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i, "Time must be in 12-hour format (h:mm AM/PM)"), // e.g., "9:00 AM"
   checkOutTime: z.string().regex(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i, "Time must be in 12-hour format (h:mm AM/PM)") // e.g., "6:00 PM"
-    .refine((checkOut: string, ctx: { parent: any }) => {
-      const checkIn = ctx.parent.checkInTime;
+    .superRefine((checkOut, ctx) => {
+      const checkIn = (ctx as any).parent.checkInTime;
       if (checkIn && checkOut) {
         // Parse 12-hour format properly for validation
         const checkInMatch = checkIn.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
@@ -745,11 +745,15 @@ export const insertDepartmentTimingSchema = z.object({
           const checkOutMinutes = checkOutHour24 * 60 + parseInt(checkOutMin);
           
           // Allow overnight shifts (checkout next day)
-          return checkOutMinutes > checkInMinutes || checkOutMinutes < checkInMinutes;
+          if (checkOutMinutes <= checkInMinutes && checkOutMinutes >= checkInMinutes) {
+            ctx.addIssue({
+              code: 'custom',
+              message: 'Check out time must be after check in time'
+            });
+          }
         }
       }
-      return true;
-    }, "Check out time must be after check in time"),
+    }),
   lateThresholdMinutes: z.number().min(0).default(15), // Grace period for late arrivals (flexible input)
   overtimeThresholdMinutes: z.number().min(0).default(30), // Minimum minutes to qualify for OT (flexible input)
   isFlexibleTiming: z.boolean().default(false),

@@ -198,12 +198,12 @@ export class SiteVisitService {
     } catch (error) {
       console.error('=== SITE VISIT UPDATE ERROR ===');
       console.error('Error updating site visit:', error);
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+      console.error('Error name:', (error as Error).name);
+      console.error('Error message:', (error as Error).message);
+      console.error('Error stack:', (error as Error).stack);
       console.error('Updates that caused error:', JSON.stringify(updates, null, 2));
       console.error('=====================================');
-      throw new Error(`Failed to update site visit: ${error.message}`);
+      throw new Error(`Failed to update site visit: ${(error as Error).message}`);
     }
   }
 
@@ -326,7 +326,7 @@ export class SiteVisitService {
     try {
       // Ultra-simplified approach: Get all data without any compound queries
       // This completely avoids Firebase index requirements
-      let query: any = this.collection;
+      let query: FirebaseFirestore.Query | FirebaseFirestore.CollectionReference = this.collection;
 
       // Only apply ONE simple equality filter if needed
       if (filters.userId) {
@@ -457,7 +457,7 @@ export class SiteVisitService {
     endDate?: Date;
   }) {
     try {
-      let query: any = this.collection;
+      let query: FirebaseFirestore.Query | FirebaseFirestore.CollectionReference = this.collection;
 
       if (filters?.department) {
         query = query.where('department', '==', filters.department);
