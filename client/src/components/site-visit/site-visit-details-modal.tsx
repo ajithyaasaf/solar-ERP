@@ -946,11 +946,55 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           <p className="font-medium">{siteVisit.marketingData.waterHeaterConfig.heatingCoil}</p>
                         </div>
                       )}
+                      {siteVisit.marketingData.waterHeaterConfig.floor && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Floor Level</p>
+                          <p className="font-medium">
+                            {siteVisit.marketingData.waterHeaterConfig.floor === '0' ? 'Ground Floor' : 
+                             `${siteVisit.marketingData.waterHeaterConfig.floor}${siteVisit.marketingData.waterHeaterConfig.floor === '1' ? 'st' : 
+                               siteVisit.marketingData.waterHeaterConfig.floor === '2' ? 'nd' : 
+                               siteVisit.marketingData.waterHeaterConfig.floor === '3' ? 'rd' : 'th'} Floor`}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.waterHeaterConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
                     </div>
+
+                    {/* Work Scope Configuration */}
+                    {(siteVisit.marketingData.waterHeaterConfig.plumbingWorkScope || 
+                      siteVisit.marketingData.waterHeaterConfig.civilWorkScope) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-red-600">Work Scope</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-red-25 p-3 rounded-lg border border-red-200">
+                          {siteVisit.marketingData.waterHeaterConfig.plumbingWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Plumbing Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.waterHeaterConfig.plumbingWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.waterHeaterConfig.civilWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Civil Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.waterHeaterConfig.civilWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {siteVisit.marketingData.waterHeaterConfig.others && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Additional Notes</p>
+                        <p className="text-sm bg-gray-50 p-3 rounded-lg border">{siteVisit.marketingData.waterHeaterConfig.others}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -985,6 +1029,80 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.waterPumpConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
                     </div>
+
+                    {/* Structure Configuration */}
+                    {(siteVisit.marketingData.waterPumpConfig.structureType || 
+                      siteVisit.marketingData.waterPumpConfig.gpStructure || 
+                      siteVisit.marketingData.waterPumpConfig.monoRail) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-cyan-600">Structure Configuration</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-cyan-25 p-3 rounded-lg border border-cyan-200">
+                          {siteVisit.marketingData.waterPumpConfig.structureType && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Structure Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.waterPumpConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {siteVisit.marketingData.waterPumpConfig.structureType === 'gp_structure' && siteVisit.marketingData.waterPumpConfig.gpStructure && (
+                            <>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Lower End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.gpStructure.lowerEndHeight} ft</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Higher End Height</p>
+                                <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.gpStructure.higherEndHeight} ft</p>
+                              </div>
+                            </>
+                          )}
+                          
+                          {siteVisit.marketingData.waterPumpConfig.structureType === 'mono_rail' && siteVisit.marketingData.waterPumpConfig.monoRail && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Mono Rail Type</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.waterPumpConfig.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Work Scope Configuration */}
+                    {(siteVisit.marketingData.waterPumpConfig.plumbingWorkScope || 
+                      siteVisit.marketingData.waterPumpConfig.civilWorkScope) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-cyan-600">Work Scope</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-cyan-25 p-3 rounded-lg border border-cyan-200">
+                          {siteVisit.marketingData.waterPumpConfig.plumbingWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Plumbing Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.waterPumpConfig.plumbingWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                          {siteVisit.marketingData.waterPumpConfig.civilWorkScope && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Civil Work Scope</p>
+                              <p className="font-medium capitalize">
+                                {siteVisit.marketingData.waterPumpConfig.civilWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {siteVisit.marketingData.waterPumpConfig.others && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Additional Notes</p>
+                        <p className="text-sm bg-gray-50 p-3 rounded-lg border">{siteVisit.marketingData.waterPumpConfig.others}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
