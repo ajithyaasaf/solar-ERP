@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/auth-context";
 import { Leaf, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import logoPath from "@assets/new logo 2.png";
+import logoPath from "@assets/Logo_1756709823475.png";
 
 import type { SystemPermission } from "@shared/schema";
 

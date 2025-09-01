@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Leaf } from "lucide-react";
-import logoPath from "@assets/new logo 2.png";
+import logoPath from "@assets/Logo_1756709823475.png";
 
 interface AuthFormProps {
   title: string;
