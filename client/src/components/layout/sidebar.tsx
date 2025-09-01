@@ -174,14 +174,14 @@ export function Sidebar() {
       <div className="py-3 px-3 md:p-4 border-b border-gray-200 flex items-center justify-between">
         <div className={cn(
           "flex items-center gap-2",
-          isCollapsed && "justify-center w-full"
+          isCollapsed ? "justify-center w-full" : "justify-center w-full"
         )}>
           <img 
             src={logoPath} 
             alt="Prakash Green Energy" 
             className={cn(
               "object-contain",
-              isCollapsed ? "h-8 w-8" : "h-10 w-auto max-w-[200px]"
+              isCollapsed ? "h-12 w-12" : "h-16 w-auto max-w-[240px]"
             )}
           />
         </div>

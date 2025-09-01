@@ -17,7 +17,7 @@ export function AuthForm({ title, description, children, footer }: AuthFormProps
         <img 
           src={logoPath} 
           alt="Prakash Green Energy" 
-          className="h-16 w-auto object-contain"
+          className="h-24 w-auto object-contain"
         />
       </div>
       
