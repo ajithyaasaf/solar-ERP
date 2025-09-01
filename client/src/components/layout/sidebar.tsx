@@ -181,7 +181,7 @@ export function Sidebar() {
             alt="Prakash Green Energy" 
             className={cn(
               "object-contain",
-              isCollapsed ? "h-12 w-12" : "h-16 w-auto max-w-[240px]"
+              isCollapsed ? "h-16 w-16" : "h-20 w-auto max-w-[280px]"
             )}
           />
         </div>
