@@ -23,6 +23,7 @@ import {
   ChevronLeft, ChevronRight, Image
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { capturePhotoWithOverlay, PhotoOverlayOptions } from "@/lib/photo-overlay-utils";
 
 interface SiteVisit {
   id: string;
@@ -341,40 +342,65 @@ export function FollowUpModal({ isOpen, onClose, originalVisit }: FollowUpModalP
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
 
-    if (!context) return;
-
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    // Draw the video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convert to base64
-    const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-    // Store the photo based on current type
-    if (currentPhotoType === 'selfie') {
-      console.log("FOLLOW_UP_CREATE: Storing selfie photo, length:", photoDataUrl.length);
-      setCapturedPhotos(prev => ({ ...prev, selfie: photoDataUrl }));
-      setCurrentPhotoType('site'); // Switch to site photo after selfie
-    } else {
-      console.log("FOLLOW_UP_CREATE: Storing site photo, length:", photoDataUrl.length);
-      setCapturedPhotos(prev => ({ 
-        ...prev, 
-        sitePhotos: [...prev.sitePhotos, photoDataUrl] 
-      }));
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      toast({
+        title: "Capture Failed",
+        description: "Camera feed not ready. Please wait a moment and try again.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    // Stop camera after capture
-    stopCamera();
+    try {
+      // Prepare overlay options with timestamp and location
+      const overlayOptions: PhotoOverlayOptions = {
+        timestamp: new Date(),
+        location: locationStatus.location ? {
+          latitude: locationStatus.location.latitude,
+          longitude: locationStatus.location.longitude,
+          address: locationStatus.location.formattedAddress || locationStatus.location.address || 'Address not available',
+          accuracy: locationStatus.location.accuracy
+        } : undefined,
+        overlayType: 'site_visit',
+        customLabel: currentPhotoType === 'selfie' ? 'Follow-up Visit' : 'Follow-up Photo'
+      };
 
-    toast({
-      title: "Photo Captured",
-      description: `${currentPhotoType === 'selfie' ? 'Selfie' : 'Site photo'} captured successfully`,
-    });
+      // Capture photo with overlay using the utility function
+      const photoDataUrl = capturePhotoWithOverlay(video, canvas, overlayOptions);
+      
+      if (!photoDataUrl || photoDataUrl.length < 100) {
+        throw new Error('Generated image data too small');
+      }
+
+      // Store the photo based on current type
+      if (currentPhotoType === 'selfie') {
+        console.log("FOLLOW_UP_CREATE: Storing selfie photo with overlay, length:", photoDataUrl.length);
+        setCapturedPhotos(prev => ({ ...prev, selfie: photoDataUrl }));
+        setCurrentPhotoType('site'); // Switch to site photo after selfie
+      } else {
+        console.log("FOLLOW_UP_CREATE: Storing site photo with overlay, length:", photoDataUrl.length);
+        setCapturedPhotos(prev => ({ 
+          ...prev, 
+          sitePhotos: [...prev.sitePhotos, photoDataUrl] 
+        }));
+      }
+
+      // Stop camera after capture
+      stopCamera();
+
+      toast({
+        title: "Photo Captured",
+        description: `${currentPhotoType === 'selfie' ? 'Selfie' : 'Site photo'} captured successfully with timestamp and location`,
+      });
+    } catch (error) {
+      console.error('FOLLOW_UP_CREATE: Photo capture error:', error);
+      toast({
+        title: "Capture Failed",
+        description: "Failed to capture photo. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const retakePhoto = (type: 'selfie' | 'site', index?: number) => {

@@ -37,6 +37,7 @@ import { EnhancedLocationCapture } from "./enhanced-location-capture";
 import { LocationData } from "@/lib/location-service";
 import ErrorBoundary from "@/components/error-boundary";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
+import { capturePhotoWithOverlay, PhotoOverlayOptions } from "@/lib/photo-overlay-utils";
 
 interface SiteVisitStartModalProps {
   isOpen: boolean;
@@ -369,17 +370,6 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    
-    if (!context) {
-      console.error('SITE_VISIT_CAMERA: Cannot get canvas context');
-      toast({
-        title: "Capture Failed",
-        description: "Canvas not supported. Please try a different browser.",
-        variant: "destructive",
-      });
-      return;
-    }
     
     if (video.videoWidth === 0 || video.videoHeight === 0) {
       console.error('SITE_VISIT_CAMERA: Video dimensions invalid:', video.videoWidth, 'x', video.videoHeight);
@@ -392,33 +382,23 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
     }
     
     try {
-      // Optimize image dimensions to reduce file size
-      const maxWidth = 1280;
-      const maxHeight = 720;
-      let { width, height } = video.getBoundingClientRect();
+      // Prepare overlay options with timestamp and location
+      const overlayOptions: PhotoOverlayOptions = {
+        timestamp: new Date(),
+        location: currentLocation ? {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          address: currentLocation.formattedAddress || currentLocation.address || 'Address not available',
+          accuracy: currentLocation.accuracy
+        } : undefined,
+        overlayType: 'site_visit',
+        customLabel: currentPhotoType === 'selfie' ? 'Site Visit Check-in' : 'Site Photo'
+      };
+
+      // Capture photo with overlay using the utility function
+      const photoDataUrl = capturePhotoWithOverlay(video, canvas, overlayOptions);
       
-      // Use actual video dimensions if available
-      if (video.videoWidth && video.videoHeight) {
-        width = video.videoWidth;
-        height = video.videoHeight;
-      }
-      
-      // Calculate new dimensions maintaining aspect ratio
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height);
-        width = width * ratio;
-        height = height * ratio;
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      context.drawImage(video, 0, 0, width, height);
-      
-      // Optimize image quality and size for better upload performance
-      // Use lower quality for smaller file sizes (0.6 instead of 0.8)
-      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      
-      if (photoDataUrl.length < 100) {
+      if (!photoDataUrl || photoDataUrl.length < 100) {
         throw new Error('Generated image data too small');
       }
       
@@ -439,12 +419,12 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
       // Stop camera after successful capture
       stopCamera();
       
-      console.log('SITE_VISIT_CAMERA: Photo captured successfully for', currentPhotoType, 'size:', photoDataUrl.length);
+      console.log('SITE_VISIT_CAMERA: Photo captured successfully with overlay for', currentPhotoType, 'size:', photoDataUrl.length);
       
       const photoTypeLabel = currentPhotoType === 'selfie' ? 'Selfie' : 'Site Photo';
       toast({
         title: "Photo Captured",
-        description: `${photoTypeLabel} captured successfully`,
+        description: `${photoTypeLabel} captured successfully with timestamp and location`,
         variant: "default",
       });
     } catch (error) {

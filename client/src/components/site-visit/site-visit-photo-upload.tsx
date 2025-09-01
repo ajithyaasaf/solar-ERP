@@ -17,6 +17,7 @@ import {
   CheckCircle,
   RotateCcw
 } from "lucide-react";
+import { capturePhotoWithOverlay, PhotoOverlayOptions } from "@/lib/photo-overlay-utils";
 
 interface PhotoUpload {
   data: string; // base64 data instead of File
@@ -111,17 +112,67 @@ export function SiteVisitPhotoUpload({ siteVisitId }: SiteVisitPhotoUploadProps)
   };
 
   const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current && isVideoReady) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-      
-      if (context && video.videoWidth > 0 && video.videoHeight > 0) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
+    if (!videoRef.current || !canvasRef.current || !isVideoReady) {
+      toast({
+        title: "Capture Failed",
+        description: "Please wait for camera to load completely",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      toast({
+        title: "Capture Failed",
+        description: "Camera feed not ready. Please wait a moment and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Get current location for the overlay (basic implementation without full location service)
+      const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number; address: string; accuracy: number } | undefined> => {
+        return new Promise((resolve) => {
+          if (!navigator.geolocation) {
+            resolve(undefined);
+            return;
+          }
+          
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                address: `Lat: ${position.coords.latitude.toFixed(6)}, Lng: ${position.coords.longitude.toFixed(6)}`,
+                accuracy: position.coords.accuracy
+              });
+            },
+            () => resolve(undefined),
+            { timeout: 5000, enableHighAccuracy: false }
+          );
+        });
+      };
+
+      // Capture location for overlay
+      getCurrentLocation().then((location) => {
+        // Prepare overlay options with timestamp and location
+        const overlayOptions: PhotoOverlayOptions = {
+          timestamp: new Date(),
+          location,
+          overlayType: 'site_visit',
+          customLabel: 'Additional Site Photo'
+        };
+
+        // Capture photo with overlay using the utility function
+        const photoDataUrl = capturePhotoWithOverlay(video, canvas, overlayOptions);
         
-        const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        if (!photoDataUrl || photoDataUrl.length < 100) {
+          throw new Error('Generated image data too small');
+        }
         
         // Add captured photo to the photos array
         setPhotos(prev => [...prev, {
@@ -135,16 +186,17 @@ export function SiteVisitPhotoUpload({ siteVisitId }: SiteVisitPhotoUploadProps)
         
         toast({
           title: "Photo Captured",
-          description: "Photo added to your site visit collection",
+          description: "Photo added with timestamp and location to your site visit collection",
           variant: "default",
         });
-      } else {
-        toast({
-          title: "Capture Failed",
-          description: "Please wait for camera to load completely",
-          variant: "destructive",
-        });
-      }
+      });
+    } catch (error) {
+      console.error('PHOTO_UPLOAD_CAMERA: Photo capture error:', error);
+      toast({
+        title: "Capture Failed",
+        description: "Failed to capture photo. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -210,14 +262,8 @@ export function SiteVisitPhotoUpload({ siteVisitId }: SiteVisitPhotoUploadProps)
       }
 
       // Add photos to site visit
-      return apiRequest(`/api/site-visits/${siteVisitId}/photos`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          photos: uploadedPhotos
-        }),
+      return apiRequest(`/api/site-visits/${siteVisitId}/photos`, 'POST', {
+        photos: uploadedPhotos
       });
     },
     onSuccess: () => {
