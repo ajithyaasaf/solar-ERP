@@ -278,15 +278,17 @@ export default function Attendance() {
 
       {/* Today's Status Card - Primary Action Area */}
       {user && (
-        <Card className="border">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Activity className="h-5 w-5 text-primary" />
-                Today's Attendance
-              </CardTitle>
-            </div>
-          </CardHeader>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card className="border">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Activity className="h-5 w-5 text-primary" />
+                    Today's Attendance
+                  </CardTitle>
+                </div>
+              </CardHeader>
           <CardContent className="space-y-4">
             {/* Current Status Display */}
             {todayAttendance ? (
@@ -495,8 +497,36 @@ export default function Attendance() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          </div>
+          
+          {/* Simple Department Schedule */}
+          {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
+            <div className="lg:col-span-1">
+              <Card className="border">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Clock className="h-5 w-5" />
+                    Department Schedule
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Check In</span>
+                      <span className="font-semibold"><TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /></span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Check Out</span>
+                      <span className="font-semibold"><TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} /></span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       )}
 
 
