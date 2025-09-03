@@ -48,6 +48,7 @@ interface MarketingSiteVisitFormProps {
   onBack?: () => void;
   isDisabled?: boolean;
   isLoading?: boolean;
+  modalScrollRef?: React.RefObject<HTMLDivElement>;
 }
 
 interface MarketingFormData {
@@ -141,11 +142,12 @@ const projectTypeOptions = [
   { value: 'water_pump', label: 'Solar Water Pump', icon: Droplets, description: 'Solar-powered water pumping system' }
 ];
 
-export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: MarketingSiteVisitFormProps) {
+export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading, modalScrollRef }: MarketingSiteVisitFormProps) {
   const [formData, setFormData] = useState<MarketingFormData>({
     updateRequirements: false
   });
   const projectTypeSelectionRef = useRef<HTMLDivElement>(null);
+  const configurationSectionRef = useRef<HTMLDivElement>(null);
 
   const handleRequirementsUpdate = (value: string) => {
     const shouldUpdate = value === 'yes';
@@ -163,12 +165,26 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
     // Auto-scroll to Project Type Selection when "Yes" is selected
     if (shouldUpdate && projectTypeSelectionRef.current) {
       setTimeout(() => {
-        projectTypeSelectionRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-          inline: 'nearest'
-        });
-      }, 100); // Small delay to ensure DOM update
+        if (modalScrollRef?.current && projectTypeSelectionRef.current) {
+          // Calculate the position of the Project Type Selection relative to the modal
+          const modalRect = modalScrollRef.current.getBoundingClientRect();
+          const targetRect = projectTypeSelectionRef.current.getBoundingClientRect();
+          const relativeTop = targetRect.top - modalRect.top + modalScrollRef.current.scrollTop;
+          
+          // Scroll the modal to the target position
+          modalScrollRef.current.scrollTo({
+            top: relativeTop - 20, // 20px padding from top
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback to regular scrollIntoView if modal ref is not available
+          projectTypeSelectionRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+            inline: 'nearest'
+          });
+        }
+      }, 150); // Slightly longer delay to ensure DOM update
     }
   };
 
@@ -287,6 +303,31 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         civilWorkScope: 'customer_scope'
       } : undefined
     }));
+
+    // Auto-scroll to configuration section when a project type is selected
+    if (projectType && configurationSectionRef.current) {
+      setTimeout(() => {
+        if (modalScrollRef?.current && configurationSectionRef.current) {
+          // Calculate the position of the configuration section relative to the modal
+          const modalRect = modalScrollRef.current.getBoundingClientRect();
+          const targetRect = configurationSectionRef.current.getBoundingClientRect();
+          const relativeTop = targetRect.top - modalRect.top + modalScrollRef.current.scrollTop;
+          
+          // Scroll the modal to the target position
+          modalScrollRef.current.scrollTo({
+            top: relativeTop - 20, // 20px padding from top
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback to regular scrollIntoView if modal ref is not available
+          configurationSectionRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+            inline: 'nearest'
+          });
+        }
+      }, 200); // Delay to ensure DOM update for configuration section
+    }
   };
 
   const updateConfig = (configType: keyof MarketingFormData, updates: any) => {
@@ -383,6 +424,8 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
             </CardContent>
           </Card>
 
+          {/* Configuration Sections */}
+          <div ref={configurationSectionRef}>
           {/* ON-GRID Configuration */}
           {formData.projectType === 'on_grid' && formData.onGridConfig && (
             <Card>
@@ -1682,6 +1725,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
               </CardContent>
             </Card>
           )}
+          </div>
 
         </>
       )}

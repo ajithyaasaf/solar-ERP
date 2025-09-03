@@ -1046,6 +1046,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                       navigateToStep(4);
                     }}
                     onBack={() => navigateToStep(2)}
+                    modalScrollRef={modalContentRef}
                     isDisabled={false}
                   />
                 </ErrorBoundary>
