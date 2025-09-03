@@ -64,20 +64,25 @@ export default function AttendanceReports() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // State for filtering
+  // State for filtering - Default to last 30 days
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
-  }>({ 
-    from: new Date(), 
-    to: new Date() 
+  }>(() => {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    return {
+      from: thirtyDaysAgo,
+      to: today
+    };
   });
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   // Range attendance records - Enhanced for date range and person filtering
-  const { data: rangeAttendance = [], isLoading: isLoadingRange, refetch: refetchRange } = useQuery({
+  const { data: rangeAttendance = [], isLoading: isLoadingRange, error: rangeError, refetch: refetchRange } = useQuery({
     queryKey: ['/api/attendance/range', { 
       from: dateRange.from?.toISOString().split('T')[0], 
       to: dateRange.to?.toISOString().split('T')[0],
@@ -92,8 +97,11 @@ export default function AttendanceReports() {
       if (selectedEmployee !== "all") params.append('userId', selectedEmployee);
       if (selectedDepartment !== "all") params.append('department', selectedDepartment);
       
+      console.log('Fetching attendance data with params:', params.toString());
       const response = await apiRequest(`/api/attendance/range?${params}`, 'GET');
-      return response.json();
+      const data = await response.json();
+      console.log('Received attendance data:', data);
+      return data;
     },
   });
 
@@ -135,27 +143,61 @@ export default function AttendanceReports() {
       const dateRangeStr = dateRange.from && dateRange.to ? 
         `${formatDate(dateRange.from)}-to-${formatDate(dateRange.to)}` : 
         formatDate(new Date());
-      const fileName = `attendance-report-${dateRangeStr}.xlsx`;
+      
+      // Add filter info to filename
+      let fileName = `attendance-report-${dateRangeStr}`;
+      if (selectedEmployee !== "all") {
+        const employeeName = allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || "employee";
+        fileName += `-${employeeName.replace(/\s+/g, '-').toLowerCase()}`;
+      }
+      if (selectedDepartment !== "all") {
+        fileName += `-${selectedDepartment}`;
+      }
+      fileName += '.xlsx';
 
       const exportData = filteredRangeAttendance.map((record: any) => ({
         'Employee Name': record.userName || `User #${record.userId}`,
         'Department': record.userDepartment || 'Unknown',
         'Date': formatDate(new Date(record.date)),
-        'Check In Time': record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString() : 'Not recorded',
-        'Check Out Time': record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString() : 'Not recorded',
-        'Working Hours': record.workingHours ? `${record.workingHours.toFixed(2)}` : '0',
-        'Overtime Hours': record.overtimeHours ? `${record.overtimeHours.toFixed(2)}` : '0',
+        'Check In Time': record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-US', { hour12: true }) : 'Not recorded',
+        'Check Out Time': record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour12: true }) : 'Not recorded',
+        'Working Hours': record.workingHours ? `${record.workingHours.toFixed(2)}` : '0.00',
+        'Overtime Hours': record.overtimeHours ? `${record.overtimeHours.toFixed(2)}` : '0.00',
         'Status': record.status || 'Unknown',
         'Has Photo': record.checkInPhoto ? 'Yes' : 'No',
         'Has Location': record.checkInLocation ? 'Yes' : 'No',
+        'Check In Location': record.checkInLocation ? 
+          `${record.checkInLocation.latitude}, ${record.checkInLocation.longitude}` : 'Not recorded',
+        'Check Out Location': record.checkOutLocation ? 
+          `${record.checkOutLocation.latitude}, ${record.checkOutLocation.longitude}` : 'Not recorded'
       }));
 
-      const ws = XLSX.utils.json_to_sheet(exportData);
+      // Add summary sheet
+      const summaryData = [
+        { 'Filter': 'Date Range', 'Value': `${dateRange.from?.toLocaleDateString()} to ${dateRange.to?.toLocaleDateString()}` },
+        { 'Filter': 'Employee', 'Value': selectedEmployee === "all" ? 'All Employees' : allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || 'Unknown' },
+        { 'Filter': 'Department', 'Value': selectedDepartment === "all" ? 'All Departments' : selectedDepartment },
+        { 'Filter': 'Status', 'Value': selectedStatus === "all" ? 'All Statuses' : selectedStatus },
+        { 'Filter': 'Total Records', 'Value': filteredRangeAttendance.length.toString() },
+        { 'Filter': 'Export Date', 'Value': new Date().toLocaleString() }
+      ];
+
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Attendance Report');
+      
+      // Add summary sheet
+      const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'Export Summary');
+      
+      // Add attendance data sheet
+      const dataWs = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, dataWs, 'Attendance Data');
+      
       XLSX.writeFile(wb, fileName);
+      
+      console.log(`Exported ${exportData.length} records to ${fileName}`);
     } catch (error) {
       console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
     }
   };
 
@@ -177,14 +219,48 @@ export default function AttendanceReports() {
           <p className="text-gray-600 mt-1">Advanced filtering and analytics for attendance data</p>
         </div>
         
-        <Button 
-          onClick={handleExportExcel}
-          disabled={filteredRangeAttendance.length === 0}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-        >
-          <Download className="h-4 w-4" />
-          Export ({filteredRangeAttendance.length} records)
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button 
+            onClick={handleExportExcel}
+            disabled={filteredRangeAttendance.length === 0}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Download className="h-4 w-4" />
+            Export ({filteredRangeAttendance.length} records)
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSelectedEmployee("all");
+              setSelectedDepartment("all");
+              setSelectedStatus("all");
+              const today = new Date();
+              const thirtyDaysAgo = new Date(today);
+              thirtyDaysAgo.setDate(today.getDate() - 30);
+              setDateRange({ from: thirtyDaysAgo, to: today });
+              refetchRange();
+            }}
+            className="flex items-center gap-2"
+          >
+            <Search className="h-4 w-4" />
+            Clear Filters
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => refetchRange()}
+            disabled={isLoadingRange}
+            className="flex items-center gap-2"
+          >
+            {isLoadingRange ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <TrendingUp className="h-4 w-4" />
+            )}
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -262,6 +338,67 @@ export default function AttendanceReports() {
                 setDateRange={setDateRange}
                 className="w-full"
               />
+              
+              {/* Quick Date Presets */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    setDateRange({ from: today, to: today });
+                  }}
+                >
+                  Today
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(today.getDate() - 1);
+                    setDateRange({ from: yesterday, to: yesterday });
+                  }}
+                >
+                  Yesterday
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    const sevenDaysAgo = new Date(today);
+                    sevenDaysAgo.setDate(today.getDate() - 7);
+                    setDateRange({ from: sevenDaysAgo, to: today });
+                  }}
+                >
+                  Last 7 Days
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    const thirtyDaysAgo = new Date(today);
+                    thirtyDaysAgo.setDate(today.getDate() - 30);
+                    setDateRange({ from: thirtyDaysAgo, to: today });
+                  }}
+                >
+                  Last 30 Days
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    setDateRange({ from: firstDayOfMonth, to: today });
+                  }}
+                >
+                  This Month
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -475,8 +612,21 @@ export default function AttendanceReports() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No attendance records found for the selected filters</p>
-              <p className="text-sm mt-2">Try adjusting your date range or filter criteria</p>
+              <div className="space-y-2">
+                <p className="font-medium">No attendance records found</p>
+                {rangeError ? (
+                  <p className="text-sm text-red-600">Error loading data: {rangeError.message}</p>
+                ) : (
+                  <div className="text-sm space-y-1">
+                    <p>Current filters:</p>
+                    <p>• Date range: {dateRange.from ? dateRange.from.toLocaleDateString() : 'Not set'} to {dateRange.to ? dateRange.to.toLocaleDateString() : 'Not set'}</p>
+                    {selectedEmployee !== "all" && <p>• Employee: {allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || 'Unknown'}</p>}
+                    {selectedDepartment !== "all" && <p>• Department: {selectedDepartment}</p>}
+                    {selectedStatus !== "all" && <p>• Status: {selectedStatus}</p>}
+                    <p className="mt-3 text-gray-600">Try adjusting your filters or check if attendance data exists for this period</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
