@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest } from "@/lib/queryClient";
 import * as XLSX from 'xlsx';
 
 import {
@@ -161,8 +161,8 @@ export default function AttendanceReports() {
 
   // Get unique departments for filtering
   const availableDepartments = Array.from(new Set(
-    allUsers.map((user: any) => user.department).filter(Boolean)
-  ));
+    allUsers.map((user: any) => user.department).filter((dept: string) => Boolean(dept))
+  )) as string[];
 
   if (!user) {
     return <div>Loading...</div>;
@@ -227,7 +227,7 @@ export default function AttendanceReports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  {availableDepartments.map((dept) => (
+                  {availableDepartments.map((dept: string) => (
                     <SelectItem key={dept} value={dept}>
                       {dept.charAt(0).toUpperCase() + dept.slice(1)}
                     </SelectItem>
@@ -291,7 +291,7 @@ export default function AttendanceReports() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600">
-                  {filteredRangeAttendance.filter(r => r.status === 'present').length}
+                  {filteredRangeAttendance.filter((r: any) => r.status === 'present').length}
                 </p>
                 <p className="text-sm text-gray-600">Present</p>
               </div>
@@ -307,7 +307,7 @@ export default function AttendanceReports() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-red-600">
-                  {filteredRangeAttendance.filter(r => isIncompleteRecord(r)).length}
+                  {filteredRangeAttendance.filter((r: any) => isIncompleteRecord(r)).length}
                 </p>
                 <p className="text-sm text-gray-600">Incomplete</p>
               </div>
@@ -323,7 +323,7 @@ export default function AttendanceReports() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-orange-600">
-                  {filteredRangeAttendance.reduce((sum, r) => sum + (r.overtimeHours || 0), 0).toFixed(1)}h
+                  {filteredRangeAttendance.reduce((sum: number, r: any) => sum + (r.overtimeHours || 0), 0).toFixed(1)}h
                 </p>
                 <p className="text-sm text-gray-600">Total OT</p>
               </div>
@@ -338,7 +338,7 @@ export default function AttendanceReports() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Employee Analytics - {allUsers.find(u => u.id === selectedEmployee)?.displayName || "Unknown"}
+              Employee Analytics - {allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || "Unknown"}
             </CardTitle>
             <CardDescription>
               Individual performance metrics for the selected date range
@@ -352,19 +352,19 @@ export default function AttendanceReports() {
               </div>
               <div className="bg-green-50 p-4 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
-                  {filteredRangeAttendance.filter(r => !isIncompleteRecord(r)).length}
+                  {filteredRangeAttendance.filter((r: any) => !isIncompleteRecord(r)).length}
                 </div>
                 <div className="text-sm text-green-600">Complete Days</div>
               </div>
               <div className="bg-amber-50 p-4 rounded-lg">
                 <div className="text-2xl font-bold text-amber-600">
-                  {filteredRangeAttendance.filter(r => r.status === 'half_day').length}
+                  {filteredRangeAttendance.filter((r: any) => r.status === 'half_day').length}
                 </div>
                 <div className="text-sm text-amber-600">Half Days</div>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
-                  {filteredRangeAttendance.reduce((sum, r) => sum + (r.workingHours || 0), 0).toFixed(1)}h
+                  {filteredRangeAttendance.reduce((sum: number, r: any) => sum + (r.workingHours || 0), 0).toFixed(1)}h
                 </div>
                 <div className="text-sm text-purple-600">Total Hours</div>
               </div>
