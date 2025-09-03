@@ -117,6 +117,10 @@ export default function AttendanceManagement() {
   const { data: attendancePolicies = [] } = useQuery({
     queryKey: ['/api/attendance/policies'],
     enabled: !!user,
+    queryFn: async () => {
+      const response = await apiRequest('/api/attendance/policies', 'GET');
+      return response.json();
+    },
   });
 
   // Department statistics
