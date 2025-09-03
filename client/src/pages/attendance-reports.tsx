@@ -92,16 +92,38 @@ export default function AttendanceReports() {
     enabled: !!user && !!dateRange.from && !!dateRange.to,
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (dateRange.from) params.append('from', dateRange.from.toISOString().split('T')[0]);
-      if (dateRange.to) params.append('to', dateRange.to.toISOString().split('T')[0]);
+      
+      // Ensure proper date formatting for API
+      if (dateRange.from) {
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0); // Start of day
+        params.append('from', fromDate.toISOString().split('T')[0]);
+      }
+      if (dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999); // End of day  
+        params.append('to', toDate.toISOString().split('T')[0]);
+      }
       if (selectedEmployee !== "all") params.append('userId', selectedEmployee);
       if (selectedDepartment !== "all") params.append('department', selectedDepartment);
       
-      console.log('Fetching attendance data with params:', params.toString());
+      console.log('📅 Fetching attendance data:', {
+        from: dateRange.from?.toISOString().split('T')[0],
+        to: dateRange.to?.toISOString().split('T')[0],
+        employee: selectedEmployee !== "all" ? selectedEmployee : 'all',
+        department: selectedDepartment !== "all" ? selectedDepartment : 'all',
+        url: `/api/attendance/range?${params.toString()}`
+      });
+      
       const response = await apiRequest(`/api/attendance/range?${params}`, 'GET');
       const data = await response.json();
-      console.log('Received attendance data:', data);
-      return data;
+      
+      console.log('📊 Received attendance data:', {
+        count: data?.length || 0,
+        sample: data?.slice(0, 2) || []
+      });
+      
+      return data || [];
     },
   });
 
@@ -271,11 +293,11 @@ export default function AttendanceReports() {
             Advanced Filters
           </CardTitle>
           <CardDescription>
-            Filter attendance records by employee, department, date range, and status
+            Enterprise-level filtering with advanced date presets, validation, and flexible range selection
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {/* Employee Filter */}
             <div className="space-y-2">
               <Label>Employee</Label>
@@ -330,86 +352,21 @@ export default function AttendanceReports() {
               </Select>
             </div>
 
-            {/* Date Range */}
+            {/* Date Range - Enterprise Level */}
             <div className="space-y-2">
-              <Label>Date Range</Label>
+              <Label className="text-sm font-medium">Date Range</Label>
               <DateRangePicker 
                 dateRange={dateRange}
                 setDateRange={setDateRange}
                 className="w-full"
+                placeholder="Select attendance period"
+                maxRange={365} // Maximum 1 year range
+                maxDate={new Date()} // Cannot select future dates
+                showPresets={true} // Show enterprise presets
+                onError={(error) => {
+                  console.error('Date range error:', error);
+                }}
               />
-              
-              {/* Quick Date Presets */}
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date();
-                    setDateRange({ from: today, to: today });
-                  }}
-                >
-                  Today
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date();
-                    const yesterday = new Date(today);
-                    yesterday.setDate(today.getDate() - 1);
-                    setDateRange({ from: yesterday, to: yesterday });
-                  }}
-                >
-                  Yesterday
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date();
-                    const sevenDaysAgo = new Date(today);
-                    sevenDaysAgo.setDate(today.getDate() - 7);
-                    setDateRange({ from: sevenDaysAgo, to: today });
-                  }}
-                >
-                  Last 7 Days
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date();
-                    const thirtyDaysAgo = new Date(today);
-                    thirtyDaysAgo.setDate(today.getDate() - 30);
-                    setDateRange({ from: thirtyDaysAgo, to: today });
-                  }}
-                >
-                  Last 30 Days
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date();
-                    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    setDateRange({ from: firstDayOfMonth, to: today });
-                  }}
-                >
-                  This Month
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    const today = new Date();
-                    const startOfYear = new Date(today.getFullYear(), 0, 1);
-                    setDateRange({ from: startOfYear, to: today });
-                  }}
-                >
-                  This Year
-                </Button>
-              </div>
             </div>
           </div>
         </CardContent>
