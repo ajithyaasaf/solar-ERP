@@ -233,22 +233,26 @@ export default function AttendanceReports() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6 max-w-7xl">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Attendance Reports</h1>
-          <p className="text-gray-600 mt-1">Advanced filtering and analytics for attendance data</p>
+    <div className="container mx-auto p-2 sm:p-4 space-y-4 sm:space-y-6 max-w-7xl">
+      {/* Header - Mobile First */}
+      <div className="space-y-3 sm:space-y-4">
+        <div className="text-center sm:text-left">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Attendance Reports</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Advanced filtering and analytics</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2">
+        {/* Action Buttons - Mobile First */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
           <Button 
             onClick={handleExportExcel}
             disabled={filteredRangeAttendance.length === 0}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 w-full sm:w-auto text-sm"
+            size="sm"
           >
             <Download className="h-4 w-4" />
-            Export ({filteredRangeAttendance.length} records)
+            <span className="hidden xs:inline">Export</span>
+            <span className="xs:hidden">Export</span>
+            <span className="text-xs">({filteredRangeAttendance.length})</span>
           </Button>
           
           <Button
@@ -263,7 +267,8 @@ export default function AttendanceReports() {
               setDateRange({ from: sevenDaysAgo, to: today });
               refetchRange();
             }}
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto text-sm"
+            size="sm"
           >
             <Search className="h-4 w-4" />
             Clear Filters
@@ -273,205 +278,211 @@ export default function AttendanceReports() {
             variant="outline"
             onClick={() => refetchRange()}
             disabled={isLoadingRange}
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto text-sm"
+            size="sm"
           >
             {isLoadingRange ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <TrendingUp className="h-4 w-4" />
             )}
-            Refresh Data
+            Refresh
           </Button>
         </div>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Advanced Filters
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+            Filters
           </CardTitle>
-          <CardDescription>
-            Enterprise-level filtering with advanced date presets, validation, and flexible range selection
+          <CardDescription className="text-sm">
+            Enterprise filtering with advanced presets
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {/* Employee Filter */}
-            <div className="space-y-2">
-              <Label>Employee</Label>
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Employees" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Employees</SelectItem>
-                  {allUsers.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-4">
+            {/* Mobile: Stack all filters vertically, Desktop: Grid layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+              {/* Employee Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Employee</Label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All Employees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Employees</SelectItem>
+                    {allUsers.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <span className="truncate">{user.displayName}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Department Filter */}
-            <div className="space-y-2">
-              <Label>Department</Label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Departments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {availableDepartments.map((dept: string) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Department Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Department</Label>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All Departments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {availableDepartments.map((dept: string) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="present">Present</SelectItem>
-                  <SelectItem value="absent">Absent</SelectItem>
-                  <SelectItem value="late">Late</SelectItem>
-                  <SelectItem value="half_day">Half Day</SelectItem>
-                  <SelectItem value="early_checkout">Early Checkout</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Status Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Status</Label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="half_day">Half Day</SelectItem>
+                    <SelectItem value="early_checkout">Early Checkout</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Date Range - Enterprise Level */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Date Range</Label>
-              <DateRangePicker 
-                dateRange={dateRange}
-                setDateRange={setDateRange}
-                className="w-full"
-                placeholder="Select attendance period"
-                maxRange={365} // Maximum 1 year range
-                maxDate={new Date()} // Cannot select future dates
-                showPresets={true} // Show enterprise presets
-                onError={(error) => {
-                  console.error('Date range error:', error);
-                }}
-              />
+              {/* Date Range - Enterprise Level */}
+              <div className="space-y-2 sm:col-span-2 lg:col-span-2 xl:col-span-1">
+                <Label className="text-sm font-medium">Date Range</Label>
+                <DateRangePicker 
+                  dateRange={dateRange}
+                  setDateRange={setDateRange}
+                  className="w-full"
+                  placeholder="Select period"
+                  maxRange={365}
+                  maxDate={new Date()}
+                  showPresets={true}
+                  onError={(error) => {
+                    console.error('Date range error:', error);
+                  }}
+                />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Summary Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Summary Statistics - Mobile First */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{filteredRangeAttendance.length}</p>
-                <p className="text-sm text-gray-600">Total Records</p>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold truncate">{filteredRangeAttendance.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Total Records</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">
                   {filteredRangeAttendance.filter((r: any) => r.status === 'present').length}
                 </p>
-                <p className="text-sm text-gray-600">Present</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Present</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <XCircle className="h-5 w-5 text-red-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg">
+                <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-red-600">
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-red-600 truncate">
                   {filteredRangeAttendance.filter((r: any) => isIncompleteRecord(r)).length}
                 </p>
-                <p className="text-sm text-gray-600">Incomplete</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Incomplete</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Clock className="h-5 w-5 text-orange-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-orange-600">
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-orange-600 truncate">
                   {filteredRangeAttendance.reduce((sum: number, r: any) => sum + (r.overtimeHours || 0), 0).toFixed(1)}h
                 </p>
-                <p className="text-sm text-gray-600">Total OT</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Total OT</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Employee-specific analytics when individual selected */}
+      {/* Employee-specific analytics when individual selected - Mobile First */}
       {selectedEmployee !== "all" && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Employee Analytics - {allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || "Unknown"}
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <User className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="truncate">
+                Employee Analytics - {allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || "Unknown"}
+              </span>
             </CardTitle>
-            <CardDescription>
-              Individual performance metrics for the selected date range
+            <CardDescription className="text-sm">
+              Individual performance metrics for selected period
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{filteredRangeAttendance.length}</div>
-                <div className="text-sm text-blue-600">Total Days</div>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-blue-600">{filteredRangeAttendance.length}</div>
+                <div className="text-xs sm:text-sm text-blue-600">Total Days</div>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
+              <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-green-600">
                   {filteredRangeAttendance.filter((r: any) => !isIncompleteRecord(r)).length}
                 </div>
-                <div className="text-sm text-green-600">Complete Days</div>
+                <div className="text-xs sm:text-sm text-green-600">Complete Days</div>
               </div>
-              <div className="bg-amber-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-amber-600">
+              <div className="bg-amber-50 p-3 sm:p-4 rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-amber-600">
                   {filteredRangeAttendance.filter((r: any) => r.status === 'half_day').length}
                 </div>
-                <div className="text-sm text-amber-600">Half Days</div>
+                <div className="text-xs sm:text-sm text-amber-600">Half Days</div>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
+              <div className="bg-purple-50 p-3 sm:p-4 rounded-lg">
+                <div className="text-lg sm:text-2xl font-bold text-purple-600">
                   {filteredRangeAttendance.reduce((sum: number, r: any) => sum + (r.workingHours || 0), 0).toFixed(1)}h
                 </div>
-                <div className="text-sm text-purple-600">Total Hours</div>
+                <div className="text-xs sm:text-sm text-purple-600">Total Hours</div>
               </div>
             </div>
           </CardContent>
@@ -497,109 +508,205 @@ export default function AttendanceReports() {
             }
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {isLoadingRange ? (
             <div className="text-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-              <p className="text-muted-foreground mt-2">Loading attendance data...</p>
+              <p className="text-muted-foreground mt-2 text-sm">Loading attendance data...</p>
             </div>
           ) : filteredRangeAttendance.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Working Hours</TableHead>
-                    <TableHead>Overtime</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Location</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <>
+              {/* Mobile Card View - Hidden on desktop */}
+              <div className="sm:hidden">
+                <div className="divide-y divide-gray-100">
                   {filteredRangeAttendance.map((record: any) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium">
-                        {record.userName || `User #${record.userId}`}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {record.userDepartment || 'Unknown'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatDate(new Date(record.date))}
-                      </TableCell>
-                      <TableCell>
-                        {record.checkInTime ? (
+                    <div key={record.id} className="p-4 hover:bg-gray-50">
+                      <div className="space-y-3">
+                        {/* Header with name and status */}
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <TimeDisplay time={record.checkInTime} format12Hour={true} />
-                            {record.checkInPhoto && (
-                              <Camera className="h-4 w-4 text-green-500" />
+                            <User className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium text-sm truncate">
+                              {record.userName || `User #${record.userId}`}
+                            </span>
+                          </div>
+                          <StatusBadge status={record.status} />
+                        </div>
+                        
+                        {/* Department and Date */}
+                        <div className="flex items-center justify-between text-sm text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              {record.userDepartment || 'Unknown'}
+                            </Badge>
+                          </div>
+                          <span className="text-xs font-medium">
+                            {formatDate(new Date(record.date))}
+                          </span>
+                        </div>
+                        
+                        {/* Time Info Grid */}
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-gray-500">
+                              <Clock className="h-3 w-3" />
+                              <span className="text-xs">Check In</span>
+                            </div>
+                            {record.checkInTime ? (
+                              <div className="flex items-center gap-1">
+                                <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                                {record.checkInPhoto && (
+                                  <Camera className="h-3 w-3 text-green-500" />
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">No check-in</span>
                             )}
                           </div>
-                        ) : (
-                          <Badge variant="outline" className="bg-gray-50 text-gray-500">No check-in</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {record.checkOutTime ? (
-                          <div className="flex items-center gap-2">
-                            <TimeDisplay time={record.checkOutTime} format12Hour={true} />
-                            {record.checkOutPhoto && (
-                              <Camera className="h-4 w-4 text-red-500" />
+                          
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-gray-500">
+                              <Clock className="h-3 w-3" />
+                              <span className="text-xs">Check Out</span>
+                            </div>
+                            {record.checkOutTime ? (
+                              <div className="flex items-center gap-1">
+                                <TimeDisplay time={record.checkOutTime} format12Hour={true} />
+                                {record.checkOutPhoto && (
+                                  <Camera className="h-3 w-3 text-red-500" />
+                                )}
+                              </div>
+                            ) : isIncompleteRecord(record) ? (
+                              <div className="flex items-center gap-1">
+                                <XCircle className="h-3 w-3 text-red-500" />
+                                <span className="text-xs text-red-600">Missing</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
                             )}
                           </div>
-                        ) : isIncompleteRecord(record) ? (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Missing
-                          </Badge>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">
-                          {record.workingHours ? `${record.workingHours.toFixed(1)}h` : '0h'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-blue-600">
-                          {record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={record.status} />
-                      </TableCell>
-                      <TableCell>
-                        {(record.checkInLocation || record.checkOutLocation) && (
-                          <MapPin className="h-4 w-4 text-blue-500" />
-                        )}
-                      </TableCell>
-                    </TableRow>
+                        </div>
+                        
+                        {/* Hours and Location */}
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-3">
+                            <span className="text-gray-600">
+                              Work: <span className="font-medium">{record.workingHours ? `${record.workingHours.toFixed(1)}h` : '0h'}</span>
+                            </span>
+                            <span className="text-blue-600">
+                              OT: <span className="font-medium">{record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h'}</span>
+                            </span>
+                          </div>
+                          {(record.checkInLocation || record.checkOutLocation) && (
+                            <MapPin className="h-3 w-3 text-blue-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+                </div>
+              </div>
+              
+              {/* Desktop Table View - Hidden on mobile */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs font-medium">Employee</TableHead>
+                      <TableHead className="text-xs font-medium">Department</TableHead>
+                      <TableHead className="text-xs font-medium">Date</TableHead>
+                      <TableHead className="text-xs font-medium">Check In</TableHead>
+                      <TableHead className="text-xs font-medium">Check Out</TableHead>
+                      <TableHead className="text-xs font-medium">Working Hours</TableHead>
+                      <TableHead className="text-xs font-medium">Overtime</TableHead>
+                      <TableHead className="text-xs font-medium">Status</TableHead>
+                      <TableHead className="text-xs font-medium">Location</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRangeAttendance.map((record: any) => (
+                      <TableRow key={record.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium text-sm">
+                          {record.userName || `User #${record.userId}`}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {record.userDepartment || 'Unknown'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium text-sm">
+                          {formatDate(new Date(record.date))}
+                        </TableCell>
+                        <TableCell>
+                          {record.checkInTime ? (
+                            <div className="flex items-center gap-2">
+                              <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                              {record.checkInPhoto && (
+                                <Camera className="h-4 w-4 text-green-500" />
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="bg-gray-50 text-gray-500 text-xs">No check-in</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {record.checkOutTime ? (
+                            <div className="flex items-center gap-2">
+                              <TimeDisplay time={record.checkOutTime} format12Hour={true} />
+                              {record.checkOutPhoto && (
+                                <Camera className="h-4 w-4 text-red-500" />
+                              )}
+                            </div>
+                          ) : isIncompleteRecord(record) ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Missing
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-sm">
+                            {record.workingHours ? `${record.workingHours.toFixed(1)}h` : '0h'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-blue-600 text-sm">
+                            {record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={record.status} />
+                        </TableCell>
+                        <TableCell>
+                          {(record.checkInLocation || record.checkOutLocation) && (
+                            <MapPin className="h-4 w-4 text-blue-500" />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <div className="text-center py-8 px-4 text-gray-500">
+              <FileText className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
               <div className="space-y-2">
-                <p className="font-medium">No attendance records found</p>
+                <p className="font-medium text-sm sm:text-base">No attendance records found</p>
                 {rangeError ? (
-                  <p className="text-sm text-red-600">Error loading data: {rangeError.message}</p>
+                  <p className="text-xs sm:text-sm text-red-600">Error: {rangeError.message}</p>
                 ) : (
-                  <div className="text-sm space-y-1">
-                    <p>Current filters:</p>
-                    <p>• Date range: {dateRange.from ? dateRange.from.toLocaleDateString() : 'Not set'} to {dateRange.to ? dateRange.to.toLocaleDateString() : 'Not set'}</p>
-                    {selectedEmployee !== "all" && <p>• Employee: {allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || 'Unknown'}</p>}
-                    {selectedDepartment !== "all" && <p>• Department: {selectedDepartment}</p>}
-                    {selectedStatus !== "all" && <p>• Status: {selectedStatus}</p>}
-                    <p className="mt-3 text-gray-600">Try adjusting your filters or check if attendance data exists for this period</p>
+                  <div className="text-xs sm:text-sm space-y-1">
+                    <p className="font-medium">Current filters:</p>
+                    <div className="space-y-0.5">
+                      <p>• Date: {dateRange.from ? dateRange.from.toLocaleDateString() : 'Not set'} to {dateRange.to ? dateRange.to.toLocaleDateString() : 'Not set'}</p>
+                      {selectedEmployee !== "all" && <p>• Employee: {allUsers.find((u: any) => u.id === selectedEmployee)?.displayName || 'Unknown'}</p>}
+                      {selectedDepartment !== "all" && <p>• Department: {selectedDepartment}</p>}
+                      {selectedStatus !== "all" && <p>• Status: {selectedStatus}</p>}
+                    </div>
+                    <p className="mt-2 text-gray-600">Try adjusting your filters</p>
                   </div>
                 )}
               </div>
