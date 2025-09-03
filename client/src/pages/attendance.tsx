@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { 
   CalendarIcon, Search, Loader2, UserCheck, Clock, 
-  MapPin, Timer, Users, TrendingUp, Activity, Zap
+  MapPin, Timer, Users, TrendingUp, Activity, Zap, RefreshCw
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { OvertimeExplanationCard } from "@/components/attendance/overtime-explanation-card";
