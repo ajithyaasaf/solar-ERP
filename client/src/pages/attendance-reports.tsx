@@ -80,6 +80,10 @@ export default function AttendanceReports() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Range attendance records - Enhanced for date range and person filtering
   const { data: rangeAttendance = [], isLoading: isLoadingRange, error: rangeError, refetch: refetchRange } = useQuery({
@@ -153,6 +157,59 @@ export default function AttendanceReports() {
     if (selectedStatus !== "all" && record.status !== selectedStatus) return false;
     return true;
   });
+  
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredRangeAttendance.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAttendance = filteredRangeAttendance.slice(startIndex, endIndex);
+  
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEmployee, selectedDepartment, selectedStatus, dateRange]);
+  
+  // Helper function to format location data
+  const formatLocation = (record: any) => {
+    const checkInLoc = record.checkInLocation;
+    const checkOutLoc = record.checkOutLocation;
+    
+    // Priority: 1. Address from reverse geocoding, 2. Office name, 3. Coordinates
+    if (checkInLoc?.address) {
+      return {
+        text: checkInLoc.address,
+        type: 'address',
+        coords: `${checkInLoc.latitude}, ${checkInLoc.longitude}`
+      };
+    }
+    
+    if (checkInLoc?.formattedAddress) {
+      return {
+        text: checkInLoc.formattedAddress,
+        type: 'address', 
+        coords: `${checkInLoc.latitude}, ${checkInLoc.longitude}`
+      };
+    }
+    
+    if (checkInLoc?.latitude && checkInLoc?.longitude) {
+      return {
+        text: `${parseFloat(checkInLoc.latitude).toFixed(4)}, ${parseFloat(checkInLoc.longitude).toFixed(4)}`,
+        type: 'coordinates',
+        coords: `${checkInLoc.latitude}, ${checkInLoc.longitude}`
+      };
+    }
+    
+    // Fallback to checkout location if check-in not available
+    if (checkOutLoc?.latitude && checkOutLoc?.longitude) {
+      return {
+        text: `${parseFloat(checkOutLoc.latitude).toFixed(4)}, ${parseFloat(checkOutLoc.longitude).toFixed(4)}`,
+        type: 'coordinates',
+        coords: `${checkOutLoc.latitude}, ${checkOutLoc.longitude}`
+      };
+    }
+    
+    return null;
+  };
 
   // Helper function to check if a record is incomplete
   const isIncompleteRecord = (record: any) => {
@@ -519,7 +576,7 @@ export default function AttendanceReports() {
               {/* Mobile Card View - Hidden on desktop */}
               <div className="sm:hidden">
                 <div className="divide-y divide-gray-100">
-                  {filteredRangeAttendance.map((record: any) => (
+                  {paginatedAttendance.map((record: any) => (
                     <div key={record.id} className="p-4 hover:bg-gray-50">
                       <div className="space-y-3">
                         {/* Header with name and status */}
@@ -588,17 +645,32 @@ export default function AttendanceReports() {
                         </div>
                         
                         {/* Hours and Location */}
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-3">
-                            <span className="text-gray-600">
-                              Work: <span className="font-medium">{record.workingHours ? `${record.workingHours.toFixed(1)}h` : '0h'}</span>
-                            </span>
-                            <span className="text-blue-600">
-                              OT: <span className="font-medium">{record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h'}</span>
-                            </span>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-3">
+                              <span className="text-gray-600">
+                                Work: <span className="font-medium">{record.workingHours ? `${record.workingHours.toFixed(1)}h` : '0h'}</span>
+                              </span>
+                              <span className="text-blue-600">
+                                OT: <span className="font-medium">{record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h'}</span>
+                              </span>
+                            </div>
                           </div>
-                          {(record.checkInLocation || record.checkOutLocation) && (
-                            <MapPin className="h-3 w-3 text-blue-500" />
+                          {/* Location Display */}
+                          {formatLocation(record) && (
+                            <div className="flex items-start gap-1">
+                              <MapPin className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-gray-600 min-w-0">
+                                <div className="truncate font-medium text-gray-800">
+                                  {formatLocation(record)?.text}
+                                </div>
+                                {formatLocation(record)?.type === 'address' && (
+                                  <div className="text-xs text-gray-400 truncate">
+                                    {formatLocation(record)?.coords}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -620,11 +692,11 @@ export default function AttendanceReports() {
                       <TableHead className="text-xs font-medium">Working Hours</TableHead>
                       <TableHead className="text-xs font-medium">Overtime</TableHead>
                       <TableHead className="text-xs font-medium">Status</TableHead>
-                      <TableHead className="text-xs font-medium">Location</TableHead>
+                      <TableHead className="text-xs font-medium w-48">Detected Location</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredRangeAttendance.map((record: any) => (
+                    {paginatedAttendance.map((record: any) => (
                       <TableRow key={record.id} className="hover:bg-gray-50">
                         <TableCell className="font-medium text-sm">
                           {record.userName || `User #${record.userId}`}
@@ -679,9 +751,23 @@ export default function AttendanceReports() {
                         <TableCell>
                           <StatusBadge status={record.status} />
                         </TableCell>
-                        <TableCell>
-                          {(record.checkInLocation || record.checkOutLocation) && (
-                            <MapPin className="h-4 w-4 text-blue-500" />
+                        <TableCell className="max-w-48">
+                          {formatLocation(record) ? (
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <div className="text-xs font-medium text-gray-800 truncate" title={formatLocation(record)?.text}>
+                                  {formatLocation(record)?.text}
+                                </div>
+                                {formatLocation(record)?.type === 'address' && (
+                                  <div className="text-xs text-gray-400 truncate" title={formatLocation(record)?.coords}>
+                                    {formatLocation(record)?.coords}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">No location data</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -689,6 +775,68 @@ export default function AttendanceReports() {
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="border-t bg-gray-50 px-3 py-3 sm:px-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-sm text-gray-700">
+                      Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                      <span className="font-medium">{Math.min(endIndex, filteredRangeAttendance.length)}</span> of{' '}
+                      <span className="font-medium">{filteredRangeAttendance.length}</span> records
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="h-8 px-3 text-xs"
+                      >
+                        Previous
+                      </Button>
+                      
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={currentPage === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className="h-8 w-8 p-0 text-xs"
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="h-8 px-3 text-xs"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center py-8 px-4 text-gray-500">
