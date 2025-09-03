@@ -600,27 +600,23 @@ export default function Attendance() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Department</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
                     <TableHead>Hours</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Location</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAttendance.map((record: any) => (
                     <TableRow key={record.id}>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">{record.userName}</div>
-                          <div className="text-sm text-muted-foreground">{record.userEmail}</div>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{formatDate(record.checkInTime || record.date)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(record.checkInTime || record.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{record.userDepartment || 'N/A'}</Badge>
                       </TableCell>
                       <TableCell>
                         {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
@@ -629,42 +625,25 @@ export default function Attendance() {
                         {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-col gap-1">
                           {record.workingHours ? (
                             <>
-                              <span>{record.workingHours.toFixed(1)}h</span>
+                              <span className="font-medium">{record.workingHours.toFixed(1)}h</span>
                               {record.overtimeHours && record.overtimeHours > 0 && (
-                                <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                                  <Zap className="h-3 w-3 mr-1" />
+                                <span className="text-xs text-orange-600">
                                   +{record.overtimeHours.toFixed(1)}h OT
-                                </Badge>
+                                </span>
                               )}
                             </>
                           ) : '-'}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={
-                          record.attendanceType === 'office' ? 'default' :
-                          record.attendanceType === 'remote' ? 'secondary' : 'outline'
-                        }>
-                          {record.attendanceType === 'office' ? 'Office' :
-                           record.attendanceType === 'remote' ? 'Remote' : 'Field Work'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          record.status === 'present' ? 'default' :
-                          record.status === 'late' ? 'secondary' : 'destructive'
-                        }>
-                          {record.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {record.isWithinOfficeRadius ? 'Office' : 
-                           record.distanceFromOffice ? `${Math.round(record.distanceFromOffice)}m away` : 'Unknown'}
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm capitalize">{record.status}</span>
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {record.attendanceType === 'field_work' ? 'Field Work' : record.attendanceType}
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -782,7 +761,6 @@ export default function Attendance() {
                         <TableHead>Check In</TableHead>
                         <TableHead>Check Out</TableHead>
                         <TableHead>Hours</TableHead>
-                        <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -791,9 +769,9 @@ export default function Attendance() {
                         <TableRow key={record.id}>
                           <TableCell>
                             <div className="flex flex-col">
-                              <span className="font-medium">{formatDate(record.checkInTime)}</span>
+                              <span className="font-medium">{formatDate(record.checkInTime || record.date)}</span>
                               <span className="text-xs text-muted-foreground">
-                                {new Date(record.checkInTime).toLocaleDateString('en-US', { weekday: 'short' })}
+                                {new Date(record.checkInTime || record.date).toLocaleDateString('en-US', { weekday: 'short' })}
                               </span>
                             </div>
                           </TableCell>
@@ -804,36 +782,26 @@ export default function Attendance() {
                             {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-col gap-1">
                               {record.workingHours ? (
                                 <>
-                                  <span>{record.workingHours.toFixed(1)}h</span>
+                                  <span className="font-medium">{record.workingHours.toFixed(1)}h</span>
                                   {record.overtimeHours && record.overtimeHours > 0 && (
-                                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                                      <Zap className="h-3 w-3 mr-1" />
-                                      +{record.overtimeHours.toFixed(1)}h
-                                    </Badge>
+                                    <span className="text-xs text-orange-600">
+                                      +{record.overtimeHours.toFixed(1)}h OT
+                                    </span>
                                   )}
                                 </>
                               ) : '-'}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={
-                              record.attendanceType === 'office' ? 'default' :
-                              record.attendanceType === 'remote' ? 'secondary' : 'outline'
-                            }>
-                              {record.attendanceType === 'office' ? 'Office' :
-                               record.attendanceType === 'remote' ? 'Remote' : 'Field Work'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              record.status === 'present' ? 'default' :
-                              record.status === 'late' ? 'secondary' : 'destructive'
-                            }>
-                              {record.status}
-                            </Badge>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm capitalize">{record.status}</span>
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {record.attendanceType === 'field_work' ? 'Field Work' : record.attendanceType}
+                              </span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
