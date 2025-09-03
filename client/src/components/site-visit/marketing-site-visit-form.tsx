@@ -560,7 +560,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.onGridConfig.panelCount}
-                      onChange={(e) => updateConfig('onGridConfig', { panelCount: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('onGridConfig', { panelCount: '' as any });
+                        } else {
+                          updateConfig('onGridConfig', { panelCount: parseInt(value) || 1 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          updateConfig('onGridConfig', { panelCount: 1 });
+                        }
+                      }}
                       min="1"
                     />
                   </div>
@@ -570,7 +583,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.onGridConfig.structureHeight}
-                      onChange={(e) => updateConfig('onGridConfig', { structureHeight: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('onGridConfig', { structureHeight: '' as any });
+                        } else {
+                          updateConfig('onGridConfig', { structureHeight: parseInt(value) || 0 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('onGridConfig', { structureHeight: 0 });
+                        }
+                      }}
                       min="0"
                     />
                   </div>
@@ -599,7 +625,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.onGridConfig.projectValue}
-                      onChange={(e) => updateConfig('onGridConfig', { projectValue: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('onGridConfig', { projectValue: '' as any });
+                        } else {
+                          updateConfig('onGridConfig', { projectValue: parseInt(value) || 0 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('onGridConfig', { projectValue: 0 });
+                        }
+                      }}
                       min="0"
                     />
                   </div>
@@ -864,7 +903,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.offGridConfig.panelCount}
-                      onChange={(e) => updateConfig('offGridConfig', { panelCount: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { panelCount: '' as any });
+                        } else {
+                          updateConfig('offGridConfig', { panelCount: parseInt(value) || 1 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          updateConfig('offGridConfig', { panelCount: 1 });
+                        }
+                      }}
                       min="1"
                     />
                   </div>
@@ -874,7 +926,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.offGridConfig.batteryCount}
-                      onChange={(e) => updateConfig('offGridConfig', { batteryCount: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { batteryCount: '' as any });
+                        } else {
+                          updateConfig('offGridConfig', { batteryCount: parseInt(value) || 1 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          updateConfig('offGridConfig', { batteryCount: 1 });
+                        }
+                      }}
                       min="1"
                     />
                   </div>
@@ -884,7 +949,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.offGridConfig.voltage}
-                      onChange={(e) => updateConfig('offGridConfig', { voltage: parseInt(e.target.value) || 12 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { voltage: '' as any });
+                        } else {
+                          updateConfig('offGridConfig', { voltage: parseInt(value) || 12 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { voltage: 12 });
+                        }
+                      }}
                       placeholder="12V, 24V, 48V etc"
                     />
                   </div>
@@ -913,7 +991,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.offGridConfig.projectValue}
-                      onChange={(e) => updateConfig('offGridConfig', { projectValue: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { projectValue: '' as any });
+                        } else {
+                          updateConfig('offGridConfig', { projectValue: parseInt(value) || 0 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { projectValue: 0 });
+                        }
+                      }}
                       min="0"
                     />
                   </div>
@@ -1131,7 +1222,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.hybridConfig.panelCount}
-                      onChange={(e) => updateConfig('hybridConfig', { panelCount: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('hybridConfig', { panelCount: '' as any });
+                        } else {
+                          updateConfig('hybridConfig', { panelCount: parseInt(value) || 1 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          updateConfig('hybridConfig', { panelCount: 1 });
+                        }
+                      }}
                       min="1"
                     />
                   </div>
@@ -1160,7 +1264,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.hybridConfig.projectValue}
-                      onChange={(e) => updateConfig('hybridConfig', { projectValue: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('hybridConfig', { projectValue: '' as any });
+                        } else {
+                          updateConfig('hybridConfig', { projectValue: parseInt(value) || 0 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('hybridConfig', { projectValue: 0 });
+                        }
+                      }}
                       min="0"
                     />
                   </div>
@@ -1378,7 +1495,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.waterHeaterConfig.litre}
-                      onChange={(e) => updateConfig('waterHeaterConfig', { litre: parseInt(e.target.value) || 100 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterHeaterConfig', { litre: '' as any });
+                        } else {
+                          updateConfig('waterHeaterConfig', { litre: parseInt(value) || 100 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || parseInt(value) < 50) {
+                          updateConfig('waterHeaterConfig', { litre: 100 });
+                        }
+                      }}
                       min="50"
                       placeholder="100, 150, 200, 300..."
                     />
@@ -1417,7 +1547,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.waterHeaterConfig.projectValue}
-                      onChange={(e) => updateConfig('waterHeaterConfig', { projectValue: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterHeaterConfig', { projectValue: '' as any });
+                        } else {
+                          updateConfig('waterHeaterConfig', { projectValue: parseInt(value) || 0 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterHeaterConfig', { projectValue: 0 });
+                        }
+                      }}
                       min="0"
                     />
                   </div>
@@ -1552,7 +1695,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.waterPumpConfig.panelCount}
-                      onChange={(e) => updateConfig('waterPumpConfig', { panelCount: parseInt(e.target.value) || 1 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterPumpConfig', { panelCount: '' as any });
+                        } else {
+                          updateConfig('waterPumpConfig', { panelCount: parseInt(value) || 1 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          updateConfig('waterPumpConfig', { panelCount: 1 });
+                        }
+                      }}
                       min="1"
                     />
                   </div>
@@ -1562,7 +1718,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.waterPumpConfig.structureHeight}
-                      onChange={(e) => updateConfig('waterPumpConfig', { structureHeight: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterPumpConfig', { structureHeight: '' as any });
+                        } else {
+                          updateConfig('waterPumpConfig', { structureHeight: parseInt(value) || 0 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterPumpConfig', { structureHeight: 0 });
+                        }
+                      }}
                       min="0"
                     />
                   </div>
@@ -1572,7 +1741,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       value={formData.waterPumpConfig.projectValue}
-                      onChange={(e) => updateConfig('waterPumpConfig', { projectValue: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterPumpConfig', { projectValue: '' as any });
+                        } else {
+                          updateConfig('waterPumpConfig', { projectValue: parseInt(value) || 0 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterPumpConfig', { projectValue: 0 });
+                        }
+                      }}
                       min="0"
                     />
                   </div>
