@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { 
   CalendarIcon, Search, Loader2, UserCheck, Clock, 
-  MapPin, Timer, Users, TrendingUp, Activity, RefreshCw, Zap, ChevronDown
+  MapPin, Timer, Users, TrendingUp, Activity, Zap
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { OvertimeExplanationCard } from "@/components/attendance/overtime-explanation-card";
@@ -41,7 +40,6 @@ export default function Attendance() {
   // Manual OT modal states
   const [showOTStartModal, setShowOTStartModal] = useState(false);
   const [showOTEndModal, setShowOTEndModal] = useState(false);
-  const [isOTExpanded, setIsOTExpanded] = useState(false);
 
   // Fetch current user's attendance records
   const { data: attendanceRecords = [], isLoading, refetch } = useQuery({
@@ -276,12 +274,6 @@ export default function Attendance() {
             <p className="text-muted-foreground text-sm">Track your daily attendance and work hours</p>
           </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button onClick={refreshAttendance} variant="outline" size="sm" className="flex-1 sm:flex-initial">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
       </div>
 
       {/* Today's Status Card - Primary Action Area */}
@@ -443,67 +435,65 @@ export default function Attendance() {
               )}
             </div>
 
-            {/* Collapsible Manual OT Section */}
+            {/* Manual OT Section */}
             {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
-              <Collapsible open={isOTExpanded} onOpenChange={setIsOTExpanded}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between p-2 h-auto">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm font-medium">Overtime Controls</span>
-                      {otStatus?.hasActiveOT && (
-                        <Badge variant="destructive" className="text-xs">
-                          Active
-                        </Badge>
-                      )}
-                      {otStatus?.currentOTHours && otStatus.currentOTHours > 0 && (
-                        <Badge variant="outline" className="text-orange-700 text-xs">
-                          {otStatus.currentOTHours.toFixed(1)}h
-                        </Badge>
-                      )}
-                    </div>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isOTExpanded ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="mt-2 p-4 border border-orange-200 rounded-lg bg-orange-50">
-                    <div className="space-y-3">
-                      {!otStatus?.hasActiveOT ? (
-                        <Button
-                          onClick={() => setShowOTStartModal(true)}
-                          disabled={!otStatus?.buttonAvailable}
-                          variant="outline"
-                          className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
-                        >
-                          <Zap className="h-4 w-4 mr-2" />
-                          Start Overtime
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => setShowOTEndModal(true)}
-                          disabled={!otStatus?.canEndOT}
-                          variant="destructive"
-                          className="w-full"
-                        >
-                          <Timer className="h-4 w-4 mr-2" />
-                          End Overtime
-                        </Button>
-                      )}
-                      
-                      {!otStatus?.buttonAvailable && otStatus?.buttonReason && (
-                        <div className="p-2 bg-orange-100 rounded text-center">
-                          <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
-                          {otStatus.nextAvailableTime && (
-                            <p className="text-xs text-orange-500 mt-1">
-                              Available after {otStatus.nextAvailableTime}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+              <div className="mt-4 p-4 border border-orange-200 rounded-lg bg-orange-50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-orange-600" />
+                    <span className="font-medium text-orange-800 text-sm sm:text-base">Manual Overtime</span>
+                    {otStatus?.hasActiveOT && (
+                      <Badge variant="destructive" className="animate-pulse text-xs">
+                        Active
+                      </Badge>
+                    )}
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                  {otStatus?.currentOTHours && otStatus.currentOTHours > 0 && (
+                    <Badge variant="outline" className="text-orange-700 border-orange-300 text-xs w-fit">
+                      {otStatus.currentOTHours.toFixed(1)}h
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {!otStatus?.hasActiveOT ? (
+                    <Button
+                      onClick={() => setShowOTStartModal(true)}
+                      disabled={!otStatus?.buttonAvailable}
+                      variant="outline"
+                      className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
+                      size="lg"
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">Start Overtime</span>
+                      <span className="sm:hidden">Start OT</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => setShowOTEndModal(true)}
+                      disabled={!otStatus?.canEndOT}
+                      variant="destructive"
+                      className="w-full"
+                      size="lg"
+                    >
+                      <Timer className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">End Overtime</span>
+                      <span className="sm:hidden">End OT</span>
+                    </Button>
+                  )}
+                  
+                  {!otStatus?.buttonAvailable && otStatus?.buttonReason && (
+                    <div className="p-2 bg-orange-100 rounded text-center">
+                      <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
+                      {otStatus.nextAvailableTime && (
+                        <p className="text-xs text-orange-500 mt-1">
+                          Available after {otStatus.nextAvailableTime}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
