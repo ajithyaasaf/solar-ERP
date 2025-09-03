@@ -231,8 +231,10 @@ export class UnifiedAttendanceService {
         locationAccuracy: request.accuracy,
         locationValidationType: locationValidation.validationType,
         locationConfidence: locationValidation.confidence,
-        detectedOfficeId: locationValidation.detectedOffice?.id,
+        detectedOfficeId: locationValidation.detectedOffice?.id || null,
         distanceFromOffice: locationValidation.distance,
+        isManualOT: false,
+        otStatus: 'not_started' as const,
         
         // Optional fields
         ...(request.customerName && { customerName: request.customerName }),
@@ -603,18 +605,31 @@ export class UnifiedAttendanceService {
     try {
       const attendanceRecords = await storage.getAttendance(userId);
       
+      if (!Array.isArray(attendanceRecords)) {
+        console.error('ATTENDANCE METRICS: Expected array, got:', typeof attendanceRecords);
+        return {
+          totalDays: 0,
+          totalWorkingHours: 0,
+          totalOvertimeHours: 0,
+          averageWorkingHours: 0,
+          lateArrivals: 0,
+          punctualityRate: 100,
+          records: []
+        };
+      }
+      
       // Filter by date range if provided
       const filteredRecords = dateRange 
-        ? attendanceRecords.filter(record => {
+        ? attendanceRecords.filter((record: any) => {
             const checkInDate = new Date(record.checkInTime);
             return checkInDate >= dateRange.start && checkInDate <= dateRange.end;
           })
         : attendanceRecords;
 
       const totalDays = filteredRecords.length;
-      const totalWorkingHours = filteredRecords.reduce((sum, record) => sum + (record.workingHours || 0), 0);
-      const totalOvertimeHours = filteredRecords.reduce((sum, record) => sum + (record.overtimeHours || 0), 0);
-      const lateArrivals = filteredRecords.filter(record => record.isLate).length;
+      const totalWorkingHours = filteredRecords.reduce((sum: number, record: any) => sum + (record.workingHours || 0), 0);
+      const totalOvertimeHours = filteredRecords.reduce((sum: number, record: any) => sum + (record.overtimeHours || 0), 0);
+      const lateArrivals = filteredRecords.filter((record: any) => record.isLate).length;
       
       return {
         totalDays,

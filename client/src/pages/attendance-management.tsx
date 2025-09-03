@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { departments } from "@shared/schema";
+import * as XLSX from 'xlsx';
 
 export default function AttendanceManagement() {
   const { user } = useAuthContext();
@@ -48,6 +49,8 @@ export default function AttendanceManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedAttendanceRecord, setSelectedAttendanceRecord] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState<{
     url: string;
     employeeName: string;
@@ -372,6 +375,76 @@ export default function AttendanceManagement() {
     });
   };
 
+  // Handle export to Excel
+  const handleExportAttendance = () => {
+    try {
+      // Prepare data for export
+      const exportData = filteredDailyAttendance.map((record: any) => ({
+        'Employee Name': record.userName || 'N/A',
+        'Email': record.userEmail || 'N/A',
+        'Department': record.userDepartment || 'N/A',
+        'Designation': record.userDesignation || 'N/A',
+        'Date': formatDate(new Date(record.date)),
+        'Check In': record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'Not Checked In',
+        'Check Out': record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'Not Checked Out',
+        'Working Hours': record.workingHours ? `${record.workingHours.toFixed(1)}h` : '0h',
+        'Overtime Hours': record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h',
+        'Status': record.status || 'Unknown',
+        'Late Minutes': record.lateMinutes || 0,
+        'Attendance Type': record.attendanceType === 'field_work' ? 'Field Work' : 
+                           record.attendanceType === 'remote' ? 'Remote Work' : 'Office',
+        'Customer Name': record.customerName || '',
+        'Location': record.location || '',
+        'Remarks': record.remarks || ''
+      }));
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+      // Auto-size columns
+      const columnWidths = [
+        { wch: 20 }, // Employee Name
+        { wch: 25 }, // Email
+        { wch: 15 }, // Department
+        { wch: 15 }, // Designation
+        { wch: 12 }, // Date
+        { wch: 12 }, // Check In
+        { wch: 12 }, // Check Out
+        { wch: 12 }, // Working Hours
+        { wch: 12 }, // Overtime Hours
+        { wch: 10 }, // Status
+        { wch: 10 }, // Late Minutes
+        { wch: 15 }, // Attendance Type
+        { wch: 20 }, // Customer Name
+        { wch: 30 }, // Location
+        { wch: 30 }  // Remarks
+      ];
+      worksheet['!cols'] = columnWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
+
+      // Generate filename with date
+      const fileName = `attendance-report-${formatDate(selectedDate)}.xlsx`;
+
+      // Write and download file
+      XLSX.writeFile(workbook, fileName);
+
+      toast({
+        title: "Export Successful",
+        description: `Attendance report exported as ${fileName}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Unable to export attendance data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Handle image viewing with preloading
   const handleViewImage = async (record: any) => {
     if (!record.checkInImageUrl) {
@@ -435,6 +508,20 @@ export default function AttendanceManagement() {
     setShowImageModal(false);
     setSelectedImage(null);
     setImageLoading(false);
+  };
+
+  // Handle view details modal
+  const handleViewDetails = (record: any) => {
+    setSelectedAttendanceRecord(record);
+    setShowDetailsModal(true);
+  };
+
+  // Calculate total time for an attendance record
+  const calculateTotalTime = (record: any) => {
+    if (!record.checkInTime || !record.checkOutTime) return 0;
+    const checkIn = new Date(record.checkInTime);
+    const checkOut = new Date(record.checkOutTime);
+    return Math.max(0, (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60)); // Hours
   };
 
   // Enhanced status badge with incomplete detection
@@ -528,9 +615,14 @@ export default function AttendanceManagement() {
             <Settings className="h-4 w-4 mr-2" />
             Policies
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700 text-sm" size="sm">
+          <Button 
+            onClick={handleExportAttendance}
+            className="bg-green-600 hover:bg-green-700 text-sm" 
+            size="sm"
+            disabled={filteredDailyAttendance.length === 0}
+          >
             <Download className="h-4 w-4 mr-2" />
-            Export
+            Export ({filteredDailyAttendance.length} records)
           </Button>
         </div>
       </div>
@@ -1058,6 +1150,7 @@ export default function AttendanceManagement() {
                                 <Button 
                                   size="sm" 
                                   variant="outline"
+                                  onClick={() => handleViewDetails(record)}
                                   title="View Details"
                                 >
                                   <Eye className="h-3 w-3" />
@@ -1514,6 +1607,357 @@ export default function AttendanceManagement() {
               disabled={updateAttendanceMutation.isPending}
             >
               {updateAttendanceMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Attendance Details Modal */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Attendance Record Details
+            </DialogTitle>
+            <DialogDescription>
+              {selectedAttendanceRecord && `Complete details for ${selectedAttendanceRecord.userName} on ${formatDate(new Date(selectedAttendanceRecord.date))}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAttendanceRecord && (
+            <div className="space-y-6">
+              {/* Employee Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Employee Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Employee Name</Label>
+                      <p className="font-medium">{selectedAttendanceRecord.userName}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Email</Label>
+                      <p className="font-medium">{selectedAttendanceRecord.userEmail || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Department</Label>
+                      <p className="font-medium capitalize">{selectedAttendanceRecord.userDepartment || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Designation</Label>
+                      <p className="font-medium capitalize">{selectedAttendanceRecord.userDesignation || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Date</Label>
+                      <p className="font-medium">{formatDate(new Date(selectedAttendanceRecord.date))}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Attendance Timing */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Attendance Timing</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Check In Time</Label>
+                      <p className="font-medium">
+                        {selectedAttendanceRecord.checkInTime ? (
+                          <TimeDisplay time={selectedAttendanceRecord.checkInTime} format12Hour={true} />
+                        ) : (
+                          <Badge variant="outline" className="bg-red-50 text-red-700">Not Checked In</Badge>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Check Out Time</Label>
+                      <p className="font-medium">
+                        {selectedAttendanceRecord.checkOutTime ? (
+                          <TimeDisplay time={selectedAttendanceRecord.checkOutTime} format12Hour={true} />
+                        ) : (
+                          <Badge variant="outline" className="bg-red-50 text-red-700">Not Checked Out</Badge>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Working Hours</Label>
+                      <p className="font-medium">
+                        {selectedAttendanceRecord.workingHours ? 
+                          `${selectedAttendanceRecord.workingHours.toFixed(1)}h` : 
+                          `${calculateTotalTime(selectedAttendanceRecord).toFixed(1)}h`
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Overtime Hours</Label>
+                      <p className="font-medium">
+                        {selectedAttendanceRecord.overtimeHours ? 
+                          `${selectedAttendanceRecord.overtimeHours.toFixed(1)}h` : '0h'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Status</Label>
+                      <div className="mt-1">
+                        {getStatusBadge(selectedAttendanceRecord)}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Late Minutes</Label>
+                      <p className="font-medium">
+                        {selectedAttendanceRecord.lateMinutes ? 
+                          `${selectedAttendanceRecord.lateMinutes} minutes` : 'On Time'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Attendance Type</Label>
+                      <Badge variant="outline" className="mt-1">
+                        {selectedAttendanceRecord.attendanceType === 'field_work' ? 'Field Work' : 
+                         selectedAttendanceRecord.attendanceType === 'remote' ? 'Remote Work' : 'Office'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Additional Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Additional Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Reason/Notes</Label>
+                      <p className="font-medium">{selectedAttendanceRecord.reason || selectedAttendanceRecord.remarks || 'No additional notes'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Record ID</Label>
+                      <p className="font-medium text-xs">{selectedAttendanceRecord.id}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          
+          <DialogFooter className="sticky bottom-0 bg-white border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => selectedAttendanceRecord && handleEditAttendance(selectedAttendanceRecord)}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Record
+            </Button>
+            <Button onClick={() => setShowDetailsModal(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Attendance Policies Modal */}
+      <Dialog open={showPolicyModal} onOpenChange={setShowPolicyModal}>
+        <DialogContent className="max-w-3xl h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Attendance Policies & Settings
+            </DialogTitle>
+            <DialogDescription>
+              Configure attendance policies, working hours, and system settings
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Current Policies */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Active Policies</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {attendancePolicies.length > 0 ? (
+                  <div className="space-y-4">
+                    {attendancePolicies.map((policy: any) => (
+                      <div key={policy.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <h4 className="font-medium">{policy.name}</h4>
+                          <p className="text-sm text-gray-600">{policy.description}</p>
+                          {policy.rules && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              <span className="font-medium">Rules:</span> {Object.keys(policy.rules).length} configured
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={policy.isActive ? "default" : "secondary"}>
+                            {policy.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No attendance policies configured</p>
+                    <Button className="mt-4" size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create First Policy
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Department Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Department Working Hours</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {departments.map((dept) => (
+                    <div key={dept} className="p-4 border rounded-lg">
+                      <h4 className="font-medium capitalize mb-2">{dept}</h4>
+                      <div className="text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Check-in:</span>
+                          <span className="font-medium">9:00 AM</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Check-out:</span>
+                          <span className="font-medium">6:00 PM</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Working Hours:</span>
+                          <span className="font-medium">8 hours</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Break Time:</span>
+                          <span className="font-medium">1 hour</span>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" className="w-full mt-3">
+                        <Edit className="h-3 w-3 mr-2" />
+                        Modify
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* General Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">General Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Late Arrival Threshold</h4>
+                      <p className="text-sm text-gray-600">Grace period before marking as late</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-medium">15 minutes</span>
+                      <Button variant="outline" size="sm" className="ml-2">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Overtime Threshold</h4>
+                      <p className="text-sm text-gray-600">Minimum overtime hours to qualify</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-medium">30 minutes</span>
+                      <Button variant="outline" size="sm" className="ml-2">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Photo Verification</h4>
+                      <p className="text-sm text-gray-600">Require photos for attendance</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="default">Enabled</Badge>
+                      <Button variant="outline" size="sm" className="ml-2">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">Location Verification</h4>
+                      <p className="text-sm text-gray-600">GPS-based attendance validation</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="default">Enabled</Badge>
+                      <Button variant="outline" size="sm" className="ml-2">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button variant="outline" className="justify-start">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create New Policy
+                  </Button>
+                  <Button variant="outline" className="justify-start">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Settings
+                  </Button>
+                  <Button variant="outline" className="justify-start">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Settings
+                  </Button>
+                  <Button variant="outline" className="justify-start">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Advanced Settings
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <DialogFooter className="sticky bottom-0 bg-white border-t pt-4">
+            <Button variant="outline" onClick={() => setShowPolicyModal(false)}>
+              Close
+            </Button>
+            <Button>
+              <CheckCircle className="h-4 w-4 mr-2" />
               Save Changes
             </Button>
           </DialogFooter>

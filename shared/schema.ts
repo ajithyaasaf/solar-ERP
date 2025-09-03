@@ -840,7 +840,7 @@ export const insertPayrollSchema = z.object({
   userId: z.string(),
   employeeId: z.string(),
   month: z.number().min(1).max(12)
-    .refine((month: number, ctx: { parent: any }) => {
+    .superRefine((month, ctx) => {
       const year = ctx.parent.year;
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
@@ -848,17 +848,31 @@ export const insertPayrollSchema = z.object({
       
       // Allow current month and past months, but not future months
       if (year === currentYear) {
-        return month <= currentMonth;
+        if (month > currentMonth) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Cannot create payroll for future months'
+          });
+        }
+      } else if (year > currentYear) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Cannot create payroll for future months'
+        });
       }
-      return year < currentYear;
-    }, "Cannot create payroll for future months"),
+    }),
   year: z.number().min(2020).max(new Date().getFullYear() + 1), // Prevent future years beyond next year
   workingDays: z.number().min(0).max(31),
   presentDays: z.number().min(0)
-    .refine((presentDays: number, ctx: { parent: any }) => {
+    .superRefine((presentDays, ctx) => {
       const workingDays = ctx.parent.workingDays;
-      return presentDays <= workingDays;
-    }, "Present days cannot exceed working days"),
+      if (presentDays > workingDays) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Present days cannot exceed working days'
+        });
+      }
+    }),
   absentDays: z.number().min(0),
   overtimeHours: z.number().min(0).default(0),
   leaveDays: z.number().min(0).default(0),
@@ -1003,24 +1017,38 @@ export const insertEnhancedPayrollSchema = z.object({
   userId: z.string(),
   employeeId: z.string(),
   month: z.number().min(1).max(12)
-    .refine((month: number, ctx: { parent: any }) => {
+    .superRefine((month, ctx) => {
       const year = ctx.parent.year;
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth() + 1;
       
       if (year === currentYear) {
-        return month <= currentMonth;
+        if (month > currentMonth) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Cannot create payroll for future months'
+          });
+        }
+      } else if (year > currentYear) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Cannot create payroll for future months'
+        });
       }
-      return year < currentYear;
-    }, "Cannot create payroll for future months"),
+    }),
   year: z.number().min(2020).max(new Date().getFullYear() + 1),
   monthDays: z.number().min(1).max(31),
   presentDays: z.number().min(0)
-    .refine((presentDays: number, ctx: { parent: any }) => {
+    .superRefine((presentDays, ctx) => {
       const monthDays = ctx.parent.monthDays;
-      return presentDays <= monthDays;
-    }, "Present days cannot exceed month days"),
+      if (presentDays > monthDays) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Present days cannot exceed month days'
+        });
+      }
+    }),
   paidLeaveDays: z.number().min(0).default(0),
   overtimeHours: z.number().min(0).default(0),
   perDaySalary: z.number().min(0),
