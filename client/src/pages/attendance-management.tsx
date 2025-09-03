@@ -4,6 +4,7 @@ import { useAuthContext } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { TimeDisplay } from "@/components/time/time-display";
+import { DateRangePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { UndoManager, useUndoManager } from "@/components/undo/undo-manager";
 import { useOfflineHandler, callWithOfflineHandling } from "@/utils/offline-handler";
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { 
   CalendarIcon, Search, Loader2, FileText, BarChart, UserCheck, Clock, 
   Plus, Edit, Trash2, Eye, Download, Upload, Settings, Users, 
-  CheckCircle, XCircle, AlertCircle, MapPin, Camera
+  CheckCircle, XCircle, AlertCircle, MapPin, Camera, CalendarDays, User
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { departments } from "@shared/schema";
@@ -38,8 +39,14 @@ export default function AttendanceManagement() {
   // Offline handling
   const offlineHandler = useOfflineHandler();
   
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  // Remove calendar popup completely to fix overlay issues
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({ 
+    from: new Date(), 
+    to: new Date() 
+  });
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -87,29 +94,24 @@ export default function AttendanceManagement() {
     };
   }, [queryClient]);
 
-  // Daily attendance records
-  const { data: dailyAttendance = [], isLoading: isLoadingDaily, refetch: refetchDaily } = useQuery({
-    queryKey: ['/api/attendance', { date: selectedDate.toISOString().split('T')[0] }],
-    enabled: !!user,
+  // Range attendance records - Enhanced for date range and person filtering
+  const { data: rangeAttendance = [], isLoading: isLoadingRange, refetch: refetchRange } = useQuery({
+    queryKey: ['/api/attendance/range', { 
+      from: dateRange.from?.toISOString().split('T')[0], 
+      to: dateRange.to?.toISOString().split('T')[0],
+      userId: selectedEmployee !== "all" ? selectedEmployee : undefined,
+      department: selectedDepartment !== "all" ? selectedDepartment : undefined
+    }],
+    enabled: !!user && !!dateRange.from && !!dateRange.to,
     queryFn: async () => {
-      const dateParam = selectedDate.toISOString().split('T')[0];
-      const attendanceResponse = await apiRequest(`/api/attendance?date=${dateParam}`, 'GET');
-      const attendanceData = await attendanceResponse.json();
+      const params = new URLSearchParams();
+      if (dateRange.from) params.append('from', dateRange.from.toISOString().split('T')[0]);
+      if (dateRange.to) params.append('to', dateRange.to.toISOString().split('T')[0]);
+      if (selectedEmployee !== "all") params.append('userId', selectedEmployee);
+      if (selectedDepartment !== "all") params.append('department', selectedDepartment);
       
-      // Enrich with user details
-      const usersResponse = await apiRequest('/api/users', 'GET');
-      const users = await usersResponse.json();
-      
-      return attendanceData.map((record: any) => {
-        const userDetails = users.find((u: any) => u.id === record.userId);
-        return {
-          ...record,
-          userName: userDetails?.displayName || `User #${record.userId}`,
-          userDepartment: userDetails?.department || null,
-          userDesignation: userDetails?.designation || null,
-          userEmail: userDetails?.email || null
-        };
-      });
+      const response = await apiRequest(`/api/attendance/range?${params}`, 'GET');
+      return response.json();
     },
   });
 
@@ -123,12 +125,22 @@ export default function AttendanceManagement() {
     },
   });
 
-  // Department statistics
-  const { data: departmentStats = [] } = useQuery({
-    queryKey: ['/api/attendance/department-stats', selectedDate.toISOString().split('T')[0]],
+  // All users for employee dropdown
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['/api/users'],
     enabled: !!user,
     queryFn: async () => {
-      const dateParam = selectedDate.toISOString().split('T')[0];
+      const response = await apiRequest('/api/users', 'GET');
+      return response.json();
+    },
+  });
+
+  // Department statistics - use single date for stats
+  const { data: departmentStats = [] } = useQuery({
+    queryKey: ['/api/attendance/department-stats', dateRange.from?.toISOString().split('T')[0]],
+    enabled: !!user && !!dateRange.from,
+    queryFn: async () => {
+      const dateParam = dateRange.from?.toISOString().split('T')[0];
       const response = await apiRequest(`/api/attendance/department-stats?date=${dateParam}`, 'GET');
       return response.json();
     },
@@ -242,7 +254,7 @@ export default function AttendanceManagement() {
   };
 
   // Filter attendance records
-  const filteredDailyAttendance = dailyAttendance.filter((record: any) => {
+  const filteredRangeAttendance = rangeAttendance.filter((record: any) => {
     const matchesSearch = !searchQuery || 
       record.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.userEmail?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -256,8 +268,8 @@ export default function AttendanceManagement() {
   });
 
   // Separate incomplete records for easy identification
-  const incompleteRecords = filteredDailyAttendance.filter((record: any) => isIncompleteRecord(record));
-  const completeRecords = filteredDailyAttendance.filter((record: any) => !isIncompleteRecord(record));
+  const incompleteRecords = filteredRangeAttendance.filter((record: any) => isIncompleteRecord(record));
+  const completeRecords = filteredRangeAttendance.filter((record: any) => !isIncompleteRecord(record));
 
   // Debug logging for incomplete records (only when there are incomplete records)
   if (incompleteRecords.length > 0) {
@@ -383,7 +395,7 @@ export default function AttendanceManagement() {
   const handleExportAttendance = () => {
     try {
       // Prepare data for export
-      const exportData = filteredDailyAttendance.map((record: any) => ({
+      const exportData = filteredRangeAttendance.map((record: any) => ({
         'Employee Name': record.userName || 'N/A',
         'Email': record.userEmail || 'N/A',
         'Department': record.userDepartment || 'N/A',
@@ -430,7 +442,10 @@ export default function AttendanceManagement() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
 
       // Generate filename with date
-      const fileName = `attendance-report-${formatDate(selectedDate)}.xlsx`;
+      const dateRangeStr = dateRange.from && dateRange.to ? 
+        `${formatDate(dateRange.from)}-to-${formatDate(dateRange.to)}` : 
+        formatDate(new Date());
+      const fileName = `attendance-report-${dateRangeStr}.xlsx`;
 
       // Write and download file
       XLSX.writeFile(workbook, fileName);
@@ -623,10 +638,10 @@ export default function AttendanceManagement() {
             onClick={handleExportAttendance}
             className="bg-green-600 hover:bg-green-700 text-sm" 
             size="sm"
-            disabled={filteredDailyAttendance.length === 0}
+            disabled={filteredRangeAttendance.length === 0}
           >
             <Download className="h-4 w-4 mr-2" />
-            Export ({filteredDailyAttendance.length} records)
+            Export ({filteredRangeAttendance.length} records)
           </Button>
         </div>
       </div>
@@ -736,7 +751,7 @@ export default function AttendanceManagement() {
       {/* Main Content Tabs */}
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-4">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-none lg:flex">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-none lg:flex">
             <TabsTrigger value="live" className="flex items-center gap-2 text-xs sm:text-sm">
               <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
               <span className="hidden sm:inline">Live Tracking</span>
@@ -761,6 +776,11 @@ export default function AttendanceManagement() {
                   {incompleteRecords.length}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2 text-xs sm:text-sm">
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline">Employee History</span>
+              <span className="sm:hidden">History</span>
             </TabsTrigger>
           </TabsList>
           
@@ -790,7 +810,7 @@ export default function AttendanceManagement() {
               </SelectContent>
             </Select>
 
-            {(activeTab === "daily" || activeTab === "corrections") && (
+            {(activeTab === "daily" || activeTab === "corrections" || activeTab === "history") && (
               <>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-full sm:w-32">
@@ -806,28 +826,25 @@ export default function AttendanceManagement() {
                   </SelectContent>
                 </Select>
 
-                <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-gray-50 w-full sm:w-auto">
-                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                  <span className="text-sm font-medium flex-1 sm:flex-none">{formatDate(selectedDate)}</span>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedDate(new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000))}
-                      className="h-6 w-6 p-0"
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedDate(new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000))}
-                      className="h-6 w-6 p-0"
-                    >
-                      →
-                    </Button>
-                  </div>
-                </div>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="All Employees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Employees</SelectItem>
+                    {allUsers.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <DateRangePicker 
+                  dateRange={dateRange}
+                  setDateRange={setDateRange}
+                  className="w-full sm:w-auto"
+                />
               </>
             )}
           </div>
@@ -981,18 +998,18 @@ export default function AttendanceManagement() {
         <TabsContent value="daily" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Daily Attendance Records - {formatDate(selectedDate)}</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Attendance Records - {dateRange.from && dateRange.to ? `${formatDate(dateRange.from)} to ${formatDate(dateRange.to)}` : 'Date Range'}</CardTitle>
               <CardDescription className="text-sm">
                 Comprehensive view of all employee attendance for the selected date
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingDaily ? (
+              {isLoadingRange ? (
                 <div className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   <p className="text-muted-foreground mt-2">Loading attendance data...</p>
                 </div>
-              ) : filteredDailyAttendance.length === 0 ? (
+              ) : filteredRangeAttendance.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No attendance records found for this date</p>
@@ -1001,7 +1018,7 @@ export default function AttendanceManagement() {
                 <>
                   {/* Mobile Card View */}
                   <div className="block md:hidden space-y-4">
-                    {filteredDailyAttendance.map((record: any) => (
+                    {filteredRangeAttendance.map((record: any) => (
                       <Card key={record.id} className={`border shadow-sm ${isIncompleteRecord(record) ? 'border-amber-300 bg-amber-50/30' : ''}`}>
                         <CardContent className="p-4">
                           <div className="space-y-3">
@@ -1105,7 +1122,7 @@ export default function AttendanceManagement() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredDailyAttendance.map((record: any) => (
+                        {filteredRangeAttendance.map((record: any) => (
                           <TableRow key={record.id} className={isIncompleteRecord(record) ? "bg-amber-50/30" : ""}>
                             <TableCell className="font-medium">
                               <div>
@@ -1185,7 +1202,7 @@ export default function AttendanceManagement() {
                   Incomplete Records - Urgent Action Required
                 </CardTitle>
                 <CardDescription className="text-amber-700">
-                  {incompleteRecords.length} employee(s) forgot to check out on {formatDate(selectedDate)}. 
+                  {incompleteRecords.length} employee(s) forgot to check out in the selected date range. 
                   These records need immediate correction to maintain data accuracy.
                 </CardDescription>
               </CardHeader>
@@ -1287,11 +1304,11 @@ export default function AttendanceManagement() {
             <CardHeader>
               <CardTitle>General Attendance Corrections</CardTitle>
               <CardDescription>
-                All attendance records for {formatDate(selectedDate)} - Edit any record as needed
+                All attendance records for selected date range - Edit any record as needed
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {filteredDailyAttendance.length > 0 ? (
+              {filteredRangeAttendance.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -1305,7 +1322,7 @@ export default function AttendanceManagement() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredDailyAttendance.map((record: any) => (
+                      {filteredRangeAttendance.map((record: any) => (
                         <TableRow key={record.id} className={isIncompleteRecord(record) ? "bg-amber-50/30" : ""}>
                           <TableCell className="font-medium">
                             <div>
@@ -1357,8 +1374,153 @@ export default function AttendanceManagement() {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No attendance records found for {formatDate(selectedDate)}</p>
+                  <p>No attendance records found for selected date range</p>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Employee History Tab */}
+        <TabsContent value="history" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <User className="h-5 w-5" />
+                Employee History - {selectedEmployee !== "all" ? 
+                  allUsers.find(u => u.id === selectedEmployee)?.displayName || "Employee" : 
+                  "All Employees"}
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Individual attendance history over the selected date range
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {selectedEmployee === "all" ? (
+                <div className="text-center py-8 text-gray-500">
+                  <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Please select a specific employee to view their attendance history</p>
+                </div>
+              ) : isLoadingRange ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <p className="text-muted-foreground mt-2">Loading employee history...</p>
+                </div>
+              ) : filteredRangeAttendance.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No attendance records found for this employee in the selected date range</p>
+                </div>
+              ) : (
+                <>
+                  {/* Employee Summary */}
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Total Days</Label>
+                        <p className="font-medium text-lg">{filteredRangeAttendance.length}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Present Days</Label>
+                        <p className="font-medium text-lg text-green-600">
+                          {filteredRangeAttendance.filter(r => r.status === 'present').length}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Total Hours</Label>
+                        <p className="font-medium text-lg">
+                          {filteredRangeAttendance.reduce((sum, r) => sum + (r.workingHours || 0), 0).toFixed(1)}h
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Overtime Hours</Label>
+                        <p className="font-medium text-lg text-blue-600">
+                          {filteredRangeAttendance.reduce((sum, r) => sum + (r.overtimeHours || 0), 0).toFixed(1)}h
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* History Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Check Out</TableHead>
+                          <TableHead>Working Hours</TableHead>
+                          <TableHead>Overtime</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredRangeAttendance.map((record: any) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="font-medium">
+                              {formatDate(new Date(record.date))}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkInTime ? (
+                                <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                              ) : (
+                                <Badge variant="outline" className="bg-gray-50 text-gray-500">No check-in</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkOutTime ? (
+                                <TimeDisplay time={record.checkOutTime} format12Hour={true} />
+                              ) : (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Missing
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-medium">
+                                {record.workingHours ? `${record.workingHours.toFixed(1)}h` : '0h'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-medium text-blue-600">
+                                {record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={record.status === 'present' ? 'default' : record.status === 'absent' ? 'destructive' : 'secondary'}>
+                                {record.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Photo"
+                                  >
+                                    <Camera className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
