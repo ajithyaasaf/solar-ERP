@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { 
   CalendarIcon, Search, Loader2, UserCheck, Clock, 
-  MapPin, Timer, Users, TrendingUp, Activity, RefreshCw, Zap
+  MapPin, Timer, Users, TrendingUp, Activity, RefreshCw, Zap, ChevronDown
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { OvertimeExplanationCard } from "@/components/attendance/overtime-explanation-card";
@@ -40,6 +41,7 @@ export default function Attendance() {
   // Manual OT modal states
   const [showOTStartModal, setShowOTStartModal] = useState(false);
   const [showOTEndModal, setShowOTEndModal] = useState(false);
+  const [isOTExpanded, setIsOTExpanded] = useState(false);
 
   // Fetch current user's attendance records
   const { data: attendanceRecords = [], isLoading, refetch } = useQuery({
@@ -66,7 +68,7 @@ export default function Attendance() {
       }));
     },
     enabled: !!user?.uid,
-    refetchInterval: 30000, // Real-time updates every 30 seconds
+    refetchInterval: 60000, // Moderate updates every 60 seconds
   });
 
   // Fetch current user's attendance for today - Fixed timezone issue
@@ -112,9 +114,9 @@ export default function Attendance() {
       return null;
     },
     enabled: !!user?.department,
-    staleTime: 30000, // Smart caching - 30 seconds
-    gcTime: 60000, // Garbage collect after 1 minute
-    refetchInterval: 30000, // Reduced frequency - every 30 seconds
+    staleTime: 60000, // Smart caching - 60 seconds
+    gcTime: 120000, // Garbage collect after 2 minutes
+    refetchInterval: 60000, // Moderate frequency - every 60 seconds
     refetchOnWindowFocus: true,
     refetchOnMount: true,
   });
@@ -131,7 +133,7 @@ export default function Attendance() {
       return null;
     },
     enabled: !!user?.uid,
-    refetchInterval: 10000, // Check OT status every 10 seconds for real-time updates
+    refetchInterval: 30000, // Check OT status every 30 seconds
   });
 
   // Enhanced refresh functions with comprehensive invalidation
@@ -270,23 +272,8 @@ export default function Attendance() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Attendance</h1>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
-            <p className="text-muted-foreground text-sm md:text-base">Track your daily attendance and work hours</p>
-            <Badge 
-              variant={
-                attendanceState.state === 'completed' ? "default" : 
-                attendanceState.state === 'checked_in' ? "secondary" : 
-                attendanceState.state === 'not_started' ? "outline" : "destructive"
-              } 
-              className="text-xs w-fit"
-            >
-              {
-                attendanceState.state === 'completed' ? "Day Complete" :
-                attendanceState.state === 'checked_in' ? "Currently Working" :
-                attendanceState.state === 'not_started' ? "Ready to Start" :
-                attendanceState.state === 'no_timing' ? "Timing Not Set" : "Unknown State"
-              }
-            </Badge>
+          <div className="mt-2">
+            <p className="text-muted-foreground text-sm">Track your daily attendance and work hours</p>
           </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
@@ -299,30 +286,22 @@ export default function Attendance() {
 
       {/* Today's Status Card - Primary Action Area */}
       {user && (
-        <Card className="border-2 border-primary/20 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <Card className="border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Activity className="h-5 w-5 text-primary" />
                 Today's Attendance
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })})
-                </span>
               </CardTitle>
-              {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
-                <div className="text-xs text-muted-foreground">
-                  Office: <TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /> - <TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} />
-                </div>
-              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Current Status Display */}
             {todayAttendance ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                  <div className="p-2 bg-green-100 rounded-full flex-shrink-0">
-                    <Clock className="h-4 w-4 text-green-600" />
+                <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="p-2 bg-muted rounded-full flex-shrink-0">
+                    <Clock className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">Check In</p>
@@ -332,9 +311,9 @@ export default function Attendance() {
                 </div>
                 
                 {todayAttendance.checkOutTime ? (
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                    <div className="p-2 bg-red-100 rounded-full flex-shrink-0">
-                      <Timer className="h-4 w-4 text-red-600" />
+                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div className="p-2 bg-muted rounded-full flex-shrink-0">
+                      <Timer className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Check Out</p>
@@ -364,24 +343,24 @@ export default function Attendance() {
                 )}
 
                 {todayAttendance.overtimeHours && todayAttendance.overtimeHours > 0 ? (
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-orange-200 sm:col-span-2 lg:col-span-1">
-                    <div className="p-2 bg-orange-100 rounded-full flex-shrink-0">
-                      <Zap className="h-4 w-4 text-orange-600" />
+                  <div className="flex items-center gap-3 p-3 border rounded-lg sm:col-span-2 lg:col-span-1">
+                    <div className="p-2 bg-muted rounded-full flex-shrink-0">
+                      <Zap className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Overtime</p>
-                      <p className="font-semibold text-orange-600">{todayAttendance.overtimeHours.toFixed(1)}h</p>
+                      <p className="font-semibold">{todayAttendance.overtimeHours.toFixed(1)}h</p>
                       <p className="text-xs text-muted-foreground">Extra hours</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-dashed sm:col-span-2 lg:col-span-1">
-                    <div className="p-2 bg-gray-100 rounded-full flex-shrink-0">
-                      <Zap className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-3 p-3 border border-dashed rounded-lg sm:col-span-2 lg:col-span-1">
+                    <div className="p-2 bg-muted rounded-full flex-shrink-0">
+                      <Zap className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">Overtime</p>
-                      <p className="font-semibold text-gray-400">None</p>
+                      <p className="font-semibold text-muted-foreground">None</p>
                       <p className="text-xs text-muted-foreground">Regular hours</p>
                     </div>
                   </div>
@@ -464,149 +443,121 @@ export default function Attendance() {
               )}
             </div>
 
-            {/* Manual OT Buttons */}
+            {/* Collapsible Manual OT Section */}
             {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
-              <div className="mt-4 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-orange-600" />
-                    <span className="font-medium text-orange-800 text-sm sm:text-base">Manual Overtime</span>
-                    {otStatus?.hasActiveOT && (
-                      <Badge variant="destructive" className="animate-pulse text-xs">
-                        Active
-                      </Badge>
-                    )}
-                  </div>
-                  {otStatus?.currentOTHours && otStatus.currentOTHours > 0 && (
-                    <Badge variant="outline" className="text-orange-700 border-orange-300 text-xs w-fit">
-                      {otStatus.currentOTHours.toFixed(1)}h
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {!otStatus?.hasActiveOT ? (
-                    <Button
-                      onClick={() => setShowOTStartModal(true)}
-                      disabled={!otStatus?.buttonAvailable}
-                      variant="outline"
-                      className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
-                      size="lg"
-                    >
-                      <Zap className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Start Overtime</span>
-                      <span className="sm:hidden">Start OT</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => setShowOTEndModal(true)}
-                      disabled={!otStatus?.canEndOT}
-                      variant="destructive"
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Timer className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">End Overtime</span>
-                      <span className="sm:hidden">End OT</span>
-                    </Button>
-                  )}
-                  
-                  {!otStatus?.buttonAvailable && otStatus?.buttonReason && (
-                    <div className="p-2 bg-orange-100 rounded text-center">
-                      <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
-                      {otStatus.nextAvailableTime && (
-                        <p className="text-xs text-orange-500 mt-1">
-                          Available after {otStatus.nextAvailableTime}
-                        </p>
+              <Collapsible open={isOTExpanded} onOpenChange={setIsOTExpanded}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between p-2 h-auto">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm font-medium">Overtime Controls</span>
+                      {otStatus?.hasActiveOT && (
+                        <Badge variant="destructive" className="text-xs">
+                          Active
+                        </Badge>
+                      )}
+                      {otStatus?.currentOTHours && otStatus.currentOTHours > 0 && (
+                        <Badge variant="outline" className="text-orange-700 text-xs">
+                          {otStatus.currentOTHours.toFixed(1)}h
+                        </Badge>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isOTExpanded ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 p-4 border border-orange-200 rounded-lg bg-orange-50">
+                    <div className="space-y-3">
+                      {!otStatus?.hasActiveOT ? (
+                        <Button
+                          onClick={() => setShowOTStartModal(true)}
+                          disabled={!otStatus?.buttonAvailable}
+                          variant="outline"
+                          className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          Start Overtime
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => setShowOTEndModal(true)}
+                          disabled={!otStatus?.canEndOT}
+                          variant="destructive"
+                          className="w-full"
+                        >
+                          <Timer className="h-4 w-4 mr-2" />
+                          End Overtime
+                        </Button>
+                      )}
+                      
+                      {!otStatus?.buttonAvailable && otStatus?.buttonReason && (
+                        <div className="p-2 bg-orange-100 rounded text-center">
+                          <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
+                          {otStatus.nextAvailableTime && (
+                            <p className="text-xs text-orange-500 mt-1">
+                              Available after {otStatus.nextAvailableTime}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Department Timing Settings Display */}
-      {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+
+      {/* Summary & Department Info */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Weekly Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold">{stats.present}</div>
+                <div className="text-xs text-muted-foreground">Days Present</div>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold">
+                  {stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0}%
+                </div>
+                <div className="text-xs text-muted-foreground">Attendance Rate</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Clock className="h-5 w-5 text-purple-600" />
-                Department Timing Settings
-                <Badge variant="outline" className="ml-2">{user?.department?.toUpperCase()}</Badge>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Department Schedule
               </CardTitle>
-              <CardDescription>Your department's configured working hours and policies</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-white rounded-lg border">
-                  <div className="text-sm text-muted-foreground mb-1">Check In Time</div>
-                  <div className="text-lg font-semibold text-green-600"><TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Check In</div>
+                  <div className="font-semibold"><TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /></div>
                 </div>
-                <div className="text-center p-4 bg-white rounded-lg border">
-                  <div className="text-sm text-muted-foreground mb-1">Check Out Time</div>
-                  <div className="text-lg font-semibold text-red-600"><TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} /></div>
-                </div>
-                <div className="text-center p-4 bg-white rounded-lg border">
-                  <div className="text-sm text-muted-foreground mb-1">Working Hours</div>
-                  <div className="text-lg font-semibold text-blue-600">{departmentTiming.workingHours}h</div>
-                </div>
-                <div className="text-center p-4 bg-white rounded-lg border">
-                  <div className="text-sm text-muted-foreground mb-1">Overtime Threshold</div>
-                  <div className="text-lg font-semibold text-orange-600">{departmentTiming.overtimeThresholdMinutes}m</div>
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Check Out</div>
+                  <div className="font-semibold"><TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} /></div>
                 </div>
               </div>
-              {departmentTiming.isFlexibleTiming && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="text-sm text-blue-700 font-medium">Flexible Timing Enabled</div>
-                  <div className="text-xs text-blue-600">Your department allows flexible working hours</div>
-                </div>
-              )}
             </CardContent>
           </Card>
-          
-          {/* Overtime Explanation */}
-          <OvertimeExplanationCard 
-            departmentTiming={departmentTiming}
-          />
-        </div>
-      )}
-
-      {/* Weekly Summary Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Weekly Summary
-          </CardTitle>
-          <CardDescription>Your attendance performance this week</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-              <div className="text-2xl font-bold text-green-600">{stats.present}</div>
-              <div className="text-xs text-green-700">Days Present</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="text-2xl font-bold text-orange-600">{stats.overtime}</div>
-              <div className="text-xs text-orange-700">Overtime Days</div>
-            </div>
-            <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="text-2xl font-bold text-yellow-600">{stats.late}</div>
-              <div className="text-xs text-yellow-700">Late Arrivals</div>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-2xl font-bold text-blue-600">
-                {stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0}%
-              </div>
-              <div className="text-xs text-blue-700">Attendance Rate</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Attendance History with Improved Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
