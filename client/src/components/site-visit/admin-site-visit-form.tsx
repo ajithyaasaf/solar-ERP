@@ -3,7 +3,7 @@
  * Handles admin-specific processes like bank work, EB office visits, etc.
  */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,7 @@ const ebProcessOptions = [
 export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: AdminSiteVisitFormProps) {
   const [formData, setFormData] = useState<AdminFormData>({});
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const sectionDetailsRef = useRef<HTMLDivElement>(null);
 
   const handleSectionToggle = (section: string) => {
     if (activeSection === section) {
@@ -97,6 +98,15 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
           ebProcess: { type: 'new_connection', description: '' }
         }));
       }
+
+      // Auto-scroll to section details when a section is selected
+      setTimeout(() => {
+        sectionDetailsRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+          inline: 'nearest'
+        });
+      }, 100); // Small delay to ensure DOM update
     }
   };
 
@@ -271,6 +281,8 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
         </Card>
       </div>
 
+      {/* Section Details */}
+      <div ref={sectionDetailsRef}>
       {/* Bank Process Details */}
       {activeSection === 'bankProcess' && formData.bankProcess && (
         <Card>
@@ -409,6 +421,7 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
           </Card>
         )
       ))}
+      </div>
 
       {/* Others Section Toggle */}
       {!activeSection && (

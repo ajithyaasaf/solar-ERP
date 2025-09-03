@@ -68,6 +68,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
   const queryClient = useQueryClient();
   
   const [step, setStep] = useState(1);
+  const modalContentRef = useRef<HTMLDivElement>(null);
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
   const [locationCaptured, setLocationCaptured] = useState(false);
   const [lastErrorMessage, setLastErrorMessage] = useState<string>('');
@@ -121,7 +122,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
   // Reset form when modal opens (but not on camera errors)
   useEffect(() => {
     if (isOpen) {
-      setStep(1);
+      navigateToStep(1);
       setCurrentLocation(null);
       setLocationCaptured(false);
       setCapturedPhotos({ selfie: null, sitePhotos: [] });
@@ -460,6 +461,25 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
     }
   };
 
+  // Scroll to top helper function
+  const scrollToTop = () => {
+    if (modalContentRef.current) {
+      modalContentRef.current.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Enhanced step navigation with scroll-to-top
+  const navigateToStep = (newStep: number) => {
+    setStep(newStep);
+    // Add small delay to ensure DOM update before scrolling
+    setTimeout(() => {
+      scrollToTop();
+    }, 50);
+  };
+
   const resetPhoto = (photoType?: 'selfie' | 'site', photoIndex?: number) => {
     if (photoType === 'selfie') {
       setCapturedPhotos(prev => ({
@@ -751,7 +771,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-2xl h-[80vh] max-h-[80vh] overflow-y-auto p-2 sm:p-6 flex flex-col">
+      <DialogContent className="w-[95vw] max-w-2xl h-[80vh] max-h-[80vh] overflow-y-auto p-2 sm:p-6 flex flex-col" ref={modalContentRef}>
         <DialogHeader className="text-center sm:text-left flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 justify-center sm:justify-start text-base sm:text-lg">
             <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -855,7 +875,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
 
               <div className="flex justify-center sm:justify-end">
                 <Button
-                  onClick={() => setStep(2)}
+                  onClick={() => navigateToStep(2)}
                   disabled={!canProceedToStep2}
                   className="w-full sm:w-auto"
                 >
@@ -990,7 +1010,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                   <span className="sm:hidden">Back</span>
                 </Button>
                 <Button
-                  onClick={() => setStep(3)}
+                  onClick={() => navigateToStep(3)}
                   disabled={!canProceedToStep3}
                   className="w-full sm:w-auto order-1 sm:order-2 h-10 sm:h-9 text-sm sm:text-base"
                 >
@@ -1010,9 +1030,9 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                   <TechnicalSiteVisitForm 
                     onSubmit={(data) => {
                       setFormData(prev => ({ ...prev, technicalData: data, marketingData: null, adminData: null }));
-                      setStep(4);
+                      navigateToStep(4);
                     }}
-                    onBack={() => setStep(2)}
+                    onBack={() => navigateToStep(2)}
                     isDisabled={false}
                   />
                 </ErrorBoundary>
@@ -1023,9 +1043,9 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                   <MarketingSiteVisitForm 
                     onSubmit={(data) => {
                       setFormData(prev => ({ ...prev, marketingData: data, technicalData: null, adminData: null }));
-                      setStep(4);
+                      navigateToStep(4);
                     }}
-                    onBack={() => setStep(2)}
+                    onBack={() => navigateToStep(2)}
                     isDisabled={false}
                   />
                 </ErrorBoundary>
@@ -1036,9 +1056,9 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                   <AdminSiteVisitForm 
                     onSubmit={(data) => {
                       setFormData(prev => ({ ...prev, adminData: data, technicalData: null, marketingData: null }));
-                      setStep(4);
+                      navigateToStep(4);
                     }}
-                    onBack={() => setStep(2)}
+                    onBack={() => navigateToStep(2)}
                     isDisabled={false}
                   />
                 </ErrorBoundary>
@@ -1359,7 +1379,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
               <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0">
                 <Button 
                   variant="outline" 
-                  onClick={() => setStep(3)}
+                  onClick={() => navigateToStep(3)}
                   className="w-full sm:w-auto order-2 sm:order-1"
                 >
                   Back

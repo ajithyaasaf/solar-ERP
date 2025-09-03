@@ -3,7 +3,7 @@
  * Handles marketing-specific project details and configurations
  */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -145,6 +145,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
   const [formData, setFormData] = useState<MarketingFormData>({
     updateRequirements: false
   });
+  const projectTypeSelectionRef = useRef<HTMLDivElement>(null);
 
   const handleRequirementsUpdate = (value: string) => {
     const shouldUpdate = value === 'yes';
@@ -158,6 +159,17 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
       waterHeaterConfig: undefined,
       waterPumpConfig: undefined
     }));
+
+    // Auto-scroll to Project Type Selection when "Yes" is selected
+    if (shouldUpdate && projectTypeSelectionRef.current) {
+      setTimeout(() => {
+        projectTypeSelectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+          inline: 'nearest'
+        });
+      }, 100); // Small delay to ensure DOM update
+    }
   };
 
   const handleProjectTypeChange = (projectType: string) => {
@@ -337,7 +349,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
       {formData.updateRequirements && (
         <>
           {/* Project Type Selection */}
-          <Card>
+          <Card ref={projectTypeSelectionRef}>
             <CardHeader>
               <CardTitle>Project Type Selection</CardTitle>
             </CardHeader>
@@ -568,10 +580,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Lower End Height (ft)</Label>
                           <Select 
-                            value={formData.onGridConfig.gpStructure?.lowerEndHeight || '0'}
+                            value={formData.onGridConfig?.gpStructure?.lowerEndHeight || '0'}
                             onValueChange={(value) => updateConfig('onGridConfig', { 
                               gpStructure: { 
-                                ...formData.onGridConfig.gpStructure, 
+                                ...formData.onGridConfig?.gpStructure, 
                                 lowerEndHeight: value 
                               } 
                             })}
@@ -591,10 +603,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Higher End Height (ft)</Label>
                           <Select 
-                            value={formData.onGridConfig.gpStructure?.higherEndHeight || '0'}
+                            value={formData.onGridConfig?.gpStructure?.higherEndHeight || '0'}
                             onValueChange={(value) => updateConfig('onGridConfig', { 
                               gpStructure: { 
-                                ...formData.onGridConfig.gpStructure, 
+                                ...formData.onGridConfig?.gpStructure, 
                                 higherEndHeight: value 
                               } 
                             })}
@@ -618,10 +630,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <div>
                         <Label>Mono Rail Type</Label>
                         <Select 
-                          value={formData.onGridConfig.monoRail?.type || 'mini_rail'}
+                          value={formData.onGridConfig?.monoRail?.type || 'mini_rail'}
                           onValueChange={(value) => updateConfig('onGridConfig', { 
                             monoRail: { 
-                              ...formData.onGridConfig.monoRail, 
+                              ...formData.onGridConfig?.monoRail, 
                               type: value 
                             } 
                           })}
@@ -882,10 +894,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Lower End Height (ft)</Label>
                           <Select 
-                            value={formData.offGridConfig.gpStructure?.lowerEndHeight || '0'}
+                            value={formData.offGridConfig?.gpStructure?.lowerEndHeight || '0'}
                             onValueChange={(value) => updateConfig('offGridConfig', { 
                               gpStructure: { 
-                                ...formData.offGridConfig.gpStructure, 
+                                ...formData.offGridConfig?.gpStructure, 
                                 lowerEndHeight: value 
                               } 
                             })}
@@ -905,10 +917,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Higher End Height (ft)</Label>
                           <Select 
-                            value={formData.offGridConfig.gpStructure?.higherEndHeight || '0'}
+                            value={formData.offGridConfig?.gpStructure?.higherEndHeight || '0'}
                             onValueChange={(value) => updateConfig('offGridConfig', { 
                               gpStructure: { 
-                                ...formData.offGridConfig.gpStructure, 
+                                ...formData.offGridConfig?.gpStructure, 
                                 higherEndHeight: value 
                               } 
                             })}
@@ -932,10 +944,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <div>
                         <Label>Mono Rail Type</Label>
                         <Select 
-                          value={formData.offGridConfig.monoRail?.type || 'mini_rail'}
+                          value={formData.offGridConfig?.monoRail?.type || 'mini_rail'}
                           onValueChange={(value) => updateConfig('offGridConfig', { 
                             monoRail: { 
-                              ...formData.offGridConfig.monoRail, 
+                              ...formData.offGridConfig?.monoRail, 
                               type: value 
                             } 
                           })}
@@ -1129,10 +1141,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Lower End Height (ft)</Label>
                           <Select 
-                            value={formData.hybridConfig.gpStructure?.lowerEndHeight || '0'}
+                            value={formData.hybridConfig?.gpStructure?.lowerEndHeight || '0'}
                             onValueChange={(value) => updateConfig('hybridConfig', { 
                               gpStructure: { 
-                                ...formData.hybridConfig.gpStructure, 
+                                ...formData.hybridConfig?.gpStructure, 
                                 lowerEndHeight: value 
                               } 
                             })}
@@ -1152,10 +1164,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Higher End Height (ft)</Label>
                           <Select 
-                            value={formData.hybridConfig.gpStructure?.higherEndHeight || '0'}
+                            value={formData.hybridConfig?.gpStructure?.higherEndHeight || '0'}
                             onValueChange={(value) => updateConfig('hybridConfig', { 
                               gpStructure: { 
-                                ...formData.hybridConfig.gpStructure, 
+                                ...formData.hybridConfig?.gpStructure, 
                                 higherEndHeight: value 
                               } 
                             })}
@@ -1179,10 +1191,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <div>
                         <Label>Mono Rail Type</Label>
                         <Select 
-                          value={formData.hybridConfig.monoRail?.type || 'mini_rail'}
+                          value={formData.hybridConfig?.monoRail?.type || 'mini_rail'}
                           onValueChange={(value) => updateConfig('hybridConfig', { 
                             monoRail: { 
-                              ...formData.hybridConfig.monoRail, 
+                              ...formData.hybridConfig?.monoRail, 
                               type: value 
                             } 
                           })}
@@ -1541,10 +1553,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Lower End Height (ft)</Label>
                           <Select 
-                            value={formData.waterPumpConfig.gpStructure?.lowerEndHeight || '0'}
+                            value={formData.waterPumpConfig?.gpStructure?.lowerEndHeight || '0'}
                             onValueChange={(value) => updateConfig('waterPumpConfig', { 
                               gpStructure: { 
-                                ...formData.waterPumpConfig.gpStructure, 
+                                ...formData.waterPumpConfig?.gpStructure, 
                                 lowerEndHeight: value 
                               } 
                             })}
@@ -1564,10 +1576,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <div>
                           <Label>Higher End Height (ft)</Label>
                           <Select 
-                            value={formData.waterPumpConfig.gpStructure?.higherEndHeight || '0'}
+                            value={formData.waterPumpConfig?.gpStructure?.higherEndHeight || '0'}
                             onValueChange={(value) => updateConfig('waterPumpConfig', { 
                               gpStructure: { 
-                                ...formData.waterPumpConfig.gpStructure, 
+                                ...formData.waterPumpConfig?.gpStructure, 
                                 higherEndHeight: value 
                               } 
                             })}
@@ -1591,10 +1603,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <div>
                         <Label>Mono Rail Type</Label>
                         <Select 
-                          value={formData.waterPumpConfig.monoRail?.type || 'mini_rail'}
+                          value={formData.waterPumpConfig?.monoRail?.type || 'mini_rail'}
                           onValueChange={(value) => updateConfig('waterPumpConfig', { 
                             monoRail: { 
-                              ...formData.waterPumpConfig.monoRail, 
+                              ...formData.waterPumpConfig?.monoRail, 
                               type: value 
                             } 
                           })}

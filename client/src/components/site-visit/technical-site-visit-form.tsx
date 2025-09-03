@@ -3,7 +3,7 @@
  * Handles technical-specific fields as per specifications
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -132,6 +132,7 @@ export function TechnicalSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
   });
 
   const [customTeamMember, setCustomTeamMember] = useState('');
+  const formTopRef = useRef<HTMLDivElement>(null);
 
   const handleServiceTypeChange = (serviceType: string, checked: boolean) => {
     setFormData(prev => ({
@@ -140,6 +141,17 @@ export function TechnicalSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         ? [...prev.serviceTypes, serviceType]
         : prev.serviceTypes.filter(type => type !== serviceType)
     }));
+    
+    // Scroll to top when major form changes occur (like first service type selection)
+    if (checked && formData.serviceTypes.length === 0) {
+      setTimeout(() => {
+        formTopRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+          inline: 'nearest'
+        });
+      }, 100);
+    }
   };
 
   const handleTeamMemberChange = (member: string, checked: boolean) => {
@@ -179,7 +191,7 @@ export function TechnicalSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                      (formData.workingStatus === 'completed' || (formData.pendingRemarks?.trim() && formData.pendingRemarks.trim().length >= 10));
 
   return (
-    <div className="space-y-6">
+    <div ref={formTopRef} className="space-y-6">
       {/* Service Types Selection */}
       <Card>
         <CardHeader>
