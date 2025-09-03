@@ -69,6 +69,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
   
   const [step, setStep] = useState(1);
   const modalContentRef = useRef<HTMLDivElement>(null);
+  const modalScrollRef = useRef<HTMLDivElement>(null);
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
   const [locationCaptured, setLocationCaptured] = useState(false);
   const [lastErrorMessage, setLastErrorMessage] = useState<string>('');
@@ -463,7 +464,13 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
 
   // Scroll to top helper function
   const scrollToTop = () => {
-    if (modalContentRef.current) {
+    // Use the actual scrolling container, not the dialog content
+    if (modalScrollRef.current) {
+      modalScrollRef.current.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    } else if (modalContentRef.current) {
       modalContentRef.current.scrollTo({
         top: 0,
         behavior: 'smooth'
@@ -782,7 +789,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0" ref={modalScrollRef}>
           <div className="space-y-2 sm:space-y-3 pb-3">
           {/* Step Indicator */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0">
@@ -1046,7 +1053,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                       navigateToStep(4);
                     }}
                     onBack={() => navigateToStep(2)}
-                    modalScrollRef={modalContentRef}
+                    modalScrollRef={modalScrollRef}
                     isDisabled={false}
                   />
                 </ErrorBoundary>

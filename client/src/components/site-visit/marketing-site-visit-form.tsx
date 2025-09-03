@@ -164,12 +164,16 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
     // Auto-scroll to Project Type Selection when "Yes" is selected
     if (shouldUpdate && projectTypeSelectionRef.current) {
+      console.log('Marketing Form: Starting scroll to project type selection');
       setTimeout(() => {
         if (modalScrollRef?.current && projectTypeSelectionRef.current) {
+          console.log('Marketing Form: Both refs available, calculating position');
           // Calculate the position of the Project Type Selection relative to the modal
           const modalRect = modalScrollRef.current.getBoundingClientRect();
           const targetRect = projectTypeSelectionRef.current.getBoundingClientRect();
           const relativeTop = targetRect.top - modalRect.top + modalScrollRef.current.scrollTop;
+          
+          console.log('Marketing Form: Scrolling to relativeTop:', relativeTop);
           
           // Scroll the modal to the target position
           modalScrollRef.current.scrollTo({
@@ -177,6 +181,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
             behavior: 'smooth'
           });
         } else {
+          console.log('Marketing Form: Using fallback scrollIntoView - modalScrollRef:', !!modalScrollRef?.current, 'projectTypeRef:', !!projectTypeSelectionRef.current);
           // Fallback to regular scrollIntoView if modal ref is not available
           projectTypeSelectionRef.current?.scrollIntoView({
             behavior: 'smooth',
@@ -306,12 +311,16 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
     // Auto-scroll to configuration section when a project type is selected
     if (projectType && configurationSectionRef.current) {
+      console.log('Marketing Form: Starting scroll to configuration section for:', projectType);
       setTimeout(() => {
         if (modalScrollRef?.current && configurationSectionRef.current) {
+          console.log('Marketing Form: Both refs available for config section, calculating position');
           // Calculate the position of the configuration section relative to the modal
           const modalRect = modalScrollRef.current.getBoundingClientRect();
           const targetRect = configurationSectionRef.current.getBoundingClientRect();
           const relativeTop = targetRect.top - modalRect.top + modalScrollRef.current.scrollTop;
+          
+          console.log('Marketing Form: Scrolling config section to relativeTop:', relativeTop);
           
           // Scroll the modal to the target position
           modalScrollRef.current.scrollTo({
@@ -319,6 +328,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
             behavior: 'smooth'
           });
         } else {
+          console.log('Marketing Form: Using fallback scrollIntoView for config section - modalScrollRef:', !!modalScrollRef?.current, 'configRef:', !!configurationSectionRef.current);
           // Fallback to regular scrollIntoView if modal ref is not available
           configurationSectionRef.current?.scrollIntoView({
             behavior: 'smooth',
