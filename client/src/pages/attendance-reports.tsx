@@ -64,16 +64,16 @@ export default function AttendanceReports() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // State for filtering - Default to last 30 days
+  // State for filtering - Default to last 7 days (weekly)
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
   }>(() => {
     const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
     return {
-      from: thirtyDaysAgo,
+      from: sevenDaysAgo,
       to: today
     };
   });
@@ -236,9 +236,9 @@ export default function AttendanceReports() {
               setSelectedDepartment("all");
               setSelectedStatus("all");
               const today = new Date();
-              const thirtyDaysAgo = new Date(today);
-              thirtyDaysAgo.setDate(today.getDate() - 30);
-              setDateRange({ from: thirtyDaysAgo, to: today });
+              const sevenDaysAgo = new Date(today);
+              sevenDaysAgo.setDate(today.getDate() - 7);
+              setDateRange({ from: sevenDaysAgo, to: today });
               refetchRange();
             }}
             className="flex items-center gap-2"
@@ -398,6 +398,17 @@ export default function AttendanceReports() {
                 >
                   This Month
                 </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    const startOfYear = new Date(today.getFullYear(), 0, 1);
+                    setDateRange({ from: startOfYear, to: today });
+                  }}
+                >
+                  This Year
+                </Button>
               </div>
             </div>
           </div>
@@ -514,11 +525,19 @@ export default function AttendanceReports() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg md:text-xl">
-            Detailed Attendance Records - {dateRange.from && dateRange.to ? 
-              `${formatDate(dateRange.from)} to ${formatDate(dateRange.to)}` : 'Date Range'}
+            Attendance Records
+            {(selectedEmployee !== "all" || selectedDepartment !== "all" || selectedStatus !== "all") && (
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                ({dateRange.from && dateRange.to ? 
+                  `${formatDate(dateRange.from)} to ${formatDate(dateRange.to)}` : 'Filtered'})
+              </span>
+            )}
           </CardTitle>
           <CardDescription>
-            Comprehensive view of all filtered attendance records
+            {filteredRangeAttendance.length > 0 ? 
+              `Showing ${filteredRangeAttendance.length} records` : 
+              'No records found for current selection'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
