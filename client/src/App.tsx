@@ -21,6 +21,7 @@ const Quotations = lazy(() => import("@/pages/quotations"));
 const Invoices = lazy(() => import("@/pages/invoices"));
 const Attendance = lazy(() => import("@/pages/attendance"));
 const AttendanceManagement = lazy(() => import("@/pages/attendance-management"));
+const AttendanceReports = lazy(() => import("@/pages/attendance-reports"));
 const PayrollManagement = lazy(() => import("@/pages/payroll-management"));
 const Leave = lazy(() => import("@/pages/leave"));
 const UserManagement = lazy(() => import("@/pages/user-management"));
@@ -232,6 +233,19 @@ function Router() {
           <DashboardLayout>
             <Suspense fallback={<PageLoader />}>
               <AttendanceManagement />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Attendance Reports - master admin only */}
+      <Route path="/attendance-reports">
+        <ProtectedRoute 
+          requiredRole="master_admin"
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <AttendanceReports />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
