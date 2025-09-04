@@ -18,10 +18,10 @@ export function LocationDisplay({ latitude, longitude, className }: LocationDisp
     const fetchAddress = async () => {
       setLoading(true);
       try {
-        const response = await apiRequest(`/api/reverse-geocode?latitude=${latitude}&longitude=${longitude}`, 'GET');
+        const response = await apiRequest(`/api/reverse-geocode?lat=${latitude}&lng=${longitude}`, 'GET');
         const data = await response.json();
         
-        if (data.success && data.address) {
+        if (data.address) {
           setAddress(data.address);
         } else {
           setAddress(`${parseFloat(latitude).toFixed(4)}, ${parseFloat(longitude).toFixed(4)}`);
