@@ -269,9 +269,9 @@ export default function HRManagement() {
       employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.contactInfo.primaryEmail.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDepartment = !selectedDepartment || employee.employmentInfo.department === selectedDepartment;
-    const matchesStatus = !selectedStatus || employee.status === selectedStatus;
-    const matchesDesignation = !selectedDesignation || employee.employmentInfo.designation === selectedDesignation;
+    const matchesDepartment = !selectedDepartment || selectedDepartment === "all" || employee.employmentInfo.department === selectedDepartment;
+    const matchesStatus = !selectedStatus || selectedStatus === "all" || employee.status === selectedStatus;
+    const matchesDesignation = !selectedDesignation || selectedDesignation === "all" || employee.employmentInfo.designation === selectedDesignation;
     
     return matchesSearch && matchesDepartment && matchesStatus && matchesDesignation;
   });
@@ -383,7 +383,7 @@ export default function HRManagement() {
                   <SelectValue placeholder="All Departments" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept} value={dept}>
                       {dept.charAt(0).toUpperCase() + dept.slice(1).replace('_', ' ')}
@@ -399,7 +399,7 @@ export default function HRManagement() {
                   <SelectValue placeholder="All Designations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Designations</SelectItem>
+                  <SelectItem value="all">All Designations</SelectItem>
                   {designations.map((designation) => (
                     <SelectItem key={designation} value={designation}>
                       {designation.toUpperCase().replace('_', ' ')}
@@ -415,7 +415,7 @@ export default function HRManagement() {
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   {employeeStatus.map((status) => (
                     <SelectItem key={status} value={status}>
                       {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
