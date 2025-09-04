@@ -158,12 +158,22 @@ export default function AttendanceReports() {
     if (selectedStatus !== "all" && record.status !== selectedStatus) return false;
     return true;
   });
+
+  // Sort attendance records by date (latest first)
+  const sortedRangeAttendance = [...filteredRangeAttendance].sort((a: any, b: any) => {
+    // Convert date strings to Date objects for comparison
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    
+    // Sort in descending order (latest first)
+    return dateB.getTime() - dateA.getTime();
+  });
   
   // Pagination calculations
-  const totalPages = Math.ceil(filteredRangeAttendance.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedRangeAttendance.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedAttendance = filteredRangeAttendance.slice(startIndex, endIndex);
+  const paginatedAttendance = sortedRangeAttendance.slice(startIndex, endIndex);
   
   // Reset to first page when filters change
   React.useEffect(() => {
@@ -571,8 +581,8 @@ export default function AttendanceReports() {
             )}
           </CardTitle>
           <CardDescription>
-            {filteredRangeAttendance.length > 0 ? 
-              `Showing ${filteredRangeAttendance.length} records` : 
+            {sortedRangeAttendance.length > 0 ? 
+              `Showing ${sortedRangeAttendance.length} records` : 
               'No records found for current selection'
             }
           </CardDescription>
@@ -770,8 +780,8 @@ export default function AttendanceReports() {
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div className="text-sm text-gray-700">
                       Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                      <span className="font-medium">{Math.min(endIndex, filteredRangeAttendance.length)}</span> of{' '}
-                      <span className="font-medium">{filteredRangeAttendance.length}</span> records
+                      <span className="font-medium">{Math.min(endIndex, sortedRangeAttendance.length)}</span> of{' '}
+                      <span className="font-medium">{sortedRangeAttendance.length}</span> records
                     </div>
                     
                     <div className="flex items-center gap-2">
