@@ -303,7 +303,7 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
         let photoUrl = null;
         const uploadResponse = await apiRequest('/api/attendance/upload-photo', 'POST', {
           imageData: photo,
-          userId: `checkout_${currentAttendance.id}_${Date.now()}`,
+          userId: currentAttendance.userId,
           attendanceType: 'checkout_verification'
         });
 
