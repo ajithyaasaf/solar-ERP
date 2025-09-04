@@ -314,17 +314,16 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
         const uploadResult = await uploadResponse.json();
         photoUrl = uploadResult.url;
 
-        // Submit checkout
+        // Submit checkout using proper user checkout endpoint
         const checkoutData = {
-          checkOutTime: new Date().toISOString(),
-          checkOutLatitude: location.latitude,
-          checkOutLongitude: location.longitude,
-          checkOutAddress: location.address,
-          checkOutImageUrl: photoUrl,
+          userId: currentAttendance.userId,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          imageUrl: photoUrl,
           reason: reason.trim() || undefined
         };
 
-        const response = await apiRequest(`/api/attendance/${currentAttendance.id}`, 'PATCH', checkoutData);
+        const response = await apiRequest('/api/attendance/check-out', 'POST', checkoutData);
 
         if (!response.ok) {
           const errorData = await response.json();
