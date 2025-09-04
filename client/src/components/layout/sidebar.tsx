@@ -106,7 +106,7 @@ export function Sidebar() {
     },
     { 
       href: "/hr-management", 
-      label: "HR Management", 
+      label: "Employee Management", 
       icon: <i className="ri-team-line mr-3 text-xl"></i>,
       roles: ["master_admin", "admin"],
       requiredPermissions: ["users.view"]
