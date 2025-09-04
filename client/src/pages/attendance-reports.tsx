@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import * as XLSX from 'xlsx';
 import { LocationDisplay } from "@/components/attendance/location-display";
+import { AttendancePhotoViewer } from "@/components/attendance/attendance-photo-viewer";
 
 import {
   Card,
@@ -84,6 +85,20 @@ export default function AttendanceReports() {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Photo viewer modal state
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
+
+  const handleViewPhotos = (record: any) => {
+    setSelectedRecord(record);
+    setShowPhotoViewer(true);
+  };
+
+  const handleClosePhotoViewer = () => {
+    setShowPhotoViewer(false);
+    setSelectedRecord(null);
+  };
   const itemsPerPage = 10;
 
   // Range attendance records - Enhanced for date range and person filtering
@@ -679,10 +694,37 @@ export default function AttendanceReports() {
                             </div>
                           </div>
                           {/* Location Display */}
-                          <LocationDisplay 
-                            latitude={record.checkInLatitude} 
-                            longitude={record.checkInLongitude}
-                          />
+                          <div className="space-y-1">
+                            <div className="text-xs text-gray-500">Check-in:</div>
+                            <LocationDisplay 
+                              latitude={record.checkInLatitude} 
+                              longitude={record.checkInLongitude}
+                            />
+                            {record.checkOutLatitude && record.checkOutLongitude && (
+                              <>
+                                <div className="text-xs text-gray-500 mt-1">Check-out:</div>
+                                <LocationDisplay 
+                                  latitude={record.checkOutLatitude} 
+                                  longitude={record.checkOutLongitude}
+                                />
+                              </>
+                            )}
+                          </div>
+                          
+                          {/* Photos Section */}
+                          {(record.checkInImageUrl || record.checkOutImageUrl) && (
+                            <div className="pt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewPhotos(record)}
+                                className="h-7 text-xs gap-1 hover:bg-blue-50 border-blue-200"
+                              >
+                                <Camera className="h-3 w-3" />
+                                View Photos
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -703,7 +745,9 @@ export default function AttendanceReports() {
                       <TableHead className="text-xs font-medium">Working Hours</TableHead>
                       <TableHead className="text-xs font-medium">Overtime</TableHead>
                       <TableHead className="text-xs font-medium">Status</TableHead>
-                      <TableHead className="text-xs font-medium w-48">Detected Location</TableHead>
+                      <TableHead className="text-xs font-medium w-48">Check-in Location</TableHead>
+                      <TableHead className="text-xs font-medium w-48">Check-out Location</TableHead>
+                      <TableHead className="text-xs font-medium">Photos</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -722,24 +766,14 @@ export default function AttendanceReports() {
                         </TableCell>
                         <TableCell>
                           {record.checkInTime ? (
-                            <div className="flex items-center gap-2">
-                              <TimeDisplay time={record.checkInTime} format12Hour={true} />
-                              {record.checkInPhoto && (
-                                <Camera className="h-4 w-4 text-green-500" />
-                              )}
-                            </div>
+                            <TimeDisplay time={record.checkInTime} format12Hour={true} />
                           ) : (
                             <Badge variant="outline" className="bg-gray-50 text-gray-500 text-xs">No check-in</Badge>
                           )}
                         </TableCell>
                         <TableCell>
                           {record.checkOutTime ? (
-                            <div className="flex items-center gap-2">
-                              <TimeDisplay time={record.checkOutTime} format12Hour={true} />
-                              {record.checkOutPhoto && (
-                                <Camera className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
+                            <TimeDisplay time={record.checkOutTime} format12Hour={true} />
                           ) : isIncompleteRecord(record) ? (
                             <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
                               <XCircle className="h-3 w-3 mr-1" />
@@ -767,6 +801,29 @@ export default function AttendanceReports() {
                             latitude={record.checkInLatitude} 
                             longitude={record.checkInLongitude}
                           />
+                        </TableCell>
+                        <TableCell className="max-w-48">
+                          <LocationDisplay 
+                            latitude={record.checkOutLatitude} 
+                            longitude={record.checkOutLongitude}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {(record.checkInImageUrl || record.checkOutImageUrl) ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewPhotos(record)}
+                                className="h-8 w-8 p-0 hover:bg-blue-50"
+                                title="View attendance photos"
+                              >
+                                <Camera className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            ) : (
+                              <span className="text-gray-400 text-xs">No photos</span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -860,6 +917,15 @@ export default function AttendanceReports() {
           )}
         </CardContent>
       </Card>
+
+      {/* Photo Viewer Modal */}
+      {selectedRecord && (
+        <AttendancePhotoViewer
+          isOpen={showPhotoViewer}
+          onClose={handleClosePhotoViewer}
+          attendanceRecord={selectedRecord}
+        />
+      )}
     </div>
   );
 }
