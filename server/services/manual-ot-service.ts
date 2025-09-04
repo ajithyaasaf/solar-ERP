@@ -93,6 +93,8 @@ export class ManualOTService {
           date: today,
           attendanceType: 'office' as const,
           status: 'present' as const,
+          isLate: false,
+          isWithinOfficeRadius: true,
           otStatus: 'in_progress' as const,
           isManualOT: true,
           otStartTime: new Date(),
@@ -123,7 +125,7 @@ export class ManualOTService {
         todayAttendance = await storage.updateAttendance(todayAttendance.id, updateData);
       }
 
-      const otType = this.determineOTType(user.department, new Date());
+      const otType = await this.determineOTType(user.department, new Date());
       
       return {
         success: true,
@@ -297,9 +299,9 @@ export class ManualOTService {
    */
   private static async determineOTType(department: string, currentTime: Date): Promise<'early_arrival' | 'late_departure' | 'weekend' | 'holiday'> {
     try {
-      // Check if weekend
+      // Check if weekend (Sunday only)
       const dayOfWeek = currentTime.getDay();
-      if (dayOfWeek === 0 || dayOfWeek === 6) { // Sunday or Saturday
+      if (dayOfWeek === 0) { // Sunday only
         return 'weekend';
       }
 

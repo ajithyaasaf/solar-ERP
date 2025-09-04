@@ -68,7 +68,7 @@ export class EnterpriseTimeService {
           lateThresholdMinutes: timing.lateThresholdMinutes || 15,
           overtimeThresholdMinutes: timing.overtimeThresholdMinutes || 0,
           isFlexibleTiming: timing.isFlexibleTiming || false,
-          weekendDays: timing.weekendDays || [0, 6],
+          weekendDays: timing.weekendDays || [0],
           allowRemoteWork: timing.allowRemoteWork !== undefined ? timing.allowRemoteWork : true,
           allowFieldWork: timing.allowFieldWork !== undefined ? timing.allowFieldWork : true,
           allowEarlyCheckOut: timing.allowEarlyCheckOut !== undefined ? timing.allowEarlyCheckOut : (department === 'sales'),
@@ -116,38 +116,13 @@ export class EnterpriseTimeService {
     let overtimeStartTime: string | undefined;
 
     if (checkOutTime) {
-      // FIXED: Early arrival + late departure overtime calculation (industry standard)
-      let overtimeMinutes = 0;
+      // Calculate total working hours (no automatic overtime calculation)
+      const totalMinutes = Math.floor((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60));
+      workingHours = Math.max(0, totalMinutes / 60);
       
-      // Early arrival overtime: work before department start time
-      if (checkInTime < expectedCheckIn) {
-        const earlyArrivalMinutes = Math.floor((expectedCheckIn.getTime() - checkInTime.getTime()) / (1000 * 60));
-        overtimeMinutes += earlyArrivalMinutes;
-        console.log(`ENTERPRISE_TIME: Early arrival OT - ${earlyArrivalMinutes} minutes`);
-      }
-      
-      // Late departure overtime: work after department end time
-      if (checkOutTime > expectedCheckOut) {
-        const lateDepartureMinutes = Math.floor((checkOutTime.getTime() - expectedCheckOut.getTime()) / (1000 * 60));
-        overtimeMinutes += lateDepartureMinutes;
-        console.log(`ENTERPRISE_TIME: Late departure OT - ${lateDepartureMinutes} minutes`);
-      }
-      
-      // Calculate regular working time (within department schedule)
-      const workStart = new Date(Math.max(checkInTime.getTime(), expectedCheckIn.getTime()));
-      const workEnd = new Date(Math.min(checkOutTime.getTime(), expectedCheckOut.getTime()));
-      const regularMinutes = Math.max(0, Math.floor((workEnd.getTime() - workStart.getTime()) / (1000 * 60)));
-      
-      // CRITICAL FIX: Separate regular working hours from overtime hours
-      workingHours = Math.max(0, regularMinutes / 60);
-      overtimeHours = Math.max(0, overtimeMinutes / 60);
-      
-      if (overtimeHours > 0) {
-        overtimeStartTime = this.formatTo12Hour(expectedCheckOut);
-        console.log(`ENTERPRISE_TIME: Total OT - ${overtimeMinutes} minutes = ${overtimeHours} hours (regular: ${regularMinutes}min, overtime: ${overtimeMinutes}min)`);
-      } else {
-        console.log(`ENTERPRISE_TIME: No OT - work within department schedule`);
-      }
+      // Overtime is now handled manually only through ManualOTService
+      // No automatic overtime calculation based on department timing
+      overtimeHours = 0;
     }
 
     return {
@@ -401,7 +376,7 @@ export class EnterpriseTimeService {
       lateThresholdMinutes: 15,
       overtimeThresholdMinutes: 0,
       isFlexibleTiming: false,
-      weekendDays: [0, 6],
+      weekendDays: [0],
       allowRemoteWork: true,
       allowFieldWork: true,
       allowEarlyCheckOut: department === 'sales' ? true : false,
