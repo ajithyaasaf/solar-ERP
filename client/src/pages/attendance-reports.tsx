@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import * as XLSX from 'xlsx';
+import { LocationDisplay } from "@/components/attendance/location-display";
 
 import {
   Card,
@@ -171,45 +172,56 @@ export default function AttendanceReports() {
   
   // Helper function to format location data
   const formatLocation = (record: any) => {
-    const checkInLoc = record.checkInLocation;
-    const checkOutLoc = record.checkOutLocation;
-    
-    // Priority: 1. Address from reverse geocoding, 2. Office name, 3. Coordinates
-    if (checkInLoc?.address) {
+    // Check for check-in location data (stored as flat fields)
+    if (record.checkInLatitude && record.checkInLongitude) {
       return {
-        text: checkInLoc.address,
-        type: 'address',
-        coords: `${checkInLoc.latitude}, ${checkInLoc.longitude}`
-      };
-    }
-    
-    if (checkInLoc?.formattedAddress) {
-      return {
-        text: checkInLoc.formattedAddress,
-        type: 'address', 
-        coords: `${checkInLoc.latitude}, ${checkInLoc.longitude}`
-      };
-    }
-    
-    if (checkInLoc?.latitude && checkInLoc?.longitude) {
-      return {
-        text: `${parseFloat(checkInLoc.latitude).toFixed(4)}, ${parseFloat(checkInLoc.longitude).toFixed(4)}`,
+        text: `Location: ${parseFloat(record.checkInLatitude).toFixed(4)}, ${parseFloat(record.checkInLongitude).toFixed(4)}`,
         type: 'coordinates',
-        coords: `${checkInLoc.latitude}, ${checkInLoc.longitude}`
+        coords: `${record.checkInLatitude}, ${record.checkInLongitude}`,
+        latitude: record.checkInLatitude,
+        longitude: record.checkInLongitude
       };
     }
     
     // Fallback to checkout location if check-in not available
-    if (checkOutLoc?.latitude && checkOutLoc?.longitude) {
+    if (record.checkOutLatitude && record.checkOutLongitude) {
       return {
-        text: `${parseFloat(checkOutLoc.latitude).toFixed(4)}, ${parseFloat(checkOutLoc.longitude).toFixed(4)}`,
+        text: `Location: ${parseFloat(record.checkOutLatitude).toFixed(4)}, ${parseFloat(record.checkOutLongitude).toFixed(4)}`,
         type: 'coordinates',
-        coords: `${checkOutLoc.latitude}, ${checkOutLoc.longitude}`
+        coords: `${record.checkOutLatitude}, ${record.checkOutLongitude}`,
+        latitude: record.checkOutLatitude,
+        longitude: record.checkOutLongitude
       };
     }
     
     return null;
   };
+
+  // Function to get readable address from coordinates
+  const [addressCache, setAddressCache] = React.useState<Map<string, string>>(new Map());
+  
+  const getReadableAddress = React.useCallback(async (latitude: string, longitude: string) => {
+    const coordKey = `${latitude},${longitude}`;
+    
+    // Check cache first
+    if (addressCache.has(coordKey)) {
+      return addressCache.get(coordKey);
+    }
+    
+    try {
+      const response = await apiRequest(`/api/reverse-geocode?latitude=${latitude}&longitude=${longitude}`, 'GET');
+      const data = await response.json();
+      
+      if (data.success && data.address) {
+        setAddressCache(prev => new Map(prev).set(coordKey, data.address));
+        return data.address;
+      }
+    } catch (error) {
+      console.error('Error getting readable address:', error);
+    }
+    
+    return `${parseFloat(latitude).toFixed(4)}, ${parseFloat(longitude).toFixed(4)}`;
+  }, [addressCache]);
 
   // Helper function to check if a record is incomplete
   const isIncompleteRecord = (record: any) => {
@@ -657,21 +669,10 @@ export default function AttendanceReports() {
                             </div>
                           </div>
                           {/* Location Display */}
-                          {formatLocation(record) && (
-                            <div className="flex items-start gap-1">
-                              <MapPin className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <div className="text-xs text-gray-600 min-w-0">
-                                <div className="truncate font-medium text-gray-800">
-                                  {formatLocation(record)?.text}
-                                </div>
-                                {formatLocation(record)?.type === 'address' && (
-                                  <div className="text-xs text-gray-400 truncate">
-                                    {formatLocation(record)?.coords}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                          <LocationDisplay 
+                            latitude={record.checkInLatitude} 
+                            longitude={record.checkInLongitude}
+                          />
                         </div>
                       </div>
                     </div>
@@ -752,23 +753,10 @@ export default function AttendanceReports() {
                           <StatusBadge status={record.status} />
                         </TableCell>
                         <TableCell className="max-w-48">
-                          {formatLocation(record) ? (
-                            <div className="flex items-start gap-2">
-                              <MapPin className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <div className="text-xs font-medium text-gray-800 truncate" title={formatLocation(record)?.text}>
-                                  {formatLocation(record)?.text}
-                                </div>
-                                {formatLocation(record)?.type === 'address' && (
-                                  <div className="text-xs text-gray-400 truncate" title={formatLocation(record)?.coords}>
-                                    {formatLocation(record)?.coords}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">No location data</span>
-                          )}
+                          <LocationDisplay 
+                            latitude={record.checkInLatitude} 
+                            longitude={record.checkInLongitude}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
