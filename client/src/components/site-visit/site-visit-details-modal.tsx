@@ -567,9 +567,21 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Inverter Phase</p>
                         <p className="font-medium">{siteVisit.marketingData.onGridConfig.inverterPhase?.replace('_', ' ')}</p>
                       </div>
+                      {siteVisit.marketingData.onGridConfig.inverterKW && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter KW</p>
+                          <p className="font-medium">{siteVisit.marketingData.onGridConfig.inverterKW} KW</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.onGridConfig.inverterQty && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter Qty</p>
+                          <p className="font-medium">{siteVisit.marketingData.onGridConfig.inverterQty} units</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Earth Connection</p>
-                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.earth?.toUpperCase()}</p>
+                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.earth?.replace('ac_dc', 'AC/DC')?.toUpperCase()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Panel Count</p>
@@ -712,10 +724,38 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Inverter Capacity</p>
                         <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterWatts}</p>
                       </div>
+                      {siteVisit.marketingData.offGridConfig.inverterKW && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter KW</p>
+                          <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterKW} KW</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.offGridConfig.inverterQty && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter Qty</p>
+                          <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterQty} units</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Earth Connection</p>
+                        <p className="font-medium">{siteVisit.marketingData.offGridConfig.earth?.replace('ac_dc', 'AC/DC')?.toUpperCase()}</p>
+                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Brand</p>
                         <p className="font-medium">{siteVisit.marketingData.offGridConfig.batteryBrand?.toUpperCase()}</p>
                       </div>
+                      {siteVisit.marketingData.offGridConfig.batteryType && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Battery Type</p>
+                          <p className="font-medium">{siteVisit.marketingData.offGridConfig.batteryType === 'lead_acid' ? 'Lead Acid' : 'Lithium'}</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.offGridConfig.batteryAH && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Battery AH</p>
+                          <p className="font-medium">{siteVisit.marketingData.offGridConfig.batteryAH} AH</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Voltage</p>
                         <p className="font-medium">{siteVisit.marketingData.offGridConfig.voltage}V</p>
@@ -831,10 +871,38 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Inverter Capacity</p>
                         <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterWatts}</p>
                       </div>
+                      {siteVisit.marketingData.hybridConfig.inverterKW && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter KW</p>
+                          <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterKW} KW</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.hybridConfig.inverterQty && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter Qty</p>
+                          <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterQty} units</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Earth Connection</p>
+                        <p className="font-medium">{siteVisit.marketingData.hybridConfig.earth?.replace('ac_dc', 'AC/DC')?.toUpperCase()}</p>
+                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Brand</p>
                         <p className="font-medium">{siteVisit.marketingData.hybridConfig.batteryBrand?.toUpperCase()}</p>
                       </div>
+                      {siteVisit.marketingData.hybridConfig.batteryType && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Battery Type</p>
+                          <p className="font-medium">{siteVisit.marketingData.hybridConfig.batteryType === 'lead_acid' ? 'Lead Acid' : 'Lithium'}</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.hybridConfig.batteryAH && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Battery AH</p>
+                          <p className="font-medium">{siteVisit.marketingData.hybridConfig.batteryAH} AH</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Configuration</p>
                         <p className="font-medium">{siteVisit.marketingData.hybridConfig.batteryCount} × {siteVisit.marketingData.hybridConfig.voltage}V</p>
