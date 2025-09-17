@@ -125,6 +125,23 @@ interface SiteVisitDetailsModalProps {
 export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitDetailsModalProps) {
   if (!siteVisit) return null;
 
+  // Helper functions to handle both legacy string values and new array values
+  const formatStringOrArray = (value: string | string[] | undefined): string => {
+    if (!value) return 'Not specified';
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ').replace(/_/g, ' ').toUpperCase() : 'Not specified';
+    }
+    return value.replace(/_/g, ' ').toUpperCase();
+  };
+
+  const formatStringOrArraySimple = (value: string | string[] | undefined): string => {
+    if (!value) return 'Not specified';
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ').toUpperCase() : 'Not specified';
+    }
+    return value.toUpperCase();
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'in_progress': return 'bg-orange-100 text-orange-800';
@@ -532,7 +549,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
                       <div>
                         <p className="text-sm text-muted-foreground">Solar Panel Make</p>
-                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.solarPanelMake?.replace('_', ' ').toUpperCase()}</p>
+                        <p className="font-medium">{formatStringOrArray(siteVisit.marketingData.onGridConfig.solarPanelMake)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Panel Watts</p>
@@ -540,7 +557,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
-                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.inverterMake?.toUpperCase()}</p>
+                        <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.onGridConfig.inverterMake)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Capacity</p>
@@ -681,7 +698,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-purple-50 p-4 rounded-lg">
                       <div>
                         <p className="text-sm text-muted-foreground">Solar Panel Make</p>
-                        <p className="font-medium">{siteVisit.marketingData.offGridConfig.solarPanelMake?.replace('_', ' ').toUpperCase()}</p>
+                        <p className="font-medium">{formatStringOrArray(siteVisit.marketingData.offGridConfig.solarPanelMake)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Panel Watts</p>
@@ -689,7 +706,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
-                        <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterMake?.toUpperCase()}</p>
+                        <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.offGridConfig.inverterMake)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Capacity</p>
@@ -800,7 +817,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-orange-50 p-4 rounded-lg">
                       <div>
                         <p className="text-sm text-muted-foreground">Solar Panel Make</p>
-                        <p className="font-medium">{siteVisit.marketingData.hybridConfig.solarPanelMake?.replace('_', ' ').toUpperCase()}</p>
+                        <p className="font-medium">{formatStringOrArray(siteVisit.marketingData.hybridConfig.solarPanelMake)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Panel Watts</p>
@@ -808,7 +825,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
-                        <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterMake?.toUpperCase()}</p>
+                        <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.hybridConfig.inverterMake)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Capacity</p>
@@ -1022,7 +1039,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Panel Brand</p>
-                        <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.panelBrand?.replace('_', ' ').toUpperCase()}</p>
+                        <p className="font-medium">{formatStringOrArray(siteVisit.marketingData.waterPumpConfig.panelBrand)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Panel Count</p>

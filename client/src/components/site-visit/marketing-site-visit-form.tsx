@@ -35,6 +35,8 @@ import {
   panelWatts,
   inverterWatts,
   batteryBrands,
+  batteryTypes,
+  batteryAHOptions,
   waterHeaterBrands,
   floorLevels,
   structureTypes,
@@ -67,11 +69,13 @@ interface BaseConfig {
 }
 
 interface OnGridConfig extends BaseConfig {
-  solarPanelMake: string;
+  solarPanelMake: string[];
   panelWatts: string;
-  inverterMake: string;
+  inverterMake: string[];
   inverterWatts: string;
   inverterPhase: string;
+  inverterKW?: number;
+  inverterQty?: number;
   lightningArrest: boolean;
   earth: string;
   floor?: string;
@@ -92,6 +96,8 @@ interface OnGridConfig extends BaseConfig {
 
 interface OffGridConfig extends OnGridConfig {
   batteryBrand: string;
+  batteryType?: string;
+  batteryAH?: string;
   voltage: number;
   batteryCount: number;
   batteryStands?: string;
@@ -118,7 +124,7 @@ interface WaterPumpConfig extends BaseConfig {
   drive: string;
   solarPanel?: string;
   structureHeight: number;
-  panelBrand: string;
+  panelBrand: string[];
   panelCount: number;
   // New fields from client specification
   structureType?: string;
@@ -198,11 +204,13 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
       ...prev,
       projectType,
       onGridConfig: projectType === 'on_grid' ? {
-        solarPanelMake: 'premier',
+        solarPanelMake: ['premier'],
         panelWatts: '530',
-        inverterMake: 'deye',
+        inverterMake: ['deye'],
         inverterWatts: '5kw',
         inverterPhase: 'single_phase',
+        inverterKW: 0,
+        inverterQty: 1,
         lightningArrest: false,
         earth: 'ac',
         floor: '0',
@@ -222,17 +230,21 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         netMeterScope: 'customer_scope'
       } : undefined,
       offGridConfig: projectType === 'off_grid' ? {
-        solarPanelMake: 'premier',
+        solarPanelMake: ['premier'],
         panelWatts: '530',
-        inverterMake: 'deye',
+        inverterMake: ['deye'],
         inverterWatts: '5kw',
         inverterPhase: 'single_phase',
+        inverterKW: 0,
+        inverterQty: 1,
         lightningArrest: false,
         earth: 'ac',
         floor: '0',
         panelCount: 1,
         structureHeight: 0,
         batteryBrand: 'exide',
+        batteryType: 'lead_acid',
+        batteryAH: '100',
         voltage: 12,
         batteryCount: 1,
         batteryStands: '',
@@ -249,17 +261,21 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         civilWorkScope: 'customer_scope'
       } : undefined,
       hybridConfig: projectType === 'hybrid' ? {
-        solarPanelMake: 'premier',
+        solarPanelMake: ['premier'],
         panelWatts: '530',
-        inverterMake: 'deye',
+        inverterMake: ['deye'],
         inverterWatts: '5kw',
         inverterPhase: 'single_phase',
+        inverterKW: 0,
+        inverterQty: 1,
         lightningArrest: false,
         earth: 'ac',
         floor: '0',
         panelCount: 1,
         structureHeight: 0,
         batteryBrand: 'exide',
+        batteryType: 'lead_acid',
+        batteryAH: '100',
         voltage: 12,
         batteryCount: 1,
         batteryStands: '',
@@ -292,7 +308,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         drive: 'AC',
         solarPanel: '',
         structureHeight: 0,
-        panelBrand: 'premier',
+        panelBrand: ['premier'],
         panelCount: 1,
         projectValue: 0,
         others: '',
@@ -358,11 +374,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
   const isFormValid = !formData.updateRequirements || 
     (formData.projectType && 
-     ((formData.projectType === 'on_grid' && formData.onGridConfig?.solarPanelMake && formData.onGridConfig?.inverterMake && formData.onGridConfig?.panelCount > 0) ||
-      (formData.projectType === 'off_grid' && formData.offGridConfig?.solarPanelMake && formData.offGridConfig?.inverterMake && formData.offGridConfig?.batteryBrand && formData.offGridConfig?.panelCount > 0) ||
-      (formData.projectType === 'hybrid' && formData.hybridConfig?.solarPanelMake && formData.hybridConfig?.inverterMake && formData.hybridConfig?.batteryBrand && formData.hybridConfig?.panelCount > 0) ||
-      (formData.projectType === 'water_heater' && formData.waterHeaterConfig?.brand && formData.waterHeaterConfig?.litre > 0) ||
-      (formData.projectType === 'water_pump' && formData.waterPumpConfig?.hp && formData.waterPumpConfig?.panelBrand && formData.waterPumpConfig?.panelCount > 0)));
+     ((formData.projectType === 'on_grid' && formData.onGridConfig?.solarPanelMake && formData.onGridConfig.solarPanelMake.length > 0 && formData.onGridConfig?.inverterMake && formData.onGridConfig.inverterMake.length > 0 && (formData.onGridConfig?.panelCount || 0) > 0) ||
+      (formData.projectType === 'off_grid' && formData.offGridConfig?.solarPanelMake && formData.offGridConfig.solarPanelMake.length > 0 && formData.offGridConfig?.inverterMake && formData.offGridConfig.inverterMake.length > 0 && formData.offGridConfig?.batteryBrand && (formData.offGridConfig?.panelCount || 0) > 0) ||
+      (formData.projectType === 'hybrid' && formData.hybridConfig?.solarPanelMake && formData.hybridConfig.solarPanelMake.length > 0 && formData.hybridConfig?.inverterMake && formData.hybridConfig.inverterMake.length > 0 && formData.hybridConfig?.batteryBrand && (formData.hybridConfig?.panelCount || 0) > 0) ||
+      (formData.projectType === 'water_heater' && formData.waterHeaterConfig?.brand && (formData.waterHeaterConfig?.litre || 0) > 0) ||
+      (formData.projectType === 'water_pump' && formData.waterPumpConfig?.hp && formData.waterPumpConfig?.panelBrand && formData.waterPumpConfig.panelBrand.length > 0 && (formData.waterPumpConfig?.panelCount || 0) > 0)));
 
   return (
     <div className="space-y-6">
@@ -448,22 +464,27 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Solar Panel Make *</Label>
-                    <Select 
-                      value={formData.onGridConfig.solarPanelMake}
-                      onValueChange={(value) => updateConfig('onGridConfig', { solarPanelMake: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select panel brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {solarPanelBrands.map((brand) => (
-                          <SelectItem key={brand} value={brand}>
+                    <Label>Solar Panel Make * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {solarPanelBrands.map((brand) => (
+                        <div key={brand} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`on-grid-panel-${brand}`}
+                            checked={formData.onGridConfig?.solarPanelMake?.includes(brand) || false}
+                            onCheckedChange={(checked) => {
+                              const currentMakes = formData.onGridConfig?.solarPanelMake || [];
+                              const newMakes = checked 
+                                ? [...currentMakes, brand]
+                                : currentMakes.filter(m => m !== brand);
+                              updateConfig('onGridConfig', { solarPanelMake: newMakes });
+                            }}
+                          />
+                          <Label htmlFor={`on-grid-panel-${brand}`} className="text-sm">
                             {brand.replace('_', ' ').toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
@@ -486,22 +507,27 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Inverter Make *</Label>
-                    <Select 
-                      value={formData.onGridConfig.inverterMake}
-                      onValueChange={(value) => updateConfig('onGridConfig', { inverterMake: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select inverter brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inverterMakes.map((make) => (
-                          <SelectItem key={make} value={make}>
+                    <Label>Inverter Make * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {inverterMakes.map((make) => (
+                        <div key={make} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`on-grid-inverter-${make}`}
+                            checked={formData.onGridConfig?.inverterMake?.includes(make) || false}
+                            onCheckedChange={(checked) => {
+                              const currentMakes = formData.onGridConfig?.inverterMake || [];
+                              const newMakes = checked 
+                                ? [...currentMakes, make]
+                                : currentMakes.filter(m => m !== make);
+                              updateConfig('onGridConfig', { inverterMake: newMakes });
+                            }}
+                          />
+                          <Label htmlFor={`on-grid-inverter-${make}`} className="text-sm">
                             {make.toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
@@ -540,6 +566,43 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Inverter KW</Label>
+                    <Input
+                      type="number"
+                      value={formData.onGridConfig.inverterKW || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('onGridConfig', { inverterKW: undefined });
+                        } else {
+                          updateConfig('onGridConfig', { inverterKW: parseFloat(value) || 0 });
+                        }
+                      }}
+                      min="0"
+                      step="0.1"
+                      placeholder="Enter inverter KW rating"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Inverter Qty</Label>
+                    <Input
+                      type="number"
+                      value={formData.onGridConfig.inverterQty || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('onGridConfig', { inverterQty: undefined });
+                        } else {
+                          updateConfig('onGridConfig', { inverterQty: parseInt(value) || 1 });
+                        }
+                      }}
+                      min="1"
+                      placeholder="Enter inverter quantity"
+                    />
+                  </div>
+
+                  <div>
                     <Label>Earth Connection</Label>
                     <Select 
                       value={formData.onGridConfig.earth}
@@ -549,8 +612,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <SelectValue placeholder="Select earth type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="dc">DC</SelectItem>
-                        <SelectItem value="ac">AC</SelectItem>
+                        {earthingTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -823,22 +889,27 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Solar Panel Make *</Label>
-                    <Select 
-                      value={formData.offGridConfig.solarPanelMake}
-                      onValueChange={(value) => updateConfig('offGridConfig', { solarPanelMake: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select panel brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {solarPanelBrands.map((brand) => (
-                          <SelectItem key={brand} value={brand}>
+                    <Label>Solar Panel Make * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {solarPanelBrands.map((brand) => (
+                        <div key={brand} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`off-grid-panel-${brand}`}
+                            checked={formData.offGridConfig?.solarPanelMake?.includes(brand) || false}
+                            onCheckedChange={(checked) => {
+                              const currentMakes = formData.offGridConfig?.solarPanelMake || [];
+                              const newMakes = checked 
+                                ? [...currentMakes, brand]
+                                : currentMakes.filter(m => m !== brand);
+                              updateConfig('offGridConfig', { solarPanelMake: newMakes });
+                            }}
+                          />
+                          <Label htmlFor={`off-grid-panel-${brand}`} className="text-sm">
                             {brand.replace('_', ' ').toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
@@ -861,22 +932,64 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Inverter Make *</Label>
-                    <Select 
-                      value={formData.offGridConfig.inverterMake}
-                      onValueChange={(value) => updateConfig('offGridConfig', { inverterMake: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select inverter brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inverterMakes.map((make) => (
-                          <SelectItem key={make} value={make}>
+                    <Label>Inverter Make * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {inverterMakes.map((make) => (
+                        <div key={make} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`off-grid-inverter-${make}`}
+                            checked={formData.offGridConfig?.inverterMake?.includes(make) || false}
+                            onCheckedChange={(checked) => {
+                              const currentMakes = formData.offGridConfig?.inverterMake || [];
+                              const newMakes = checked 
+                                ? [...currentMakes, make]
+                                : currentMakes.filter(m => m !== make);
+                              updateConfig('offGridConfig', { inverterMake: newMakes });
+                            }}
+                          />
+                          <Label htmlFor={`off-grid-inverter-${make}`} className="text-sm">
                             {make.toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Inverter KW</Label>
+                    <Input
+                      type="number"
+                      value={formData.offGridConfig.inverterKW || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { inverterKW: undefined });
+                        } else {
+                          updateConfig('offGridConfig', { inverterKW: parseFloat(value) || 0 });
+                        }
+                      }}
+                      min="0"
+                      step="0.1"
+                      placeholder="Enter inverter KW rating"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Inverter Qty</Label>
+                    <Input
+                      type="number"
+                      value={formData.offGridConfig.inverterQty || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('offGridConfig', { inverterQty: undefined });
+                        } else {
+                          updateConfig('offGridConfig', { inverterQty: parseInt(value) || 1 });
+                        }
+                      }}
+                      min="1"
+                      placeholder="Enter inverter quantity"
+                    />
                   </div>
 
                   <div>
@@ -892,6 +1005,44 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         {batteryBrands.map((brand) => (
                           <SelectItem key={brand} value={brand}>
                             {brand.replace('_', ' ').toUpperCase()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Battery Type</Label>
+                    <Select 
+                      value={formData.offGridConfig.batteryType || ''}
+                      onValueChange={(value) => updateConfig('offGridConfig', { batteryType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select battery type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {batteryTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type === 'lead_acid' ? 'Lead Acid' : 'Lithium'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Battery AH</Label>
+                    <Select 
+                      value={formData.offGridConfig.batteryAH || ''}
+                      onValueChange={(value) => updateConfig('offGridConfig', { batteryAH: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select battery AH" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {batteryAHOptions.map((ah) => (
+                          <SelectItem key={ah} value={ah}>
+                            {ah} AH
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1161,41 +1312,88 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Solar Panel Make *</Label>
-                    <Select 
-                      value={formData.hybridConfig.solarPanelMake}
-                      onValueChange={(value) => updateConfig('hybridConfig', { solarPanelMake: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select panel brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {solarPanelBrands.map((brand) => (
-                          <SelectItem key={brand} value={brand}>
+                    <Label>Solar Panel Make * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {solarPanelBrands.map((brand) => (
+                        <div key={brand} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`hybrid-panel-${brand}`}
+                            checked={formData.hybridConfig?.solarPanelMake?.includes(brand) || false}
+                            onCheckedChange={(checked) => {
+                              const currentMakes = formData.hybridConfig?.solarPanelMake || [];
+                              const newMakes = checked 
+                                ? [...currentMakes, brand]
+                                : currentMakes.filter(m => m !== brand);
+                              updateConfig('hybridConfig', { solarPanelMake: newMakes });
+                            }}
+                          />
+                          <Label htmlFor={`hybrid-panel-${brand}`} className="text-sm">
                             {brand.replace('_', ' ').toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
-                    <Label>Inverter Make *</Label>
-                    <Select 
-                      value={formData.hybridConfig.inverterMake}
-                      onValueChange={(value) => updateConfig('hybridConfig', { inverterMake: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select inverter brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inverterMakes.map((make) => (
-                          <SelectItem key={make} value={make}>
+                    <Label>Inverter Make * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {inverterMakes.map((make) => (
+                        <div key={make} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`hybrid-inverter-${make}`}
+                            checked={formData.hybridConfig?.inverterMake?.includes(make) || false}
+                            onCheckedChange={(checked) => {
+                              const currentMakes = formData.hybridConfig?.inverterMake || [];
+                              const newMakes = checked 
+                                ? [...currentMakes, make]
+                                : currentMakes.filter(m => m !== make);
+                              updateConfig('hybridConfig', { inverterMake: newMakes });
+                            }}
+                          />
+                          <Label htmlFor={`hybrid-inverter-${make}`} className="text-sm">
                             {make.toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Inverter KW</Label>
+                    <Input
+                      type="number"
+                      value={formData.hybridConfig.inverterKW || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('hybridConfig', { inverterKW: undefined });
+                        } else {
+                          updateConfig('hybridConfig', { inverterKW: parseFloat(value) || 0 });
+                        }
+                      }}
+                      min="0"
+                      step="0.1"
+                      placeholder="Enter inverter KW rating"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Inverter Qty</Label>
+                    <Input
+                      type="number"
+                      value={formData.hybridConfig.inverterQty || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('hybridConfig', { inverterQty: undefined });
+                        } else {
+                          updateConfig('hybridConfig', { inverterQty: parseInt(value) || 1 });
+                        }
+                      }}
+                      min="1"
+                      placeholder="Enter inverter quantity"
+                    />
                   </div>
 
                   <div>
@@ -1211,6 +1409,44 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         {batteryBrands.map((brand) => (
                           <SelectItem key={brand} value={brand}>
                             {brand.replace('_', ' ').toUpperCase()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Battery Type</Label>
+                    <Select 
+                      value={formData.hybridConfig.batteryType || ''}
+                      onValueChange={(value) => updateConfig('hybridConfig', { batteryType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select battery type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {batteryTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type === 'lead_acid' ? 'Lead Acid' : 'Lithium'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Battery AH</Label>
+                    <Select 
+                      value={formData.hybridConfig.batteryAH || ''}
+                      onValueChange={(value) => updateConfig('hybridConfig', { batteryAH: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select battery AH" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {batteryAHOptions.map((ah) => (
+                          <SelectItem key={ah} value={ah}>
+                            {ah} AH
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1672,22 +1908,27 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Panel Brand *</Label>
-                    <Select 
-                      value={formData.waterPumpConfig.panelBrand}
-                      onValueChange={(value) => updateConfig('waterPumpConfig', { panelBrand: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select panel brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {solarPanelBrands.map((brand) => (
-                          <SelectItem key={brand} value={brand}>
+                    <Label>Panel Brand * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {solarPanelBrands.map((brand) => (
+                        <div key={brand} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`water-pump-panel-${brand}`}
+                            checked={formData.waterPumpConfig?.panelBrand?.includes(brand) || false}
+                            onCheckedChange={(checked) => {
+                              const currentMakes = formData.waterPumpConfig?.panelBrand || [];
+                              const newMakes = checked 
+                                ? [...currentMakes, brand]
+                                : currentMakes.filter(m => m !== brand);
+                              updateConfig('waterPumpConfig', { panelBrand: newMakes });
+                            }}
+                          />
+                          <Label htmlFor={`water-pump-panel-${brand}`} className="text-sm">
                             {brand.replace('_', ' ').toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>

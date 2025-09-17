@@ -165,7 +165,7 @@ export const solarPanelBrands = [
 ] as const;
 
 export const inverterMakes = [
-  "growatt", "deye", "polycab", "utl"
+  "growatt", "deye", "polycab", "utl", "microtech"
 ] as const;
 
 export const inverterPhases = [
@@ -173,11 +173,11 @@ export const inverterPhases = [
 ] as const;
 
 export const earthingTypes = [
-  "dc", "ac"
+  "dc", "ac", "ac_dc"
 ] as const;
 
 export const panelWatts = [
-  "530", "535", "550", "590"
+  "530", "535", "550", "590", "610"
 ] as const;
 
 export const inverterWatts = [
@@ -185,7 +185,15 @@ export const inverterWatts = [
 ] as const;
 
 export const batteryBrands = [
-  "exide", "utl"
+  "exide", "utl", "EXIDE", "UTL"
+] as const;
+
+export const batteryTypes = [
+  "lead_acid", "lithium"
+] as const;
+
+export const batteryAHOptions = [
+  "100", "120", "150", "200"
 ] as const;
 
 export const waterHeaterBrands = [
@@ -266,11 +274,13 @@ export const technicalSiteVisitSchema = z.object({
 
 // Solar system configuration schemas
 export const onGridConfigSchema = z.object({
-  solarPanelMake: z.enum(solarPanelBrands),
+  solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
   panelWatts: z.enum(panelWatts),
-  inverterMake: z.enum(inverterMakes),
+  inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterWatts: z.enum(inverterWatts),
   inverterPhase: z.enum(inverterPhases),
+  inverterKW: z.number().min(0).optional(),
+  inverterQty: z.number().min(1).optional(),
   lightningArrest: z.boolean().default(false),
   earth: z.enum(earthingTypes),
   floor: z.enum(floorLevels).optional(),
@@ -293,6 +303,8 @@ export const onGridConfigSchema = z.object({
 
 export const offGridConfigSchema = onGridConfigSchema.extend({
   batteryBrand: z.enum(batteryBrands),
+  batteryType: z.enum(batteryTypes).optional(),
+  batteryAH: z.enum(batteryAHOptions).optional(),
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
   batteryStands: z.string().optional()
@@ -320,7 +332,7 @@ export const waterPumpConfigSchema = z.object({
   drive: z.string(),
   solarPanel: z.string().optional(),
   structureHeight: z.number().min(0),
-  panelBrand: z.enum(solarPanelBrands),
+  panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
   panelCount: z.number().min(1),
   projectValue: z.number().min(0),
   others: z.string().optional(),
@@ -477,6 +489,8 @@ export type EarthingType = typeof earthingTypes[number];
 export type PanelWatt = typeof panelWatts[number];
 export type InverterWatt = typeof inverterWatts[number];
 export type BatteryBrand = typeof batteryBrands[number];
+export type BatteryType = typeof batteryTypes[number];
+export type BatteryAH = typeof batteryAHOptions[number];
 export type WaterHeaterBrand = typeof waterHeaterBrands[number];
 export type MarketingProjectType = typeof marketingProjectTypes[number];
 export type BankProcessStep = typeof bankProcessSteps[number];
