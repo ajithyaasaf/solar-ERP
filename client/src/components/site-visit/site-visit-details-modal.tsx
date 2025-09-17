@@ -742,7 +742,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Brand</p>
-                        <p className="font-medium">{siteVisit.marketingData.offGridConfig.batteryBrand?.toUpperCase()}</p>
+                        <p className="font-medium">{
+                          siteVisit.marketingData.offGridConfig.batteryBrand === 'exide' ? 'Exide' : 
+                          siteVisit.marketingData.offGridConfig.batteryBrand === 'utl' ? 'UTL' : 
+                          siteVisit.marketingData.offGridConfig.batteryBrand === 'exide_utl' ? 'EXIDE/UTL' : 
+                          siteVisit.marketingData.offGridConfig.batteryBrand?.replace('_', ' ').toUpperCase()
+                        }</p>
                       </div>
                       {siteVisit.marketingData.offGridConfig.batteryType && (
                         <div>
@@ -889,7 +894,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Brand</p>
-                        <p className="font-medium">{siteVisit.marketingData.hybridConfig.batteryBrand?.toUpperCase()}</p>
+                        <p className="font-medium">{
+                          siteVisit.marketingData.hybridConfig.batteryBrand === 'exide' ? 'Exide' : 
+                          siteVisit.marketingData.hybridConfig.batteryBrand === 'utl' ? 'UTL' : 
+                          siteVisit.marketingData.hybridConfig.batteryBrand === 'exide_utl' ? 'EXIDE/UTL' : 
+                          siteVisit.marketingData.hybridConfig.batteryBrand?.replace('_', ' ').toUpperCase()
+                        }</p>
                       </div>
                       {siteVisit.marketingData.hybridConfig.batteryType && (
                         <div>

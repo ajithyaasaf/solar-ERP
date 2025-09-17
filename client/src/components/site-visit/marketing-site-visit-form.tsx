@@ -1004,7 +1004,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <SelectContent>
                         {batteryBrands.map((brand) => (
                           <SelectItem key={brand} value={brand}>
-                            {brand.replace('_', ' ').toUpperCase()}
+                            {brand === 'exide' ? 'Exide' : 
+                             brand === 'utl' ? 'UTL' : 
+                             brand === 'exide_utl' ? 'EXIDE/UTL' : 
+                             brand.replace('_', ' ').toUpperCase()}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1408,7 +1411,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <SelectContent>
                         {batteryBrands.map((brand) => (
                           <SelectItem key={brand} value={brand}>
-                            {brand.replace('_', ' ').toUpperCase()}
+                            {brand === 'exide' ? 'Exide' : 
+                             brand === 'utl' ? 'UTL' : 
+                             brand === 'exide_utl' ? 'EXIDE/UTL' : 
+                             brand.replace('_', ' ').toUpperCase()}
                           </SelectItem>
                         ))}
                       </SelectContent>

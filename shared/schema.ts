@@ -185,7 +185,7 @@ export const inverterWatts = [
 ] as const;
 
 export const batteryBrands = [
-  "exide", "utl", "EXIDE", "UTL"
+  "exide", "utl", "exide_utl"
 ] as const;
 
 export const batteryTypes = [
