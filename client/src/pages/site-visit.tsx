@@ -27,13 +27,17 @@ import {
   Trash2,
   LogOut,
   RefreshCw,
-  History
+  History,
+  FileText,
+  ArrowRight
 } from "lucide-react";
 import { SiteVisitStartModal } from "@/components/site-visit/site-visit-start-modal";
 import { SiteVisitDetailsModal } from "@/components/site-visit/site-visit-details-modal";
 import { SiteVisitCheckoutModal } from "@/components/site-visit/site-visit-checkout-modal";
 import { FollowUpModal } from "@/components/site-visit/follow-up-modal";
 import { FollowUpDetailsModal } from "@/components/site-visit/follow-up-details-modal";
+import { DraftSiteVisitsModal } from "@/components/site-visit/draft-site-visits-modal";
+import { StatusUpdateModal } from "@/components/site-visit/status-update-modal";
 import { formatDistanceToNow } from "date-fns";
 
 interface SiteVisit {
@@ -169,6 +173,9 @@ export default function SiteVisitPage() {
   const [selectedFollowUpId, setSelectedFollowUpId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("my-visits");
   const [resumingDraft, setResumingDraft] = useState<SiteVisit | null>(null);
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+  const [isStatusUpdateModalOpen, setIsStatusUpdateModalOpen] = useState(false);
+  const [visitForStatusUpdate, setVisitForStatusUpdate] = useState<SiteVisit | null>(null);
 
   // Check if user has access to Site Visit features
   const hasAccess = user?.department && ['technical', 'marketing', 'admin', 'administration'].includes(user.department.toLowerCase());
@@ -301,6 +308,12 @@ export default function SiteVisitPage() {
       // Also invalidate drafts query
       queryClient.invalidateQueries({ queryKey: ['/api/site-visits/drafts'] });
     }
+  };
+
+  // Handle status update
+  const handleStatusUpdate = (visit: SiteVisit) => {
+    setVisitForStatusUpdate(visit);
+    setIsStatusUpdateModalOpen(true);
   };
 
   // Convert follow-ups to site visit format for display
@@ -595,6 +608,7 @@ export default function SiteVisitPage() {
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
                       onDelete={handleDeleteSiteVisit}
+                      onStatusUpdate={handleStatusUpdate}
                       showActions={true}
                     />
                   ))}
@@ -608,7 +622,18 @@ export default function SiteVisitPage() {
         <TabsContent value="drafts">
           <Card>
             <CardHeader>
-              <CardTitle>Draft Site Visits</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Draft Site Visits</span>
+                <Button 
+                  variant="outline"
+                  onClick={() => setIsDraftModalOpen(true)}
+                  disabled={isLoadingDrafts}
+                  data-testid="button-manage-drafts"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Manage Drafts
+                </Button>
+              </CardTitle>
               <CardDescription>
                 Incomplete site visits that can be resumed and completed
               </CardDescription>
@@ -635,61 +660,63 @@ export default function SiteVisitPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {myDrafts.map((draft: SiteVisit, index: number) => (
-                    <div key={`draft-${draft.id}-${index}`} className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/10">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                              Draft
-                            </Badge>
-                            <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
-                              {draft.department?.charAt(0).toUpperCase() + draft.department?.slice(1)}
-                            </Badge>
+                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="font-medium">You have {myDrafts.length} saved draft{myDrafts.length > 1 ? 's' : ''}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Continue working on incomplete site visit forms
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => setIsDraftModalOpen(true)}
+                      data-testid="button-view-drafts"
+                    >
+                      View Drafts
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                  
+                  {/* Show first few drafts as preview */}
+                  <div className="space-y-3">
+                    {myDrafts.slice(0, 3).map((draft: any, index: number) => (
+                      <div key={`draft-preview-${draft.id}-${index}`} className="p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/10">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                                Draft ({draft.completionPercentage || 0}% complete)
+                              </Badge>
+                            </div>
+                            <h4 className="font-medium text-sm truncate">
+                              {draft.customer?.name || 'Unnamed Customer'}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              {draft.visitPurpose || 'No purpose specified'}
+                            </p>
                           </div>
-                          <h3 className="font-medium text-sm sm:text-base mb-1 truncate">
-                            {draft.customer?.name || 'Unnamed Customer'}
-                          </h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
-                            Purpose: {draft.visitPurpose || 'Not specified'}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {draft.customer?.address ? 
-                                `${draft.customer.address.substring(0, 30)}${draft.customer.address.length > 30 ? '...' : ''}` 
-                                : 'No address'
-                              }
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDistanceToNow(new Date(draft.createdAt), { addSuffix: true })}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 ml-4">
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => handleResumeDraft(draft)}
-                            data-testid={`button-resume-draft-${draft.id}`}
+                            onClick={() => {
+                              setResumingDraft(draft);
+                              setIsStartModalOpen(true);
+                            }}
                           >
                             <Edit className="h-3 w-3 mr-1" />
                             Resume
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleDeleteDraft(draft.id)}
-                            data-testid={`button-delete-draft-${draft.id}`}
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Delete
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                    {myDrafts.length > 3 && (
+                      <p className="text-sm text-muted-foreground text-center">
+                        And {myDrafts.length - 3} more draft{myDrafts.length - 3 > 1 ? 's' : ''}...
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -749,6 +776,7 @@ export default function SiteVisitPage() {
                       onView={handleViewDetails}
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
+                      onStatusUpdate={handleStatusUpdate}
                       showActions={true}
                     />
                   ))}
@@ -806,6 +834,7 @@ export default function SiteVisitPage() {
                       onView={handleViewDetails}
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
+                      onStatusUpdate={handleStatusUpdate}
                       showActions={true}
                     />
                   ))}
@@ -853,6 +882,29 @@ export default function SiteVisitPage() {
         followUpId={selectedFollowUpId}
         onCheckout={handleFollowUpCheckout}
       />
+
+      {/* Draft Management Modal */}
+      <DraftSiteVisitsModal
+        isOpen={isDraftModalOpen}
+        onClose={() => setIsDraftModalOpen(false)}
+        onResumeDraft={(draft) => {
+          setResumingDraft(draft);
+          setIsStartModalOpen(true);
+          setIsDraftModalOpen(false);
+        }}
+        userDepartment={user?.department?.toLowerCase() === 'administration' ? 'admin' : (user?.department || 'technical')}
+      />
+
+      {/* Status Update Modal */}
+      <StatusUpdateModal
+        isOpen={isStatusUpdateModalOpen}
+        onClose={() => {
+          setIsStatusUpdateModalOpen(false);
+          setVisitForStatusUpdate(null);
+        }}
+        visit={visitForStatusUpdate}
+        userId={user?.uid || ''}
+      />
     </div>
   );
 }
@@ -864,16 +916,20 @@ interface UnifiedSiteVisitCardProps {
   onCheckout?: (visit: SiteVisit) => void;
   onFollowUp?: (visit: SiteVisit) => void;
   onDelete?: (visitId: string) => void;
+  onStatusUpdate?: (visit: SiteVisit) => void;
   showActions: boolean;
 }
 
-function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDelete, showActions }: UnifiedSiteVisitCardProps) {
+function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDelete, onStatusUpdate, showActions }: UnifiedSiteVisitCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'in_progress': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'draft': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'on_process': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+      case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -1068,6 +1124,18 @@ function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDe
                           >
                             <LogOut className="h-3 w-3 mr-1" />
                             Check-out
+                          </Button>
+                        )}
+                        
+                        {(visit.status === 'in_progress' || visit.status === 'on_process') && onStatusUpdate && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onStatusUpdate(visit)}
+                            className="text-xs h-7 px-3"
+                          >
+                            <ArrowRight className="h-3 w-3 mr-1" />
+                            Update Status
                           </Button>
                         )}
                         
