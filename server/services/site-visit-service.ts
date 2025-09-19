@@ -355,7 +355,7 @@ export class SiteVisitService {
         console.log('- Checkout photos (siteOutPhotos):', results[0].siteOutPhotos ? results[0].siteOutPhotos.length : 0);
         console.log('- Has check-in photo:', !!results[0].siteInPhotoUrl);
         console.log('- Has check-out photo:', !!results[0].siteOutPhotoUrl);
-        console.log('- Customer name:', results[0].customer?.name || results[0].customerName || 'N/A');
+        console.log('- Customer name:', results[0].customer?.name || 'N/A');
         console.log('- Status:', results[0].status);
         console.log('- Department:', results[0].department);
         if (results[0].marketingData) {

@@ -92,7 +92,7 @@ interface CustomerVisitGroup {
 }
 
 // Group visits by customer (mobile + name combination)
-function groupVisitsByCustomer(visits: SiteVisit[]): CustomerVisitGroup[] {
+function groupVisitsByCustomer(visits: SiteVisit[], preservePriorityOrder = false): CustomerVisitGroup[] {
   if (!visits || !Array.isArray(visits)) {
     return [];
   }
@@ -152,18 +152,44 @@ function groupVisitsByCustomer(visits: SiteVisit[]): CustomerVisitGroup[] {
     );
   });
 
-  // Convert to array and sort by latest activity
-  return Array.from(groupMap.values()).sort((a, b) => {
-    const aLatest = Math.max(
-      new Date(a.primaryVisit.createdAt || a.primaryVisit.siteInTime).getTime(),
-      ...a.followUps.map(f => new Date(f.createdAt || f.siteInTime).getTime())
-    );
-    const bLatest = Math.max(
-      new Date(b.primaryVisit.createdAt || b.primaryVisit.siteInTime).getTime(),
-      ...b.followUps.map(f => new Date(f.createdAt || f.siteInTime).getTime())
-    );
-    return bLatest - aLatest;
-  });
+  // Convert to array and sort appropriately
+  const groupsArray = Array.from(groupMap.values());
+  
+  if (preservePriorityOrder) {
+    // For priority sorting (On Process tab), sort by earliest follow-up date in group
+    return groupsArray.sort((a, b) => {
+      const getEarliestFollowUpDate = (group: CustomerVisitGroup) => {
+        const allVisits = [group.primaryVisit, ...group.followUps];
+        const followUpDates = allVisits
+          .map(v => v.scheduledFollowUpDate)
+          .filter((d): d is string => Boolean(d))
+          .map(d => new Date(d).getTime());
+        return followUpDates.length > 0 ? Math.min(...followUpDates) : Infinity;
+      };
+      
+      const aEarliest = getEarliestFollowUpDate(a);
+      const bEarliest = getEarliestFollowUpDate(b);
+      
+      // Groups with follow-up dates come first, sorted by earliest date
+      if (aEarliest === Infinity && bEarliest === Infinity) return 0;
+      if (aEarliest === Infinity) return 1;
+      if (bEarliest === Infinity) return -1;
+      return aEarliest - bEarliest;
+    });
+  } else {
+    // Default sorting by latest activity
+    return groupsArray.sort((a, b) => {
+      const aLatest = Math.max(
+        new Date(a.primaryVisit.createdAt || a.primaryVisit.siteInTime).getTime(),
+        ...a.followUps.map(f => new Date(f.createdAt || f.siteInTime).getTime())
+      );
+      const bLatest = Math.max(
+        new Date(b.primaryVisit.createdAt || b.primaryVisit.siteInTime).getTime(),
+        ...b.followUps.map(f => new Date(f.createdAt || f.siteInTime).getTime())
+      );
+      return bLatest - aLatest;
+    });
+  }
 }
 
 export default function SiteVisitPage() {
@@ -178,7 +204,8 @@ export default function SiteVisitPage() {
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [isFollowUpDetailsModalOpen, setIsFollowUpDetailsModalOpen] = useState(false);
   const [selectedFollowUpId, setSelectedFollowUpId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState("my-visits");
+  const [activeOutcome, setActiveOutcome] = useState("on_process");
+  const [scopeFilter, setScopeFilter] = useState<"my" | "team">("my");
   
   // Visit outcome filters
   const [outcomeFilter, setOutcomeFilter] = useState<string | null>(null);
@@ -187,70 +214,44 @@ export default function SiteVisitPage() {
   // Check if user has access to Site Visit features
   const hasAccess = user?.department && ['technical', 'marketing', 'admin', 'administration'].includes(user.department.toLowerCase());
 
-  // Fetch user's site visits
-  const { data: mySiteVisits, isLoading: isLoadingMy } = useQuery({
-    queryKey: ['/api/site-visits', { userId: user?.uid }],
+  // Fetch site visits based on scope and outcome
+  const { data: siteVisitsData, isLoading: isLoadingSiteVisits } = useQuery({
+    queryKey: ['/api/site-visits', { scope: scopeFilter, outcome: activeOutcome, userId: scopeFilter === 'my' ? user?.uid : undefined, department: scopeFilter === 'team' ? user?.department : undefined }],
     queryFn: async () => {
-      const response = await apiRequest(`/api/site-visits?userId=${user?.uid}`, 'GET');
+      const params = new URLSearchParams();
+      if (scopeFilter === 'my' && user?.uid) {
+        params.append('userId', user.uid);
+      } else if (scopeFilter === 'team' && user?.department) {
+        params.append('department', user.department);
+      }
+      const response = await apiRequest(`/api/site-visits?${params.toString()}`, 'GET');
       return await response.json();
     },
-    enabled: Boolean(hasAccess && user?.uid && activeTab === 'my-visits'),
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
-  // Fetch user's follow-up visits
-  const { data: myFollowUps, isLoading: isLoadingMyFollowUps } = useQuery({
-    queryKey: ['/api/follow-ups', { userId: user?.uid }],
-    queryFn: async () => {
-      const response = await apiRequest(`/api/follow-ups?userId=${user?.uid}`, 'GET');
-      return await response.json();
-    },
-    enabled: Boolean(hasAccess && user?.uid && activeTab === 'my-visits'),
+    enabled: Boolean(hasAccess && ((scopeFilter === 'my' && user?.uid) || (scopeFilter === 'team' && user?.department))),
     refetchInterval: 30000,
   });
 
-  // Fetch team/all site visits based on permissions
-  const { data: teamSiteVisits, isLoading: isLoadingTeam, refetch: refetchTeam } = useQuery({
-    queryKey: ['/api/site-visits', { department: user?.department }],
+  // Fetch follow-ups based on scope and outcome
+  const { data: followUpsData, isLoading: isLoadingFollowUps } = useQuery({
+    queryKey: ['/api/follow-ups', { scope: scopeFilter, outcome: activeOutcome, userId: scopeFilter === 'my' ? user?.uid : undefined, department: scopeFilter === 'team' ? user?.department : undefined }],
     queryFn: async () => {
-      const response = await apiRequest(`/api/site-visits?department=${user?.department}`, 'GET');
+      const params = new URLSearchParams();
+      if (scopeFilter === 'my' && user?.uid) {
+        params.append('userId', user.uid);
+      } else if (scopeFilter === 'team' && user?.department) {
+        params.append('department', user.department);
+      }
+      const response = await apiRequest(`/api/follow-ups?${params.toString()}`, 'GET');
       return await response.json();
     },
-    enabled: Boolean(hasAccess && user?.department && activeTab === 'team-visits'),
+    enabled: Boolean(hasAccess && ((scopeFilter === 'my' && user?.uid) || (scopeFilter === 'team' && user?.department))),
     refetchInterval: 30000,
   });
 
-  // Fetch team follow-ups for team visits tab
-  const { data: teamFollowUps, isLoading: isLoadingTeamFollowUps } = useQuery({
-    queryKey: ['/api/follow-ups', { department: user?.department }],
-    queryFn: async () => {
-      const response = await apiRequest(`/api/follow-ups?department=${user?.department}`, 'GET');
-      return await response.json();
-    },
-    enabled: Boolean(hasAccess && user?.department && activeTab === 'team-visits'),
-    refetchInterval: 30000,
-  });
-
-  // Fetch active site visits
-  const { data: activeSiteVisits, isLoading: isLoadingActive, refetch: refetchActive } = useQuery({
-    queryKey: ['/api/site-visits/active'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/site-visits/active', 'GET');
-      return await response.json();
-    },
-    enabled: Boolean(hasAccess && activeTab === 'active-visits'),
-    refetchInterval: 15000, // More frequent updates for active visits
-  });
-
-  // Fetch active follow-ups for active visits tab  
-  const { data: activeFollowUps, isLoading: isLoadingActiveFollowUps } = useQuery({
-    queryKey: ['/api/follow-ups/active'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/follow-ups?status=in_progress', 'GET');
-      return await response.json();
-    },
-    enabled: Boolean(hasAccess && activeTab === 'active-visits'),
-    refetchInterval: 15000,
+  // Refetch function for manual refresh
+  const { refetch: refetchData } = useQuery({
+    queryKey: ['/api/site-visits', { scope: scopeFilter, outcome: activeOutcome, userId: scopeFilter === 'my' ? user?.uid : undefined, department: scopeFilter === 'team' ? user?.department : undefined }],
+    enabled: false, // Disable automatic fetching for this query
   });
 
   // Fetch site visit statistics
@@ -299,10 +300,6 @@ export default function SiteVisitPage() {
       visitPurpose: `Follow-up: ${followUp.followUpReason?.replace(/_/g, ' ')}`,
       siteInTime: followUp.siteInTime,
       siteOutTime: followUp.siteOutTime,
-      siteInLocation: followUp.siteInLocation,
-      siteOutLocation: followUp.siteOutLocation,
-      siteInPhotoUrl: followUp.siteInPhotoUrl,
-      siteOutPhotoUrl: followUp.siteOutPhotoUrl,
       status: followUp.status,
       notes: followUp.notes || followUp.description,
       isFollowUp: true,
@@ -310,7 +307,13 @@ export default function SiteVisitPage() {
       followUpReason: followUp.followUpReason,
       createdAt: followUp.createdAt,
       updatedAt: followUp.updatedAt,
-      sitePhotos: followUp.sitePhotos || []
+      sitePhotos: followUp.sitePhotos || [],
+      // Include outcome fields from follow-up data
+      visitOutcome: followUp.visitOutcome,
+      scheduledFollowUpDate: followUp.scheduledFollowUpDate,
+      outcomeNotes: followUp.outcomeNotes,
+      outcomeSelectedAt: followUp.outcomeSelectedAt,
+      outcomeSelectedBy: followUp.outcomeSelectedBy
     };
   };
 
@@ -611,52 +614,118 @@ export default function SiteVisitPage() {
         </Card>
       )}
 
-      {/* Site Visits Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 h-auto">
-          <TabsTrigger value="my-visits" className="text-xs sm:text-sm px-2 py-2">My Visits</TabsTrigger>
-          <TabsTrigger value="active-visits" className="text-xs sm:text-sm px-2 py-2">Active Visits</TabsTrigger>
-          <TabsTrigger value="team-visits" className="text-xs sm:text-sm px-2 py-2">Team Visits</TabsTrigger>
-        </TabsList>
+      {/* Outcome-Based Navigation */}
+      <div className="space-y-4">
+        {/* Scope Filter Toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">Scope:</span>
+            <div className="flex rounded-md border">
+              <button
+                onClick={() => setScopeFilter('my')}
+                className={`px-3 py-1 text-xs rounded-l-md transition-colors ${
+                  scopeFilter === 'my'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                My
+              </button>
+              <button
+                onClick={() => setScopeFilter('team')}
+                className={`px-3 py-1 text-xs rounded-r-md border-l transition-colors ${
+                  scopeFilter === 'team'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Team
+              </button>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['/api/site-visits'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/follow-ups'] });
+            }}
+            className="h-8 px-3"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh
+          </Button>
+        </div>
+        
+        {/* Outcome Tabs */}
+        <Tabs value={activeOutcome} onValueChange={setActiveOutcome}>
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="on_process" className="text-xs sm:text-sm px-2 py-2">
+              <Zap className="h-4 w-4 mr-2 text-yellow-600" />
+              On Process
+            </TabsTrigger>
+            <TabsTrigger value="converted" className="text-xs sm:text-sm px-2 py-2">
+              <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
+              Completed
+            </TabsTrigger>
+            <TabsTrigger value="cancelled" className="text-xs sm:text-sm px-2 py-2">
+              <CircleX className="h-4 w-4 mr-2 text-red-600" />
+              Cancelled
+            </TabsTrigger>
+          </TabsList>
 
-        {/* My Site Visits */}
-        <TabsContent value="my-visits">
+        {/* On Process Visits */}
+        <TabsContent value="on_process">
           <Card>
             <CardHeader>
-              <CardTitle>My Site Visits</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-600" />
+                On Process - Active Pipeline
+                <Badge className="bg-yellow-100 text-yellow-800">
+                  {stats?.outcomes?.on_process || 0}
+                </Badge>
+              </CardTitle>
               <CardDescription>
-                Your personal site visits and field operations
+                Visits requiring follow-up action - sorted by earliest follow-up date
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {(isLoadingMy || isLoadingMyFollowUps) ? (
+              {(isLoadingSiteVisits || isLoadingFollowUps) ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (() => {
-                const combinedVisits = combineVisitsAndFollowUps(mySiteVisits, myFollowUps);
-                return combinedVisits.length === 0;
+                const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
+                const onProcessVisits = combinedVisits.filter(visit => visit.visitOutcome === 'on_process');
+                // Sort by earliest follow-up date
+                const sortedVisits = onProcessVisits.sort((a, b) => {
+                  if (!a.scheduledFollowUpDate && !b.scheduledFollowUpDate) return 0;
+                  if (!a.scheduledFollowUpDate) return 1;
+                  if (!b.scheduledFollowUpDate) return -1;
+                  return new Date(a.scheduledFollowUpDate).getTime() - new Date(b.scheduledFollowUpDate).getTime();
+                });
+                return sortedVisits.length === 0;
               })() ? (
                 <div className="text-center py-6 sm:py-8 px-4">
-                  <MapPin className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-base sm:text-lg font-semibold mb-2">No site visits yet</h3>
+                  <Zap className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">No visits on process</h3>
                   <p className="text-sm sm:text-base text-muted-foreground mb-4 max-w-sm mx-auto">
-                    Start your first site visit to begin tracking field operations
+                    All visits have been completed or cancelled. Great work!
                   </p>
-                  <Button 
-                    onClick={() => setIsStartModalOpen(true)}
-                    className="w-full sm:w-auto"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Start Site Visit
-                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {(() => {
-                    const combinedVisits = combineVisitsAndFollowUps(mySiteVisits, myFollowUps);
-                    const groupedVisits = groupVisitsByCustomer(combinedVisits);
-                    return filterVisitGroupsByOutcome(groupedVisits);
+                    const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
+                    const onProcessVisits = combinedVisits.filter(visit => visit.visitOutcome === 'on_process');
+                    const sortedVisits = onProcessVisits.sort((a, b) => {
+                      if (!a.scheduledFollowUpDate && !b.scheduledFollowUpDate) return 0;
+                      if (!a.scheduledFollowUpDate) return 1;
+                      if (!b.scheduledFollowUpDate) return -1;
+                      return new Date(a.scheduledFollowUpDate).getTime() - new Date(b.scheduledFollowUpDate).getTime();
+                    });
+                    const groupedVisits = groupVisitsByCustomer(sortedVisits, true); // Enable priority order preservation
+                    return groupedVisits;
                   })().map((group: CustomerVisitGroup, index: number) => (
                     <UnifiedSiteVisitCard
                       key={`${group.customerMobile}_${group.customerName}_${index}`}
@@ -674,53 +743,45 @@ export default function SiteVisitPage() {
           </Card>
         </TabsContent>
 
-        {/* Active Site Visits */}
-        <TabsContent value="active-visits">
+        {/* Converted/Completed Visits */}
+        <TabsContent value="converted">
           <Card>
             <CardHeader>
-              <CardTitle>Active Site Visits</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                Completed - Success Tracking
+                <Badge className="bg-green-100 text-green-800">
+                  {stats?.outcomes?.converted || 0}
+                </Badge>
+              </CardTitle>
               <CardDescription>
-                Currently in-progress site visits across all departments
+                Successfully converted visits - great work on closing deals!
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-muted-foreground">
-                  Real-time updates every 15 seconds
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => refetchActive()}
-                  className="h-8 px-3"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Refresh
-                </Button>
-              </div>
-              {(isLoadingActive || isLoadingActiveFollowUps) ? (
+              {(isLoadingSiteVisits || isLoadingFollowUps) ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (() => {
-                const combinedActiveVisits = combineVisitsAndFollowUps(activeSiteVisits, activeFollowUps);
-                const activeInProgressVisits = combinedActiveVisits.filter(visit => visit.status === 'in_progress');
-                return activeInProgressVisits.length === 0;
+                const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
+                const convertedVisits = combinedVisits.filter(visit => visit.visitOutcome === 'converted');
+                return convertedVisits.length === 0;
               })() ? (
                 <div className="text-center py-6 sm:py-8 px-4">
-                  <Activity className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-base sm:text-lg font-semibold mb-2">No active site visits</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto">
-                    All site visits have been completed
+                  <TrendingUp className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">No completed visits yet</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-4 max-w-sm mx-auto">
+                    Keep working on those 'On Process' visits to get your first conversions!
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {(() => {
-                    const combinedActiveVisits = combineVisitsAndFollowUps(activeSiteVisits, activeFollowUps);
-                    const activeInProgressVisits = combinedActiveVisits.filter(visit => visit.status === 'in_progress');
-                    const groupedVisits = groupVisitsByCustomer(activeInProgressVisits);
-                    return filterVisitGroupsByOutcome(groupedVisits);
+                    const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
+                    const convertedVisits = combinedVisits.filter(visit => visit.visitOutcome === 'converted');
+                    const groupedVisits = groupVisitsByCustomer(convertedVisits);
+                    return groupedVisits;
                   })().map((group: CustomerVisitGroup, index: number) => (
                     <UnifiedSiteVisitCard
                       key={`${group.customerMobile}_${group.customerName}_${index}`}
@@ -728,6 +789,7 @@ export default function SiteVisitPage() {
                       onView={handleViewDetails}
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
+                      onDelete={handleDeleteSiteVisit}
                       showActions={true}
                     />
                   ))}
@@ -737,51 +799,45 @@ export default function SiteVisitPage() {
           </Card>
         </TabsContent>
 
-        {/* Team Site Visits */}
-        <TabsContent value="team-visits">
+        {/* Cancelled Visits */}
+        <TabsContent value="cancelled">
           <Card>
             <CardHeader>
-              <CardTitle>Team Site Visits</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CircleX className="h-5 w-5 text-red-600" />
+                Cancelled - Learning Opportunities
+                <Badge className="bg-red-100 text-red-800">
+                  {stats?.outcomes?.cancelled || 0}
+                </Badge>
+              </CardTitle>
               <CardDescription>
-                Site visits from your department team
+                Cancelled visits - analyze for future improvements and re-engagement opportunities
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-muted-foreground">
-                  Real-time updates every 30 seconds
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => refetchTeam()}
-                  className="h-8 px-3"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Refresh
-                </Button>
-              </div>
-              {(isLoadingTeam || isLoadingTeamFollowUps) ? (
+              {(isLoadingSiteVisits || isLoadingFollowUps) ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (() => {
-                const combinedTeamVisits = combineVisitsAndFollowUps(teamSiteVisits, teamFollowUps);
-                return combinedTeamVisits.length === 0;
+                const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
+                const cancelledVisits = combinedVisits.filter(visit => visit.visitOutcome === 'cancelled');
+                return cancelledVisits.length === 0;
               })() ? (
                 <div className="text-center py-6 sm:py-8 px-4">
-                  <Users className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-base sm:text-lg font-semibold mb-2">No team site visits</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto">
-                    No site visits from your department team yet
+                  <CircleX className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">No cancelled visits</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-4 max-w-sm mx-auto">
+                    Excellent! No cancelled visits means great customer engagement.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {(() => {
-                    const combinedVisits = combineVisitsAndFollowUps(teamSiteVisits, teamFollowUps);
-                    const groupedVisits = groupVisitsByCustomer(combinedVisits);
-                    return filterVisitGroupsByOutcome(groupedVisits);
+                    const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
+                    const cancelledVisits = combinedVisits.filter(visit => visit.visitOutcome === 'cancelled');
+                    const groupedVisits = groupVisitsByCustomer(cancelledVisits);
+                    return groupedVisits;
                   })().map((group: CustomerVisitGroup, index: number) => (
                     <UnifiedSiteVisitCard
                       key={`${group.customerMobile}_${group.customerName}_${index}`}
@@ -789,6 +845,7 @@ export default function SiteVisitPage() {
                       onView={handleViewDetails}
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
+                      onDelete={handleDeleteSiteVisit}
                       showActions={true}
                     />
                   ))}
@@ -797,7 +854,8 @@ export default function SiteVisitPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
 
       {/* Modals */}
       <SiteVisitStartModal
