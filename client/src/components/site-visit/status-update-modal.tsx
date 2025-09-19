@@ -45,6 +45,7 @@ interface StatusUpdateModalProps {
 }
 
 // Status options with their transitions and metadata
+// Note: 'completed' status should only be set through the checkout flow
 const statusOptions = [
   {
     value: 'on_process',
@@ -52,13 +53,6 @@ const statusOptions = [
     description: 'Visit is in progress, will complete later',
     icon: Clock,
     color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
-  },
-  {
-    value: 'completed',
-    label: 'Completed',
-    description: 'Visit has been successfully completed',
-    icon: CheckCircle,
-    color: 'bg-green-100 text-green-800 border-green-200'
   },
   {
     value: 'rejected',
@@ -77,12 +71,6 @@ const statusReasons = {
     'Waiting for additional materials/resources',
     'Technical issues need further investigation',
     'Customer not available, rescheduled'
-  ],
-  completed: [
-    'All work completed successfully',
-    'Customer satisfied with service',
-    'Installation/service completed as planned',
-    'All requirements fulfilled'
   ],
   rejected: [
     'Customer cancelled the service',
@@ -112,7 +100,11 @@ export function StatusUpdateModal({ isOpen, onClose, visit, userId }: StatusUpda
         title: "Status Updated",
         description: `Site visit status has been updated to ${selectedStatus.replace('_', ' ')}.`,
       });
+      // Invalidate all relevant queries to ensure UI consistency
       queryClient.invalidateQueries({ queryKey: ['/api/site-visits'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/site-visits/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/site-visits/team'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/follow-ups'] });
       handleClose();
     },
     onError: (error: any) => {
@@ -165,10 +157,11 @@ export function StatusUpdateModal({ isOpen, onClose, visit, userId }: StatusUpda
 
   const getAvailableStatuses = (currentStatus: string) => {
     // Define valid transitions based on the schema
+    // Note: 'completed' transitions should only happen through checkout flow
     const transitions: Record<string, string[]> = {
       'draft': ['in_progress', 'rejected'],
-      'in_progress': ['on_process', 'completed', 'rejected'],
-      'on_process': ['completed', 'rejected', 'in_progress']
+      'in_progress': ['on_process', 'rejected'],
+      'on_process': ['rejected', 'in_progress']
     };
     
     const allowedTransitions = transitions[currentStatus] || [];
