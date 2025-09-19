@@ -159,6 +159,11 @@ export const workingStatus = [
   "pending", "completed"
 ] as const;
 
+// Visit outcome categories for business classification
+export const visitOutcomes = [
+  "converted", "on_process", "cancelled"
+] as const;
+
 // Solar product specifications
 export const solarPanelBrands = [
   "renew", "premier", "utl_solar", "loom_solar", "kirloskar", "adani_solar", "vikram_solar"
@@ -425,6 +430,14 @@ export const insertSiteVisitSchema = z.object({
   
   // Status and metadata
   status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
+  
+  // Visit outcome for business classification (selected at checkout)
+  visitOutcome: z.enum(visitOutcomes).optional(),
+  outcomeNotes: z.string().optional(),
+  scheduledFollowUpDate: z.date().optional(),
+  outcomeSelectedAt: z.date().optional(),
+  outcomeSelectedBy: z.string().optional(),
+  
   notes: z.string().optional(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date())
@@ -495,6 +508,7 @@ export type WaterHeaterBrand = typeof waterHeaterBrands[number];
 export type MarketingProjectType = typeof marketingProjectTypes[number];
 export type BankProcessStep = typeof bankProcessSteps[number];
 export type EBProcessType = typeof ebProcessTypes[number];
+export type VisitOutcome = typeof visitOutcomes[number];
 
 export type Location = z.infer<typeof locationSchema>;
 export type CustomerDetails = z.infer<typeof customerDetailsSchema>;
@@ -853,40 +867,10 @@ export const insertSalaryStructureSchema = z.object({
 export const insertPayrollSchema = z.object({
   userId: z.string(),
   employeeId: z.string(),
-  month: z.number().min(1).max(12)
-    .superRefine((month, ctx) => {
-      const year = ctx.parent.year;
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-      
-      // Allow current month and past months, but not future months
-      if (year === currentYear) {
-        if (month > currentMonth) {
-          ctx.addIssue({
-            code: 'custom',
-            message: 'Cannot create payroll for future months'
-          });
-        }
-      } else if (year > currentYear) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'Cannot create payroll for future months'
-        });
-      }
-    }),
+  month: z.number().min(1).max(12),
   year: z.number().min(2020).max(new Date().getFullYear() + 1), // Prevent future years beyond next year
   workingDays: z.number().min(0).max(31),
-  presentDays: z.number().min(0)
-    .superRefine((presentDays, ctx) => {
-      const workingDays = ctx.parent.workingDays;
-      if (presentDays > workingDays) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'Present days cannot exceed working days'
-        });
-      }
-    }),
+  presentDays: z.number().min(0),
   absentDays: z.number().min(0),
   overtimeHours: z.number().min(0).default(0),
   leaveDays: z.number().min(0).default(0),
@@ -1030,39 +1014,10 @@ export const insertEnhancedSalaryStructureSchema = z.object({
 export const insertEnhancedPayrollSchema = z.object({
   userId: z.string(),
   employeeId: z.string(),
-  month: z.number().min(1).max(12)
-    .superRefine((month, ctx) => {
-      const year = ctx.parent.year;
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-      
-      if (year === currentYear) {
-        if (month > currentMonth) {
-          ctx.addIssue({
-            code: 'custom',
-            message: 'Cannot create payroll for future months'
-          });
-        }
-      } else if (year > currentYear) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'Cannot create payroll for future months'
-        });
-      }
-    }),
+  month: z.number().min(1).max(12),
   year: z.number().min(2020).max(new Date().getFullYear() + 1),
   monthDays: z.number().min(1).max(31),
-  presentDays: z.number().min(0)
-    .superRefine((presentDays, ctx) => {
-      const monthDays = ctx.parent.monthDays;
-      if (presentDays > monthDays) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'Present days cannot exceed month days'
-        });
-      }
-    }),
+  presentDays: z.number().min(0),
   paidLeaveDays: z.number().min(0).default(0),
   overtimeHours: z.number().min(0).default(0),
   perDaySalary: z.number().min(0),
