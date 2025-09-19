@@ -27,7 +27,12 @@ import {
   Trash2,
   LogOut,
   RefreshCw,
-  History
+  History,
+  Filter,
+  X,
+  TrendingUp,
+  CircleX,
+  Zap
 } from "lucide-react";
 import { SiteVisitStartModal } from "@/components/site-visit/site-visit-start-modal";
 import { SiteVisitDetailsModal } from "@/components/site-visit/site-visit-details-modal";
@@ -66,6 +71,12 @@ interface SiteVisit {
   followUpReason?: string;
   followUpCount?: number;
   hasFollowUps?: boolean;
+  // Visit outcome fields
+  visitOutcome?: 'converted' | 'on_process' | 'cancelled';
+  outcomeNotes?: string;
+  scheduledFollowUpDate?: string;
+  outcomeSelectedAt?: string;
+  outcomeSelectedBy?: string;
 }
 
 // Unified Site Visit Types
@@ -168,6 +179,10 @@ export default function SiteVisitPage() {
   const [isFollowUpDetailsModalOpen, setIsFollowUpDetailsModalOpen] = useState(false);
   const [selectedFollowUpId, setSelectedFollowUpId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("my-visits");
+  
+  // Visit outcome filters
+  const [outcomeFilter, setOutcomeFilter] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Check if user has access to Site Visit features
   const hasAccess = user?.department && ['technical', 'marketing', 'admin', 'administration'].includes(user.department.toLowerCase());
@@ -323,6 +338,16 @@ export default function SiteVisitPage() {
     });
   };
 
+  // Filter visit groups based on outcome selection
+  const filterVisitGroupsByOutcome = (visitGroups: CustomerVisitGroup[]) => {
+    if (!outcomeFilter) return visitGroups;
+    
+    return visitGroups.filter(group => {
+      // Check if the primary visit has the selected outcome
+      return group.primaryVisit.visitOutcome === outcomeFilter;
+    });
+  };
+
   const handleViewDetails = (siteVisit: SiteVisit) => {
     // Check if this is a follow-up visit stored in the separate collection
     if (siteVisit.isFollowUp && siteVisit.id) {
@@ -461,7 +486,7 @@ export default function SiteVisitPage() {
 
       {/* Statistics Cards */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
           <Card>
             <CardContent className="p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
@@ -486,30 +511,104 @@ export default function SiteVisitPage() {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => {setOutcomeFilter(outcomeFilter === 'converted' ? null : 'converted'); setShowFilters(true)}}>
             <CardContent className="p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <CheckCircle className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-green-600 flex-shrink-0" />
+                <TrendingUp className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-green-600 flex-shrink-0" />
                 <div className="ml-2 sm:ml-3 lg:ml-4 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Completed</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{(stats as any)?.completed || 0}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Converted</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{(stats as any)?.outcomes?.converted || 0}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => {setOutcomeFilter(outcomeFilter === 'on_process' ? null : 'on_process'); setShowFilters(true)}}>
             <CardContent className="p-3 sm:p-4 lg:p-6">
               <div className="flex items-center">
-                <Users className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-purple-600 flex-shrink-0" />
+                <Zap className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-yellow-600 flex-shrink-0" />
                 <div className="ml-2 sm:ml-3 lg:ml-4 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Department</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{(stats as any)?.byDepartment?.[user?.department || ''] || 0}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">On Process</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{(stats as any)?.outcomes?.on_process || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => {setOutcomeFilter(outcomeFilter === 'cancelled' ? null : 'cancelled'); setShowFilters(true)}}>
+            <CardContent className="p-3 sm:p-4 lg:p-6">
+              <div className="flex items-center">
+                <CircleX className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-red-600 flex-shrink-0" />
+                <div className="ml-2 sm:ml-3 lg:ml-4 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Cancelled</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{(stats as any)?.outcomes?.cancelled || 0}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+      )}
+      
+      {/* Outcome Filters */}
+      {(showFilters || outcomeFilter) && (
+        <Card className="bg-muted/30">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filters:</span>
+              </div>
+              
+              {/* Outcome Filter Badges */}
+              {outcomeFilter === 'converted' && (
+                <Badge className="bg-green-100 text-green-800 border-green-200">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  Converted
+                  <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setOutcomeFilter(null)} />
+                </Badge>
+              )}
+              {outcomeFilter === 'on_process' && (
+                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                  <Zap className="h-3 w-3 mr-1" />
+                  On Process
+                  <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setOutcomeFilter(null)} />
+                </Badge>
+              )}
+              {outcomeFilter === 'cancelled' && (
+                <Badge className="bg-red-100 text-red-800 border-red-200">
+                  <CircleX className="h-3 w-3 mr-1" />
+                  Cancelled
+                  <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setOutcomeFilter(null)} />
+                </Badge>
+              )}
+              
+              {/* Filter Options */}
+              {!outcomeFilter && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setOutcomeFilter('converted')} className="h-8">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Converted
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setOutcomeFilter('on_process')} className="h-8">
+                    <Zap className="h-3 w-3 mr-1" />
+                    On Process
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setOutcomeFilter('cancelled')} className="h-8">
+                    <CircleX className="h-3 w-3 mr-1" />
+                    Cancelled
+                  </Button>
+                </>
+              )}
+              
+              {/* Clear All */}
+              {outcomeFilter && (
+                <Button variant="ghost" size="sm" onClick={() => {setOutcomeFilter(null); setShowFilters(false)}} className="h-8 text-xs">
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Site Visits Tabs */}
@@ -556,7 +655,8 @@ export default function SiteVisitPage() {
                 <div className="space-y-4">
                   {(() => {
                     const combinedVisits = combineVisitsAndFollowUps(mySiteVisits, myFollowUps);
-                    return groupVisitsByCustomer(combinedVisits);
+                    const groupedVisits = groupVisitsByCustomer(combinedVisits);
+                    return filterVisitGroupsByOutcome(groupedVisits);
                   })().map((group: CustomerVisitGroup, index: number) => (
                     <UnifiedSiteVisitCard
                       key={`${group.customerMobile}_${group.customerName}_${index}`}
@@ -619,7 +719,8 @@ export default function SiteVisitPage() {
                   {(() => {
                     const combinedActiveVisits = combineVisitsAndFollowUps(activeSiteVisits, activeFollowUps);
                     const activeInProgressVisits = combinedActiveVisits.filter(visit => visit.status === 'in_progress');
-                    return groupVisitsByCustomer(activeInProgressVisits);
+                    const groupedVisits = groupVisitsByCustomer(activeInProgressVisits);
+                    return filterVisitGroupsByOutcome(groupedVisits);
                   })().map((group: CustomerVisitGroup, index: number) => (
                     <UnifiedSiteVisitCard
                       key={`${group.customerMobile}_${group.customerName}_${index}`}
@@ -677,7 +778,11 @@ export default function SiteVisitPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {groupVisitsByCustomer(combineVisitsAndFollowUps(teamSiteVisits, teamFollowUps)).map((group: CustomerVisitGroup, index: number) => (
+                  {(() => {
+                    const combinedVisits = combineVisitsAndFollowUps(teamSiteVisits, teamFollowUps);
+                    const groupedVisits = groupVisitsByCustomer(combinedVisits);
+                    return filterVisitGroupsByOutcome(groupedVisits);
+                  })().map((group: CustomerVisitGroup, index: number) => (
                     <UnifiedSiteVisitCard
                       key={`${group.customerMobile}_${group.customerName}_${index}`}
                       visitGroup={group}
@@ -762,6 +867,15 @@ function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDe
     }
   };
 
+  const getOutcomeColor = (outcome: string) => {
+    switch (outcome) {
+      case 'converted': return 'bg-green-100 text-green-800 border-green-200';
+      case 'on_process': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   const formatTime = (timeString: string) => {
     try {
       return formatDistanceToNow(new Date(timeString), { addSuffix: true });
@@ -786,6 +900,12 @@ function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDe
               <Badge className={getStatusColor(visitGroup.latestStatus)}>
                 {visitGroup.latestStatus.replace('_', ' ')}
               </Badge>
+              {visitGroup.primaryVisit.visitOutcome && (
+                <Badge className={getOutcomeColor(visitGroup.primaryVisit.visitOutcome)}>
+                  {visitGroup.primaryVisit.visitOutcome === 'on_process' ? 'On Process' : 
+                   visitGroup.primaryVisit.visitOutcome.charAt(0).toUpperCase() + visitGroup.primaryVisit.visitOutcome.slice(1)}
+                </Badge>
+              )}
               {visitGroup.totalVisits > 1 && (
                 <Badge variant="secondary" className="text-xs">
                   {visitGroup.totalVisits} visits
