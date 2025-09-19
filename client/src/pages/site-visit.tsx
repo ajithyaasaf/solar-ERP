@@ -41,8 +41,8 @@ interface SiteVisit {
   userId: string;
   department: 'technical' | 'marketing' | 'admin';
   visitPurpose: string;
-  status: 'in_progress' | 'completed' | 'cancelled';
-  siteInTime: string;
+  status: 'draft' | 'in_progress' | 'on_process' | 'completed' | 'rejected';
+  siteInTime?: string;
   siteOutTime?: string;
   customer: {
     name: string;
@@ -168,6 +168,7 @@ export default function SiteVisitPage() {
   const [isFollowUpDetailsModalOpen, setIsFollowUpDetailsModalOpen] = useState(false);
   const [selectedFollowUpId, setSelectedFollowUpId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("my-visits");
+  const [resumingDraft, setResumingDraft] = useState<SiteVisit | null>(null);
 
   // Check if user has access to Site Visit features
   const hasAccess = user?.department && ['technical', 'marketing', 'admin', 'administration'].includes(user.department.toLowerCase());
@@ -238,6 +239,17 @@ export default function SiteVisitPage() {
     refetchInterval: 15000,
   });
 
+  // Fetch user's draft site visits
+  const { data: myDrafts, isLoading: isLoadingDrafts } = useQuery({
+    queryKey: ['/api/site-visits/drafts'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/site-visits/drafts', 'GET');
+      return await response.json();
+    },
+    enabled: Boolean(hasAccess && user?.uid && activeTab === 'drafts'),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   // Fetch site visit statistics
   const { data: stats } = useQuery({
     queryKey: ['/api/site-visits/stats'],
@@ -271,6 +283,23 @@ export default function SiteVisitPage() {
   const handleDeleteSiteVisit = (id: string) => {
     if (confirm("Are you sure you want to delete this site visit?")) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  // Handle draft resumption
+  const handleResumeDraft = (draft: SiteVisit) => {
+    console.log('Resuming draft:', draft);
+    setResumingDraft(draft);
+    setIsStartModalOpen(true);
+  };
+
+  // Handle draft deletion
+  const handleDeleteDraft = (draftId: string) => {
+    if (confirm("Are you sure you want to delete this draft? This action cannot be undone.")) {
+      // Use the existing delete mutation for drafts as well
+      deleteMutation.mutate(draftId);
+      // Also invalidate drafts query
+      queryClient.invalidateQueries({ queryKey: ['/api/site-visits/drafts'] });
     }
   };
 
@@ -514,8 +543,9 @@ export default function SiteVisitPage() {
 
       {/* Site Visits Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 h-auto">
+        <TabsList className="grid w-full grid-cols-4 h-auto">
           <TabsTrigger value="my-visits" className="text-xs sm:text-sm px-2 py-2">My Visits</TabsTrigger>
+          <TabsTrigger value="drafts" className="text-xs sm:text-sm px-2 py-2">Drafts</TabsTrigger>
           <TabsTrigger value="active-visits" className="text-xs sm:text-sm px-2 py-2">Active Visits</TabsTrigger>
           <TabsTrigger value="team-visits" className="text-xs sm:text-sm px-2 py-2">Team Visits</TabsTrigger>
         </TabsList>
@@ -567,6 +597,98 @@ export default function SiteVisitPage() {
                       onDelete={handleDeleteSiteVisit}
                       showActions={true}
                     />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Draft Site Visits */}
+        <TabsContent value="drafts">
+          <Card>
+            <CardHeader>
+              <CardTitle>Draft Site Visits</CardTitle>
+              <CardDescription>
+                Incomplete site visits that can be resumed and completed
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingDrafts ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : !myDrafts?.length ? (
+                <div className="text-center py-6 sm:py-8 px-4">
+                  <Edit className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">No draft site visits</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-4 max-w-sm mx-auto">
+                    Draft site visits will appear here when you save incomplete forms
+                  </p>
+                  <Button 
+                    onClick={() => setIsStartModalOpen(true)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Start Site Visit
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myDrafts.map((draft: SiteVisit, index: number) => (
+                    <div key={`draft-${draft.id}-${index}`} className="p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/10">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                              Draft
+                            </Badge>
+                            <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+                              {draft.department?.charAt(0).toUpperCase() + draft.department?.slice(1)}
+                            </Badge>
+                          </div>
+                          <h3 className="font-medium text-sm sm:text-base mb-1 truncate">
+                            {draft.customer?.name || 'Unnamed Customer'}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+                            Purpose: {draft.visitPurpose || 'Not specified'}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {draft.customer?.address ? 
+                                `${draft.customer.address.substring(0, 30)}${draft.customer.address.length > 30 ? '...' : ''}` 
+                                : 'No address'
+                              }
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDistanceToNow(new Date(draft.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 ml-4">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleResumeDraft(draft)}
+                            data-testid={`button-resume-draft-${draft.id}`}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Resume
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleDeleteDraft(draft.id)}
+                            data-testid={`button-delete-draft-${draft.id}`}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -697,8 +819,12 @@ export default function SiteVisitPage() {
       {/* Modals */}
       <SiteVisitStartModal
         isOpen={isStartModalOpen}
-        onClose={() => setIsStartModalOpen(false)}
+        onClose={() => {
+          setIsStartModalOpen(false);
+          setResumingDraft(null);
+        }}
         userDepartment={user?.department?.toLowerCase() === 'administration' ? 'admin' : (user?.department || 'technical')}
+        resumingDraft={resumingDraft}
       />
 
       <SiteVisitDetailsModal

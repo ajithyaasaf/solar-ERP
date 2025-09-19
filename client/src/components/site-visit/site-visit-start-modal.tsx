@@ -28,7 +28,8 @@ import {
   Zap,
   RotateCcw,
   X,
-  User
+  User,
+  Edit
 } from "lucide-react";
 import { TechnicalSiteVisitForm } from "./technical-site-visit-form";
 import { MarketingSiteVisitForm } from "./marketing-site-visit-form";
@@ -43,6 +44,21 @@ interface SiteVisitStartModalProps {
   isOpen: boolean;
   onClose: () => void;
   userDepartment: string;
+  resumingDraft?: {
+    id: string;
+    visitPurpose: string;
+    customer: {
+      name: string;
+      mobile: string;
+      address: string;
+      ebServiceNumber?: string;
+      propertyType: string;
+    };
+    notes?: string;
+    technicalData?: any;
+    marketingData?: any;
+    adminData?: any;
+  } | null;
 }
 
 const visitPurposes = [
@@ -63,7 +79,7 @@ const propertyTypes = [
   { value: 'other', label: 'Other' }
 ];
 
-export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVisitStartModalProps) {
+export function SiteVisitStartModal({ isOpen, onClose, userDepartment, resumingDraft }: SiteVisitStartModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -120,10 +136,49 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
     adminData: null
   });
 
-  // Reset form when modal opens (but not on camera errors)
+  // Reset form when modal opens or load draft data when resuming
   useEffect(() => {
     if (isOpen) {
-      navigateToStep(1);
+      if (resumingDraft) {
+        // Load draft data
+        console.log('Loading draft data:', resumingDraft);
+        setFormData({
+          visitPurpose: resumingDraft.visitPurpose || '',
+          customer: {
+            name: resumingDraft.customer?.name || '',
+            mobile: resumingDraft.customer?.mobile || '',
+            address: resumingDraft.customer?.address || '',
+            ebServiceNumber: resumingDraft.customer?.ebServiceNumber || '',
+            propertyType: resumingDraft.customer?.propertyType || '',
+          },
+          notes: resumingDraft.notes || '',
+          technicalData: resumingDraft.technicalData || null,
+          marketingData: resumingDraft.marketingData || null,
+          adminData: resumingDraft.adminData || null
+        });
+        // Start from step 1 but indicate it's a resume
+        navigateToStep(1);
+        setLocationCaptured(false); // Still need fresh location
+      } else {
+        // Fresh start - reset everything
+        setFormData({
+          visitPurpose: '',
+          customer: {
+            name: '',
+            mobile: '',
+            address: '',
+            ebServiceNumber: '',
+            propertyType: '',
+          },
+          notes: '',
+          technicalData: null,
+          marketingData: null,
+          adminData: null
+        });
+        navigateToStep(1);
+      }
+      
+      // Common reset for both fresh start and resume
       setCurrentLocation(null);
       setLocationCaptured(false);
       setCapturedPhotos({ selfie: null, sitePhotos: [] });
@@ -132,23 +187,8 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
       setIsCameraActive(false);
       setIsVideoReady(false);
       setCurrentCamera('back');
-      
-      setFormData({
-        visitPurpose: '',
-        customer: {
-          name: '',
-          mobile: '',
-          address: '',
-          ebServiceNumber: '',
-          propertyType: '',
-        },
-        notes: '',
-        technicalData: null,
-        marketingData: null,
-        adminData: null
-      });
     }
-  }, [isOpen]);
+  }, [isOpen, resumingDraft]);
 
   // Cleanup camera stream when modal closes or component unmounts
   useEffect(() => {
@@ -698,6 +738,82 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
     },
   });
 
+  // Draft saving mutation
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      console.log("=== SAVING DRAFT ===");
+      console.log("Draft data:", JSON.stringify(data, null, 2));
+      
+      // Create draft payload (no location or photos required)
+      const draftPayload = {
+        visitPurpose: data.visitPurpose,
+        customer: {
+          ...data.customer,
+          ebServiceNumber: data.customer.ebServiceNumber || '',
+        },
+        // Include department-specific data with correct field names
+        ...(data.technicalData && { technicalData: data.technicalData }),
+        ...(data.marketingData && { marketingData: data.marketingData }),
+        ...(data.adminData && { adminData: data.adminData }),
+        notes: data.notes || ''
+      };
+
+      console.log("Draft payload being sent:", JSON.stringify(draftPayload, null, 2));
+
+      const endpoint = resumingDraft ? 
+        `/api/site-visits/drafts/${resumingDraft.id}` : 
+        '/api/site-visits/drafts';
+      const method = resumingDraft ? 'PATCH' : 'POST';
+
+      try {
+        console.log(`Making API request to ${endpoint} (${method})...`);
+        const result = await apiRequest(endpoint, method, draftPayload);
+        console.log("Draft API request successful:", result);
+        return result;
+      } catch (error) {
+        console.error("Draft API request failed:", error);
+        throw error;
+      }
+    },
+    onSuccess: (result) => {
+      console.log("=== DRAFT SAVE SUCCESS ===");
+      console.log("Result:", result);
+      toast({
+        title: "Draft Saved",
+        description: "Your progress has been saved successfully. You can continue later from the Drafts tab.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/site-visits/drafts'] });
+      onClose();
+    },
+    onError: (error: any) => {
+      console.error("=== DRAFT SAVE ERROR ===");
+      console.error("Error:", error);
+      
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save draft. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveDraft = () => {
+    console.log("=== HANDLE SAVE DRAFT STARTED ===");
+    
+    // Basic validation - only require customer name for draft
+    if (!formData.customer.name.trim()) {
+      toast({
+        title: "Customer Name Required",
+        description: "Please enter at least the customer name to save a draft",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("Saving draft with current form data...");
+    saveDraftMutation.mutate(formData);
+  };
+
   const handleSubmit = () => {
     console.log("=== HANDLE SUBMIT STARTED ===");
     console.log("Form data:", JSON.stringify(formData, null, 2));
@@ -782,7 +898,8 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
         <DialogHeader className="text-center sm:text-left flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 justify-center sm:justify-start text-base sm:text-lg">
             <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-            Start Site Visit
+            {resumingDraft ? 'Resume Site Visit Draft' : 'Start Site Visit'}
+            {resumingDraft && <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">Resuming Draft</Badge>}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
             Follow the steps to start your field site visit for {userDepartment} department
@@ -1010,21 +1127,46 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                 <Button 
                   variant="outline" 
                   onClick={() => setStep(1)} 
-                  className="w-full sm:w-auto order-2 sm:order-1 h-10 sm:h-9 text-sm sm:text-base"
+                  className="w-full sm:w-auto order-3 sm:order-1 h-10 sm:h-9 text-sm sm:text-base"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">Back to Customer Details</span>
                   <span className="sm:hidden">Back</span>
                 </Button>
-                <Button
-                  onClick={() => navigateToStep(3)}
-                  disabled={!canProceedToStep3}
-                  className="w-full sm:w-auto order-1 sm:order-2 h-10 sm:h-9 text-sm sm:text-base"
-                >
-                  <span className="hidden sm:inline">Continue to Site Visit</span>
-                  <span className="sm:hidden">Continue</span>
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                
+                <div className="flex gap-2 order-1 sm:order-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                    disabled={saveDraftMutation.isPending}
+                    className="flex-1 sm:flex-none h-10 sm:h-9 text-sm sm:text-base"
+                    data-testid="button-save-draft-step2"
+                  >
+                    {saveDraftMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                        <span className="hidden sm:inline">Saving...</span>
+                        <span className="sm:hidden">Save...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">Save Draft</span>
+                        <span className="sm:hidden">Save</span>
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    onClick={() => navigateToStep(3)}
+                    disabled={!canProceedToStep3}
+                    className="flex-1 sm:flex-none h-10 sm:h-9 text-sm sm:text-base"
+                  >
+                    <span className="hidden sm:inline">Continue to Site Visit</span>
+                    <span className="sm:hidden">Continue</span>
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1388,29 +1530,56 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                 <Button 
                   variant="outline" 
                   onClick={() => navigateToStep(3)}
-                  className="w-full sm:w-auto order-2 sm:order-1"
+                  className="w-full sm:w-auto order-3 sm:order-1"
                 >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
                   Back
                 </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!capturedPhotos.selfie || createSiteVisitMutation.isPending}
-                  className="w-full sm:w-auto order-1 sm:order-2"
-                >
-                  {createSiteVisitMutation.isPending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      <span className="hidden sm:inline">Starting Visit...</span>
-                      <span className="sm:hidden">Starting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Start Site Visit</span>
-                      <span className="sm:hidden">Start Visit</span>
-                    </>
-                  )}
-                </Button>
+                
+                <div className="flex gap-2 order-1 sm:order-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                    disabled={saveDraftMutation.isPending}
+                    className="flex-1 sm:flex-none"
+                    data-testid="button-save-draft"
+                  >
+                    {saveDraftMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                        <span className="hidden sm:inline">Saving...</span>
+                        <span className="sm:hidden">Save...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">Save Draft</span>
+                        <span className="sm:hidden">Save</span>
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!capturedPhotos.selfie || createSiteVisitMutation.isPending}
+                    className="flex-1 sm:flex-none"
+                    data-testid="button-start-site-visit"
+                  >
+                    {createSiteVisitMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <span className="hidden sm:inline">Starting Visit...</span>
+                        <span className="sm:hidden">Starting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">Start Site Visit</span>
+                        <span className="sm:hidden">Start Visit</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
