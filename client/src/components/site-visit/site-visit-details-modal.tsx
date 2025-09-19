@@ -29,7 +29,9 @@ import {
   CreditCard,
   Wrench,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp,
+  CircleX
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -114,6 +116,12 @@ interface SiteVisit {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  // Visit outcome fields
+  visitOutcome?: 'converted' | 'on_process' | 'cancelled';
+  outcomeNotes?: string;
+  scheduledFollowUpDate?: string;
+  outcomeSelectedAt?: string;
+  outcomeSelectedBy?: string;
 }
 
 interface SiteVisitDetailsModalProps {
@@ -158,6 +166,51 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
       case 'admin': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getOutcomeColor = (outcome: string) => {
+    switch (outcome) {
+      case 'converted': return 'bg-green-100 text-green-800 border-green-200';
+      case 'on_process': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getOutcomeIcon = (outcome: string) => {
+    switch (outcome) {
+      case 'converted': return <TrendingUp className="h-4 w-4" />;
+      case 'on_process': return <Zap className="h-4 w-4" />;
+      case 'cancelled': return <CircleX className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getOutcomeLabel = (outcome: string) => {
+    switch (outcome) {
+      case 'converted': return 'Converted';
+      case 'on_process': return 'On Process';  
+      case 'cancelled': return 'Cancelled';
+      default: return 'Unknown';
+    }
+  };
+
+  // Helper function to check if follow-up date is overdue
+  const isOverdue = (dateString?: string) => {
+    if (!dateString) return false;
+    const followUpDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    followUpDate.setHours(0, 0, 0, 0);
+    return followUpDate < today;
+  };
+
+  // Helper function to check if follow-up date is today
+  const isToday = (dateString?: string) => {
+    if (!dateString) return false;
+    const followUpDate = new Date(dateString);
+    const today = new Date();
+    return followUpDate.toDateString() === today.toDateString();
   };
 
   const getWorkingStatusIcon = (status: string) => {
@@ -209,6 +262,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                 <Badge variant="outline" className="text-xs">
                   {siteVisit.visitPurpose}
                 </Badge>
+                {siteVisit.visitOutcome && (
+                  <Badge className={getOutcomeColor(siteVisit.visitOutcome)}>
+                    {getOutcomeIcon(siteVisit.visitOutcome)}
+                    <span className="ml-1">{getOutcomeLabel(siteVisit.visitOutcome)}</span>
+                  </Badge>
+                )}
               </div>
               <h2 className="text-lg sm:text-xl lg:text-2xl font-bold break-words">{siteVisit.customer.name}</h2>
             </div>
@@ -217,6 +276,92 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
               <p>Created: {format(new Date(siteVisit.createdAt), 'PPP')}</p>
             </div>
           </div>
+
+          {/* Visit Outcome Section */}
+          {(siteVisit.visitOutcome || siteVisit.scheduledFollowUpDate || siteVisit.outcomeNotes) && (
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Visit Outcome & Follow-up Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {siteVisit.visitOutcome && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Visit Outcome</p>
+                    <Badge className={`${getOutcomeColor(siteVisit.visitOutcome)} px-3 py-1`}>
+                      {getOutcomeIcon(siteVisit.visitOutcome)}
+                      <span className="ml-2 font-medium">{getOutcomeLabel(siteVisit.visitOutcome)}</span>
+                    </Badge>
+                  </div>
+                )}
+
+                {siteVisit.scheduledFollowUpDate && (
+                  <div className={`p-4 rounded-lg border-l-4 ${
+                    isOverdue(siteVisit.scheduledFollowUpDate) 
+                      ? 'bg-red-50 border-l-red-500 border-red-200' 
+                      : isToday(siteVisit.scheduledFollowUpDate)
+                      ? 'bg-yellow-50 border-l-yellow-500 border-yellow-200'
+                      : 'bg-blue-50 border-l-blue-500 border-blue-200'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className={`h-4 w-4 ${
+                        isOverdue(siteVisit.scheduledFollowUpDate)
+                          ? 'text-red-600'
+                          : isToday(siteVisit.scheduledFollowUpDate)
+                          ? 'text-yellow-600'
+                          : 'text-blue-600'
+                      }`} />
+                      <span className={`font-medium text-sm ${
+                        isOverdue(siteVisit.scheduledFollowUpDate)
+                          ? 'text-red-700'
+                          : isToday(siteVisit.scheduledFollowUpDate)
+                          ? 'text-yellow-700'
+                          : 'text-blue-700'
+                      }`}>
+                        {isOverdue(siteVisit.scheduledFollowUpDate) && 'Overdue Follow-up'}
+                        {isToday(siteVisit.scheduledFollowUpDate) && 'Follow-up Scheduled Today'}
+                        {!isOverdue(siteVisit.scheduledFollowUpDate) && !isToday(siteVisit.scheduledFollowUpDate) && 'Scheduled Follow-up'}
+                      </span>
+                    </div>
+                    <p className={`text-sm ${
+                      isOverdue(siteVisit.scheduledFollowUpDate)
+                        ? 'text-red-600 font-medium'
+                        : isToday(siteVisit.scheduledFollowUpDate)
+                        ? 'text-yellow-700 font-medium'
+                        : 'text-blue-600'
+                    }`}>
+                      {format(new Date(siteVisit.scheduledFollowUpDate), 'PPPP')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(siteVisit.scheduledFollowUpDate), 'EEEE, h:mm a')}
+                    </p>
+                  </div>
+                )}
+
+                {siteVisit.outcomeNotes && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Outcome Notes</p>
+                    <div className="bg-gray-50 p-3 rounded-lg border">
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {siteVisit.outcomeNotes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {siteVisit.outcomeSelectedAt && (
+                  <div className="pt-2 border-t border-gray-200">
+                    <p className="text-xs text-muted-foreground">
+                      Outcome selected on {format(new Date(siteVisit.outcomeSelectedAt), 'PPP p')}
+                      {siteVisit.outcomeSelectedBy && ` by ${siteVisit.outcomeSelectedBy}`}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Location Tracking Section */}
           {(siteVisit.siteInLocation || siteVisit.siteOutLocation) && (

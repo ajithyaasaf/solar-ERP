@@ -15,7 +15,7 @@ import {
   MapPin, Search, Download, Eye, Calendar, Clock, Users, Building, 
   Camera, FileText, Filter, RefreshCw, TrendingUp, BarChart3,
   CheckCircle, XCircle, AlertTriangle, Navigation, Phone, Mail,
-  User, Zap, ChevronDown, History, LogOut, Plus
+  User, Zap, ChevronDown, History, LogOut, Plus, CircleX
 } from "lucide-react";
 import { format } from "date-fns";
 import { SiteVisitDetailsModal } from "@/components/site-visit/site-visit-details-modal";
@@ -23,7 +23,7 @@ import { SiteVisitDetailsModal } from "@/components/site-visit/site-visit-detail
 interface SiteVisit {
   id: string;
   userId: string;
-  department: string;
+  department: 'technical' | 'marketing' | 'admin' | 'operations' | 'hr' | 'sales' | 'housekeeping';
   visitPurpose: string;
   siteInTime: Date;
   siteOutTime?: Date;
@@ -72,6 +72,12 @@ interface SiteVisit {
   siteOutPhotoUrl?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  // Visit outcome fields
+  visitOutcome?: 'converted' | 'on_process' | 'cancelled';
+  outcomeNotes?: string;
+  scheduledFollowUpDate?: string;
+  outcomeSelectedAt?: string;
+  outcomeSelectedBy?: string;
 }
 
 interface CustomerVisitGroup {
@@ -85,6 +91,52 @@ interface CustomerVisitGroup {
   hasActiveVisit: boolean;
   latestActivity: Date;
 }
+
+// Outcome helper functions
+const getOutcomeColor = (outcome: string) => {
+  switch (outcome) {
+    case 'converted': return 'bg-green-100 text-green-800 border-green-200';
+    case 'on_process': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
+    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getOutcomeIcon = (outcome: string) => {
+  switch (outcome) {
+    case 'converted': return <TrendingUp className="h-3 w-3" />;
+    case 'on_process': return <Zap className="h-3 w-3" />;
+    case 'cancelled': return <CircleX className="h-3 w-3" />;
+    default: return <FileText className="h-3 w-3" />;
+  }
+};
+
+const getOutcomeLabel = (outcome: string) => {
+  switch (outcome) {
+    case 'converted': return 'Converted';
+    case 'on_process': return 'On Process';  
+    case 'cancelled': return 'Cancelled';
+    default: return 'Unknown';
+  }
+};
+
+// Helper function to check if follow-up date is overdue
+const isOverdue = (dateString?: string) => {
+  if (!dateString) return false;
+  const followUpDate = new Date(dateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  followUpDate.setHours(0, 0, 0, 0);
+  return followUpDate < today;
+};
+
+// Helper function to check if follow-up date is today
+const isToday = (dateString?: string) => {
+  if (!dateString) return false;
+  const followUpDate = new Date(dateString);
+  const today = new Date();
+  return followUpDate.toDateString() === today.toDateString();
+};
 
 // Customer Visit Group Card Component
 const CustomerVisitGroupCard = ({ 
@@ -131,6 +183,12 @@ const CustomerVisitGroupCard = ({
                     {group.followUps.length} Follow-up{group.followUps.length !== 1 ? 's' : ''}
                   </Badge>
                 )}
+                {group.primaryVisit.visitOutcome && (
+                  <Badge className={`${getOutcomeColor(group.primaryVisit.visitOutcome)} text-xs`}>
+                    {getOutcomeIcon(group.primaryVisit.visitOutcome)}
+                    <span className="ml-1">{getOutcomeLabel(group.primaryVisit.visitOutcome)}</span>
+                  </Badge>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-1">
@@ -140,6 +198,25 @@ const CustomerVisitGroupCard = ({
               <p className="text-xs text-muted-foreground">
                 {format(group.latestActivity, 'MMM dd, yyyy HH:mm')}
               </p>
+              {group.primaryVisit.scheduledFollowUpDate && (
+                <div className={`text-xs p-2 rounded-md border-l-2 ${
+                  isOverdue(group.primaryVisit.scheduledFollowUpDate) 
+                    ? 'bg-red-50 border-l-red-500 text-red-700' 
+                    : isToday(group.primaryVisit.scheduledFollowUpDate)
+                    ? 'bg-yellow-50 border-l-yellow-500 text-yellow-700'
+                    : 'bg-blue-50 border-l-blue-500 text-blue-700'
+                }`}>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    <span className="font-medium">
+                      {isOverdue(group.primaryVisit.scheduledFollowUpDate) && 'Overdue Follow-up:'}
+                      {isToday(group.primaryVisit.scheduledFollowUpDate) && 'Follow-up Today:'}
+                      {!isOverdue(group.primaryVisit.scheduledFollowUpDate) && !isToday(group.primaryVisit.scheduledFollowUpDate) && 'Scheduled:'}
+                    </span>
+                    <span>{format(new Date(group.primaryVisit.scheduledFollowUpDate), 'MMM dd, yyyy')}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -348,6 +425,7 @@ export default function SiteVisitMonitoring() {
   const [dateFilter, setDateFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [outcomeFilter, setOutcomeFilter] = useState("all");
   const [followUpFilter, setFollowUpFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grouped" | "individual">("grouped");
 
@@ -363,7 +441,7 @@ export default function SiteVisitMonitoring() {
 
   // Live site visits data with real-time updates
   const { data: siteVisits = [], isLoading, refetch } = useQuery({
-    queryKey: ["/api/site-visits/monitoring", statusFilter, departmentFilter, dateFilter, followUpFilter],
+    queryKey: ["/api/site-visits/monitoring", statusFilter, departmentFilter, dateFilter, followUpFilter, outcomeFilter],
     queryFn: async () => {
       // Build query params
       const params = new URLSearchParams();
@@ -448,14 +526,14 @@ export default function SiteVisitMonitoring() {
     const groupMap = new Map<string, CustomerVisitGroup>();
 
     visits.forEach(visit => {
-      const mobile = visit.customer?.mobile || visit.customerPhone || 'unknown';
+      const mobile = visit.customer?.mobile || 'unknown';
       
       if (!groupMap.has(mobile)) {
         // Initialize new group with this visit as primary
         groupMap.set(mobile, {
           customerMobile: mobile,
-          customerName: visit.customer?.name || visit.customerName || 'Unknown Customer',
-          customerAddress: visit.customer?.address || visit.siteAddress || '',
+          customerName: visit.customer?.name || 'Unknown Customer',
+          customerAddress: visit.customer?.address || '',
           primaryVisit: visit,
           followUps: [],
           totalVisits: 1,
@@ -527,7 +605,10 @@ export default function SiteVisitMonitoring() {
       (followUpFilter === 'follow_up' && visit.isFollowUp) ||
       (followUpFilter === 'with_follow_ups' && visit.hasFollowUps);
     
-    return matchesSearch && matchesDate && matchesDepartment && matchesStatus && matchesFollowUp;
+    const matchesOutcome = !outcomeFilter || outcomeFilter === 'all' || 
+      visit.visitOutcome === outcomeFilter;
+    
+    return matchesSearch && matchesDate && matchesDepartment && matchesStatus && matchesFollowUp && matchesOutcome;
   });
 
   // Get grouped data
@@ -553,7 +634,10 @@ export default function SiteVisitMonitoring() {
       (followUpFilter === 'follow_up' && group.primaryVisit.isFollowUp) ||
       (followUpFilter === 'with_follow_ups' && group.followUps.length > 0);
     
-    return matchesSearch && matchesDate && matchesDepartment && matchesStatus && matchesFollowUp;
+    const matchesOutcome = !outcomeFilter || outcomeFilter === 'all' || 
+      group.primaryVisit.visitOutcome === outcomeFilter;
+    
+    return matchesSearch && matchesDate && matchesDepartment && matchesStatus && matchesFollowUp && matchesOutcome;
   });
 
   // Export functionality
@@ -564,6 +648,7 @@ export default function SiteVisitMonitoring() {
           dateFilter,
           departmentFilter,
           statusFilter,
+          outcomeFilter,
           searchQuery
         }
       });
@@ -741,7 +826,7 @@ export default function SiteVisitMonitoring() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:flex sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:flex sm:gap-4">
               <Input
                 type="date"
                 value={dateFilter}
@@ -788,9 +873,21 @@ export default function SiteVisitMonitoring() {
                   <SelectItem value="with_follow_ups">Has Follow-ups</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
+                <SelectTrigger className="sm:w-36">
+                  <SelectValue placeholder="Outcome" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Outcomes</SelectItem>
+                  <SelectItem value="converted">Converted</SelectItem>
+                  <SelectItem value="on_process">On Process</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {(searchQuery || dateFilter || (departmentFilter && departmentFilter !== 'all') || (statusFilter && statusFilter !== 'all') || (followUpFilter && followUpFilter !== 'all')) && (
+            {(searchQuery || dateFilter || (departmentFilter && departmentFilter !== 'all') || (statusFilter && statusFilter !== 'all') || (followUpFilter && followUpFilter !== 'all') || (outcomeFilter && outcomeFilter !== 'all')) && (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -801,6 +898,7 @@ export default function SiteVisitMonitoring() {
                   setDepartmentFilter("all");
                   setStatusFilter("all");
                   setFollowUpFilter("all");
+                  setOutcomeFilter("all");
                 }}
               >
                 Clear Filters
