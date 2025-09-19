@@ -5498,10 +5498,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Update payload:", JSON.stringify(req.body, null, 2));
       console.log("User:", user.uid, user.displayName);
 
-      // Validate known checkout fields
+      // Validate known checkout fields including visit outcome fields
       const allowedFields = [
         'status', 'siteOutTime', 'siteOutLocation', 'siteOutPhotoUrl', 
-        'notes', 'updatedAt', 'sitePhotos', 'siteOutPhotos'
+        'notes', 'updatedAt', 'sitePhotos', 'siteOutPhotos',
+        // Visit outcome fields for business classification
+        'visitOutcome', 'outcomeNotes', 'scheduledFollowUpDate', 
+        'outcomeSelectedAt', 'outcomeSelectedBy'
       ];
       
       const invalidFields = Object.keys(req.body).filter(field => 
