@@ -10,6 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +29,9 @@ import {
   AlertTriangle,
   RotateCcw,
   X,
-  ArrowRight
+  ArrowRight,
+  ClipboardList,
+  Calendar
 } from "lucide-react";
 import { EnhancedLocationCapture } from "./enhanced-location-capture";
 import { LocationData } from "@/lib/location-service";
@@ -795,7 +801,7 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                   disabled={!canProceedToStep2}
                   className="w-full sm:w-auto"
                 >
-                  Next: Photo & Notes
+                  Next: Photos & Notes
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -1117,9 +1123,133 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                   Back
                 </Button>
                 <Button
+                  onClick={() => setStep(3)}
+                  disabled={!capturedPhotos.selfie}
+                  className="order-1 sm:order-2 w-full sm:w-auto"
+                >
+                  Next: Visit Outcome
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Visit Outcome Selection */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 justify-center sm:justify-start">
+                    <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Visit Outcome (Required)
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Please classify the outcome of this site visit for business tracking
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Select Visit Outcome</Label>
+                      <RadioGroup value={visitOutcome} onValueChange={setVisitOutcome}>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="converted" id="converted" data-testid="radio-converted" />
+                          <Label htmlFor="converted" className="flex-1 cursor-pointer">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-green-700">Converted</span>
+                              <span className="text-xs text-muted-foreground">Customer agreed, ready for quotation</span>
+                            </div>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="on_process" id="on_process" data-testid="radio-on-process" />
+                          <Label htmlFor="on_process" className="flex-1 cursor-pointer">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-yellow-700">On Process</span>
+                              <span className="text-xs text-muted-foreground">Customer needs time, schedule follow-up</span>
+                            </div>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="cancelled" id="cancelled" data-testid="radio-cancelled" />
+                          <Label htmlFor="cancelled" className="flex-1 cursor-pointer">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-red-700">Cancelled</span>
+                              <span className="text-xs text-muted-foreground">Customer not interested or not feasible</span>
+                            </div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    {/* Conditional Follow-up Date for On Process */}
+                    {visitOutcome === 'on_process' && (
+                      <div className="space-y-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <Label className="text-sm font-medium text-yellow-800">Schedule Follow-up Date (Optional)</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !scheduledFollowUpDate && "text-muted-foreground"
+                              )}
+                              data-testid="button-followup-date"
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {scheduledFollowUpDate ? format(new Date(scheduledFollowUpDate), "PPP") : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <CalendarComponent
+                              mode="single"
+                              selected={scheduledFollowUpDate ? new Date(scheduledFollowUpDate) : undefined}
+                              onSelect={(date) => setScheduledFollowUpDate(date ? date.toISOString().split('T')[0] : '')}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <p className="text-xs text-yellow-700">
+                          When would you like to follow up with this customer?
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Outcome Notes */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Additional Notes (Optional)</Label>
+                      <Textarea
+                        value={outcomeNotes}
+                        onChange={(e) => setOutcomeNotes(e.target.value)}
+                        placeholder="Add any specific details about this outcome..."
+                        rows={3}
+                        className="text-sm"
+                        data-testid="textarea-outcome-notes"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {!visitOutcome && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-red-700">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-xs sm:text-sm font-medium">Please select a visit outcome to complete checkout</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
+                <Button variant="outline" onClick={() => setStep(2)} className="order-2 sm:order-1 w-full sm:w-auto">
+                  Back
+                </Button>
+                <Button
                   onClick={handleSubmit}
-                  disabled={checkoutMutation.isPending || !capturedPhotos.selfie}
+                  disabled={checkoutMutation.isPending || !visitOutcome}
                   className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto"
+                  data-testid="button-complete-checkout"
                 >
                   {checkoutMutation.isPending ? (
                     <>
