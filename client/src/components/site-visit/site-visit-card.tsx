@@ -32,6 +32,12 @@ interface SiteVisit {
   followUpOf?: string;
   followUpReason?: string;
   notes?: string;
+  // New outcome fields
+  visitOutcome?: 'converted' | 'on_process' | 'cancelled';
+  scheduledFollowUpDate?: string;
+  outcomeNotes?: string;
+  outcomeSelectedAt?: string;
+  outcomeSelectedBy?: string;
 }
 
 interface SiteVisitCardProps {
@@ -64,6 +70,18 @@ const followUpReasonIcons = {
   'other': FileText
 };
 
+const outcomeColors = {
+  'converted': 'bg-green-100 text-green-800 border-green-200',
+  'on_process': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  'cancelled': 'bg-red-100 text-red-800 border-red-200'
+};
+
+const outcomeLabels = {
+  'converted': 'Converted',
+  'on_process': 'On Process',
+  'cancelled': 'Cancelled'
+};
+
 export function SiteVisitCard({ 
   visit, 
   onFollowUp, 
@@ -88,6 +106,32 @@ export function SiteVisitCard({
     followUpReasonIcons[visit.followUpReason as keyof typeof followUpReasonIcons] || FileText : 
     FileText;
 
+  // Helper function to check if follow-up date is overdue
+  const isOverdue = (dateString?: string) => {
+    if (!dateString) return false;
+    const followUpDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    followUpDate.setHours(0, 0, 0, 0);
+    return followUpDate < today;
+  };
+
+  // Helper function to check if follow-up date is today
+  const isToday = (dateString?: string) => {
+    if (!dateString) return false;
+    const followUpDate = new Date(dateString);
+    const today = new Date();
+    return followUpDate.toDateString() === today.toDateString();
+  };
+
+  const formatFollowUpDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: format(date, 'MMM dd, yyyy'),
+      relative: formatDistanceToNow(date, { addSuffix: true })
+    };
+  };
+
   return (
     <Card className={`${isCompact ? 'h-auto' : 'h-full'} transition-all hover:shadow-md`}>
       <CardHeader className="pb-3">
@@ -103,13 +147,18 @@ export function SiteVisitCard({
                 </Badge>
               )}
             </CardTitle>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <Badge className={departmentColors[visit.department as keyof typeof departmentColors] || 'bg-gray-100 text-gray-800'}>
                 {visit.department.charAt(0).toUpperCase() + visit.department.slice(1)}
               </Badge>
               <Badge variant="outline" className={statusColors[visit.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}>
                 {visit.status.replace('_', ' ')}
               </Badge>
+              {visit.visitOutcome && (
+                <Badge className={outcomeColors[visit.visitOutcome] || 'bg-gray-100 text-gray-800'}>
+                  {outcomeLabels[visit.visitOutcome]}
+                </Badge>
+              )}
               {visit.followUpCount && visit.followUpCount > 0 && (
                 <Badge variant="secondary">
                   {visit.followUpCount} follow-up{visit.followUpCount > 1 ? 's' : ''}
@@ -177,13 +226,81 @@ export function SiteVisitCard({
             )}
           </div>
 
-          {/* Notes */}
+          {/* Scheduled Follow-up Date */}
+          {visit.scheduledFollowUpDate && (
+            <div className={`text-sm p-3 rounded-lg border ${
+              isOverdue(visit.scheduledFollowUpDate) 
+                ? 'bg-red-50 border-red-200' 
+                : isToday(visit.scheduledFollowUpDate)
+                ? 'bg-yellow-50 border-yellow-200'
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <Calendar className={`h-4 w-4 ${
+                  isOverdue(visit.scheduledFollowUpDate)
+                    ? 'text-red-600'
+                    : isToday(visit.scheduledFollowUpDate)
+                    ? 'text-yellow-600'
+                    : 'text-blue-600'
+                }`} />
+                <span className="font-medium">
+                  {isOverdue(visit.scheduledFollowUpDate) && 'Overdue Follow-up:'}
+                  {isToday(visit.scheduledFollowUpDate) && 'Follow-up Today:'}
+                  {!isOverdue(visit.scheduledFollowUpDate) && !isToday(visit.scheduledFollowUpDate) && 'Scheduled Follow-up:'}
+                </span>
+                <span className={`${
+                  isOverdue(visit.scheduledFollowUpDate)
+                    ? 'text-red-700 font-semibold'
+                    : isToday(visit.scheduledFollowUpDate)
+                    ? 'text-yellow-700 font-semibold'
+                    : 'text-blue-700'
+                }`}>
+                  {formatFollowUpDate(visit.scheduledFollowUpDate).date}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  ({formatFollowUpDate(visit.scheduledFollowUpDate).relative})
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Outcome Notes */}
+          {visit.outcomeNotes && (
+            <div className="text-sm">
+              <span className="font-medium">Outcome Notes:</span>
+              <p className="text-muted-foreground mt-1 text-xs bg-gray-50 p-2 rounded">
+                {visit.outcomeNotes}
+              </p>
+            </div>
+          )}
+
+          {/* General Notes */}
           {visit.notes && (
             <div className="text-sm">
               <span className="font-medium">Notes:</span>
               <p className="text-muted-foreground mt-1 text-xs bg-gray-50 p-2 rounded">
                 {visit.notes}
               </p>
+            </div>
+          )}
+
+          {/* Quick Actions for On Process visits */}
+          {visit.visitOutcome === 'on_process' && visit.scheduledFollowUpDate && (
+            <div className="flex items-center gap-2 text-xs">
+              <Badge variant="outline" className="text-xs">
+                <Clock className="h-3 w-3 mr-1" />
+                Action Required
+              </Badge>
+              {isOverdue(visit.scheduledFollowUpDate) && (
+                <Badge variant="destructive" className="text-xs">
+                  Overdue
+                </Badge>
+              )}
+              {isToday(visit.scheduledFollowUpDate) && (
+                <Badge className="bg-yellow-600 text-xs">
+                  Due Today
+                </Badge>
+              )}
             </div>
           )}
         </div>
