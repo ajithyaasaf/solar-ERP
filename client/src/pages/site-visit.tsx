@@ -274,6 +274,8 @@ export default function SiteVisitPage() {
         description: "Site visit deleted successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/site-visits'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/follow-ups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/site-visits/stats'] });
     },
     onError: (error: any) => {
       toast({
@@ -322,16 +324,8 @@ export default function SiteVisitPage() {
     const siteVisits = visits?.data || [];
     const followUpVisits = followUps?.data || [];
     
-    console.log("=== COMBINE VISITS DEBUG ===");
-    console.log("Site visits count:", siteVisits.length);
-    console.log("Follow-ups count:", followUpVisits.length);
-    console.log("Follow-ups data:", followUpVisits);
-    
     const convertedFollowUps = followUpVisits.map(convertFollowUpToSiteVisit);
     const combined = [...siteVisits, ...convertedFollowUps];
-    
-    console.log("Combined visits count:", combined.length);
-    console.log("Combined data:", combined);
     
     // Sort by creation time (most recent first)
     return combined.sort((a, b) => {
@@ -346,8 +340,9 @@ export default function SiteVisitPage() {
     if (!outcomeFilter) return visitGroups;
     
     return visitGroups.filter(group => {
-      // Check if the primary visit has the selected outcome
-      return group.primaryVisit.visitOutcome === outcomeFilter;
+      // Check if any visit in the group (primary or follow-ups) has the selected outcome
+      const allVisitsInGroup = [group.primaryVisit, ...group.followUps];
+      return allVisitsInGroup.some(visit => visit.visitOutcome === outcomeFilter);
     });
   };
 
@@ -395,6 +390,7 @@ export default function SiteVisitPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/site-visits'] });
       queryClient.invalidateQueries({ queryKey: ['/api/follow-ups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/site-visits/stats'] });
     },
     onError: (error: any) => {
       toast({
