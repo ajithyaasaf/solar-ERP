@@ -159,6 +159,25 @@ export const workingStatus = [
   "pending", "completed"
 ] as const;
 
+// Enhanced Site Visit Status - includes draft and process states
+export const siteVisitStatus = [
+  "draft", "in_progress", "on_process", "completed", "rejected"
+] as const;
+
+// Form completion tracking for draft functionality
+export const formCompletionFields = [
+  "visitPurpose", "customerDetails", "location", "photos", "departmentForm"
+] as const;
+
+// Status transition rules for workflow management
+export const statusTransitions = {
+  "draft": ["in_progress", "rejected"],
+  "in_progress": ["on_process", "completed", "rejected"],
+  "on_process": ["completed", "rejected", "in_progress"],
+  "completed": [], // Terminal state
+  "rejected": [] // Terminal state
+} as const;
+
 // Solar product specifications
 export const solarPanelBrands = [
   "renew", "premier", "utl_solar", "loom_solar", "kirloskar", "adani_solar", "vikram_solar"
@@ -387,6 +406,24 @@ export const sitePhotoSchema = z.object({
   description: z.string().optional()
 });
 
+// Form completion status tracking schema for draft functionality
+export const formCompletionStatusSchema = z.object({
+  visitPurpose: z.boolean().default(false),
+  customerDetails: z.boolean().default(false),
+  location: z.boolean().default(false),
+  photos: z.boolean().default(false),
+  departmentForm: z.boolean().default(false)
+});
+
+// Status history tracking for audit purposes
+export const statusHistorySchema = z.object({
+  status: z.enum(siteVisitStatus),
+  timestamp: z.date().default(() => new Date()),
+  updatedBy: z.string(),
+  reason: z.string().optional(),
+  notes: z.string().optional()
+});
+
 // Main site visit schema
 export const insertSiteVisitSchema = z.object({
   userId: z.string(),
@@ -423,8 +460,19 @@ export const insertSiteVisitSchema = z.object({
   followUpReason: z.string().optional(), // Why follow-up was needed
   followUpDescription: z.string().optional(), // Simple description for follow-ups
   
-  // Status and metadata
-  status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
+  // Enhanced Status and metadata with draft functionality
+  status: z.enum(siteVisitStatus).default("draft"),
+  isDraft: z.boolean().default(true),
+  formCompletionStatus: formCompletionStatusSchema.default({
+    visitPurpose: false,
+    customerDetails: false,
+    location: false,
+    photos: false,
+    departmentForm: false
+  }),
+  completionPercentage: z.number().min(0).max(100).default(0),
+  lastModified: z.date().default(() => new Date()),
+  statusHistory: z.array(statusHistorySchema).default([]),
   notes: z.string().optional(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date())
@@ -459,8 +507,8 @@ export const insertFollowUpSiteVisitSchema = z.object({
   sitePhotos: z.array(z.string().url()).max(10).default([]), // Array of site "in" photo URLs
   siteOutPhotos: z.array(z.string().url()).max(10).default([]), // Array of site "out" photo URLs (checkout photos)
   
-  // Status and metadata
-  status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
+  // Status and metadata (follow-ups cannot be drafts)
+  status: z.enum(["in_progress", "on_process", "completed", "rejected"]).default("in_progress"),
   notes: z.string().optional(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
@@ -507,7 +555,64 @@ export type WaterPumpConfig = z.infer<typeof waterPumpConfigSchema>;
 export type MarketingSiteVisit = z.infer<typeof marketingSiteVisitSchema>;
 export type AdminSiteVisit = z.infer<typeof adminSiteVisitSchema>;
 export type SitePhoto = z.infer<typeof sitePhotoSchema>;
+// Draft-specific schema for partial saving (minimal required fields)
+export const insertSiteVisitDraftSchema = z.object({
+  userId: z.string(),
+  department: z.enum(["technical", "marketing", "admin"]),
+  visitPurpose: z.enum(siteVisitPurposes).optional(),
+  
+  // Optional fields for drafts
+  siteInTime: z.date().optional(),
+  siteInLocation: locationSchema.optional(),
+  siteInPhotoUrl: z.string().url().optional(),
+  customer: customerDetailsSchema.optional(),
+  technicalData: technicalSiteVisitSchema.optional(),
+  marketingData: marketingSiteVisitSchema.optional(),
+  adminData: adminSiteVisitSchema.optional(),
+  sitePhotos: z.array(sitePhotoSchema).max(20).default([]),
+  
+  // Draft-specific fields
+  isDraft: z.boolean().default(true),
+  status: z.enum(["draft"]).default("draft"),
+  formCompletionStatus: formCompletionStatusSchema.default({
+    visitPurpose: false,
+    customerDetails: false,
+    location: false,
+    photos: false,
+    departmentForm: false
+  }),
+  completionPercentage: z.number().min(0).max(100).default(0),
+  lastModified: z.date().default(() => new Date()),
+  statusHistory: z.array(statusHistorySchema).default([]),
+  notes: z.string().optional(),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date())
+});
+
+// Partial update schema for updating existing drafts and visits
+export const updateSiteVisitSchema = insertSiteVisitSchema.partial().extend({
+  id: z.string().optional(), // Allow ID for updates
+  formCompletionStatus: formCompletionStatusSchema.optional(),
+  completionPercentage: z.number().min(0).max(100).optional(),
+  lastModified: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date())
+});
+
+// Status update schema for workflow management
+export const updateSiteVisitStatusSchema = z.object({
+  status: z.enum(siteVisitStatus),
+  reason: z.string().optional(),
+  notes: z.string().optional(),
+  updatedBy: z.string()
+});
+
 export type InsertSiteVisit = z.infer<typeof insertSiteVisitSchema>;
+export type InsertSiteVisitDraft = z.infer<typeof insertSiteVisitDraftSchema>;
+export type UpdateSiteVisit = z.infer<typeof updateSiteVisitSchema>;
+export type UpdateSiteVisitStatus = z.infer<typeof updateSiteVisitStatusSchema>;
+export type SiteVisitStatus = typeof siteVisitStatus[number];
+export type FormCompletionStatus = z.infer<typeof formCompletionStatusSchema>;
+export type StatusHistory = z.infer<typeof statusHistorySchema>;
 
 export interface SiteVisit extends InsertSiteVisit {
   id: string;

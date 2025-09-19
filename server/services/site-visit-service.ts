@@ -8,7 +8,16 @@ import { Timestamp } from "firebase-admin/firestore";
 import {
   SiteVisit,
   InsertSiteVisit,
+  InsertSiteVisitDraft,
+  UpdateSiteVisit,
+  UpdateSiteVisitStatus,
+  SiteVisitStatus,
+  FormCompletionStatus,
+  StatusHistory,
   insertSiteVisitSchema,
+  insertSiteVisitDraftSchema,
+  updateSiteVisitSchema,
+  updateSiteVisitStatusSchema,
   Location,
   CustomerDetails,
   TechnicalSiteVisit,
@@ -37,10 +46,22 @@ export class SiteVisitService {
         siteOutTime: validatedData.siteOutTime ? Timestamp.fromDate(validatedData.siteOutTime) : null,
         createdAt: Timestamp.fromDate(validatedData.createdAt || new Date()),
         updatedAt: Timestamp.fromDate(validatedData.updatedAt || new Date()),
-        sitePhotos: validatedData.sitePhotos?.map(photo => ({
-          ...photo,
-          timestamp: Timestamp.fromDate(photo.timestamp)
-        })) || []
+        sitePhotos: validatedData.sitePhotos?.map(photo => {
+          try {
+            return {
+              ...photo,
+              timestamp: photo.timestamp instanceof Date 
+                ? Timestamp.fromDate(photo.timestamp)
+                : Timestamp.fromDate(new Date(photo.timestamp))
+            };
+          } catch (error) {
+            console.warn('Failed to parse site photo timestamp, using current time:', error);
+            return {
+              ...photo,
+              timestamp: Timestamp.fromDate(new Date())
+            };
+          }
+        }) || []
       };
 
       // Remove undefined values to prevent Firestore errors
@@ -71,7 +92,7 @@ export class SiteVisitService {
   /**
    * Update site visit (for check-out and progress updates)
    */
-  async updateSiteVisit(id: string, updates: Partial<InsertSiteVisit>): Promise<SiteVisit> {
+  async updateSiteVisit(id: string, updates: UpdateSiteVisit): Promise<SiteVisit> {
     try {
       const docRef = this.collection.doc(id);
       
@@ -317,7 +338,7 @@ export class SiteVisitService {
   async getSiteVisitsWithFilters(filters: {
     userId?: string;
     department?: 'technical' | 'marketing' | 'admin';
-    status?: 'in_progress' | 'completed' | 'cancelled';
+    status?: 'draft' | 'in_progress' | 'on_process' | 'completed' | 'rejected';
     visitPurpose?: string;
     startDate?: Date;
     endDate?: Date;
@@ -355,7 +376,7 @@ export class SiteVisitService {
         console.log('- Checkout photos (siteOutPhotos):', results[0].siteOutPhotos ? results[0].siteOutPhotos.length : 0);
         console.log('- Has check-in photo:', !!results[0].siteInPhotoUrl);
         console.log('- Has check-out photo:', !!results[0].siteOutPhotoUrl);
-        console.log('- Customer name:', results[0].customer?.name || results[0].customerName || 'N/A');
+        console.log('- Customer name:', results[0].customer?.name || 'N/A');
         console.log('- Status:', results[0].status);
         console.log('- Department:', results[0].department);
         if (results[0].marketingData) {
@@ -372,13 +393,19 @@ export class SiteVisitService {
 
       if (filters.startDate) {
         const beforeCount = results.length;
-        results = results.filter(sv => sv.siteInTime >= filters.startDate!);
+        results = results.filter(sv => {
+          const visitDate = sv.siteInTime ?? sv.createdAt;
+          return visitDate >= filters.startDate!;
+        });
         console.log(`SITE_VISIT_SERVICE: Applied start date filter ${filters.startDate.toISOString()}, ${beforeCount} -> ${results.length} results`);
       }
 
       if (filters.endDate) {
         const beforeCount = results.length;
-        results = results.filter(sv => sv.siteInTime <= filters.endDate!);
+        results = results.filter(sv => {
+          const visitDate = sv.siteInTime ?? sv.createdAt;
+          return visitDate <= filters.endDate!;
+        });
         console.log(`SITE_VISIT_SERVICE: Applied end date filter ${filters.endDate.toISOString()}, ${beforeCount} -> ${results.length} results`);
       }
 
@@ -386,8 +413,12 @@ export class SiteVisitService {
         results = results.filter(sv => sv.visitPurpose === filters.visitPurpose);
       }
 
-      // Sort results by date descending (newest first)
-      results.sort((a, b) => b.siteInTime.getTime() - a.siteInTime.getTime());
+      // Sort results by date descending (newest first) - handle missing siteInTime for drafts
+      results.sort((a, b) => {
+        const aTime = a.siteInTime?.getTime() ?? a.createdAt.getTime();
+        const bTime = b.siteInTime?.getTime() ?? b.createdAt.getTime();
+        return bTime - aTime;
+      });
 
       return results;
     } catch (error) {
@@ -423,18 +454,31 @@ export class SiteVisitService {
       const currentData = doc.data()!;
       const currentPhotos = currentData.sitePhotos || [];
       
-      // Convert new photos to Firestore format
-      const firestorePhotos = photos.map(photo => ({
-        ...photo,
-        timestamp: Timestamp.fromDate(photo.timestamp)
-      }));
+      // Convert new photos to Firestore format with robust timestamp handling
+      const firestorePhotos = photos.slice(0, 20).map(photo => {
+        try {
+          return {
+            ...photo,
+            timestamp: photo.timestamp instanceof Date 
+              ? Timestamp.fromDate(photo.timestamp)
+              : Timestamp.fromDate(new Date(photo.timestamp))
+          };
+        } catch (error) {
+          console.warn('Failed to parse photo timestamp, using current time:', error);
+          return {
+            ...photo,
+            timestamp: Timestamp.fromDate(new Date())
+          };
+        }
+      }).filter(photo => photo !== undefined);
 
       // Ensure we don't exceed 20 photos limit
       const updatedPhotos = [...currentPhotos, ...firestorePhotos].slice(0, 20);
 
       await docRef.update({
         sitePhotos: updatedPhotos,
-        updatedAt: Timestamp.fromDate(new Date())
+        updatedAt: Timestamp.fromDate(new Date()),
+        lastModified: Timestamp.fromDate(new Date())
       });
 
       const updatedDoc = await docRef.get();
@@ -476,9 +520,11 @@ export class SiteVisitService {
 
       return {
         total: siteVisits.length,
+        draft: siteVisits.filter((sv: any) => sv.status === 'draft').length,
         inProgress: siteVisits.filter((sv: any) => sv.status === 'in_progress').length,
+        onProcess: siteVisits.filter((sv: any) => sv.status === 'on_process').length,
         completed: siteVisits.filter((sv: any) => sv.status === 'completed').length,
-        cancelled: siteVisits.filter((sv: any) => sv.status === 'cancelled').length,
+        rejected: siteVisits.filter((sv: any) => sv.status === 'rejected').length,
         byDepartment: {
           technical: siteVisits.filter((sv: any) => sv.department === 'technical').length,
           marketing: siteVisits.filter((sv: any) => sv.department === 'marketing').length,
@@ -605,6 +651,306 @@ export class SiteVisitService {
   }
 
   /**
+   * Create a draft site visit with minimal required fields
+   */
+  async createDraft(data: InsertSiteVisitDraft): Promise<SiteVisit> {
+    try {
+      console.log("SITE_VISIT_SERVICE: Creating draft with data:", JSON.stringify(data, null, 2));
+      
+      // Note: Validation assumed to be done at route level for consistency
+      // Convert dates to Firestore timestamps and handle optional fields
+      const firestoreData: any = {
+        ...data,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
+        lastModified: Timestamp.fromDate(new Date()),
+        statusHistory: [{
+          status: 'draft',
+          timestamp: Timestamp.fromDate(new Date()),
+          updatedBy: data.userId,
+          reason: 'Draft created'
+        }]
+      };
+      
+      // Only add siteInTime if it exists (avoid null storage)
+      if (data.siteInTime) {
+        firestoreData.siteInTime = Timestamp.fromDate(data.siteInTime);
+      }
+
+      // Remove undefined values to prevent Firestore errors
+      Object.keys(firestoreData).forEach(key => {
+        if (firestoreData[key] === undefined) {
+          delete firestoreData[key];
+        }
+      });
+
+      const docRef = await this.collection.add(firestoreData);
+      console.log("SITE_VISIT_SERVICE: Draft document created with ID:", docRef.id);
+      
+      return {
+        id: docRef.id,
+        ...this.convertFirestoreToSiteVisit(firestoreData)
+      };
+    } catch (error) {
+      console.error('SITE_VISIT_SERVICE: Error creating draft:', error);
+      throw new Error('Failed to create draft site visit');
+    }
+  }
+
+  /**
+   * Update partial site visit (for draft updates and form completion)
+   */
+  async updatePartialSiteVisit(id: string, updates: UpdateSiteVisit): Promise<SiteVisit> {
+    try {
+      console.log("SITE_VISIT_SERVICE: Updating partial site visit:", id, JSON.stringify(updates, null, 2));
+      
+      // Note: Validation assumed to be done at route level for consistency
+      const docRef = this.collection.doc(id);
+      const doc = await docRef.get();
+      
+      if (!doc.exists) {
+        throw new Error('Site visit not found');
+      }
+
+      const currentData = doc.data()!;
+      const firestoreUpdates: any = { ...updates };
+      
+      // Handle date conversions
+      if (updates.siteInTime) {
+        firestoreUpdates.siteInTime = Timestamp.fromDate(updates.siteInTime);
+      }
+      if (updates.siteOutTime) {
+        firestoreUpdates.siteOutTime = Timestamp.fromDate(updates.siteOutTime);
+      }
+      
+      // Handle photo timestamps similar to updateSiteVisit
+      if (updates.sitePhotos) {
+        firestoreUpdates.sitePhotos = updates.sitePhotos.map((photo: any) => ({
+          ...photo,
+          timestamp: photo.timestamp instanceof Date 
+            ? Timestamp.fromDate(photo.timestamp)
+            : Timestamp.fromDate(new Date(photo.timestamp))
+        }));
+      }
+      
+      if (updates.siteOutPhotos) {
+        firestoreUpdates.siteOutPhotos = updates.siteOutPhotos.map((photo: any) => ({
+          ...photo,
+          timestamp: photo.timestamp instanceof Date 
+            ? Timestamp.fromDate(photo.timestamp)
+            : Timestamp.fromDate(new Date(photo.timestamp))
+        }));
+      }
+      
+      // Always update lastModified and updatedAt
+      firestoreUpdates.lastModified = Timestamp.fromDate(new Date());
+      firestoreUpdates.updatedAt = Timestamp.fromDate(new Date());
+      
+      // Handle form completion and status transitions atomically using transaction
+      if (updates.formCompletionStatus) {
+        const completionPercentage = this.calculateCompletionPercentage(updates.formCompletionStatus);
+        firestoreUpdates.completionPercentage = completionPercentage;
+        
+        // If form is 100% complete and still in draft, we need atomic transition
+        if (completionPercentage === 100 && currentData.status === 'draft') {
+          // Use transaction to ensure atomicity
+          await db.runTransaction(async (transaction) => {
+            const freshDoc = await transaction.get(docRef);
+            if (!freshDoc.exists) {
+              throw new Error('Site visit was deleted');
+            }
+            
+            const freshData = freshDoc.data()!;
+            if (freshData.status !== 'draft') {
+              // Someone else already transitioned it, just update normally
+              return;
+            }
+            
+            const currentStatusHistory = freshData.statusHistory || [];
+            const transactionUpdates = {
+              ...firestoreUpdates,
+              status: 'in_progress',
+              isDraft: false,
+              statusHistory: [...currentStatusHistory, {
+                status: 'in_progress',
+                timestamp: Timestamp.fromDate(new Date()),
+                updatedBy: currentData.userId,
+                reason: 'Form completed - auto-transition from draft'
+              }]
+            };
+            
+            // Remove undefined values
+            Object.keys(transactionUpdates).forEach(key => {
+              if (transactionUpdates[key] === undefined) {
+                delete transactionUpdates[key];
+              }
+            });
+            
+            transaction.update(docRef, transactionUpdates);
+          });
+        } else {
+          // Regular update without transaction needed
+          // Remove undefined values
+          Object.keys(firestoreUpdates).forEach(key => {
+            if (firestoreUpdates[key] === undefined) {
+              delete firestoreUpdates[key];
+            }
+          });
+          
+          await docRef.update(firestoreUpdates);
+        }
+      } else {
+        // Regular update without form completion changes
+        // Remove undefined values
+        Object.keys(firestoreUpdates).forEach(key => {
+          if (firestoreUpdates[key] === undefined) {
+            delete firestoreUpdates[key];
+          }
+        });
+        
+        await docRef.update(firestoreUpdates);
+      }
+      
+      const updatedDoc = await docRef.get();
+      return {
+        id: updatedDoc.id,
+        ...this.convertFirestoreToSiteVisit(updatedDoc.data()!)
+      };
+    } catch (error) {
+      console.error('SITE_VISIT_SERVICE: Error updating partial site visit:', error);
+      throw new Error('Failed to update partial site visit');
+    }
+  }
+
+  /**
+   * Update site visit status with history tracking and transition validation
+   */
+  async updateSiteVisitStatus(id: string, statusUpdate: UpdateSiteVisitStatus): Promise<SiteVisit> {
+    try {
+      console.log("SITE_VISIT_SERVICE: Updating status for visit:", id, JSON.stringify(statusUpdate, null, 2));
+      
+      // Note: Validation assumed to be done at route level for consistency
+      const docRef = this.collection.doc(id);
+      const doc = await docRef.get();
+      
+      if (!doc.exists) {
+        throw new Error('Site visit not found');
+      }
+
+      const currentData = doc.data()!;
+      const currentStatus = currentData.status;
+      const newStatus = statusUpdate.status;
+      
+      // Import status transitions for validation (would be better to import from schema)
+      const statusTransitions: Record<string, string[]> = {
+        "draft": ["in_progress", "rejected"],
+        "in_progress": ["on_process", "completed", "rejected"],
+        "on_process": ["completed", "rejected", "in_progress"],
+        "completed": [], // Terminal state
+        "rejected": [] // Terminal state
+      };
+      
+      // Validate status transition
+      const allowedTransitions = statusTransitions[currentStatus] || [];
+      if (!allowedTransitions.includes(newStatus) && currentStatus !== newStatus) {
+        throw new Error(`Invalid status transition from '${currentStatus}' to '${newStatus}'`);
+      }
+      
+      const currentStatusHistory = currentData.statusHistory || [];
+      
+      // Add status change to history
+      const statusHistoryEntry = {
+        status: statusUpdate.status,
+        timestamp: Timestamp.fromDate(new Date()),
+        updatedBy: statusUpdate.updatedBy,
+        reason: statusUpdate.reason,
+        notes: statusUpdate.notes
+      };
+
+      const updates = {
+        status: statusUpdate.status,
+        isDraft: statusUpdate.status === 'draft',
+        statusHistory: [...currentStatusHistory, statusHistoryEntry],
+        updatedAt: Timestamp.fromDate(new Date()),
+        lastModified: Timestamp.fromDate(new Date())
+      };
+
+      await docRef.update(updates);
+      
+      const updatedDoc = await docRef.get();
+      return {
+        id: updatedDoc.id,
+        ...this.convertFirestoreToSiteVisit(updatedDoc.data()!)
+      };
+    } catch (error) {
+      console.error('SITE_VISIT_SERVICE: Error updating site visit status:', error);
+      throw new Error(`Failed to update site visit status: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Get user's draft site visits (avoiding composite index issues)
+   */
+  async getUserDrafts(userId: string, department?: string): Promise<SiteVisit[]> {
+    try {
+      console.log("SITE_VISIT_SERVICE: Getting drafts for user:", userId, "department:", department);
+      
+      // Use single-field query then filter in memory to avoid composite index
+      const snapshot = await this.collection
+        .where('userId', '==', userId)
+        .get();
+      
+      const allVisits = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...this.convertFirestoreToSiteVisit(doc.data())
+      }));
+      
+      // Filter for drafts and optionally by department
+      const drafts = allVisits.filter(visit => 
+        visit.isDraft && 
+        visit.status === 'draft' && 
+        (!department || visit.department === department)
+      );
+      
+      // Sort by lastModified descending
+      drafts.sort((a, b) => {
+        const aTime = a.lastModified?.getTime() || 0;
+        const bTime = b.lastModified?.getTime() || 0;
+        return bTime - aTime;
+      });
+      
+      return drafts;
+    } catch (error) {
+      console.error('SITE_VISIT_SERVICE: Error getting user drafts:', error);
+      throw new Error('Failed to get user drafts');
+    }
+  }
+
+  /**
+   * Calculate completion percentage based on form completion status
+   */
+  private calculateCompletionPercentage(formCompletionStatus: FormCompletionStatus): number {
+    const fields = Object.values(formCompletionStatus);
+    const completedFields = fields.filter(Boolean).length;
+    return Math.round((completedFields / fields.length) * 100);
+  }
+
+  /**
+   * Update form completion status based on provided data
+   */
+  private updateFormCompletionStatus(data: any, currentStatus: FormCompletionStatus): FormCompletionStatus {
+    return {
+      visitPurpose: currentStatus.visitPurpose || !!data.visitPurpose,
+      customerDetails: currentStatus.customerDetails || !!(data.customer?.name && data.customer?.mobile),
+      location: currentStatus.location || !!data.siteInLocation,
+      photos: currentStatus.photos || !!(data.sitePhotos && data.sitePhotos.length > 0),
+      departmentForm: currentStatus.departmentForm || !!(
+        data.technicalData || data.marketingData || data.adminData
+      )
+    };
+  }
+
+  /**
    * Convert Firestore data to SiteVisit object
    */
   private convertFirestoreToSiteVisit(data: any): Omit<SiteVisit, 'id'> {
@@ -622,12 +968,20 @@ export class SiteVisitService {
     // Combine both photo arrays, with checkout photos appearing after original photos
     const allPhotos = [...originalPhotos, ...checkoutPhotos];
 
+    // Convert statusHistory timestamps
+    const statusHistory = (data.statusHistory || []).map((entry: any) => ({
+      ...entry,
+      timestamp: entry.timestamp?.toDate() || new Date()
+    }));
+
     return {
       ...data,
-      siteInTime: data.siteInTime?.toDate() || new Date(),
+      siteInTime: data.siteInTime?.toDate() || undefined, // Don't default to current date for drafts
       siteOutTime: data.siteOutTime?.toDate() || undefined,
+      lastModified: data.lastModified?.toDate() || new Date(),
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
+      statusHistory,
       sitePhotos: allPhotos,
       // Keep the original siteOutPhotos field for reference
       siteOutPhotos: checkoutPhotos
