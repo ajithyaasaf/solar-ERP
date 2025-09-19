@@ -18,7 +18,11 @@ import {
   insertEmployeeSchema,
   insertEmployeeDocumentSchema,
   insertPerformanceReviewSchema,
-  departments
+  departments,
+  insertSiteVisitDraftSchema,
+  updateSiteVisitSchema,
+  updateSiteVisitStatusSchema,
+  type SiteVisitStatus
 } from "@shared/schema";
 // Import all the necessary schemas from storage.ts since they've been moved there
 import { 
@@ -5747,6 +5751,306 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting site visit:", error);
       res.status(500).json({ message: "Failed to delete site visit" });
+    }
+  });
+
+  // ========== SITE VISIT DRAFT FUNCTIONALITY API ROUTES ==========
+
+  // Create a site visit draft
+  app.post("/api/site-visits/drafts", verifyAuth, async (req, res) => {
+    try {
+      console.log("=== SITE VISIT DRAFT CREATION STARTED ===");
+      console.log("User ID:", req.user?.uid);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+      const user = await storage.getUser(req.user.uid);
+      const hasPermission = user ? await checkSiteVisitPermission(user, 'create') : false;
+      
+      if (!user || !hasPermission) {
+        return res.status(403).json({ 
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        });
+      }
+
+      const { siteVisitService } = await import("./services/site-visit-service");
+
+      // Automatically create/find customer if needed
+      let customerId = null;
+      if (req.body.customer && req.body.customer.name && req.body.customer.mobile) {
+        const customerData = req.body.customer;
+        
+        // Try to find existing customer by phone and name
+        const existingCustomers = await storage.listCustomers();
+        const existingCustomer = existingCustomers.find((customer: any) => 
+          (customer.phone === customerData.mobile) ||
+          (customer.name.toLowerCase() === customerData.name.toLowerCase() && customer.phone === customerData.mobile)
+        );
+
+        if (existingCustomer) {
+          customerId = existingCustomer.id;
+          console.log("Found existing customer:", existingCustomer.id, existingCustomer.name);
+        } else {
+          // Create new customer
+          try {
+            const newCustomer = await storage.createCustomer({
+              name: customerData.name,
+              phone: customerData.mobile,
+              email: customerData.email || '',
+              address: customerData.address || ''
+            });
+            customerId = newCustomer.id;
+            console.log("Created new customer:", newCustomer.id, newCustomer.name);
+          } catch (error) {
+            console.error("Error creating customer during draft:", error);
+          }
+        }
+      }
+
+      // Map user department to site visit schema department
+      const departmentMapping: Record<string, string> = {
+        'admin': 'admin',
+        'administration': 'admin',
+        'operations': 'admin',
+        'technical': 'technical',
+        'marketing': 'marketing',
+        'sales': 'marketing',
+        'hr': 'admin',
+      };
+
+      const mappedDepartment = departmentMapping[user.department?.toLowerCase() || ''] || 'technical';
+
+      const requestData = {
+        ...req.body,
+        userId: user.uid,
+        department: mappedDepartment,
+        customerId: customerId
+      };
+
+      const draftData = insertSiteVisitDraftSchema.parse(requestData);
+      console.log("Draft data validation passed, creating draft...");
+
+      const draft = await siteVisitService.createDraft(draftData);
+      console.log("Site visit draft created successfully:", draft.id);
+      
+      res.status(201).json({
+        message: "Site visit draft created successfully",
+        siteVisit: draft
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error("Site visit draft validation errors:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ 
+          message: "Validation error",
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating site visit draft:", error);
+      res.status(500).json({ message: "Failed to create site visit draft" });
+    }
+  });
+
+  // Get user's draft site visits
+  app.get("/api/site-visits/drafts", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
+      
+      if (!user || !hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitService } = await import("./services/site-visit-service");
+      
+      // Only allow users to see their own drafts unless they have admin permissions
+      let drafts;
+      if (user.role === 'master_admin' || (await checkSiteVisitPermission(user, 'view_all'))) {
+        // Admins can see all drafts (if needed, add filtering by department later)
+        drafts = await siteVisitService.getAllSiteVisits({ status: 'draft' });
+      } else {
+        // Regular users only see their own drafts
+        drafts = await siteVisitService.getUserDrafts(user.uid);
+      }
+      
+      res.json(drafts);
+    } catch (error) {
+      console.error("Error fetching user drafts:", error);
+      res.status(500).json({ message: "Failed to fetch draft site visits" });
+    }
+  });
+
+  // Update a site visit draft (partial update)
+  app.patch("/api/site-visits/drafts/:id", verifyAuth, async (req, res) => {
+    try {
+      console.log("=== SITE VISIT DRAFT UPDATE STARTED ===");
+      console.log("Draft ID:", req.params.id);
+      console.log("Update payload:", JSON.stringify(req.body, null, 2));
+
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(await checkSiteVisitPermission(user, 'edit'))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitService } = await import("./services/site-visit-service");
+      
+      // Get existing draft to check ownership
+      const existingDraft = await siteVisitService.getSiteVisitById(req.params.id);
+      if (!existingDraft) {
+        return res.status(404).json({ message: "Site visit draft not found" });
+      }
+
+      // Check if user can edit this draft
+      const canEdit = existingDraft.userId === user.uid || 
+                     (await checkSiteVisitPermission(user, 'view_all')) ||
+                     user.role === 'master_admin';
+      
+      if (!canEdit) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Ensure only draft status can be updated this way
+      if (existingDraft.status !== 'draft') {
+        return res.status(400).json({ 
+          message: "This site visit is no longer in draft status and cannot be updated" 
+        });
+      }
+
+      // Validate partial update data for draft
+      const updateData = updateSiteVisitSchema.parse(req.body);
+      
+      const updatedDraft = await siteVisitService.updatePartialSiteVisit(req.params.id, updateData);
+      
+      console.log("Site visit draft updated successfully:", updatedDraft.id);
+      
+      res.json({
+        message: "Site visit draft updated successfully",
+        siteVisit: updatedDraft
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error("Site visit draft update validation errors:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ 
+          message: "Validation error",
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating site visit draft:", error);
+      res.status(500).json({ message: "Failed to update site visit draft" });
+    }
+  });
+
+  // Update site visit status
+  app.patch("/api/site-visits/:id/status", verifyAuth, async (req, res) => {
+    try {
+      console.log("=== SITE VISIT STATUS UPDATE STARTED ===");
+      console.log("Site Visit ID:", req.params.id);
+      console.log("Status update payload:", JSON.stringify(req.body, null, 2));
+
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(await checkSiteVisitPermission(user, 'edit'))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitService } = await import("./services/site-visit-service");
+      
+      // Get existing site visit to check ownership
+      const existingSiteVisit = await siteVisitService.getSiteVisitById(req.params.id);
+      if (!existingSiteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // Check if user can edit this site visit
+      const canEdit = existingSiteVisit.userId === user.uid || 
+                     (await checkSiteVisitPermission(user, 'view_all')) ||
+                     user.role === 'master_admin';
+      
+      if (!canEdit) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Validate status update data and ensure valid transitions
+      const statusUpdateData = updateSiteVisitStatusSchema.parse(req.body);
+      
+      // Check if status transition is valid
+      const { statusTransitions } = await import("@shared/schema");
+      const allowedNextStatuses = statusTransitions[existingSiteVisit.status as keyof typeof statusTransitions] || [];
+      
+      if (!allowedNextStatuses.includes(statusUpdateData.status)) {
+        return res.status(400).json({
+          message: `Invalid status transition from '${existingSiteVisit.status}' to '${statusUpdateData.status}'. Allowed transitions: ${allowedNextStatuses.join(', ')}`
+        });
+      }
+      
+      const updatedSiteVisit = await siteVisitService.updateSiteVisitStatus(req.params.id, statusUpdateData);
+      
+      console.log("Site visit status updated successfully:", updatedSiteVisit.id, "->", statusUpdateData.status);
+      
+      res.json({
+        message: "Site visit status updated successfully",
+        siteVisit: updatedSiteVisit
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error("Site visit status update validation errors:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ 
+          message: "Validation error",
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating site visit status:", error);
+      res.status(500).json({ message: "Failed to update site visit status" });
+    }
+  });
+
+  // Finalize draft to in_progress (convert draft to active site visit)
+  app.post("/api/site-visits/:id/finalize", verifyAuth, async (req, res) => {
+    try {
+      console.log("=== SITE VISIT DRAFT FINALIZATION STARTED ===");
+      console.log("Draft ID:", req.params.id);
+
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(await checkSiteVisitPermission(user, 'edit'))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitService } = await import("./services/site-visit-service");
+      
+      // Get existing draft to check ownership and status
+      const existingDraft = await siteVisitService.getSiteVisitById(req.params.id);
+      if (!existingDraft) {
+        return res.status(404).json({ message: "Site visit draft not found" });
+      }
+
+      // Check if user can finalize this draft
+      const canFinalize = existingDraft.userId === user.uid || 
+                         (await checkSiteVisitPermission(user, 'view_all')) ||
+                         user.role === 'master_admin';
+      
+      if (!canFinalize) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Ensure only draft status can be finalized
+      if (existingDraft.status !== 'draft') {
+        return res.status(400).json({ 
+          message: "This site visit is not in draft status and cannot be finalized" 
+        });
+      }
+
+      // Finalize the draft by setting status to in_progress and siteInTime
+      const finalizedSiteVisit = await siteVisitService.updateSiteVisitStatus(req.params.id, {
+        status: 'in_progress' as SiteVisitStatus,
+        reason: 'Draft finalized and site visit started'
+      });
+      
+      console.log("Site visit draft finalized successfully:", finalizedSiteVisit.id);
+      
+      res.json({
+        message: "Site visit draft finalized successfully",
+        siteVisit: finalizedSiteVisit
+      });
+    } catch (error) {
+      console.error("Error finalizing site visit draft:", error);
+      res.status(500).json({ message: "Failed to finalize site visit draft" });
     }
   });
 
