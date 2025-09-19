@@ -27,17 +27,13 @@ import {
   Trash2,
   LogOut,
   RefreshCw,
-  History,
-  FileText,
-  ArrowRight
+  History
 } from "lucide-react";
 import { SiteVisitStartModal } from "@/components/site-visit/site-visit-start-modal";
 import { SiteVisitDetailsModal } from "@/components/site-visit/site-visit-details-modal";
 import { SiteVisitCheckoutModal } from "@/components/site-visit/site-visit-checkout-modal";
 import { FollowUpModal } from "@/components/site-visit/follow-up-modal";
 import { FollowUpDetailsModal } from "@/components/site-visit/follow-up-details-modal";
-import { DraftSiteVisitsModal } from "@/components/site-visit/draft-site-visits-modal";
-import { StatusUpdateModal } from "@/components/site-visit/status-update-modal";
 import { formatDistanceToNow } from "date-fns";
 
 interface SiteVisit {
@@ -45,8 +41,8 @@ interface SiteVisit {
   userId: string;
   department: 'technical' | 'marketing' | 'admin';
   visitPurpose: string;
-  status: 'draft' | 'in_progress' | 'on_process' | 'completed' | 'rejected';
-  siteInTime?: string;
+  status: 'in_progress' | 'completed' | 'cancelled';
+  siteInTime: string;
   siteOutTime?: string;
   customer: {
     name: string;
@@ -172,10 +168,6 @@ export default function SiteVisitPage() {
   const [isFollowUpDetailsModalOpen, setIsFollowUpDetailsModalOpen] = useState(false);
   const [selectedFollowUpId, setSelectedFollowUpId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("my-visits");
-  const [resumingDraft, setResumingDraft] = useState<SiteVisit | null>(null);
-  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
-  const [isStatusUpdateModalOpen, setIsStatusUpdateModalOpen] = useState(false);
-  const [visitForStatusUpdate, setVisitForStatusUpdate] = useState<SiteVisit | null>(null);
 
   // Check if user has access to Site Visit features
   const hasAccess = user?.department && ['technical', 'marketing', 'admin', 'administration'].includes(user.department.toLowerCase());
@@ -246,17 +238,6 @@ export default function SiteVisitPage() {
     refetchInterval: 15000,
   });
 
-  // Fetch user's draft site visits
-  const { data: myDrafts, isLoading: isLoadingDrafts } = useQuery({
-    queryKey: ['/api/site-visits/drafts'],
-    queryFn: async () => {
-      const response = await apiRequest('/api/site-visits/drafts', 'GET');
-      return await response.json();
-    },
-    enabled: Boolean(hasAccess && user?.uid && activeTab === 'drafts'),
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
   // Fetch site visit statistics
   const { data: stats } = useQuery({
     queryKey: ['/api/site-visits/stats'],
@@ -291,29 +272,6 @@ export default function SiteVisitPage() {
     if (confirm("Are you sure you want to delete this site visit?")) {
       deleteMutation.mutate(id);
     }
-  };
-
-  // Handle draft resumption
-  const handleResumeDraft = (draft: SiteVisit) => {
-    console.log('Resuming draft:', draft);
-    setResumingDraft(draft);
-    setIsStartModalOpen(true);
-  };
-
-  // Handle draft deletion
-  const handleDeleteDraft = (draftId: string) => {
-    if (confirm("Are you sure you want to delete this draft? This action cannot be undone.")) {
-      // Use the existing delete mutation for drafts as well
-      deleteMutation.mutate(draftId);
-      // Also invalidate drafts query
-      queryClient.invalidateQueries({ queryKey: ['/api/site-visits/drafts'] });
-    }
-  };
-
-  // Handle status update
-  const handleStatusUpdate = (visit: SiteVisit) => {
-    setVisitForStatusUpdate(visit);
-    setIsStatusUpdateModalOpen(true);
   };
 
   // Convert follow-ups to site visit format for display
@@ -556,9 +514,8 @@ export default function SiteVisitPage() {
 
       {/* Site Visits Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="my-visits" className="text-xs sm:text-sm px-2 py-2">My Visits</TabsTrigger>
-          <TabsTrigger value="drafts" className="text-xs sm:text-sm px-2 py-2">Drafts</TabsTrigger>
           <TabsTrigger value="active-visits" className="text-xs sm:text-sm px-2 py-2">Active Visits</TabsTrigger>
           <TabsTrigger value="team-visits" className="text-xs sm:text-sm px-2 py-2">Team Visits</TabsTrigger>
         </TabsList>
@@ -608,115 +565,9 @@ export default function SiteVisitPage() {
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
                       onDelete={handleDeleteSiteVisit}
-                      onStatusUpdate={handleStatusUpdate}
                       showActions={true}
                     />
                   ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Draft Site Visits */}
-        <TabsContent value="drafts">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Draft Site Visits</span>
-                <Button 
-                  variant="outline"
-                  onClick={() => setIsDraftModalOpen(true)}
-                  disabled={isLoadingDrafts}
-                  data-testid="button-manage-drafts"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Manage Drafts
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Incomplete site visits that can be resumed and completed
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingDrafts ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : !myDrafts?.length ? (
-                <div className="text-center py-6 sm:py-8 px-4">
-                  <Edit className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                  <h3 className="text-base sm:text-lg font-semibold mb-2">No draft site visits</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground mb-4 max-w-sm mx-auto">
-                    Draft site visits will appear here when you save incomplete forms
-                  </p>
-                  <Button 
-                    onClick={() => setIsStartModalOpen(true)}
-                    className="w-full sm:w-auto"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Start Site Visit
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="font-medium">You have {myDrafts.length} saved draft{myDrafts.length > 1 ? 's' : ''}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Continue working on incomplete site visit forms
-                        </p>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={() => setIsDraftModalOpen(true)}
-                      data-testid="button-view-drafts"
-                    >
-                      View Drafts
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </div>
-                  
-                  {/* Show first few drafts as preview */}
-                  <div className="space-y-3">
-                    {myDrafts.slice(0, 3).map((draft: any, index: number) => (
-                      <div key={`draft-preview-${draft.id}-${index}`} className="p-3 border rounded-lg bg-gray-50 dark:bg-gray-900/10">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                                Draft ({draft.completionPercentage || 0}% complete)
-                              </Badge>
-                            </div>
-                            <h4 className="font-medium text-sm truncate">
-                              {draft.customer?.name || 'Unnamed Customer'}
-                            </h4>
-                            <p className="text-xs text-muted-foreground">
-                              {draft.visitPurpose || 'No purpose specified'}
-                            </p>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              setResumingDraft(draft);
-                              setIsStartModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Resume
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    {myDrafts.length > 3 && (
-                      <p className="text-sm text-muted-foreground text-center">
-                        And {myDrafts.length - 3} more draft{myDrafts.length - 3 > 1 ? 's' : ''}...
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
             </CardContent>
@@ -776,7 +627,6 @@ export default function SiteVisitPage() {
                       onView={handleViewDetails}
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
-                      onStatusUpdate={handleStatusUpdate}
                       showActions={true}
                     />
                   ))}
@@ -834,7 +684,6 @@ export default function SiteVisitPage() {
                       onView={handleViewDetails}
                       onCheckout={handleCheckoutSiteVisit}
                       onFollowUp={handleFollowUpVisit}
-                      onStatusUpdate={handleStatusUpdate}
                       showActions={true}
                     />
                   ))}
@@ -848,12 +697,8 @@ export default function SiteVisitPage() {
       {/* Modals */}
       <SiteVisitStartModal
         isOpen={isStartModalOpen}
-        onClose={() => {
-          setIsStartModalOpen(false);
-          setResumingDraft(null);
-        }}
+        onClose={() => setIsStartModalOpen(false)}
         userDepartment={user?.department?.toLowerCase() === 'administration' ? 'admin' : (user?.department || 'technical')}
-        resumingDraft={resumingDraft}
       />
 
       <SiteVisitDetailsModal
@@ -882,29 +727,6 @@ export default function SiteVisitPage() {
         followUpId={selectedFollowUpId}
         onCheckout={handleFollowUpCheckout}
       />
-
-      {/* Draft Management Modal */}
-      <DraftSiteVisitsModal
-        isOpen={isDraftModalOpen}
-        onClose={() => setIsDraftModalOpen(false)}
-        onResumeDraft={(draft) => {
-          setResumingDraft(draft);
-          setIsStartModalOpen(true);
-          setIsDraftModalOpen(false);
-        }}
-        userDepartment={user?.department?.toLowerCase() === 'administration' ? 'admin' : (user?.department || 'technical')}
-      />
-
-      {/* Status Update Modal */}
-      <StatusUpdateModal
-        isOpen={isStatusUpdateModalOpen}
-        onClose={() => {
-          setIsStatusUpdateModalOpen(false);
-          setVisitForStatusUpdate(null);
-        }}
-        visit={visitForStatusUpdate}
-        userId={user?.uid || ''}
-      />
     </div>
   );
 }
@@ -916,20 +738,16 @@ interface UnifiedSiteVisitCardProps {
   onCheckout?: (visit: SiteVisit) => void;
   onFollowUp?: (visit: SiteVisit) => void;
   onDelete?: (visitId: string) => void;
-  onStatusUpdate?: (visit: SiteVisit) => void;
   showActions: boolean;
 }
 
-function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDelete, onStatusUpdate, showActions }: UnifiedSiteVisitCardProps) {
+function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDelete, showActions }: UnifiedSiteVisitCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'on_process': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'in_progress': return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -1124,18 +942,6 @@ function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDe
                           >
                             <LogOut className="h-3 w-3 mr-1" />
                             Check-out
-                          </Button>
-                        )}
-                        
-                        {(visit.status === 'in_progress' || visit.status === 'on_process') && onStatusUpdate && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onStatusUpdate(visit)}
-                            className="text-xs h-7 px-3"
-                          >
-                            <ArrowRight className="h-3 w-3 mr-1" />
-                            Update Status
                           </Button>
                         )}
                         
