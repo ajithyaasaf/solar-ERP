@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -43,6 +44,11 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
   const [locationCaptured, setLocationCaptured] = useState(false);
   const [notes, setNotes] = useState('');
   const [lastErrorMessage, setLastErrorMessage] = useState<string>('');
+  
+  // Visit outcome state
+  const [visitOutcome, setVisitOutcome] = useState<string>('');
+  const [outcomeNotes, setOutcomeNotes] = useState('');
+  const [scheduledFollowUpDate, setScheduledFollowUpDate] = useState<string>('');
   
   // Enhanced photo capture states - Support for multiple photos
   const [capturedPhotos, setCapturedPhotos] = useState<{
@@ -78,6 +84,11 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
       setIsCameraActive(false);
       setIsVideoReady(false);
       setCurrentCamera('back');
+      
+      // Reset visit outcome state
+      setVisitOutcome('');
+      setOutcomeNotes('');
+      setScheduledFollowUpDate('');
       
       // Stop any existing camera stream on modal open
       if (stream) {
@@ -549,6 +560,13 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
         status: 'completed',
         siteOutTime: new Date(), // Send as Date object, not ISO string
         siteOutLocation: currentLocation,
+        
+        // Add visit outcome data
+        visitOutcome: visitOutcome || undefined,
+        outcomeNotes: outcomeNotes || undefined,
+        scheduledFollowUpDate: scheduledFollowUpDate ? new Date(scheduledFollowUpDate) : undefined,
+        outcomeSelectedAt: new Date(),
+        outcomeSelectedBy: getAuth().currentUser?.uid,
         ...(selfiePhotoUrl && { siteOutPhotoUrl: selfiePhotoUrl }),
         // Follow-ups expect simple URL arrays, site visits expect complex photo objects
         siteOutPhotos: siteVisit.isFollowUp 
@@ -701,6 +719,7 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                 <span className="text-xs sm:text-sm font-medium">
                   {step === 1 && 'Checkout Location'}
                   {step === 2 && 'Photos & Notes'}
+                  {step === 3 && 'Visit Outcome'}
                 </span>
               </div>
             </div>
@@ -719,6 +738,13 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                   2
                 </div>
                 <span className="text-sm font-medium">Photos & Notes</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <div className={`flex items-center gap-2 ${step >= 3 ? 'text-primary' : 'text-muted-foreground'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-primary text-white' : 'bg-muted'}`}>
+                  3
+                </div>
+                <span className="text-sm font-medium">Visit Outcome</span>
               </div>
             </div>
           </div>
