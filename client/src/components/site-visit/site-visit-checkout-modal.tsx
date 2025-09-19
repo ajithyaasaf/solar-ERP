@@ -1182,10 +1182,22 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                       </RadioGroup>
                     </div>
 
-                    {/* Conditional Follow-up Date for On Process */}
-                    {visitOutcome === 'on_process' && (
-                      <div className="space-y-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <Label className="text-sm font-medium text-yellow-800">Schedule Follow-up Date (Optional)</Label>
+                    {/* Follow-up Date for All Outcomes */}
+                    {visitOutcome && (
+                      <div className={cn(
+                        "space-y-3 p-3 rounded-lg border",
+                        visitOutcome === 'converted' && "bg-green-50 border-green-200",
+                        visitOutcome === 'on_process' && "bg-yellow-50 border-yellow-200", 
+                        visitOutcome === 'cancelled' && "bg-red-50 border-red-200"
+                      )}>
+                        <Label className={cn(
+                          "text-sm font-medium",
+                          visitOutcome === 'converted' && "text-green-800",
+                          visitOutcome === 'on_process' && "text-yellow-800",
+                          visitOutcome === 'cancelled' && "text-red-800"
+                        )}>
+                          Schedule Follow-up Date (Optional)
+                        </Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -1210,8 +1222,15 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                             />
                           </PopoverContent>
                         </Popover>
-                        <p className="text-xs text-yellow-700">
-                          When would you like to follow up with this customer?
+                        <p className={cn(
+                          "text-xs",
+                          visitOutcome === 'converted' && "text-green-700",
+                          visitOutcome === 'on_process' && "text-yellow-700",
+                          visitOutcome === 'cancelled' && "text-red-700"
+                        )}>
+                          {visitOutcome === 'converted' && "Post-installation support or check-in"}
+                          {visitOutcome === 'on_process' && "When would you like to follow up with this customer?"}
+                          {visitOutcome === 'cancelled' && "Future opportunity or change of mind follow-up"}
                         </p>
                       </div>
                     )}
