@@ -478,13 +478,6 @@ export const insertFollowUpSiteVisitSchema = z.object({
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
   
-  // Visit outcome fields - CRITICAL for tab filtering
-  visitOutcome: z.enum(visitOutcomes).optional(),
-  outcomeNotes: z.string().optional(),
-  scheduledFollowUpDate: z.date().optional(),
-  outcomeSelectedAt: z.date().optional(),
-  outcomeSelectedBy: z.string().optional(),
-  
   // Customer info (copied from original)
   customer: customerDetailsSchema,
 });

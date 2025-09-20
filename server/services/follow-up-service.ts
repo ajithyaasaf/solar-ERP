@@ -27,9 +27,6 @@ export class FollowUpService {
       // Validate data
       const validatedData = insertFollowUpSiteVisitSchema.parse(data);
       
-      // ROBUSTNESS: Set server-side default visitOutcome if not provided by client
-      validatedData.visitOutcome ||= 'on_process';
-      
       // Convert dates to Firestore timestamps and filter out undefined values
       const firestoreData: any = {
         ...validatedData,
@@ -210,12 +207,10 @@ export class FollowUpService {
   async getFollowUpsByUser(
     userId: string, 
     department?: string,
-    status?: string,
-    visitOutcome?: string
+    status?: string
   ): Promise<FollowUpSiteVisit[]> {
     try {
       console.log("FOLLOW_UP_SERVICE: Getting follow-ups for user:", userId);
-      console.log("FOLLOW_UP_SERVICE: Filters - department:", department, "status:", status, "visitOutcome:", visitOutcome);
       
       // Simple query to avoid index issues
       const snapshot = await this.collection.where('userId', '==', userId).get();
@@ -230,13 +225,6 @@ export class FollowUpService {
         // Apply additional filters in memory
         if (department && doc.department !== department) return false;
         if (status && doc.status !== status) return false;
-        
-        // LEGACY SUPPORT: Treat missing visitOutcome as 'on_process' for backward compatibility
-        if (visitOutcome) {
-          const docOutcome = doc.visitOutcome || 'on_process';
-          if (docOutcome !== visitOutcome) return false;
-        }
-        
         return true;
       });
 
@@ -305,13 +293,7 @@ export class FollowUpService {
       notes: data.notes,
       customer: data.customer,
       createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-      // Visit outcome fields - CRITICAL for tab filtering
-      visitOutcome: data.visitOutcome,
-      outcomeNotes: data.outcomeNotes,
-      scheduledFollowUpDate: data.scheduledFollowUpDate?.toDate ? data.scheduledFollowUpDate.toDate() : data.scheduledFollowUpDate,
-      outcomeSelectedAt: data.outcomeSelectedAt?.toDate ? data.outcomeSelectedAt.toDate() : data.outcomeSelectedAt,
-      outcomeSelectedBy: data.outcomeSelectedBy
+      updatedAt: data.updatedAt?.toDate() || new Date()
     };
   }
 }
