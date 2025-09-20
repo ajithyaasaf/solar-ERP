@@ -5595,6 +5595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply additional filters
       if (req.query.status) filters.status = req.query.status as string;
       if (req.query.visitPurpose) filters.visitPurpose = req.query.visitPurpose as string;
+      if (req.query.visitOutcome) filters.visitOutcome = req.query.visitOutcome as string;
       if (req.query.startDate) {
         const startDate = new Date(req.query.startDate as string);
         startDate.setHours(0, 0, 0, 0); // Start of day

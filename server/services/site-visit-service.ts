@@ -319,6 +319,7 @@ export class SiteVisitService {
     department?: 'technical' | 'marketing' | 'admin';
     status?: 'in_progress' | 'completed' | 'cancelled';
     visitPurpose?: string;
+    visitOutcome?: 'converted' | 'on_process' | 'cancelled';
     startDate?: Date;
     endDate?: Date;
     limit?: number;
@@ -384,6 +385,12 @@ export class SiteVisitService {
 
       if (filters.visitPurpose) {
         results = results.filter(sv => sv.visitPurpose === filters.visitPurpose);
+      }
+
+      if (filters.visitOutcome) {
+        const beforeCount = results.length;
+        results = results.filter(sv => sv.visitOutcome === filters.visitOutcome);
+        console.log(`SITE_VISIT_SERVICE: Applied visitOutcome filter '${filters.visitOutcome}' in memory, ${beforeCount} -> ${results.length} results`);
       }
 
       // Sort results by date descending (newest first)

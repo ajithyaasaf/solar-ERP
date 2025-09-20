@@ -224,6 +224,10 @@ export default function SiteVisitPage() {
       } else if (scopeFilter === 'team' && user?.department) {
         params.append('department', user.department);
       }
+      // Add outcome filter to the API request
+      if (activeOutcome) {
+        params.append('visitOutcome', activeOutcome);
+      }
       const response = await apiRequest(`/api/site-visits?${params.toString()}`, 'GET');
       return await response.json();
     },
@@ -240,6 +244,10 @@ export default function SiteVisitPage() {
         params.append('userId', user.uid);
       } else if (scopeFilter === 'team' && user?.department) {
         params.append('department', user.department);
+      }
+      // Add outcome filter to the API request for follow-ups too
+      if (activeOutcome) {
+        params.append('visitOutcome', activeOutcome);
       }
       const response = await apiRequest(`/api/follow-ups?${params.toString()}`, 'GET');
       return await response.json();
