@@ -749,9 +749,15 @@ export class SiteVisitService {
       siteOutTime: data.siteOutTime?.toDate() || undefined,
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
-      // Convert outcome-related timestamps to Date objects
-      scheduledFollowUpDate: data.scheduledFollowUpDate?.toDate() || undefined,
-      outcomeSelectedAt: data.outcomeSelectedAt?.toDate() || undefined,
+      // Convert outcome-related timestamps to Date objects - handle different data types
+      scheduledFollowUpDate: data.scheduledFollowUpDate ? 
+        (typeof data.scheduledFollowUpDate?.toDate === 'function' ? 
+          data.scheduledFollowUpDate.toDate() : 
+          data.scheduledFollowUpDate) : undefined,
+      outcomeSelectedAt: data.outcomeSelectedAt ? 
+        (typeof data.outcomeSelectedAt?.toDate === 'function' ? 
+          data.outcomeSelectedAt.toDate() : 
+          data.outcomeSelectedAt) : undefined,
       sitePhotos: allPhotos,
       // Keep the original siteOutPhotos field for reference
       siteOutPhotos: checkoutPhotos
