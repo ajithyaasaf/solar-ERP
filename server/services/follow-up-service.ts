@@ -27,6 +27,9 @@ export class FollowUpService {
       // Validate data
       const validatedData = insertFollowUpSiteVisitSchema.parse(data);
       
+      // ROBUSTNESS: Set server-side default visitOutcome if not provided by client
+      validatedData.visitOutcome ||= 'on_process';
+      
       // Convert dates to Firestore timestamps and filter out undefined values
       const firestoreData: any = {
         ...validatedData,
@@ -227,7 +230,13 @@ export class FollowUpService {
         // Apply additional filters in memory
         if (department && doc.department !== department) return false;
         if (status && doc.status !== status) return false;
-        if (visitOutcome && doc.visitOutcome !== visitOutcome) return false;
+        
+        // LEGACY SUPPORT: Treat missing visitOutcome as 'on_process' for backward compatibility
+        if (visitOutcome) {
+          const docOutcome = doc.visitOutcome || 'on_process';
+          if (docOutcome !== visitOutcome) return false;
+        }
+        
         return true;
       });
 

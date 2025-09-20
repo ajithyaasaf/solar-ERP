@@ -573,7 +573,9 @@ export function FollowUpModal({ isOpen, onClose, originalVisit }: FollowUpModalP
         siteInPhotoUrl: uploadedPhotos.selfie, // Keep backward compatibility
         sitePhotos: uploadedPhotos.sitePhotos,
         followUpReason,
-        description
+        description,
+        // CRITICAL: Set default visitOutcome so follow-up appears in "On Process" tab
+        visitOutcome: 'on_process'
       };
 
       console.log("FOLLOW_UP_CREATE: Original visit check:", {
