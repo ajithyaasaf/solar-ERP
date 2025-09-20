@@ -5961,27 +5961,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { followUpService } = await import("./services/follow-up-service");
       
-      // Get follow-ups by user
-      const { userId, department, status } = req.query;
+      // Get follow-ups by user including visitOutcome parameter
+      const { userId, department, status, visitOutcome } = req.query;
+      
+      console.log("FOLLOW_UP_API: Received query parameters:", { userId, department, status, visitOutcome });
       
       let followUps = [];
       if (userId && userId === user.uid) {
         followUps = await followUpService.getFollowUpsByUser(
           userId as string,
           department as string,
-          status as string
+          status as string,
+          visitOutcome as string
         );
       } else if (await checkSiteVisitPermission(user, 'view_all') || user.role === 'master_admin') {
         // Allow viewing all follow-ups for admins
         followUps = await followUpService.getFollowUpsByUser(
           userId as string || user.uid,
           department as string,
-          status as string
+          status as string,
+          visitOutcome as string
         );
       } else {
         // Default to own follow-ups
-        followUps = await followUpService.getFollowUpsByUser(user.uid);
+        followUps = await followUpService.getFollowUpsByUser(user.uid, undefined, undefined, visitOutcome as string);
       }
+      
+      console.log("FOLLOW_UP_API: Returning", followUps.length, "follow-ups");
       
       res.json({ data: followUps });
     } catch (error) {
