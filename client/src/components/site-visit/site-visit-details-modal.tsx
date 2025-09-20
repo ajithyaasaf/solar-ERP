@@ -38,11 +38,11 @@ import { format } from "date-fns";
 interface SiteVisit {
   id: string;
   userId: string;
-  department: 'technical' | 'marketing' | 'admin';
+  department: 'technical' | 'marketing' | 'admin' | 'operations' | 'hr' | 'sales' | 'housekeeping';
   visitPurpose: string;
   status: 'in_progress' | 'completed' | 'cancelled';
-  siteInTime: string;
-  siteOutTime?: string;
+  siteInTime: string | Date;
+  siteOutTime?: string | Date;
   // Location tracking fields
   siteInLocation?: {
     latitude: number;
@@ -65,7 +65,7 @@ interface SiteVisit {
     name: string;
     mobile: string;
     address: string;
-    propertyType: string;
+    propertyType?: string;
     ebServiceNumber?: string;
     location?: string; // Additional customer location field
   };
@@ -104,7 +104,7 @@ interface SiteVisit {
   };
   sitePhotos: Array<{
     url: string;
-    timestamp: string;
+    timestamp: string | Date;
     description?: string;
     location?: { // Photo location data
       latitude: number;
@@ -114,8 +114,11 @@ interface SiteVisit {
     };
   }>;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  // Additional monitoring fields
+  userName?: string;
+  userDepartment?: string;
   // Visit outcome fields
   visitOutcome?: 'converted' | 'on_process' | 'cancelled';
   outcomeNotes?: string;
@@ -273,7 +276,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
             </div>
             <div className="text-left sm:text-right text-xs sm:text-sm text-muted-foreground bg-gray-50 p-2 rounded-lg sm:bg-transparent sm:p-0">
               <p>Visit ID: {siteVisit.id.slice(0, 8)}</p>
-              <p>Created: {format(new Date(siteVisit.createdAt), 'PPP')}</p>
+              <p>Created: {format(new Date(siteVisit.createdAt || siteVisit.siteInTime), 'PPP')}</p>
             </div>
           </div>
 

@@ -483,11 +483,11 @@ export default function SiteVisitMonitoring() {
       }));
     },
     refetchInterval: 15000, // Live updates every 15 seconds
-    enabled: hasAccess
+    enabled: !!hasAccess
   });
 
   // Debug: Log all site visits data to understand the structure (can be removed after testing)
-  console.log('SITE_VISITS_RAW_DATA:', siteVisits.map(visit => ({
+  console.log('SITE_VISITS_RAW_DATA:', siteVisits.map((visit: SiteVisit) => ({
     id: visit.id,
     customerName: visit.customer?.name,
     status: visit.status,
@@ -501,18 +501,18 @@ export default function SiteVisitMonitoring() {
   // Enhanced dashboard statistics with follow-up metrics
   const stats = {
     total: siteVisits.length,
-    inProgress: siteVisits.filter(v => v.status === 'in_progress').length,
-    completed: siteVisits.filter(v => v.status === 'completed').length,
-    today: siteVisits.filter(v => {
+    inProgress: siteVisits.filter((v: SiteVisit) => v.status === 'in_progress').length,
+    completed: siteVisits.filter((v: SiteVisit) => v.status === 'completed').length,
+    today: siteVisits.filter((v: SiteVisit) => {
       const today = new Date();
       const visitDate = new Date(v.siteInTime);
       return visitDate.toDateString() === today.toDateString();
     }).length,
     // Enhanced follow-up metrics
-    followUps: siteVisits.filter(v => v.isFollowUp).length,
-    originalVisits: siteVisits.filter(v => !v.isFollowUp).length,
-    withFollowUps: siteVisits.filter(v => v.hasFollowUps).length,
-    totalFollowUpCount: siteVisits.reduce((sum, v) => sum + (v.followUpCount || 0), 0)
+    followUps: siteVisits.filter((v: SiteVisit) => v.isFollowUp).length,
+    originalVisits: siteVisits.filter((v: SiteVisit) => !v.isFollowUp).length,
+    withFollowUps: siteVisits.filter((v: SiteVisit) => v.hasFollowUps).length,
+    totalFollowUpCount: siteVisits.reduce((sum: number, v: SiteVisit) => sum + (v.followUpCount || 0), 0)
   };
   
   console.log('SITE_VISITS_STATS:', stats);
@@ -585,7 +585,7 @@ export default function SiteVisitMonitoring() {
   };
 
   // Enhanced filtered data with follow-up awareness
-  const filteredVisits = siteVisits.filter(visit => {
+  const filteredVisits = siteVisits.filter((visit: SiteVisit) => {
     const matchesSearch = !searchQuery || 
       visit.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       visit.customer?.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -939,13 +939,13 @@ export default function SiteVisitMonitoring() {
                 ))
               ) : (
                 // Individual View - All visits separately  
-                filteredVisits.map((visit) => (
+                filteredVisits.map((visit: SiteVisit) => (
                 <Card key={visit.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-3 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                       <div className="flex-1">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-                          <h3 className="font-semibold text-base sm:text-lg">{visit.customer?.name || visit.customerName || 'Unknown Customer'}</h3>
+                          <h3 className="font-semibold text-base sm:text-lg">{visit.customer?.name || 'Unknown Customer'}</h3>
                           <div className="flex flex-wrap gap-2">
                             <Badge 
                               variant={
@@ -990,17 +990,17 @@ export default function SiteVisitMonitoring() {
                         <div className="flex-1">
                           <span className="font-medium">Address:</span>
                           <span className="text-muted-foreground ml-1 break-words">
-                            {visit.customer?.address || visit.siteAddress || 'No address provided'}
+                            {visit.customer?.address || 'No address provided'}
                           </span>
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                        {(visit.customer?.mobile || visit.customerPhone) && (
+                        {visit.customer?.mobile && (
                           <div className="flex items-center gap-2 text-xs sm:text-sm">
                             <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
                             <span className="font-medium">Phone:</span>
-                            <span className="text-muted-foreground">{visit.customer?.mobile || visit.customerPhone}</span>
+                            <span className="text-muted-foreground">{visit.customer?.mobile}</span>
                           </div>
                         )}
                         {visit.customer?.propertyType && (
