@@ -5754,6 +5754,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick update site visit outcome (convert, cancel, reschedule)
+  app.patch("/api/site-visits/:id/quick-update", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(await checkSiteVisitPermission(user, 'edit'))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Import and validate the quick update schema
+      const { quickUpdateSiteVisitSchema } = await import("@shared/schema");
+      
+      let validatedData;
+      try {
+        validatedData = quickUpdateSiteVisitSchema.parse(req.body);
+      } catch (zodError: any) {
+        console.error("Quick update validation error:", zodError);
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: zodError.issues || zodError.errors 
+        });
+      }
+
+      const { siteVisitService } = await import("./services/site-visit-service");
+      
+      // Check if user owns the site visit or has appropriate permissions
+      const siteVisit = await siteVisitService.getSiteVisitById(req.params.id);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      const canUpdate = siteVisit.userId === user.uid || 
+                       user.role === 'master_admin' ||
+                       (user.role === 'admin' && siteVisit.department === user.department) ||
+                       (user.department === siteVisit.department && ['team_leader', 'officer', 'gm'].includes(user.designation || ''));
+      
+      if (!canUpdate) {
+        return res.status(403).json({ message: "Access denied: You can only update your own site visits" });
+      }
+
+      // Validate action-specific requirements
+      if (validatedData.action === 'reschedule' && !validatedData.scheduledFollowUpDate) {
+        return res.status(400).json({ 
+          message: "Scheduled follow-up date is required for reschedule action" 
+        });
+      }
+
+      // Perform the quick update
+      const updatedSiteVisit = await siteVisitService.quickUpdateSiteVisit(
+        req.params.id,
+        validatedData.action,
+        {
+          scheduledFollowUpDate: validatedData.scheduledFollowUpDate,
+          outcomeNotes: validatedData.outcomeNotes,
+          reason: validatedData.reason,
+          userId: user.uid
+        }
+      );
+
+      // Return success response with updated data
+      res.json({
+        success: true,
+        data: {
+          id: updatedSiteVisit.id,
+          visitOutcome: updatedSiteVisit.visitOutcome,
+          scheduledFollowUpDate: updatedSiteVisit.scheduledFollowUpDate,
+          outcomeNotes: updatedSiteVisit.outcomeNotes,
+          updatedAt: updatedSiteVisit.updatedAt
+        },
+        message: `Site visit ${validatedData.action === 'convert' ? 'converted' : validatedData.action === 'cancel' ? 'cancelled' : 'rescheduled'} successfully`
+      });
+
+    } catch (error) {
+      console.error("Error in quick update site visit:", error);
+      res.status(500).json({ 
+        message: "Failed to update site visit", 
+        error: (error as Error).message 
+      });
+    }
+  });
+
   // Site Visit Monitoring - Master Admin and HR only
   app.get("/api/site-visits/monitoring", verifyAuth, async (req, res) => {
     try {

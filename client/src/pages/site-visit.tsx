@@ -39,6 +39,7 @@ import { SiteVisitDetailsModal } from "@/components/site-visit/site-visit-detail
 import { SiteVisitCheckoutModal } from "@/components/site-visit/site-visit-checkout-modal";
 import { FollowUpModal } from "@/components/site-visit/follow-up-modal";
 import { FollowUpDetailsModal } from "@/components/site-visit/follow-up-details-modal";
+import { QuickActionButtons } from "@/components/site-visit/quick-action-buttons";
 import { formatDistanceToNow } from "date-fns";
 
 interface SiteVisit {
@@ -1105,39 +1106,50 @@ function UnifiedSiteVisitCard({ visitGroup, onView, onCheckout, onFollowUp, onDe
                       </div>
                       
                       {/* Individual Visit Actions */}
-                      <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onView(visit)}
-                          className="text-xs h-7 px-3"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View Details
-                        </Button>
-                        
-                        {visit.status === 'in_progress' && onCheckout && (
-                          <Button
-                            size="sm"
-                            onClick={() => onCheckout(visit)}
-                            className="text-xs h-7 px-3 bg-blue-600 hover:bg-blue-700"
-                          >
-                            <LogOut className="h-3 w-3 mr-1" />
-                            Check-out
-                          </Button>
+                      <div className="space-y-2 pt-2 border-t border-gray-200">
+                        {/* Quick Action Buttons for On Process visits */}
+                        {visit.visitOutcome === 'on_process' && (
+                          <QuickActionButtons 
+                            siteVisit={visit}
+                            className="mb-2"
+                          />
                         )}
                         
-                        {visit.status === 'completed' && onFollowUp && (
+                        {/* Standard Action Buttons */}
+                        <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onFollowUp(visit)}
+                            onClick={() => onView(visit)}
                             className="text-xs h-7 px-3"
                           >
-                            <RefreshCw className="h-3 w-3 mr-1" />
-                            Create Follow-up
+                            <Eye className="h-3 w-3 mr-1" />
+                            View Details
                           </Button>
-                        )}
+                          
+                          {visit.status === 'in_progress' && onCheckout && (
+                            <Button
+                              size="sm"
+                              onClick={() => onCheckout(visit)}
+                              className="text-xs h-7 px-3 bg-blue-600 hover:bg-blue-700"
+                            >
+                              <LogOut className="h-3 w-3 mr-1" />
+                              Check-out
+                            </Button>
+                          )}
+                          
+                          {visit.status === 'completed' && onFollowUp && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onFollowUp(visit)}
+                              className="text-xs h-7 px-3"
+                            >
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Create Follow-up
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

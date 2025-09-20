@@ -527,6 +527,36 @@ export interface SiteVisit extends InsertSiteVisit {
   id: string;
 }
 
+// Quick Action Types for Site Visit Workflow Enhancement
+export const quickActionTypes = [
+  "convert", "cancel", "reschedule"
+] as const;
+
+export type QuickActionType = typeof quickActionTypes[number];
+
+// Quick Update Request Schema
+export const quickUpdateSiteVisitSchema = z.object({
+  action: z.enum(quickActionTypes),
+  scheduledFollowUpDate: z.coerce.date().optional(), // Required for reschedule action - coerce for HTTP JSON compatibility
+  outcomeNotes: z.string().optional(), // Optional notes for any action
+  reason: z.string().optional() // Optional reason for cancel/reschedule
+});
+
+export type QuickUpdateSiteVisit = z.infer<typeof quickUpdateSiteVisitSchema>;
+
+// Quick Update Response Interface
+export interface QuickUpdateResponse {
+  success: boolean;
+  data: {
+    id: string;
+    visitOutcome: VisitOutcome;
+    scheduledFollowUpDate?: Date;
+    outcomeNotes?: string;
+    updatedAt: Date;
+  };
+  message: string;
+}
+
 // Marital status options
 export const maritalStatus = [
   "single", "married", "divorced", "widowed", "separated"

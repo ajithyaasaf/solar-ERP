@@ -612,6 +612,120 @@ export class SiteVisitService {
   }
 
   /**
+   * Quick update site visit outcome without full checkout process
+   * For simple actions like convert, cancel, reschedule
+   */
+  async quickUpdateSiteVisit(id: string, action: 'convert' | 'cancel' | 'reschedule', options: {
+    scheduledFollowUpDate?: Date;
+    outcomeNotes?: string;
+    reason?: string;
+    userId: string;
+  }): Promise<SiteVisit> {
+    try {
+      console.log("=== QUICK UPDATE STARTED ===");
+      console.log("Site visit ID:", id);
+      console.log("Action:", action);
+      console.log("Options:", JSON.stringify(options, null, 2));
+
+      const docRef = this.collection.doc(id);
+      
+      // Get existing site visit to validate
+      const existingDoc = await docRef.get();
+      if (!existingDoc.exists) {
+        throw new Error('Site visit not found');
+      }
+
+      // Prepare quick update data
+      const updateData: any = {
+        updatedAt: Timestamp.fromDate(new Date()),
+        outcomeSelectedAt: Timestamp.fromDate(new Date()),
+        outcomeSelectedBy: options.userId
+      };
+
+      // Apply action-specific updates
+      switch (action) {
+        case 'convert':
+          updateData.visitOutcome = 'converted';
+          updateData.status = 'completed'; // Also mark technical status as completed
+          updateData.scheduledFollowUpDate = null; // Clear follow-up date as visit is completed
+          if (options.outcomeNotes) {
+            updateData.outcomeNotes = options.outcomeNotes;
+          }
+          break;
+
+        case 'cancel':
+          updateData.visitOutcome = 'cancelled';
+          updateData.status = 'cancelled'; // Also mark technical status as cancelled
+          updateData.scheduledFollowUpDate = null; // Clear follow-up date as visit is cancelled
+          if (options.reason || options.outcomeNotes) {
+            updateData.outcomeNotes = options.reason || options.outcomeNotes || 'Visit cancelled';
+          }
+          break;
+
+        case 'reschedule':
+          if (!options.scheduledFollowUpDate) {
+            throw new Error('Scheduled follow-up date is required for reschedule action');
+          }
+          updateData.visitOutcome = 'on_process'; // Keep as on_process
+          updateData.scheduledFollowUpDate = Timestamp.fromDate(options.scheduledFollowUpDate);
+          if (options.reason || options.outcomeNotes) {
+            updateData.outcomeNotes = options.reason || options.outcomeNotes || 'Visit rescheduled';
+          }
+          // Note: For reschedule, we don't set outcomeSelectedAt/By as this is not a final outcome
+          delete updateData.outcomeSelectedAt;
+          delete updateData.outcomeSelectedBy;
+          break;
+
+        default:
+          throw new Error(`Invalid quick action: ${action}`);
+      }
+
+      console.log("=== QUICK UPDATE PAYLOAD ===");
+      console.log("Update data:", JSON.stringify({
+        ...updateData,
+        scheduledFollowUpDate: updateData.scheduledFollowUpDate?.toDate?.() || updateData.scheduledFollowUpDate,
+        updatedAt: updateData.updatedAt?.toDate?.() || updateData.updatedAt,
+        outcomeSelectedAt: updateData.outcomeSelectedAt?.toDate?.() || updateData.outcomeSelectedAt
+      }, null, 2));
+
+      // Update the document
+      await docRef.update(updateData);
+      
+      // Get the updated document
+      const updatedDoc = await docRef.get();
+      if (!updatedDoc.exists) {
+        throw new Error('Site visit not found after update');
+      }
+
+      const result = {
+        id: updatedDoc.id,
+        ...this.convertFirestoreToSiteVisit(updatedDoc.data()!)
+      };
+
+      console.log("=== QUICK UPDATE SUCCESS ===");
+      console.log("Site visit quick updated successfully:", {
+        id: result.id,
+        action,
+        visitOutcome: result.visitOutcome,
+        status: result.status,
+        scheduledFollowUpDate: result.scheduledFollowUpDate,
+        outcomeNotes: result.outcomeNotes
+      });
+      console.log("===============================");
+
+      return result;
+    } catch (error) {
+      console.error('=== QUICK UPDATE ERROR ===');
+      console.error('Error in quick update:', error);
+      console.error('Site visit ID:', id);
+      console.error('Action:', action);
+      console.error('Options:', JSON.stringify(options, null, 2));
+      console.error('===========================');
+      throw new Error(`Failed to quick update site visit: ${(error as Error).message}`);
+    }
+  }
+
+  /**
    * Convert Firestore data to SiteVisit object
    */
   private convertFirestoreToSiteVisit(data: any): Omit<SiteVisit, 'id'> {
@@ -635,6 +749,9 @@ export class SiteVisitService {
       siteOutTime: data.siteOutTime?.toDate() || undefined,
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
+      // Convert outcome-related timestamps to Date objects
+      scheduledFollowUpDate: data.scheduledFollowUpDate?.toDate() || undefined,
+      outcomeSelectedAt: data.outcomeSelectedAt?.toDate() || undefined,
       sitePhotos: allPhotos,
       // Keep the original siteOutPhotos field for reference
       siteOutPhotos: checkoutPhotos
