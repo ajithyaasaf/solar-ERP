@@ -640,6 +640,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
           ebServiceNumber: data.customer.ebServiceNumber || '',
         },
         status: 'in_progress',
+        visitOutcome: 'on_process', // Automatically set new visits to on_process so they appear in the On Process tab
         // Include department-specific data with correct field names
         ...(data.technicalData && { technicalData: data.technicalData }),
         ...(data.marketingData && { marketingData: data.marketingData }),
