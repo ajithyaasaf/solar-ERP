@@ -316,6 +316,24 @@ export default function SiteVisitPage() {
 
   // Convert follow-ups to site visit format for display
   const convertFollowUpToSiteVisit = (followUp: any): SiteVisit => {
+    // Determine customer current status for follow-ups
+    // For in-progress follow-ups, they should appear in "on_process" tab
+    // For completed follow-ups, use newCustomerStatus or fallback to originalCustomerStatus
+    let customerCurrentStatus = followUp.customerCurrentStatus;
+    
+    if (!customerCurrentStatus) {
+      if (followUp.status === 'in_progress') {
+        // In-progress follow-ups should show as "on_process" to appear in the active pipeline
+        customerCurrentStatus = 'on_process';
+      } else if (followUp.status === 'completed') {
+        // Use the new status set during follow-up completion, or fallback to original
+        customerCurrentStatus = followUp.newCustomerStatus || followUp.originalCustomerStatus || 'on_process';
+      } else {
+        // Default fallback
+        customerCurrentStatus = 'on_process';
+      }
+    }
+
     return {
       id: followUp.id,
       userId: followUp.userId,
@@ -338,8 +356,8 @@ export default function SiteVisitPage() {
       outcomeNotes: followUp.outcomeNotes,
       outcomeSelectedAt: followUp.outcomeSelectedAt,
       outcomeSelectedBy: followUp.outcomeSelectedBy,
-      // Include dynamic status management fields
-      customerCurrentStatus: followUp.customerCurrentStatus,
+      // Include dynamic status management fields - use calculated customerCurrentStatus
+      customerCurrentStatus: customerCurrentStatus,
       lastActivityType: followUp.lastActivityType,
       lastActivityDate: followUp.lastActivityDate,
       activeFollowUpId: followUp.activeFollowUpId
