@@ -31,7 +31,8 @@ import {
   Users,
   AlertTriangle,
   TrendingUp,
-  CircleX
+  CircleX,
+  History
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -125,6 +126,12 @@ interface SiteVisit {
   scheduledFollowUpDate?: string;
   outcomeSelectedAt?: string;
   outcomeSelectedBy?: string;
+  
+  // Dynamic Status Management fields (additional fields for enhanced follow-up workflow)
+  customerCurrentStatus?: 'converted' | 'on_process' | 'cancelled';
+  lastActivityType?: 'initial_visit' | 'follow_up';
+  lastActivityDate?: string;
+  activeFollowUpId?: string;
 }
 
 interface SiteVisitDetailsModalProps {
@@ -243,16 +250,23 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-            Site Visit Details
+            {siteVisit.isFollowUp ? (
+              <History className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            ) : (
+              <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+            )}
+            {siteVisit.isFollowUp ? 'Follow-up Visit Details' : 'Original Site Visit Details'}
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Complete information about the site visit
+            {siteVisit.isFollowUp 
+              ? 'Complete information about this follow-up visit and its relationship to the original visit'
+              : 'Complete information about this original site visit and any related follow-ups'
+            }
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 sm:space-y-6">
-          {/* Header Info */}
+          {/* Enhanced Header Info with Follow-up Context */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="space-y-2 flex-1">
               <div className="flex flex-wrap gap-1 sm:gap-2">
@@ -265,6 +279,36 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                 <Badge variant="outline" className="text-xs">
                   {siteVisit.visitPurpose}
                 </Badge>
+                
+                {/* Enhanced Visit Type Badge */}
+                {siteVisit.isFollowUp ? (
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 border border-purple-300">
+                    <History className="h-3 w-3 mr-1" />
+                    Follow-up Visit
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border border-blue-300">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    Original Visit
+                  </Badge>
+                )}
+                
+                {/* Customer Status Badge */}
+                {siteVisit.customerCurrentStatus && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs ${
+                      siteVisit.customerCurrentStatus === 'converted' 
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : siteVisit.customerCurrentStatus === 'on_process'
+                        ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                        : 'border-red-500 bg-red-50 text-red-700'
+                    }`}
+                  >
+                    Current Status: {siteVisit.customerCurrentStatus.replace('_', ' ')}
+                  </Badge>
+                )}
+                
                 {siteVisit.visitOutcome && (
                   <Badge className={getOutcomeColor(siteVisit.visitOutcome)}>
                     {getOutcomeIcon(siteVisit.visitOutcome)}
@@ -277,8 +321,91 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
             <div className="text-left sm:text-right text-xs sm:text-sm text-muted-foreground bg-gray-50 p-2 rounded-lg sm:bg-transparent sm:p-0">
               <p>Visit ID: {siteVisit.id.slice(0, 8)}</p>
               <p>Created: {format(new Date(siteVisit.createdAt || siteVisit.siteInTime), 'PPP')}</p>
+              {siteVisit.lastActivityDate && (
+                <p>Last Activity: {format(new Date(siteVisit.lastActivityDate), 'PPP')}</p>
+              )}
             </div>
           </div>
+          
+          {/* Follow-up Relationship Section */}
+          {siteVisit.isFollowUp && (
+            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-indigo-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-purple-800">
+                  <History className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Follow-up Relationship
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {siteVisit.followUpOf && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-purple-600" />
+                    <span className="font-medium text-purple-700">Original Visit ID:</span>
+                    <code className="bg-purple-100 px-2 py-1 rounded text-purple-800">{siteVisit.followUpOf.slice(0, 8)}...</code>
+                  </div>
+                )}
+                {siteVisit.followUpReason && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <AlertCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-purple-700">Follow-up Reason:</span>
+                      <p className="text-purple-600 mt-1">{siteVisit.followUpReason.replace(/_/g, ' ')}</p>
+                    </div>
+                  </div>
+                )}
+                {siteVisit.followUpDescription && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-purple-700">Additional Details:</span>
+                      <p className="text-purple-600 mt-1">{siteVisit.followUpDescription}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Customer Journey Status */}
+          {(siteVisit.hasFollowUps || siteVisit.activeFollowUpId || siteVisit.lastActivityType) && (
+            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-cyan-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-blue-800">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Customer Journey Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {siteVisit.hasFollowUps && siteVisit.followUpCount && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-700">Total Follow-ups:</span>
+                    <Badge variant="outline" className="text-blue-700 border-blue-300">
+                      {siteVisit.followUpCount} visit{siteVisit.followUpCount !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                )}
+                {siteVisit.activeFollowUpId && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Zap className="h-4 w-4 text-orange-600" />
+                    <span className="font-medium text-orange-700">Active Follow-up:</span>
+                    <Badge variant="outline" className="text-orange-700 border-orange-300 animate-pulse">
+                      In Progress
+                    </Badge>
+                  </div>
+                )}
+                {siteVisit.lastActivityType && siteVisit.lastActivityDate && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-700">Last Activity:</span>
+                    <span className="text-blue-600">
+                      {siteVisit.lastActivityType.replace('_', ' ')} • {format(new Date(siteVisit.lastActivityDate), 'PPP')}
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Visit Outcome Section */}
           {(siteVisit.visitOutcome || siteVisit.scheduledFollowUpDate || siteVisit.outcomeNotes) && (
