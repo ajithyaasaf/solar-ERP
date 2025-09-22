@@ -688,32 +688,7 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
       return;
     }
 
-    if (!visitOutcome) {
-      toast({
-        title: "Visit Outcome Required",
-        description: "Please select a visit outcome to complete checkout.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Include all outcome data in the mutation payload
-    const checkoutPayload = {
-      visitOutcome,
-      scheduledFollowUpDate: scheduledFollowUpDate || null,
-      outcomeNotes: outcomeNotes || null,
-      outcomeSelectedAt: new Date().toISOString(),
-      outcomeSelectedBy: siteVisit.userName || 'Unknown'
-    };
-
-    console.log("=== CHECKOUT PAYLOAD DEBUG ===");
-    console.log("Visit outcome:", visitOutcome);
-    console.log("Scheduled follow-up date:", scheduledFollowUpDate);
-    console.log("Outcome notes:", outcomeNotes);
-    console.log("Full payload:", JSON.stringify(checkoutPayload, null, 2));
-    console.log("===============================");
-
-    checkoutMutation.mutate(checkoutPayload);
+    checkoutMutation.mutate({});
   };
 
   const canProceedToStep2 = locationCaptured;
@@ -1175,74 +1150,35 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                 <CardContent>
                   <div className="space-y-4">
                     <div className="space-y-3">
-                      <Label className="text-sm font-medium">
-                        Select {siteVisit.isFollowUp ? 'Follow-up' : 'Visit'} Outcome
-                      </Label>
-                      {/* Show different outcome options based on whether it's a follow-up or normal visit */}
+                      <Label className="text-sm font-medium">Select Visit Outcome</Label>
                       <RadioGroup value={visitOutcome} onValueChange={setVisitOutcome}>
-                        {!siteVisit.isFollowUp ? (
-                          // Normal site visit outcomes
-                          <>
-                            <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                              <RadioGroupItem value="converted" id="converted" data-testid="radio-converted" />
-                              <Label htmlFor="converted" className="flex-1 cursor-pointer">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-green-700">Converted</span>
-                                  <span className="text-xs text-muted-foreground">Customer agreed, ready for quotation</span>
-                                </div>
-                              </Label>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="converted" id="converted" data-testid="radio-converted" />
+                          <Label htmlFor="converted" className="flex-1 cursor-pointer">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-green-700">Converted</span>
+                              <span className="text-xs text-muted-foreground">Customer agreed, ready for quotation</span>
                             </div>
-                            <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                              <RadioGroupItem value="on_process" id="on_process" data-testid="radio-on-process" />
-                              <Label htmlFor="on_process" className="flex-1 cursor-pointer">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-yellow-700">On Process</span>
-                                  <span className="text-xs text-muted-foreground">Customer needs time, schedule follow-up</span>
-                                </div>
-                              </Label>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="on_process" id="on_process" data-testid="radio-on-process" />
+                          <Label htmlFor="on_process" className="flex-1 cursor-pointer">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-yellow-700">On Process</span>
+                              <span className="text-xs text-muted-foreground">Customer needs time, schedule follow-up</span>
                             </div>
-                            <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                              <RadioGroupItem value="cancelled" id="cancelled" data-testid="radio-cancelled" />
-                              <Label htmlFor="cancelled" className="flex-1 cursor-pointer">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-red-700">Cancelled</span>
-                                  <span className="text-xs text-muted-foreground">Customer not interested or not feasible</span>
-                                </div>
-                              </Label>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="cancelled" id="cancelled" data-testid="radio-cancelled" />
+                          <Label htmlFor="cancelled" className="flex-1 cursor-pointer">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-red-700">Cancelled</span>
+                              <span className="text-xs text-muted-foreground">Customer not interested or not feasible</span>
                             </div>
-                          </>
-                        ) : (
-                          // Follow-up checkout outcomes
-                          <>
-                            <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                              <RadioGroupItem value="completed" id="completed" data-testid="radio-completed" />
-                              <Label htmlFor="completed" className="flex-1 cursor-pointer">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-green-700">Completed</span>
-                                  <span className="text-xs text-muted-foreground">Follow-up work finished successfully</span>
-                                </div>
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                              <RadioGroupItem value="on_process" id="on_process" data-testid="radio-on-process" />
-                              <Label htmlFor="on_process" className="flex-1 cursor-pointer">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-yellow-700">On Process</span>
-                                  <span className="text-xs text-muted-foreground">More work required, schedule another follow-up</span>
-                                </div>
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                              <RadioGroupItem value="cancelled" id="cancelled" data-testid="radio-cancelled" />
-                              <Label htmlFor="cancelled" className="flex-1 cursor-pointer">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-red-700">Cancelled</span>
-                                  <span className="text-xs text-muted-foreground">Customer no longer interested or project cancelled</span>
-                                </div>
-                              </Label>
-                            </div>
-                          </>
-                        )}
+                          </Label>
+                        </div>
                       </RadioGroup>
                     </div>
 

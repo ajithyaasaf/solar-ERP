@@ -5515,38 +5515,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn("Invalid fields in update request:", invalidFields);
       }
 
-      // CRITICAL: Validate follow-up completion before allowing conversion to 'converted'
-      if (req.body.visitOutcome === 'converted') {
-        try {
-          const { followUpService } = await import("./services/follow-up-service");
-          const validation = await followUpService.validateOutcomeChange(
-            req.params.id, 
-            'converted', 
-            existingSiteVisit.visitOutcome
-          );
-
-          if (!validation.isValid) {
-            console.log("FOLLOW_UP_VALIDATION: Blocking checkout conversion due to incomplete follow-ups:", validation.reason);
-            return res.status(400).json({ 
-              message: validation.reason,
-              incompleteFollowUps: validation.incompleteFollowUps?.map(f => ({
-                id: f.id,
-                followUpReason: f.followUpReason,
-                createdAt: f.createdAt,
-                status: f.status
-              })) || []
-            });
-          }
-        } catch (error) {
-          console.error("FOLLOW_UP_VALIDATION: Critical error validating follow-ups for checkout conversion:", error);
-          // FAIL-CLOSED: Block conversion if validation fails to ensure data integrity
-          return res.status(503).json({ 
-            message: "Unable to validate follow-up status. Please try again or contact support.",
-            error: "Validation service unavailable"
-          });
-        }
-      }
-
       const updatedSiteVisit = await siteVisitService.updateSiteVisit(req.params.id, req.body);
       
       console.log("Site visit updated successfully:", updatedSiteVisit.id);
@@ -5830,38 +5798,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ 
           message: "Scheduled follow-up date is required for reschedule action" 
         });
-      }
-
-      // CRITICAL: Validate follow-up completion before allowing conversion
-      if (validatedData.action === 'convert') {
-        try {
-          const { followUpService } = await import("./services/follow-up-service");
-          const validation = await followUpService.validateOutcomeChange(
-            req.params.id, 
-            'converted', 
-            siteVisit.visitOutcome
-          );
-
-          if (!validation.isValid) {
-            console.log("FOLLOW_UP_VALIDATION: Blocking conversion due to incomplete follow-ups:", validation.reason);
-            return res.status(400).json({ 
-              message: validation.reason,
-              incompleteFollowUps: validation.incompleteFollowUps?.map(f => ({
-                id: f.id,
-                followUpReason: f.followUpReason,
-                createdAt: f.createdAt,
-                status: f.status
-              })) || []
-            });
-          }
-        } catch (error) {
-          console.error("FOLLOW_UP_VALIDATION: Critical error validating follow-ups for conversion:", error);
-          // FAIL-CLOSED: Block conversion if validation fails to ensure data integrity
-          return res.status(503).json({ 
-            message: "Unable to validate follow-up status. Please try again or contact support.",
-            error: "Validation service unavailable"
-          });
-        }
       }
 
       // Perform the quick update
@@ -6268,12 +6204,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         siteOutPhotos: req.body.siteOutPhotos || [],
         status: 'completed' as const,
         notes: req.body.notes || followUp.notes || '',
-        // Include outcome data for follow-up workflow processing
-        visitOutcome: req.body.visitOutcome,
-        scheduledFollowUpDate: req.body.scheduledFollowUpDate ? new Date(req.body.scheduledFollowUpDate) : null,
-        outcomeNotes: req.body.outcomeNotes || null,
-        outcomeSelectedAt: req.body.outcomeSelectedAt ? new Date(req.body.outcomeSelectedAt) : new Date(),
-        outcomeSelectedBy: req.body.outcomeSelectedBy || user.displayName || user.uid,
         updatedAt: new Date()
       };
 
