@@ -6196,6 +6196,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Validate visit outcome fields if provided
+      if (req.body.visitOutcome) {
+        const allowedOutcomes = ['completed', 'on_process', 'cancelled'];
+        if (!allowedOutcomes.includes(req.body.visitOutcome)) {
+          return res.status(400).json({ 
+            message: "Invalid visit outcome. Must be one of: completed, on_process, cancelled",
+            error: "INVALID_OUTCOME"
+          });
+        }
+        
+        // Validate scheduled follow-up date for on_process outcome
+        if (req.body.visitOutcome === 'on_process' && req.body.scheduledFollowUpDate) {
+          const followUpDate = new Date(req.body.scheduledFollowUpDate);
+          if (followUpDate <= new Date()) {
+            return res.status(400).json({ 
+              message: "Scheduled follow-up date must be in the future",
+              error: "INVALID_FOLLOWUP_DATE"
+            });
+          }
+        }
+      }
+
       // Prepare checkout data - be more flexible with missing fields
       const checkoutData = {
         siteOutTime: new Date(),
@@ -6204,6 +6226,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         siteOutPhotos: req.body.siteOutPhotos || [],
         status: 'completed' as const,
         notes: req.body.notes || followUp.notes || '',
+        
+        // Handle visit outcome fields for follow-ups
+        visitOutcome: req.body.visitOutcome || null,
+        outcomeNotes: req.body.outcomeNotes || null,
+        scheduledFollowUpDate: req.body.scheduledFollowUpDate ? new Date(req.body.scheduledFollowUpDate) : null,
+        // Security: Set these server-side, don't trust client input
+        outcomeSelectedAt: req.body.visitOutcome ? new Date() : null,
+        outcomeSelectedBy: req.body.visitOutcome ? user.uid : null,
+        
         updatedAt: new Date()
       };
 

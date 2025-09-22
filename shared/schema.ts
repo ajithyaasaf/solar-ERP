@@ -474,6 +474,14 @@ export const insertFollowUpSiteVisitSchema = z.object({
   
   // Status and metadata
   status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
+  
+  // Visit outcome for business classification (follow-up specific outcomes)
+  visitOutcome: z.enum(["completed", "on_process", "cancelled"]).optional(),
+  outcomeNotes: z.string().optional(),
+  scheduledFollowUpDate: z.date().optional(),
+  outcomeSelectedAt: z.date().optional(),
+  outcomeSelectedBy: z.string().optional(),
+  
   notes: z.string().optional(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
