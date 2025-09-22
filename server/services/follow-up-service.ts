@@ -174,8 +174,48 @@ export class FollowUpService {
             // Map follow-up outcomes to original visit outcomes according to specification
             switch (updates.visitOutcome) {
               case 'completed':
-                // Follow-up "completed" means customer is back to "converted" (completed) status
-                newOriginalOutcome = 'converted';
+                // CRITICAL: Only set to "converted" if ALL follow-ups (including current) are complete
+                try {
+                  // First validate that the current follow-up is truly complete
+                  const isCurrentComplete = updates.siteOutTime && // Has checkout time
+                                          updates.status === 'completed' && // Status is completed
+                                          updates.visitOutcome === 'completed'; // Outcome is completed
+
+                  if (!isCurrentComplete) {
+                    // Current follow-up is not fully complete, keep as "on_process"
+                    newOriginalOutcome = 'on_process';
+                    console.log("FOLLOW_UP_WORKFLOW: Current follow-up not fully complete - keeping as 'on_process'");
+                  } else {
+                    // Current follow-up is complete, check all other follow-ups
+                    const allFollowUpsSnapshot = await this.collection
+                      .where('originalVisitId', '==', followUpData.originalVisitId)
+                      .get();
+
+                    const otherIncompleteFollowUps = allFollowUpsSnapshot.docs
+                      .filter(doc => doc.id !== id) // Exclude current follow-up being updated
+                      .map(doc => ({ id: doc.id, ...this.convertFirestoreToFollowUp(doc.data()) }))
+                      .filter(followUp => {
+                        const isInProgress = followUp.status === 'in_progress';
+                        const notCheckedOut = !followUp.siteOutTime;
+                        const noOutcome = !followUp.visitOutcome;
+                        return isInProgress || notCheckedOut || noOutcome;
+                      });
+
+                    if (otherIncompleteFollowUps.length > 0) {
+                      // Other follow-ups still incomplete, keep as "on_process"
+                      newOriginalOutcome = 'on_process';
+                      console.log("FOLLOW_UP_WORKFLOW: Keeping status as 'on_process' - other incomplete follow-ups remain:", otherIncompleteFollowUps.length);
+                    } else {
+                      // All follow-ups complete, can set to "converted"
+                      newOriginalOutcome = 'converted';
+                      console.log("FOLLOW_UP_WORKFLOW: All follow-ups complete - setting to 'converted'");
+                    }
+                  }
+                } catch (error) {
+                  console.error("FOLLOW_UP_WORKFLOW: Error checking follow-up completeness, staying safe with 'on_process':", error);
+                  // FAIL-SAFE: If we can't verify completeness, keep as on_process
+                  newOriginalOutcome = 'on_process';
+                }
                 break;
               case 'on_process':
                 // Follow-up "on_process" means customer stays "on_process"
@@ -313,6 +353,106 @@ export class FollowUpService {
     } catch (error) {
       console.error('FOLLOW_UP_SERVICE: Error getting follow-ups by user:', error);
       return [];
+    }
+  }
+
+  /**
+   * Check if an original visit has incomplete follow-ups that need to be checked out
+   * This prevents customers from being marked as converted if they have active follow-ups
+   */
+  async hasIncompleteFollowUps(originalVisitId: string): Promise<{
+    hasIncomplete: boolean;
+    incompleteFollowUps: FollowUpSiteVisit[];
+    totalFollowUps: number;
+  }> {
+    try {
+      console.log("FOLLOW_UP_VALIDATION: Checking for incomplete follow-ups for visit:", originalVisitId);
+      
+      const snapshot = await this.collection
+        .where('originalVisitId', '==', originalVisitId)
+        .get();
+
+      const allFollowUps = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...this.convertFirestoreToFollowUp(doc.data())
+      }));
+
+      // Filter for incomplete follow-ups (status is 'in_progress' or missing siteOutTime)
+      const incompleteFollowUps = allFollowUps.filter(followUp => {
+        const isInProgress = followUp.status === 'in_progress';
+        const notCheckedOut = !followUp.siteOutTime;
+        const noOutcome = !followUp.visitOutcome;
+        
+        // A follow-up is incomplete if it's in progress, not checked out, or has no outcome
+        return isInProgress || notCheckedOut || noOutcome;
+      });
+
+      const result = {
+        hasIncomplete: incompleteFollowUps.length > 0,
+        incompleteFollowUps,
+        totalFollowUps: allFollowUps.length
+      };
+
+      console.log("FOLLOW_UP_VALIDATION: Incomplete follow-ups check result:", {
+        originalVisitId,
+        totalFollowUps: result.totalFollowUps,
+        incompleteCount: incompleteFollowUps.length,
+        hasIncomplete: result.hasIncomplete,
+        incompleteIds: incompleteFollowUps.map(f => f.id)
+      });
+
+      return result;
+    } catch (error) {
+      console.error('FOLLOW_UP_VALIDATION: Error checking incomplete follow-ups:', error);
+      // FAIL-CLOSED: Assume incomplete follow-ups exist to prevent unauthorized conversion
+      throw new Error('Unable to verify follow-up status. Please try again.');
+    }
+  }
+
+  /**
+   * Validate if a visit outcome change is allowed based on follow-up status
+   * This enforces that customers cannot be marked as converted if they have incomplete follow-ups
+   */
+  async validateOutcomeChange(
+    originalVisitId: string, 
+    newOutcome: string,
+    currentOutcome?: string
+  ): Promise<{
+    isValid: boolean;
+    reason?: string;
+    incompleteFollowUps?: FollowUpSiteVisit[];
+  }> {
+    try {
+      console.log("FOLLOW_UP_VALIDATION: Validating outcome change:", {
+        originalVisitId,
+        currentOutcome,
+        newOutcome
+      });
+
+      // If not trying to convert to 'converted', allow the change
+      if (newOutcome !== 'converted') {
+        return { isValid: true };
+      }
+
+      // Check for incomplete follow-ups
+      const { hasIncomplete, incompleteFollowUps } = await this.hasIncompleteFollowUps(originalVisitId);
+
+      if (hasIncomplete) {
+        return {
+          isValid: false,
+          reason: `Cannot mark as converted: ${incompleteFollowUps.length} follow-up(s) need to be checked out first`,
+          incompleteFollowUps
+        };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      console.error('FOLLOW_UP_VALIDATION: Error validating outcome change:', error);
+      // FAIL-CLOSED: Block conversion if validation fails to ensure data integrity
+      return { 
+        isValid: false,
+        reason: 'Validation failed, please try again. If the problem persists, contact support.'
+      };
     }
   }
 
