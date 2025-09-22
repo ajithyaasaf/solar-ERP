@@ -6251,6 +6251,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedFollowUp = await followUpService.updateFollowUp(req.params.id, checkoutData);
 
+      // Log follow-up outcome activity using server-side normalized data
+      try {
+        if (updatedFollowUp.visitOutcome) {
+          const outcomeLabel = {
+            completed: 'Completed',
+            on_process: 'Scheduled for Follow-up', 
+            cancelled: 'Cancelled'
+          }[updatedFollowUp.visitOutcome] || updatedFollowUp.visitOutcome;
+
+          let activityType: 'follow_up_completed' | 'follow_up_scheduled' = 'follow_up_completed';
+          let description = `Follow-up visit ${outcomeLabel.toLowerCase()} for ${followUp.customer.name}`;
+
+          if (updatedFollowUp.visitOutcome === 'on_process' && updatedFollowUp.scheduledFollowUpDate) {
+            activityType = 'follow_up_scheduled';
+            const followUpDate = updatedFollowUp.scheduledFollowUpDate.toLocaleDateString();
+            description = `Follow-up visit rescheduled for ${followUp.customer.name} on ${followUpDate}`;
+          }
+
+          if (updatedFollowUp.outcomeNotes) {
+            description += `. Notes: ${updatedFollowUp.outcomeNotes}`;
+          }
+
+          await storage.createActivityLog({
+            type: activityType,
+            title: `Follow-up ${outcomeLabel}`,
+            description,
+            entityId: req.params.id,
+            entityType: 'follow_up',
+            userId: user.uid
+          });
+        }
+      } catch (logError) {
+        console.error("Failed to create activity log:", logError);
+        // Don't fail the checkout if logging fails
+      }
+
       console.log("=== FOLLOW-UP CHECKOUT COMPLETED ===");
       console.log("Follow-up ID:", req.params.id);
       console.log("User:", user.uid, user.displayName);

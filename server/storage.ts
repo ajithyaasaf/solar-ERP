@@ -243,7 +243,7 @@ export interface Leave {
 // Activity Log interface
 export interface ActivityLog {
   id: string;
-  type: 'customer_created' | 'customer_updated' | 'quotation_created' | 'invoice_paid' | 'product_created' | 'attendance' | 'leave_requested';
+  type: 'customer_created' | 'customer_updated' | 'quotation_created' | 'invoice_paid' | 'product_created' | 'attendance' | 'leave_requested' | 'follow_up_completed' | 'follow_up_scheduled';
   title: string;
   description: string;
   createdAt: Date;
@@ -253,7 +253,7 @@ export interface ActivityLog {
 }
 
 export const insertActivityLogSchema = z.object({
-  type: z.enum(['customer_created', 'customer_updated', 'quotation_created', 'invoice_paid', 'product_created', 'attendance', 'leave_requested']),
+  type: z.enum(['customer_created', 'customer_updated', 'quotation_created', 'invoice_paid', 'product_created', 'attendance', 'leave_requested', 'follow_up_completed', 'follow_up_scheduled']),
   title: z.string(),
   description: z.string(),
   entityId: z.string().optional(),
