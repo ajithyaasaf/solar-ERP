@@ -1,0 +1,61 @@
+WORKFLOW_REDESIGN_SPECIFICATION.md
+
+This is the last task I worked on and it is completed.  
+Currently, when a customer (for example "A") is converted to a customer, he moves to the **Completed** tab.  
+
+---
+
+### Follow-up Handling (Not Yet Implemented)
+
+When I make a **follow-up** for him (who is in the customer tab and already converted during the normal site visit checkout),  
+where should it show?  
+
+If I start a follow-up for a person who is already in the **Completed** tab,  
+how should we handle this?  
+
+- I mean, the follow-up for this person should show in the **On Process** tab.  
+- What happens after the follow-up is completed?  
+- Does the follow-up automatically move from **On Process** to the respective tab based on the final outcome selected during the follow-up checkout?  
+
+---
+
+### Checkout Form Logic
+
+Currently, the **site visit checkout form** handles both normal checkout and follow-up checkout.  
+
+- In the **normal site visit checkout**, the outcomes are: **Converted**, **On Process**, or **Cancelled**. (This is correct.)  
+- However, in a **follow-up checkout**, since the customer is already converted, the options should be:  
+  **Completed**, **On Process**, or **Cancelled**.  
+  This is more meaningful because it reflects the follow-up context.  
+
+So, even though we use the same site visit checkout form, the outcome options should be adjusted dynamically depending on whether it’s a **normal visit** or a **follow-up visit**.  
+
+---
+
+### Workflow Rules for Converted Customers
+
+Now, let’s consider the case where a customer was already converted during the normal site visit and is in the **Completed** tab:  
+
+1. I go to the **Completed** tab and start a follow-up for this customer.  
+   - At this point, the customer should temporarily show in the **On Process** tab.  
+
+2. After completing the follow-up visit, the customer should move back to the timeline and to the **respective tab** based on the final outcome:  
+   - If **Completed** → He goes back to the **Completed** tab.  
+   - If **On Process** → He stays in the **On Process** tab, because more work may be required.  
+   - If **Cancelled** → The customer (with all his data) is moved to the **Cancelled** tab.  
+
+---
+
+### Additional Considerations
+
+- How should we handle multiple follow-ups for the same person who is already in follow-up?  
+- Should the **site visit monitoring page** also reflect these changes?  
+- I don’t need a complex solution, but I do need a solid one.  
+
+---
+
+### Open Questions
+
+1. What happens if I select **On Process** again during the follow-up?  
+2. What happens if I click **Converted**, since he is already converted?  
+3. What happens if I click **Cancelled**? Will an already converted customer move to the **Cancelled** tab because I clicked cancelled during a follow-up?
