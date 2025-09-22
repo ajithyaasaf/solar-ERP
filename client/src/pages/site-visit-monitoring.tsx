@@ -78,12 +78,6 @@ interface SiteVisit {
   scheduledFollowUpDate?: string;
   outcomeSelectedAt?: string;
   outcomeSelectedBy?: string;
-  
-  // Dynamic Status Management fields (from FOLLOW_UP_WORKFLOW_ROOT_CAUSE_ANALYSIS.md)
-  customerCurrentStatus?: 'converted' | 'on_process' | 'cancelled';
-  lastActivityType?: 'initial_visit' | 'follow_up';
-  lastActivityDate?: string;
-  activeFollowUpId?: string;
 }
 
 interface CustomerVisitGroup {
@@ -518,11 +512,7 @@ export default function SiteVisitMonitoring() {
     followUps: siteVisits.filter((v: SiteVisit) => v.isFollowUp).length,
     originalVisits: siteVisits.filter((v: SiteVisit) => !v.isFollowUp).length,
     withFollowUps: siteVisits.filter((v: SiteVisit) => v.hasFollowUps).length,
-    totalFollowUpCount: siteVisits.reduce((sum: number, v: SiteVisit) => sum + (v.followUpCount || 0), 0),
-    activeFollowUps: siteVisits.filter((v: SiteVisit) => v.activeFollowUpId).length,
-    statusTransitions: siteVisits.filter((v: SiteVisit) => 
-      v.customerCurrentStatus && v.customerCurrentStatus !== v.visitOutcome && v.lastActivityType === 'follow_up'
-    ).length
+    totalFollowUpCount: siteVisits.reduce((sum: number, v: SiteVisit) => sum + (v.followUpCount || 0), 0)
   };
   
   console.log('SITE_VISITS_STATS:', stats);
@@ -968,76 +958,26 @@ export default function SiteVisitMonitoring() {
                                visit.status === 'completed' ? 'Completed' : 'Cancelled'}
                             </Badge>
                             <Badge variant="outline" className="capitalize text-xs">{visit.department}</Badge>
-                            
-                            {/* Enhanced Follow-up Status Indicators */}
                             {visit.isFollowUp && (
-                              <Badge 
-                                variant="secondary" 
-                                className="text-xs bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 border border-purple-300"
-                              >
-                                <History className="h-3 w-3 mr-1" />
-                                Follow-up Visit
+                              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                Follow-up
                               </Badge>
                             )}
-                            
-                            {/* Active Follow-up Indicator */}
-                            {visit.activeFollowUpId && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs border-2 border-orange-400 bg-orange-50 text-orange-700 animate-pulse"
-                              >
-                                <Zap className="h-3 w-3 mr-1" />
-                                Follow-up Active
-                              </Badge>
-                            )}
-                            
-                            {/* Customer Journey Indicators */}
                             {visit.hasFollowUps && !visit.isFollowUp && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs border-emerald-500 bg-emerald-50 text-emerald-700"
-                              >
+                              <Badge variant="outline" className="text-xs border-green-500 text-green-700">
                                 <TrendingUp className="h-3 w-3 mr-1" />
                                 {visit.followUpCount} Follow-up{visit.followUpCount !== 1 ? 's' : ''}
-                              </Badge>
-                            )}
-                            
-                            {/* Status Transition Indicator */}
-                            {visit.customerCurrentStatus && visit.customerCurrentStatus !== visit.visitOutcome && visit.lastActivityType === 'follow_up' && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs border-blue-500 bg-blue-50 text-blue-700"
-                              >
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                                Status Updated
                               </Badge>
                             )}
                           </div>
                         </div>
                         <div className="flex flex-col gap-1">
                           <p className="text-xs sm:text-sm text-muted-foreground">{visit.visitPurpose || 'Site Visit'}</p>
-                          
-                          {/* Enhanced Follow-up Context */}
                           {visit.isFollowUp && visit.followUpReason && (
-                            <div className="bg-purple-50 border border-purple-200 rounded-md p-2 mt-1">
-                              <p className="text-xs text-purple-700 font-medium flex items-center gap-1">
-                                <History className="h-3 w-3" />
-                                Follow-up Reason: {visit.followUpReason.replace(/_/g, ' ')}
-                              </p>
-                              {visit.followUpOf && (
-                                <p className="text-xs text-purple-600 mt-1">
-                                  Original Visit ID: {visit.followUpOf.slice(0, 8)}...
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Customer Journey Timeline */}
-                          {visit.lastActivityType && visit.lastActivityDate && (
-                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                              <Clock className="h-3 w-3" />
-                              Last Activity: {visit.lastActivityType.replace('_', ' ')} • {new Date(visit.lastActivityDate).toLocaleDateString()}
-                            </div>
+                            <p className="text-xs text-purple-600 font-medium">
+                              Reason: {visit.followUpReason.replace('_', ' ')}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -1109,38 +1049,6 @@ export default function SiteVisitMonitoring() {
                           <Badge variant="outline" className="flex items-center gap-1 text-xs">
                             <FileText className="h-2 w-2 sm:h-3 sm:w-3" />
                             Data
-                          </Badge>
-                        )}
-                        
-                        {/* Enhanced Visit Type Indicator */}
-                        {visit.isFollowUp ? (
-                          <Badge variant="outline" className="flex items-center gap-1 text-xs border-purple-400 text-purple-700">
-                            <History className="h-2 w-2 sm:h-3 sm:w-3" />
-                            Follow-up Visit
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="flex items-center gap-1 text-xs border-blue-400 text-blue-700">
-                            <MapPin className="h-2 w-2 sm:h-3 sm:w-3" />
-                            Original Visit
-                          </Badge>
-                        )}
-                        
-                        {/* Customer Status Indicator */}
-                        {visit.customerCurrentStatus && (
-                          <Badge 
-                            variant="outline" 
-                            className={`flex items-center gap-1 text-xs ${
-                              visit.customerCurrentStatus === 'converted' 
-                                ? 'border-green-500 bg-green-50 text-green-700'
-                                : visit.customerCurrentStatus === 'on_process'
-                                ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                                : 'border-red-500 bg-red-50 text-red-700'
-                            }`}
-                          >
-                            {visit.customerCurrentStatus === 'converted' && <CheckCircle className="h-2 w-2 sm:h-3 sm:w-3" />}
-                            {visit.customerCurrentStatus === 'on_process' && <Clock className="h-2 w-2 sm:h-3 sm:w-3" />}
-                            {visit.customerCurrentStatus === 'cancelled' && <XCircle className="h-2 w-2 sm:h-3 sm:w-3" />}
-                            {visit.customerCurrentStatus.replace('_', ' ')}
                           </Badge>
                         )}
                       </div>
