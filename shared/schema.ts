@@ -438,6 +438,12 @@ export const insertSiteVisitSchema = z.object({
   outcomeSelectedAt: z.date().optional(),
   outcomeSelectedBy: z.string().optional(),
   
+  // Dynamic Status Management for Follow-up Workflow Enhancement
+  customerCurrentStatus: z.enum(["converted", "on_process", "cancelled"]).optional(), // Dynamic customer status based on latest activity
+  lastActivityType: z.enum(["initial_visit", "follow_up"]).default("initial_visit"), // Type of last activity affecting customer status
+  lastActivityDate: z.date().default(() => new Date()), // Timestamp of last status-affecting activity
+  activeFollowUpId: z.string().optional(), // Reference to active follow-up if customer is in follow-up process
+  
   notes: z.string().optional(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date())
@@ -467,6 +473,11 @@ export const insertFollowUpSiteVisitSchema = z.object({
     "other"
   ]).default("additional_work_required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
+  
+  // Dynamic Status Management for Follow-up Impact Tracking
+  originalCustomerStatus: z.enum(["converted", "on_process", "cancelled"]).optional(), // Customer status before follow-up started
+  affectsCustomerStatus: z.boolean().default(true), // Whether this follow-up impacts customer status
+  newCustomerStatus: z.enum(["converted", "on_process", "cancelled"]).optional(), // Customer status after follow-up completion
   
   // Photo documentation for follow-ups
   sitePhotos: z.array(z.string().url()).max(10).default([]), // Array of site "in" photo URLs

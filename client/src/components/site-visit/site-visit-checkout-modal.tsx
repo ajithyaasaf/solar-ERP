@@ -1223,13 +1223,13 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                     {visitOutcome && (
                       <div className={cn(
                         "space-y-3 p-3 rounded-lg border",
-                        visitOutcome === 'converted' && "bg-green-50 border-green-200",
+                        (visitOutcome === 'converted' || visitOutcome === 'completed') && "bg-green-50 border-green-200",
                         visitOutcome === 'on_process' && "bg-yellow-50 border-yellow-200", 
                         visitOutcome === 'cancelled' && "bg-red-50 border-red-200"
                       )}>
                         <Label className={cn(
                           "text-sm font-medium",
-                          visitOutcome === 'converted' && "text-green-800",
+                          (visitOutcome === 'converted' || visitOutcome === 'completed') && "text-green-800",
                           visitOutcome === 'on_process' && "text-yellow-800",
                           visitOutcome === 'cancelled' && "text-red-800"
                         )}>
@@ -1261,11 +1261,15 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                         </Popover>
                         <p className={cn(
                           "text-xs",
-                          visitOutcome === 'converted' && "text-green-700",
+                          (visitOutcome === 'converted' || visitOutcome === 'completed') && "text-green-700",
                           visitOutcome === 'on_process' && "text-yellow-700",
                           visitOutcome === 'cancelled' && "text-red-700"
                         )}>
-                          {visitOutcome === 'converted' && "Post-installation support or check-in"}
+                          {(visitOutcome === 'converted' || visitOutcome === 'completed') && (
+                            siteVisit.isFollowUp 
+                              ? "Post-follow-up check-in or additional support" 
+                              : "Post-installation support or check-in"
+                          )}
                           {visitOutcome === 'on_process' && "When would you like to follow up with this customer?"}
                           {visitOutcome === 'cancelled' && "Future opportunity or change of mind follow-up"}
                         </p>

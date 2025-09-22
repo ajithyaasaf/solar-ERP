@@ -78,6 +78,12 @@ interface SiteVisit {
   scheduledFollowUpDate?: string;
   outcomeSelectedAt?: string;
   outcomeSelectedBy?: string;
+  
+  // Dynamic Status Management fields
+  customerCurrentStatus?: 'converted' | 'on_process' | 'cancelled';
+  lastActivityType?: 'initial_visit' | 'follow_up';
+  lastActivityDate?: string;
+  activeFollowUpId?: string;
 }
 
 // Unified Site Visit Types
@@ -90,6 +96,13 @@ interface CustomerVisitGroup {
   totalVisits: number;
   latestStatus: string;
   hasActiveVisit: boolean;
+}
+
+// Helper function to get effective customer status with dynamic management support
+function getEffectiveCustomerStatus(visit: SiteVisit): 'converted' | 'on_process' | 'cancelled' | undefined {
+  // Use customerCurrentStatus if available (dynamic status management)
+  // Otherwise fallback to visitOutcome (legacy/backward compatibility)
+  return visit.customerCurrentStatus || visit.visitOutcome;
 }
 
 // Group visits by customer (mobile + name combination)
@@ -324,7 +337,12 @@ export default function SiteVisitPage() {
       scheduledFollowUpDate: followUp.scheduledFollowUpDate,
       outcomeNotes: followUp.outcomeNotes,
       outcomeSelectedAt: followUp.outcomeSelectedAt,
-      outcomeSelectedBy: followUp.outcomeSelectedBy
+      outcomeSelectedBy: followUp.outcomeSelectedBy,
+      // Include dynamic status management fields
+      customerCurrentStatus: followUp.customerCurrentStatus,
+      lastActivityType: followUp.lastActivityType,
+      lastActivityDate: followUp.lastActivityDate,
+      activeFollowUpId: followUp.activeFollowUpId
     };
   };
 
@@ -351,7 +369,7 @@ export default function SiteVisitPage() {
     return visitGroups.filter(group => {
       // Check if any visit in the group (primary or follow-ups) has the selected outcome
       const allVisitsInGroup = [group.primaryVisit, ...group.followUps];
-      return allVisitsInGroup.some(visit => visit.visitOutcome === outcomeFilter);
+      return allVisitsInGroup.some(visit => getEffectiveCustomerStatus(visit) === outcomeFilter);
     });
   };
 
@@ -701,7 +719,7 @@ export default function SiteVisitPage() {
                 </div>
               ) : (() => {
                 const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
-                const onProcessVisits = combinedVisits.filter(visit => visit.visitOutcome === 'on_process');
+                const onProcessVisits = combinedVisits.filter(visit => getEffectiveCustomerStatus(visit) === 'on_process');
                 // Sort by earliest follow-up date
                 const sortedVisits = onProcessVisits.sort((a, b) => {
                   if (!a.scheduledFollowUpDate && !b.scheduledFollowUpDate) return 0;
@@ -722,7 +740,7 @@ export default function SiteVisitPage() {
                 <div className="space-y-4">
                   {(() => {
                     const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
-                    const onProcessVisits = combinedVisits.filter(visit => visit.visitOutcome === 'on_process');
+                    const onProcessVisits = combinedVisits.filter(visit => getEffectiveCustomerStatus(visit) === 'on_process');
                     const sortedVisits = onProcessVisits.sort((a, b) => {
                       if (!a.scheduledFollowUpDate && !b.scheduledFollowUpDate) return 0;
                       if (!a.scheduledFollowUpDate) return 1;
@@ -770,7 +788,7 @@ export default function SiteVisitPage() {
                 </div>
               ) : (() => {
                 const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
-                const convertedVisits = combinedVisits.filter(visit => visit.visitOutcome === 'converted');
+                const convertedVisits = combinedVisits.filter(visit => getEffectiveCustomerStatus(visit) === 'converted');
                 return convertedVisits.length === 0;
               })() ? (
                 <div className="text-center py-6 sm:py-8 px-4">
@@ -784,7 +802,7 @@ export default function SiteVisitPage() {
                 <div className="space-y-4">
                   {(() => {
                     const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
-                    const convertedVisits = combinedVisits.filter(visit => visit.visitOutcome === 'converted');
+                    const convertedVisits = combinedVisits.filter(visit => getEffectiveCustomerStatus(visit) === 'converted');
                     const groupedVisits = groupVisitsByCustomer(convertedVisits);
                     return groupedVisits;
                   })().map((group: CustomerVisitGroup, index: number) => (
@@ -826,7 +844,7 @@ export default function SiteVisitPage() {
                 </div>
               ) : (() => {
                 const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
-                const cancelledVisits = combinedVisits.filter(visit => visit.visitOutcome === 'cancelled');
+                const cancelledVisits = combinedVisits.filter(visit => getEffectiveCustomerStatus(visit) === 'cancelled');
                 return cancelledVisits.length === 0;
               })() ? (
                 <div className="text-center py-6 sm:py-8 px-4">
@@ -840,7 +858,7 @@ export default function SiteVisitPage() {
                 <div className="space-y-4">
                   {(() => {
                     const combinedVisits = combineVisitsAndFollowUps(siteVisitsData, followUpsData);
-                    const cancelledVisits = combinedVisits.filter(visit => visit.visitOutcome === 'cancelled');
+                    const cancelledVisits = combinedVisits.filter(visit => getEffectiveCustomerStatus(visit) === 'cancelled');
                     const groupedVisits = groupVisitsByCustomer(cancelledVisits);
                     return groupedVisits;
                   })().map((group: CustomerVisitGroup, index: number) => (
