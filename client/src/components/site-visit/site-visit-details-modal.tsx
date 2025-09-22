@@ -36,6 +36,22 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
+// Utility function to safely format dates
+const safeFormatDate = (date: any, formatString: string = 'PPP'): string => {
+  if (!date) return 'N/A';
+  
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid Date';
+    }
+    return format(dateObj, formatString);
+  } catch (error) {
+    console.warn('Date formatting error:', error, 'Date value:', date);
+    return 'Invalid Date';
+  }
+};
+
 interface SiteVisit {
   id: string;
   userId: string;
@@ -320,9 +336,9 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
             </div>
             <div className="text-left sm:text-right text-xs sm:text-sm text-muted-foreground bg-gray-50 p-2 rounded-lg sm:bg-transparent sm:p-0">
               <p>Visit ID: {siteVisit.id.slice(0, 8)}</p>
-              <p>Created: {format(new Date(siteVisit.createdAt || siteVisit.siteInTime), 'PPP')}</p>
+              <p>Created: {safeFormatDate(siteVisit.createdAt || siteVisit.siteInTime, 'PPP')}</p>
               {siteVisit.lastActivityDate && (
-                <p>Last Activity: {format(new Date(siteVisit.lastActivityDate), 'PPP')}</p>
+                <p>Last Activity: {safeFormatDate(siteVisit.lastActivityDate, 'PPP')}</p>
               )}
             </div>
           </div>
@@ -399,7 +415,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <Clock className="h-4 w-4 text-blue-600" />
                     <span className="font-medium text-blue-700">Last Activity:</span>
                     <span className="text-blue-600">
-                      {siteVisit.lastActivityType.replace('_', ' ')} • {format(new Date(siteVisit.lastActivityDate), 'PPP')}
+                      {siteVisit.lastActivityType.replace('_', ' ')} • {safeFormatDate(siteVisit.lastActivityDate, 'PPP')}
                     </span>
                   </div>
                 )}
@@ -462,10 +478,10 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         ? 'text-yellow-700 font-medium'
                         : 'text-blue-600'
                     }`}>
-                      {format(new Date(siteVisit.scheduledFollowUpDate), 'PPPP')}
+                      {safeFormatDate(siteVisit.scheduledFollowUpDate, 'PPPP')}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(siteVisit.scheduledFollowUpDate), 'EEEE, h:mm a')}
+                      {safeFormatDate(siteVisit.scheduledFollowUpDate, 'EEEE, h:mm a')}
                     </p>
                   </div>
                 )}
@@ -484,7 +500,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                 {siteVisit.outcomeSelectedAt && (
                   <div className="pt-2 border-t border-gray-200">
                     <p className="text-xs text-muted-foreground">
-                      Outcome selected on {format(new Date(siteVisit.outcomeSelectedAt), 'PPP p')}
+                      Outcome selected on {safeFormatDate(siteVisit.outcomeSelectedAt, 'PPP p')}
                       {siteVisit.outcomeSelectedBy && ` by ${siteVisit.outcomeSelectedBy}`}
                     </p>
                   </div>
@@ -670,7 +686,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                   <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs sm:text-sm text-muted-foreground">Site In Time</p>
-                    <p className="font-medium text-xs sm:text-sm break-words">{format(new Date(siteVisit.siteInTime), 'PPP p')}</p>
+                    <p className="font-medium text-xs sm:text-sm break-words">{safeFormatDate(siteVisit.siteInTime, 'PPP p')}</p>
                   </div>
                 </div>
 
@@ -679,7 +695,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs sm:text-sm text-muted-foreground">Site Out Time</p>
-                      <p className="font-medium text-xs sm:text-sm break-words">{format(new Date(siteVisit.siteOutTime), 'PPP p')}</p>
+                      <p className="font-medium text-xs sm:text-sm break-words">{safeFormatDate(siteVisit.siteOutTime, 'PPP p')}</p>
                     </div>
                   </div>
                 )}
@@ -1803,7 +1819,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                             {/* Timestamp Badge */}
                             {photoTimestamp && (
                               <Badge className="absolute top-1 right-1 text-xs bg-black/70 text-white">
-                                {format(new Date(photoTimestamp), 'HH:mm')}
+                                {safeFormatDate(photoTimestamp, 'HH:mm')}
                               </Badge>
                             )}
                             
@@ -1824,7 +1840,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                                 </Button>
                                 {photoTimestamp && (
                                   <Badge variant="secondary" className="text-xs bg-white/90 text-black">
-                                    {format(new Date(photoTimestamp), 'MMM d')}
+                                    {safeFormatDate(photoTimestamp, 'MMM d')}
                                   </Badge>
                                 )}
                                 {photoLocation && (
@@ -1866,14 +1882,14 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                             </span>
                             {siteVisit.sitePhotos[0] && typeof siteVisit.sitePhotos[0] === 'object' && siteVisit.sitePhotos[0].timestamp && (
                               <span className="text-blue-600 text-xs">
-                                First: {format(new Date(siteVisit.sitePhotos[0].timestamp), 'HH:mm')}
+                                First: {safeFormatDate(siteVisit.sitePhotos[0].timestamp, 'HH:mm')}
                               </span>
                             )}
                             {siteVisit.sitePhotos.length > 1 && siteVisit.sitePhotos[siteVisit.sitePhotos.length - 1] && 
                              typeof siteVisit.sitePhotos[siteVisit.sitePhotos.length - 1] === 'object' && 
                              siteVisit.sitePhotos[siteVisit.sitePhotos.length - 1].timestamp && (
                               <span className="text-blue-600 text-xs">
-                                Last: {format(new Date(siteVisit.sitePhotos[siteVisit.sitePhotos.length - 1].timestamp), 'HH:mm')}
+                                Last: {safeFormatDate(siteVisit.sitePhotos[siteVisit.sitePhotos.length - 1].timestamp, 'HH:mm')}
                               </span>
                             )}
                           </div>
