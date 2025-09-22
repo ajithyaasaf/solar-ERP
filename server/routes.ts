@@ -6204,6 +6204,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         siteOutPhotos: req.body.siteOutPhotos || [],
         status: 'completed' as const,
         notes: req.body.notes || followUp.notes || '',
+        // Include outcome data for follow-up workflow processing
+        visitOutcome: req.body.visitOutcome,
+        scheduledFollowUpDate: req.body.scheduledFollowUpDate ? new Date(req.body.scheduledFollowUpDate) : null,
+        outcomeNotes: req.body.outcomeNotes || null,
+        outcomeSelectedAt: req.body.outcomeSelectedAt ? new Date(req.body.outcomeSelectedAt) : new Date(),
+        outcomeSelectedBy: req.body.outcomeSelectedBy || user.displayName || user.uid,
         updatedAt: new Date()
       };
 
