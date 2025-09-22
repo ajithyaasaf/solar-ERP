@@ -51,19 +51,33 @@ export class FollowUpService {
       const docRef = await this.collection.add(firestoreData);
       console.log("FOLLOW_UP_SERVICE: Document created with ID:", docRef.id);
       
-      // Update the original visit to increment follow-up count
+      // Update the original visit to increment follow-up count and handle workflow
       try {
         const originalVisitRef = this.siteVisitsCollection.doc(validatedData.originalVisitId);
         const originalVisitDoc = await originalVisitRef.get();
         
         if (originalVisitDoc.exists) {
-          const currentCount = originalVisitDoc.data()?.followUpCount || 0;
-          await originalVisitRef.update({
+          const originalData = originalVisitDoc.data();
+          const currentCount = originalData?.followUpCount || 0;
+          const currentOutcome = originalData?.visitOutcome;
+          
+          // Workflow logic: If customer is "converted" (completed), temporarily move to "on_process" during follow-up
+          let updatePayload: any = {
             followUpCount: currentCount + 1,
             hasFollowUps: true,
             updatedAt: Timestamp.fromDate(new Date())
-          });
-          console.log("FOLLOW_UP_SERVICE: Updated original visit follow-up count:", currentCount + 1);
+          };
+
+          // According to specification: if customer is converted, move to on_process temporarily during follow-up
+          if (currentOutcome === 'converted') {
+            updatePayload.visitOutcome = 'on_process';
+            updatePayload.temporaryStatusChange = true; // Flag to track this is a temporary change
+            updatePayload.originalOutcome = 'converted'; // Store the original outcome for restoration
+            console.log("FOLLOW_UP_SERVICE: Customer was converted, temporarily moving to on_process during follow-up");
+          }
+
+          await originalVisitRef.update(updatePayload);
+          console.log("FOLLOW_UP_SERVICE: Updated original visit - follow-up count:", currentCount + 1, "outcome:", updatePayload.visitOutcome || currentOutcome);
         }
       } catch (error) {
         console.error("FOLLOW_UP_SERVICE: Error updating original visit:", error);
@@ -89,6 +103,13 @@ export class FollowUpService {
   async updateFollowUp(id: string, updates: Partial<InsertFollowUpSiteVisit>): Promise<FollowUpSiteVisit> {
     try {
       const docRef = this.collection.doc(id);
+      
+      // Get current follow-up data to access original visit ID
+      const followUpDoc = await docRef.get();
+      if (!followUpDoc.exists) {
+        throw new Error('Follow-up visit not found');
+      }
+      const followUpData = followUpDoc.data();
       
       // Convert dates to Firestore timestamps in updates
       const firestoreUpdates: any = {
@@ -138,6 +159,59 @@ export class FollowUpService {
       console.log("Original updates:", JSON.stringify(updates, null, 2));
       console.log("Firestore updates:", JSON.stringify(firestoreUpdates, null, 2));
       console.log("======================================");
+
+      // Handle workflow logic for follow-up checkout (if visitOutcome is provided)
+      if (updates.visitOutcome && followUpData?.originalVisitId) {
+        try {
+          console.log("FOLLOW_UP_WORKFLOW: Processing follow-up checkout outcome:", updates.visitOutcome);
+          const originalVisitRef = this.siteVisitsCollection.doc(followUpData.originalVisitId);
+          const originalVisitDoc = await originalVisitRef.get();
+          
+          if (originalVisitDoc.exists) {
+            const originalData = originalVisitDoc.data();
+            let newOriginalOutcome: string;
+            
+            // Map follow-up outcomes to original visit outcomes according to specification
+            switch (updates.visitOutcome) {
+              case 'completed':
+                // Follow-up "completed" means customer is back to "converted" (completed) status
+                newOriginalOutcome = 'converted';
+                break;
+              case 'on_process':
+                // Follow-up "on_process" means customer stays "on_process"
+                newOriginalOutcome = 'on_process';
+                break;
+              case 'cancelled':
+                // Follow-up "cancelled" means customer moves to "cancelled" 
+                newOriginalOutcome = 'cancelled';
+                break;
+              default:
+                // Keep original outcome if no valid follow-up outcome
+                newOriginalOutcome = originalData?.visitOutcome || 'on_process';
+            }
+
+            // Update original visit with new outcome
+            const originalUpdatePayload: any = {
+              visitOutcome: newOriginalOutcome,
+              updatedAt: Timestamp.fromDate(new Date()),
+              lastFollowUpOutcome: updates.visitOutcome,
+              lastFollowUpDate: Timestamp.fromDate(new Date())
+            };
+
+            // Remove temporary status change flags if they exist
+            if (originalData?.temporaryStatusChange) {
+              originalUpdatePayload.temporaryStatusChange = null;
+              originalUpdatePayload.originalOutcome = null;
+            }
+
+            await originalVisitRef.update(originalUpdatePayload);
+            console.log("FOLLOW_UP_WORKFLOW: Updated original visit outcome from", originalData?.visitOutcome, "to", newOriginalOutcome);
+          }
+        } catch (error) {
+          console.error("FOLLOW_UP_WORKFLOW: Error updating original visit outcome:", error);
+          // Don't fail the follow-up update if original visit update fails
+        }
+      }
 
       await docRef.update(firestoreUpdates);
       
@@ -290,6 +364,12 @@ export class FollowUpService {
       description: data.description,
       sitePhotos: data.sitePhotos || [],
       status: data.status || 'in_progress',
+      // Visit outcome fields for follow-up workflow
+      visitOutcome: data.visitOutcome,
+      outcomeNotes: data.outcomeNotes,
+      scheduledFollowUpDate: data.scheduledFollowUpDate?.toDate() || undefined,
+      outcomeSelectedAt: data.outcomeSelectedAt?.toDate() || undefined,
+      outcomeSelectedBy: data.outcomeSelectedBy,
       notes: data.notes,
       customer: data.customer,
       createdAt: data.createdAt?.toDate() || new Date(),

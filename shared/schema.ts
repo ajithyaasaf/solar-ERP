@@ -161,7 +161,7 @@ export const workingStatus = [
 
 // Visit outcome categories for business classification
 export const visitOutcomes = [
-  "converted", "on_process", "cancelled"
+  "converted", "on_process", "cancelled", "completed"
 ] as const;
 
 // Solar product specifications
@@ -474,6 +474,14 @@ export const insertFollowUpSiteVisitSchema = z.object({
   
   // Status and metadata
   status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
+  
+  // Visit outcome for follow-up business classification (selected at checkout)
+  visitOutcome: z.enum(visitOutcomes).optional(),
+  outcomeNotes: z.string().optional(),
+  scheduledFollowUpDate: z.date().optional(),
+  outcomeSelectedAt: z.date().optional(),
+  outcomeSelectedBy: z.string().optional(),
+  
   notes: z.string().optional(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
