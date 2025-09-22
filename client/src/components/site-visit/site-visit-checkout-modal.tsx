@@ -688,7 +688,32 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
       return;
     }
 
-    checkoutMutation.mutate({});
+    if (!visitOutcome) {
+      toast({
+        title: "Visit Outcome Required",
+        description: "Please select a visit outcome to complete checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Include all outcome data in the mutation payload
+    const checkoutPayload = {
+      visitOutcome,
+      scheduledFollowUpDate: scheduledFollowUpDate || null,
+      outcomeNotes: outcomeNotes || null,
+      outcomeSelectedAt: new Date().toISOString(),
+      outcomeSelectedBy: siteVisit.userName || 'Unknown'
+    };
+
+    console.log("=== CHECKOUT PAYLOAD DEBUG ===");
+    console.log("Visit outcome:", visitOutcome);
+    console.log("Scheduled follow-up date:", scheduledFollowUpDate);
+    console.log("Outcome notes:", outcomeNotes);
+    console.log("Full payload:", JSON.stringify(checkoutPayload, null, 2));
+    console.log("===============================");
+
+    checkoutMutation.mutate(checkoutPayload);
   };
 
   const canProceedToStep2 = locationCaptured;
