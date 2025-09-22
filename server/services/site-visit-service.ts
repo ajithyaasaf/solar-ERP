@@ -319,7 +319,7 @@ export class SiteVisitService {
     department?: 'technical' | 'marketing' | 'admin';
     status?: 'in_progress' | 'completed' | 'cancelled';
     visitPurpose?: string;
-    visitOutcome?: 'converted' | 'on_process' | 'cancelled';
+    customerCurrentStatus?: 'converted' | 'on_process' | 'cancelled';
     startDate?: Date;
     endDate?: Date;
     limit?: number;
@@ -387,10 +387,14 @@ export class SiteVisitService {
         results = results.filter(sv => sv.visitPurpose === filters.visitPurpose);
       }
 
-      if (filters.visitOutcome) {
+      if (filters.customerCurrentStatus) {
         const beforeCount = results.length;
-        results = results.filter(sv => sv.visitOutcome === filters.visitOutcome);
-        console.log(`SITE_VISIT_SERVICE: Applied visitOutcome filter '${filters.visitOutcome}' in memory, ${beforeCount} -> ${results.length} results`);
+        // Use customerCurrentStatus if available, fallback to visitOutcome for backward compatibility
+        results = results.filter(sv => {
+          const effectiveStatus = sv.customerCurrentStatus || sv.visitOutcome;
+          return effectiveStatus === filters.customerCurrentStatus;
+        });
+        console.log(`SITE_VISIT_SERVICE: Applied customerCurrentStatus filter '${filters.customerCurrentStatus}' in memory, ${beforeCount} -> ${results.length} results`);
       }
 
       // Sort results by date descending (newest first)

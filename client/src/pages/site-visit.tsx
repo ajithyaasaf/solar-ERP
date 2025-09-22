@@ -238,9 +238,9 @@ export default function SiteVisitPage() {
       } else if (scopeFilter === 'team' && user?.department) {
         params.append('department', user.department);
       }
-      // Add outcome filter to the API request
+      // Add outcome filter to the API request - use customerCurrentStatus instead of visitOutcome
       if (activeOutcome) {
-        params.append('visitOutcome', activeOutcome);
+        params.append('customerCurrentStatus', activeOutcome);
       }
       const response = await apiRequest(`/api/site-visits?${params.toString()}`, 'GET');
       return await response.json();
@@ -259,9 +259,9 @@ export default function SiteVisitPage() {
       } else if (scopeFilter === 'team' && user?.department) {
         params.append('department', user.department);
       }
-      // Add outcome filter to the API request for follow-ups too
+      // Add outcome filter to the API request for follow-ups too - use customerCurrentStatus instead of visitOutcome
       if (activeOutcome) {
-        params.append('visitOutcome', activeOutcome);
+        params.append('customerCurrentStatus', activeOutcome);
       }
       const response = await apiRequest(`/api/follow-ups?${params.toString()}`, 'GET');
       return await response.json();
