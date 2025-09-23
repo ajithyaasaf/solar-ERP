@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
   
   // Duplicate customer tracking
   const [duplicateCustomer, setDuplicateCustomer] = useState<any>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   const [formData, setFormData] = useState<{
     visitPurpose: string;
@@ -782,6 +784,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                            (normalizedDepartment === 'admin' && formData.adminData);
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-2xl h-[80vh] max-h-[80vh] overflow-y-auto p-2 sm:p-6 flex flex-col" ref={modalContentRef}>
         <DialogHeader className="text-center sm:text-left flex-shrink-0">
@@ -1025,9 +1028,16 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                   <span className="sm:hidden">Back</span>
                 </Button>
                 <Button
-                  onClick={() => navigateToStep(3)}
+                  onClick={() => {
+                    if (duplicateCustomer) {
+                      setShowConfirmDialog(true);
+                    } else {
+                      navigateToStep(3);
+                    }
+                  }}
                   disabled={!canProceedToStep3}
                   className="w-full sm:w-auto order-1 sm:order-2 h-10 sm:h-9 text-sm sm:text-base"
+                  data-testid="button-continue-site-visit"
                 >
                   <span className="hidden sm:inline">Continue to Site Visit</span>
                   <span className="sm:hidden">Continue</span>
@@ -1429,5 +1439,46 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
         <canvas ref={canvasRef} style={{ display: 'none' }} />
       </DialogContent>
     </Dialog>
+
+    {/* Duplicate Customer Confirmation Dialog */}
+    <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <AlertDialogContent data-testid="duplicate-customer-dialog">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            Update Existing Customer?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            The mobile number <strong>{formData.customer.mobile}</strong> already belongs to customer <strong>{duplicateCustomer?.name}</strong>.
+            <br /><br />
+            Creating this site visit will update their information with the new details:
+            <ul className="mt-2 space-y-1">
+              <li>• <strong>Name:</strong> {duplicateCustomer?.name} → <strong>{formData.customer.name}</strong></li>
+              {formData.customer.address !== duplicateCustomer?.address && (
+                <li>• <strong>Address:</strong> {duplicateCustomer?.address || 'None'} → <strong>{formData.customer.address}</strong></li>
+              )}
+              {formData.customer.propertyType !== duplicateCustomer?.propertyType && (
+                <li>• <strong>Property Type:</strong> {duplicateCustomer?.propertyType || 'None'} → <strong>{formData.customer.propertyType}</strong></li>
+              )}
+            </ul>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="button-cancel-update">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={() => {
+              setShowConfirmDialog(false);
+              navigateToStep(3);
+            }}
+            data-testid="button-confirm-update"
+          >
+            Update and Continue
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
