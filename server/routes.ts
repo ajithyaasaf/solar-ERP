@@ -2344,13 +2344,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/customers/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
-      if (
-        !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
-      ) {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const hasPermission = req.authenticatedUser.permissions.includes("customers.view") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
       const customer = await storage.getCustomer(req.params.id);
@@ -2366,13 +2367,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/customers", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
-      if (
-        !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
-      ) {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const hasPermission = req.authenticatedUser.permissions.includes("customers.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
       const customerData = insertCustomerSchema.parse(req.body);
@@ -2389,13 +2391,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/customers/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
-      if (
-        !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
-      ) {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const hasPermission = req.authenticatedUser.permissions.includes("customers.edit") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
       const customerData = insertCustomerSchema.partial().parse(req.body);
