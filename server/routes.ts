@@ -135,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/activity-logs", verifyAuth, async (req, res) => {
     try {
       // Check if user is authenticated
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -379,7 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       // Allow users to view their own profile or check enterprise permissions for viewing others
       const canViewOwnProfile = user && user.id === req.params.id;
       const hasViewPermission = user && await storage.checkEffectiveUserPermission(user.uid, "users.view");
@@ -400,7 +400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       // Check enterprise permission for user creation
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "users.create"))) {
         return res.status(403).json({ message: "Access denied" });
@@ -420,7 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/users/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       // Check enterprise permissions for user editing
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "users.edit"))) {
         return res.status(403).json({ message: "Access denied" });
@@ -585,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enterprise RBAC testing endpoint
   app.get("/api/rbac/test", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master admin only" });
       }
@@ -628,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/department/:department", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -643,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/designation/:designation", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -658,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/:managerId/subordinates", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -679,7 +679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Designation Management Routes
   app.get("/api/designations", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -694,7 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/designations", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -709,7 +709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/designations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -724,7 +724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/designations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -740,7 +740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Permission Group Management Routes
   app.get("/api/permission-groups", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -755,7 +755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/permission-groups", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -770,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/permission-groups/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -785,7 +785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/permission-groups/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -801,7 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Migration endpoint for organizational structure
   app.post("/api/admin/migrate-organization", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - master admin only" });
       }
@@ -829,7 +829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Departments
   app.get("/api/departments", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -881,7 +881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/office-locations", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -899,7 +899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/office-locations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -923,7 +923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/office-locations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2427,7 +2427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/customers/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role || "")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2523,7 +2523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "technical_team"].includes(
@@ -2545,7 +2545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/products", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "technical_team"].includes(
@@ -2568,7 +2568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/products/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "technical_team"].includes(
@@ -2597,7 +2597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/products/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role || "")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2736,7 +2736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/quotations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "sales_and_marketing"].includes(
@@ -2758,7 +2758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/quotations", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "sales_and_marketing"].includes(
@@ -2781,7 +2781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/quotations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "sales_and_marketing"].includes(
@@ -2810,7 +2810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/quotations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role || "")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2949,7 +2949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/invoices/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "accounts"].includes(
@@ -2971,7 +2971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/invoices", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "accounts"].includes(
@@ -2994,7 +2994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/invoices/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
         !["master_admin", "admin", "accounts"].includes(
@@ -3023,7 +3023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/invoices/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role || "")) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3495,7 +3495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/leaves/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const leave = await storage.getLeave(req.params.id);
       if (!leave) {
         return res.status(404).json({ message: "Leave record not found" });
@@ -3518,7 +3518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/leaves", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3539,7 +3539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/leaves/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const leave = await storage.getLeave(req.params.id);
       if (!leave) {
         return res.status(404).json({ message: "Leave record not found" });
@@ -3573,7 +3573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Role Management Routes
   app.get("/api/roles", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3587,7 +3587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/roles/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3604,7 +3604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/roles", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -3634,7 +3634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/roles/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -3664,7 +3664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/roles/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -3693,7 +3693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User Role Assignment Routes
   app.get("/api/users/:userId/roles", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (!["master_admin", "admin"].includes(user.role) && user.id !== req.params.userId)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3707,7 +3707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users/:userId/roles", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3741,7 +3741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/users/:userId/roles/:roleId", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3771,7 +3771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Permission Override Routes
   app.get("/api/users/:userId/permission-overrides", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (!["master_admin", "admin"].includes(user.role) && user.id !== req.params.userId)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3785,7 +3785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users/:userId/permission-overrides", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -3823,7 +3823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/permission-overrides/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -3852,7 +3852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Permission Checking Routes
   app.get("/api/users/:userId/effective-permissions", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (!["master_admin", "admin"].includes(user.role) && user.id !== req.params.userId)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3867,7 +3867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users/:userId/check-permission", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (!["master_admin", "admin"].includes(user.role) && user.id !== req.params.userId)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3886,7 +3886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Audit Log Routes
   app.get("/api/audit-logs", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !["master_admin", "admin"].includes(user.role)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3985,7 +3985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get payroll records with comprehensive filtering
   app.get("/api/payroll", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4009,7 +4009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Process payroll for specified period
   app.post("/api/payroll/process", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4058,7 +4058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get payroll statistics
   app.get("/api/payroll/stats", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4091,7 +4091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Salary Structure Management
   app.get("/api/salary-structures", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4106,7 +4106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/salary-structures", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4140,7 +4140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payroll Settings Management
   app.get("/api/payroll-settings", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4171,7 +4171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Live attendance tracking
   app.get("/api/attendance/live", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4198,7 +4198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Attendance policies management
   app.get("/api/attendance/policies", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4457,7 +4457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk attendance actions
   app.post("/api/attendance/bulk-action", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4655,7 +4655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/departments/:department/timing", verifyAuth, async (req, res) => {
     try {
       const { department } = req.params;
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
@@ -4715,7 +4715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/departments/:department/timing", verifyAuth, async (req, res) => {
     try {
       const { department } = req.params;
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
@@ -4761,7 +4761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk update department timings
   app.post("/api/departments/timings/bulk", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
@@ -4872,7 +4872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payroll Field Configuration Routes
   app.get("/api/payroll/field-configs", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4887,7 +4887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/payroll/field-configs", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4909,7 +4909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Salary Structure Routes
   app.get("/api/enhanced-salary-structures", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4924,7 +4924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/enhanced-salary-structures", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4945,7 +4945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Payroll Routes
   app.get("/api/enhanced-payrolls", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -4969,7 +4969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update enhanced payroll record
   app.put("/api/enhanced-payrolls/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied - Admin or Master Admin only" });
       }
@@ -5006,7 +5006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/enhanced-payrolls/bulk-process", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -5223,7 +5223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Payroll Settings Routes
   app.get("/api/enhanced-payroll-settings", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -5238,7 +5238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/enhanced-payroll-settings", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -5366,10 +5366,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/site-visits", verifyAuth, async (req, res) => {
     try {
       console.log("=== SITE VISIT CREATION STARTED ===");
-      console.log("User ID:", req.user?.uid);
+      console.log("User ID:", req.authenticatedUser?.uid);
       console.log("Request body received:", JSON.stringify(req.body, null, 2));
       
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       console.log("User retrieved:", user ? `${user.displayName} (${user.department})` : 'null');
       
       const hasPermission = user ? await checkSiteVisitPermission(user, 'create') : false;
@@ -5492,7 +5492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update site visit (Site Out, progress updates)
   app.patch("/api/site-visits/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await checkSiteVisitPermission(user, 'edit'))) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5555,7 +5555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get site visit by ID
   app.get("/api/site-visits/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await checkSiteVisitPermission(user, 'view_own'))) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5587,7 +5587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get site visits with filters
   app.get("/api/site-visits", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
       
       if (!user || !hasPermission) {
@@ -5645,7 +5645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get active site visits (in progress)
   app.get("/api/site-visits/active", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await checkSiteVisitPermission(user, 'view_own'))) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5674,7 +5674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add photos to site visit
   app.post("/api/site-visits/:id/photos", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await checkSiteVisitPermission(user, 'edit'))) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5717,7 +5717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get site visit statistics
   app.get("/api/site-visits/stats", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await checkSiteVisitPermission(user, 'view_own'))) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5746,7 +5746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete site visit
   app.delete("/api/site-visits/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await checkSiteVisitPermission(user, 'delete'))) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5779,7 +5779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quick update site visit outcome (convert, cancel, reschedule)
   app.patch("/api/site-visits/:id/quick-update", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await checkSiteVisitPermission(user, 'edit'))) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5859,7 +5859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Site Visit Monitoring - Master Admin and HR only
   app.get("/api/site-visits/monitoring", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -5887,7 +5887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create Follow-up Site Visit
   app.post("/api/site-visits/follow-up", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'create') : false;
       
       if (!user || !hasPermission) {
@@ -5972,7 +5972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all follow-ups for a user (to include in main site visit listing)
   app.get("/api/follow-ups", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
       
       if (!user || !hasPermission) {
@@ -6015,7 +6015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get follow-up visit by ID
   app.get("/api/follow-ups/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
       
       if (!user || !hasPermission) {
@@ -6050,7 +6050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get follow-ups for original visit
   app.get("/api/follow-ups/original/:originalVisitId", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
       
       if (!user || !hasPermission) {
@@ -6087,7 +6087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update follow-up visit (general update)
   app.patch("/api/follow-ups/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'edit') : false;
       
       if (!user || !hasPermission) {
@@ -6166,7 +6166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Request body keys:", Object.keys(req.body));
       console.log("==========================================");
 
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'edit') : false;
       
       if (!user || !hasPermission) {
@@ -6343,7 +6343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get customer site visit history for follow-up modal
   app.get("/api/site-visits/customer-history", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
       
       if (!user || !hasPermission) {
@@ -6396,7 +6396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Site Visit Data Export - Master Admin and HR only
   app.post("/api/site-visits/export", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
