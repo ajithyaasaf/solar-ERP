@@ -303,7 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [toast, user]);
+  }, [toast]);
 
   const createUserProfile = async (userData: Partial<AuthUser>) => {
     if (!user) return;
