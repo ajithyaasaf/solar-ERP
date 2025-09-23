@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, User, X } from 'lucide-react';
+import { Search, User, X, AlertTriangle } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ interface CustomerAutocompleteProps {
     address: string;
     email?: string;
   }) => void;
+  onDuplicateDetected?: (existingCustomer: Customer | null) => void;
   placeholder?: string;
   className?: string;
 }
@@ -35,6 +36,7 @@ interface CustomerAutocompleteProps {
 const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
   value,
   onChange,
+  onDuplicateDetected,
   placeholder = "Start typing customer name...",
   className
 }) => {
@@ -43,7 +45,10 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [duplicateCustomer, setDuplicateCustomer] = useState<Customer | null>(null);
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
+  const duplicateCheckRef = useRef<NodeJS.Timeout>();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Search customers API call
@@ -88,6 +93,57 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     }
   };
 
+  // Check for duplicate mobile number
+  const checkDuplicateMobile = async (mobile: string) => {
+    if (!mobile || mobile.length < 10) {
+      setDuplicateCustomer(null);
+      onDuplicateDetected?.(null);
+      return;
+    }
+
+    setIsCheckingDuplicate(true);
+    try {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        console.error('No authenticated user found');
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/customers/check-mobile/${encodeURIComponent(mobile)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.exists) {
+          console.log('Duplicate customer found:', data.customer.name);
+          setDuplicateCustomer(data.customer);
+          onDuplicateDetected?.(data.customer);
+        } else {
+          console.log('No duplicate customer found');
+          setDuplicateCustomer(null);
+          onDuplicateDetected?.(null);
+        }
+      } else {
+        console.error('Duplicate check failed:', response.status, response.statusText);
+        setDuplicateCustomer(null);
+        onDuplicateDetected?.(null);
+      }
+    } catch (error) {
+      console.error('Error checking duplicate mobile:', error);
+      setDuplicateCustomer(null);
+      onDuplicateDetected?.(null);
+    } finally {
+      setIsCheckingDuplicate(false);
+    }
+  };
+
   // Debounced search
   useEffect(() => {
     if (debounceRef.current) {
@@ -104,6 +160,28 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       }
     };
   }, [query]);
+
+  // Debounced mobile duplicate check
+  useEffect(() => {
+    if (duplicateCheckRef.current) {
+      clearTimeout(duplicateCheckRef.current);
+    }
+
+    if (value.mobile && value.mobile.length >= 10) {
+      duplicateCheckRef.current = setTimeout(() => {
+        checkDuplicateMobile(value.mobile!);
+      }, 500);
+    } else {
+      setDuplicateCustomer(null);
+      onDuplicateDetected?.(null);
+    }
+
+    return () => {
+      if (duplicateCheckRef.current) {
+        clearTimeout(duplicateCheckRef.current);
+      }
+    };
+  }, [value.mobile]);
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -240,6 +318,32 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
           <User className="h-4 w-4 text-green-600" />
           <span className="text-sm text-green-800">
             Customer details auto-filled from database
+          </span>
+        </div>
+      )}
+
+      {/* Duplicate customer warning */}
+      {duplicateCustomer && !selectedCustomer && (
+        <div className="mt-2 flex items-center gap-2 p-3 bg-yellow-50 rounded-md border border-yellow-200" data-testid="duplicate-customer-warning">
+          <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-yellow-800">
+              Mobile number already exists
+            </p>
+            <p className="text-xs text-yellow-700 mt-1">
+              This mobile number belongs to <strong>{duplicateCustomer.name}</strong>. 
+              Creating a customer will update their information instead of creating a new record.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading indicator for duplicate check */}
+      {isCheckingDuplicate && (
+        <div className="mt-2 flex items-center gap-2 p-2 bg-blue-50 rounded-md border border-blue-200">
+          <div className="h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm text-blue-800">
+            Checking for existing customer...
           </span>
         </div>
       )}
