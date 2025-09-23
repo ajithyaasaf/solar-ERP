@@ -676,6 +676,16 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
         description: "Your site visit has been started successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/site-visits'] });
+      // Also invalidate customer queries since site visit creation can update customer data
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0];
+          if (typeof queryKey === 'string') {
+            return queryKey.includes('/api/customers');
+          }
+          return false;
+        }
+      });
       onClose();
     },
     onError: (error: any) => {
