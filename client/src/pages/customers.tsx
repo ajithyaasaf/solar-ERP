@@ -69,7 +69,7 @@ interface Customer {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  mobile: string;
   location?: string;
   address?: string;
   createdAt: string;
@@ -326,7 +326,7 @@ export default function Customers() {
                     <TableRow key={customer.id}>
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell>{customer.email || "-"}</TableCell>
-                      <TableCell>{customer.phone || "-"}</TableCell>
+                      <TableCell>{customer.mobile || "-"}</TableCell>
                       <TableCell>{customer.location || customer.address || "-"}</TableCell>
                       <TableCell>{formatDate(customer.createdAt)}</TableCell>
                       <TableCell className="text-right">

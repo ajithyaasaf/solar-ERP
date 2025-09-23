@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 interface Customer {
   id: string;
   name: string;
-  phone: string;
+  mobile: string;
   email?: string;
   address: string;
   displayText: string;
@@ -130,7 +130,7 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     // Auto-fill all customer details
     onChange({
       name: customer.name,
-      mobile: customer.phone || '',
+      mobile: customer.mobile || '',
       address: customer.address || '',
       email: customer.email || ''
     });

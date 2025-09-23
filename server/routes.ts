@@ -2198,19 +2198,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           await storage.createCustomer({
             name: "Ajith Kumar",
-            phone: "9944325858",
+            mobile: "9944325858",
             email: "ajith@example.com",
             address: "123 Main Street, Chennai"
           });
           await storage.createCustomer({
             name: "Priya Sharma", 
-            phone: "9876543210",
+            mobile: "9876543210",
             email: "priya@example.com",
             address: "456 Park Road, Bangalore"
           });
           await storage.createCustomer({
             name: "Rajesh Patel",
-            phone: "8765432109", 
+            mobile: "8765432109", 
             email: "rajesh@example.com",
             address: "789 Garden Lane, Mumbai"
           });
@@ -2229,7 +2229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const searchLower = query.toLowerCase();
       const filteredCustomers = allCustomers.filter((customer: any) => 
         customer.name?.toLowerCase().includes(searchLower) ||
-        customer.phone?.toLowerCase().includes(searchLower) ||
+        customer.mobile?.toLowerCase().includes(searchLower) ||
         customer.email?.toLowerCase().includes(searchLower)
       ).slice(0, limit);
       
@@ -2239,10 +2239,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = filteredCustomers.map((customer: any) => ({
         id: customer.id,
         name: customer.name,
-        phone: customer.phone,
+        mobile: customer.mobile,
         email: customer.email,
         address: customer.address,
-        displayText: `${customer.name}${customer.phone ? ` (${customer.phone})` : ''}`
+        displayText: `${customer.name}${customer.mobile ? ` (${customer.mobile})` : ''}`
       }));
       
       res.json(results);
@@ -2294,7 +2294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filteredCustomers = customers.filter((customer: any) => 
           customer.name?.toLowerCase().includes(searchLower) ||
           customer.email?.toLowerCase().includes(searchLower) ||
-          customer.phone?.toLowerCase().includes(searchLower) ||
+          customer.mobile?.toLowerCase().includes(searchLower) ||
           customer.address?.toLowerCase().includes(searchLower)
         );
       }

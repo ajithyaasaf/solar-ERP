@@ -567,7 +567,7 @@ export class SiteVisitService {
         'Employee Name': visit.userId,
         'Department': visit.department,
         'Customer Name': (visit as any).customerDetails?.name || visit.customerName || 'N/A',
-        'Customer Phone': (visit as any).customerDetails?.phone || visit.customerPhone || 'N/A',
+        'Customer Phone': (visit as any).customerDetails?.mobile || visit.customerPhone || 'N/A',
         'Customer Email': (visit as any).customerDetails?.email || visit.customerEmail || 'N/A',
         'Visit Purpose': visit.visitPurpose,
         'Status': visit.status,
