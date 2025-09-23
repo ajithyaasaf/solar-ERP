@@ -67,7 +67,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
         })
       };
       
-      return apiRequest(method, endpoint, unifiedData);
+      return apiRequest(endpoint, method, unifiedData);
     },
     onSuccess: () => {
       // Invalidate all customer-related queries to refresh the UI
