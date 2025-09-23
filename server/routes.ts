@@ -5395,18 +5395,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use unified customer creation with automatic deduplication
         try {
-          const customer = await storage.createCustomer({
+          // Build customer data object, excluding empty/undefined values
+          const customerCreateData: any = {
             name: customerData.name,
             mobile: customerData.mobile,
-            email: customerData.email || undefined,
-            address: customerData.address || undefined,
-            ebServiceNumber: customerData.ebServiceNumber || undefined,
-            propertyType: customerData.propertyType || undefined,
-            location: customerData.location || undefined,
             // CRITICAL: Mark as created from site visit with basic profile
             createdFrom: "site_visit",
             profileCompleteness: "basic"
-          });
+          };
+          
+          // Only add optional fields if they have actual values
+          if (customerData.email && customerData.email.trim() !== "") {
+            customerCreateData.email = customerData.email;
+          }
+          if (customerData.address && customerData.address.trim() !== "") {
+            customerCreateData.address = customerData.address;
+          }
+          if (customerData.ebServiceNumber && customerData.ebServiceNumber.trim() !== "") {
+            customerCreateData.ebServiceNumber = customerData.ebServiceNumber;
+          }
+          if (customerData.propertyType && customerData.propertyType.trim() !== "") {
+            customerCreateData.propertyType = customerData.propertyType;
+          }
+          if (customerData.location && customerData.location.trim() !== "") {
+            customerCreateData.location = customerData.location;
+          }
+          
+          console.log("Clean customer data for Firestore:", JSON.stringify(customerCreateData, null, 2));
+          const customer = await storage.createCustomer(customerCreateData);
           customerId = customer.id;
           console.log(`✅ Customer creation SUCCESS: ${customer.mobile} -> ID: ${customerId} (${customer.profileCompleteness} profile, created from ${customer.createdFrom})`);
           
