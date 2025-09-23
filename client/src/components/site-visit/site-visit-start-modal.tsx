@@ -92,6 +92,9 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
+  // Duplicate customer tracking
+  const [duplicateCustomer, setDuplicateCustomer] = useState<any>(null);
+  
   const [formData, setFormData] = useState<{
     visitPurpose: string;
     customer: {
@@ -132,6 +135,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
       setIsCameraActive(false);
       setIsVideoReady(false);
       setCurrentCamera('back');
+      setDuplicateCustomer(null);
       
       setFormData({
         visitPurpose: '',
@@ -910,6 +914,9 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                         ...prev,
                         customer: { ...prev.customer, ...customerData }
                       }))}
+                      onDuplicateDetected={(existingCustomer) => {
+                        setDuplicateCustomer(existingCustomer);
+                      }}
                       placeholder="Start typing customer name or phone number..."
                     />
                   </div>
