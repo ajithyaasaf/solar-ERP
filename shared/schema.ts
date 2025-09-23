@@ -1261,4 +1261,73 @@ export const getEffectivePermissions = (department: Department | null, designati
   return Array.from(combinedPermissions);
 };
 
+// ====== UNIFIED CUSTOMER MANAGEMENT SCHEMAS ======
+
+// Customer profile completeness tracking
+export const customerProfileCompleteness = [
+  "basic", "full"
+] as const;
+
+// Customer creation source tracking  
+export const customerCreationSources = [
+  "site_visit", "customers_page"
+] as const;
+
+// Unified Customer Schema - Single source of truth for customer data
+// Uses mobile as unique identifier with proper validation and tracking fields
+export const insertCustomerSchema = z.object({
+  // Core required fields (minimum for any customer record)
+  name: z.string().min(2, "Customer name must be at least 2 characters"),
+  mobile: z.string().min(10, "Valid mobile number is required").max(15, "Mobile number cannot exceed 15 digits"),
+  
+  // Optional contact fields
+  email: z.string().email("Please enter a valid email address").optional(),
+  address: z.string().min(3, "Address must be at least 3 characters").optional(),
+  
+  // Site visit specific fields (optional for basic customer records)
+  ebServiceNumber: z.string().optional(),
+  propertyType: z.enum(propertyTypes).optional(),
+  location: z.string().optional(),
+  
+  // Customer management specific fields
+  scope: z.string().optional(),
+  
+  // Data consistency tracking fields
+  profileCompleteness: z.enum(customerProfileCompleteness).default("basic"),
+  createdFrom: z.enum(customerCreationSources).default("customers_page")
+});
+
+// Customer interface derived from schema
+export interface UnifiedCustomer {
+  id: string;
+  // Core required fields
+  name: string;
+  mobile: string;
+  
+  // Optional contact fields
+  email?: string;
+  address?: string;
+  
+  // Site visit specific fields
+  ebServiceNumber?: string;
+  propertyType?: "residential" | "commercial" | "agri" | "other";
+  location?: string;
+  
+  // Customer management specific fields
+  scope?: string;
+  
+  // Data consistency tracking fields
+  profileCompleteness: "basic" | "full";
+  createdFrom: "site_visit" | "customers_page";
+  
+  // Timestamp fields
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+// Type exports for consistency
+export type CustomerProfileCompleteness = typeof customerProfileCompleteness[number];
+export type CustomerCreationSource = typeof customerCreationSources[number];
+export type InsertUnifiedCustomer = z.infer<typeof insertCustomerSchema>;
+
 

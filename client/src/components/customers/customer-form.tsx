@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { insertCustomerSchema, type InsertUnifiedCustomer } from "@shared/schema";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -12,15 +13,15 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-// Extend the customer schema for frontend validation
-const customerFormSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  address: z.string().optional(),
+// UNIFIED: Use shared customer schema with additional frontend validation
+const customerFormSchema = insertCustomerSchema.extend({
+  // Allow empty strings for optional fields to handle controlled form inputs
   email: z.string().email({ message: "Please enter a valid email address" }).optional().or(z.literal("")),
-  phone: z.string().optional(),
-  location: z.string().optional(),
-  scope: z.string().optional(),
-});
+  address: z.string().optional().or(z.literal("")),
+  ebServiceNumber: z.string().optional().or(z.literal("")),
+  location: z.string().optional().or(z.literal("")),
+  scope: z.string().optional().or(z.literal(""))
+}).omit({ profileCompleteness: true, createdFrom: true }); // Frontend doesn't need to handle these
 
 type CustomerFormValues = z.infer<typeof customerFormSchema>;
 
@@ -36,15 +37,17 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
 
   const defaultValues: Partial<CustomerFormValues> = {
     name: "",
+    mobile: "",
     address: "",
     email: "",
-    phone: "",
+    ebServiceNumber: "",
+    propertyType: undefined,
     location: "",
     scope: "",
     ...initialData,
   };
 
-  // Create/Update customer mutation with cache invalidation
+  // UNIFIED: Create/Update customer mutation with unified schema
   const customerMutation = useMutation({
     mutationFn: async (data: CustomerFormValues) => {
       const endpoint = isEditing 
@@ -52,7 +55,18 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
         : "/api/customers";
         
       const method = isEditing ? "PATCH" : "POST";
-      return apiRequest(method, endpoint, data);
+      
+      // Add unified schema fields for new customers
+      const unifiedData = {
+        ...data,
+        // CRITICAL: Mark as created from customers page with full profile
+        ...(isEditing ? {} : {
+          createdFrom: "customers_page",
+          profileCompleteness: "full"
+        })
+      };
+      
+      return apiRequest(method, endpoint, unifiedData);
     },
     onSuccess: () => {
       // Invalidate all customer-related queries to refresh the UI
@@ -86,7 +100,22 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
   });
 
   const onSubmit = (data: CustomerFormValues) => {
-    customerMutation.mutate(data);
+    // CRITICAL: Strip empty strings to prevent overwriting existing data
+    const sanitizeData = (formData: CustomerFormValues) => {
+      const sanitized: any = {};
+      
+      Object.entries(formData).forEach(([key, value]) => {
+        // Only include non-empty, meaningful values
+        if (value !== undefined && value !== null && value !== '') {
+          sanitized[key] = value;
+        }
+      });
+      
+      return sanitized;
+    };
+    
+    const sanitizedData = sanitizeData(data);
+    customerMutation.mutate(sanitizedData);
   };
 
   return (
@@ -151,12 +180,42 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
               
               <FormField
                 control={form.control}
-                name="phone"
+                name="mobile"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Mobile <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="Phone number" {...field} />
+                      <Input placeholder="10-digit mobile number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City, State" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="ebServiceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>EB Service Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="EB service number (optional)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,12 +225,21 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
             
             <FormField
               control={form.control}
-              name="location"
+              name="propertyType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>Property Type</FormLabel>
                   <FormControl>
-                    <Input placeholder="City, State" {...field} />
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      {...field}
+                    >
+                      <option value="">Select property type (optional)</option>
+                      <option value="residential">Residential</option>
+                      <option value="commercial">Commercial</option>
+                      <option value="agri">Agricultural</option>
+                      <option value="other">Other</option>
+                    </select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

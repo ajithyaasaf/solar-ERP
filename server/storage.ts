@@ -67,12 +67,8 @@ export const insertDepartmentSchema = z.object({
   name: z.string()
 });
 
-export const insertCustomerSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  phone: z.string(),
-  address: z.string()
-});
+// Import unified customer schema from shared location
+import { insertCustomerSchema, type UnifiedCustomer } from "@shared/schema";
 
 export const insertProductSchema = z.object({
   name: z.string(),
@@ -173,14 +169,8 @@ export interface OfficeLocation {
   radius: number;
 }
 
-export interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  createdAt: Date;
-}
+// Use unified customer interface from shared schema
+export type Customer = UnifiedCustomer;
 
 export interface Product {
   id: string;
@@ -1665,10 +1655,17 @@ export class FirestoreStorage implements IStorage {
       return {
         id: doc.id,
         name: data.name,
+        mobile: data.mobile,
         email: data.email,
-        phone: data.phone,
         address: data.address,
-        createdAt: data.createdAt?.toDate() || new Date()
+        ebServiceNumber: data.ebServiceNumber,
+        propertyType: data.propertyType,
+        location: data.location,
+        scope: data.scope,
+        profileCompleteness: data.profileCompleteness || "basic",
+        createdFrom: data.createdFrom || "customers_page",
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate()
       } as Customer;
     });
   }
@@ -1683,30 +1680,151 @@ export class FirestoreStorage implements IStorage {
     return {
       id: docSnap.id,
       name: data.name,
+      mobile: data.mobile,
       email: data.email,
-      phone: data.phone,
       address: data.address,
-      createdAt: data.createdAt?.toDate() || new Date()
+      ebServiceNumber: data.ebServiceNumber,
+      propertyType: data.propertyType,
+      location: data.location,
+      scope: data.scope,
+      profileCompleteness: data.profileCompleteness || "basic",
+      createdFrom: data.createdFrom || "customers_page",
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate()
     } as Customer;
   }
 
+  // NEW: Find customer by mobile number for deduplication
+  async findCustomerByMobile(mobile: string): Promise<Customer | undefined> {
+    const customersCollection = this.db.collection("customers");
+    const snapshot = await customersCollection.where("mobile", "==", mobile).limit(1).get();
+    
+    if (snapshot.empty) return undefined;
+    
+    const doc = snapshot.docs[0];
+    const data = doc.data() || {};
+    return {
+      id: doc.id,
+      name: data.name,
+      mobile: data.mobile,
+      email: data.email,
+      address: data.address,
+      ebServiceNumber: data.ebServiceNumber,
+      propertyType: data.propertyType,
+      location: data.location,
+      scope: data.scope,
+      profileCompleteness: data.profileCompleteness || "basic",
+      createdFrom: data.createdFrom || "customers_page",
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate()
+    } as Customer;
+  }
+
+  // UNIFIED: Create or update customer with proper deduplication and merge logic
   async createCustomer(
     data: z.infer<typeof insertCustomerSchema>,
   ): Promise<Customer> {
     const validatedData = insertCustomerSchema.parse(data);
-    const customersRef = this.db.collection("customers");
     
-    const customerDoc = await customersRef.add({
-      ...validatedData,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
+    // CRITICAL: Check if customer already exists by mobile number
+    const existingCustomer = await this.findCustomerByMobile(validatedData.mobile);
     
-    return {
-      id: customerDoc.id,
-      ...validatedData,
-      createdAt: new Date(),
-    } as Customer;
+    if (existingCustomer) {
+      // Customer exists - merge data without overwriting existing values with empty strings
+      console.log(`Customer with mobile ${validatedData.mobile} already exists. Merging data.`);
+      
+      // Helper function to clean and merge fields (only add non-empty, defined values)
+      const cleanMerge = (existing: any, incoming: any) => {
+        const merged = { ...existing };
+        
+        Object.keys(incoming).forEach(key => {
+          const value = incoming[key];
+          // Only update if value is meaningful (not empty string, null, or undefined)
+          if (value !== undefined && value !== null && value !== '') {
+            merged[key] = value;
+          }
+        });
+        
+        return merged;
+      };
+      
+      // Merge only meaningful data, preserving existing values
+      const mergedData = cleanMerge(existingCustomer, validatedData);
+      
+      // Promote profile completeness (full > basic) and keep original creation source
+      const finalData = {
+        ...mergedData,
+        createdFrom: existingCustomer.createdFrom, // Keep original source
+        profileCompleteness: this.promoteProfileCompleteness(
+          existingCustomer.profileCompleteness,
+          validatedData.profileCompleteness || "basic"
+        ),
+        updatedAt: Timestamp.now()
+      };
+      
+      // Remove createdAt from update data since it should not be updated
+      const { createdAt, ...updateDataWithoutCreatedAt } = finalData;
+      
+      // Update existing customer
+      const customerDoc = this.db.collection("customers").doc(existingCustomer.id);
+      await customerDoc.update(updateDataWithoutCreatedAt);
+      
+      // Return updated customer with proper data structure
+      return {
+        ...finalData,
+        id: existingCustomer.id,
+        createdAt: existingCustomer.createdAt,
+        updatedAt: new Date()
+      } as Customer;
+      
+    } else {
+      // No existing customer - create new record
+      console.log(`Creating new customer with mobile ${validatedData.mobile}`);
+      
+      const customersRef = this.db.collection("customers");
+      const newCustomerData = {
+        ...validatedData,
+        profileCompleteness: this.determineProfileCompleteness(validatedData),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+      
+      const customerDoc = await customersRef.add(newCustomerData);
+      
+      return {
+        id: customerDoc.id,
+        ...validatedData,
+        profileCompleteness: newCustomerData.profileCompleteness,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as Customer;
+    }
+  }
+
+  // Helper method to determine profile completeness based on available data
+  private determineProfileCompleteness(customerData: any): "basic" | "full" {
+    const hasBasicInfo = customerData.name && customerData.mobile;
+    const hasExtendedInfo = customerData.email || customerData.address || customerData.scope;
+    const hasSiteVisitInfo = customerData.propertyType || customerData.ebServiceNumber;
+    
+    // Consider "full" if has basic info plus either extended info or site visit info
+    if (hasBasicInfo && (hasExtendedInfo || hasSiteVisitInfo)) {
+      return "full";
+    }
+    
+    return "basic";
+  }
+
+  // Helper method to promote profile completeness (full > basic)
+  private promoteProfileCompleteness(
+    existing: "basic" | "full", 
+    incoming: "basic" | "full"
+  ): "basic" | "full" {
+    // Always promote to the higher level (full > basic)
+    if (existing === "full" || incoming === "full") {
+      return "full";
+    }
+    return "basic";
   }
 
   async updateCustomer(
@@ -1716,19 +1834,35 @@ export class FirestoreStorage implements IStorage {
     const validatedData = insertCustomerSchema.partial().parse(data);
     const customerDoc = this.db.collection("customers").doc(id);
     
+    // Get current customer to merge with updates
+    const currentDoc = await customerDoc.get();
+    if (!currentDoc.exists) throw new Error("Customer not found");
+    
+    const currentData = currentDoc.data() || {};
+    const mergedData = { ...currentData, ...validatedData };
+    
     await customerDoc.update({
       ...validatedData,
+      profileCompleteness: this.determineProfileCompleteness(mergedData),
       updatedAt: Timestamp.now(),
     });
     
     const updatedDoc = await customerDoc.get();
-    if (!updatedDoc.exists) throw new Error("Customer not found");
-    
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
-      ...updatedData,
+      name: updatedData.name,
+      mobile: updatedData.mobile,
+      email: updatedData.email,
+      address: updatedData.address,
+      ebServiceNumber: updatedData.ebServiceNumber,
+      propertyType: updatedData.propertyType,
+      location: updatedData.location,
+      scope: updatedData.scope,
+      profileCompleteness: updatedData.profileCompleteness,
+      createdFrom: updatedData.createdFrom,
       createdAt: updatedData.createdAt?.toDate() || new Date(),
+      updatedAt: updatedData.updatedAt?.toDate()
     } as Customer;
   }
 

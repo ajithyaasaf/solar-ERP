@@ -18,6 +18,7 @@ import {
   insertEmployeeSchema,
   insertEmployeeDocumentSchema,
   insertPerformanceReviewSchema,
+  insertCustomerSchema,
   departments
 } from "@shared/schema";
 // Import all the necessary schemas from storage.ts since they've been moved there
@@ -26,7 +27,6 @@ import {
   insertDepartmentSchema,
   insertDesignationSchema,
   insertPermissionGroupSchema,
-  insertCustomerSchema,
   insertProductSchema,
   insertQuotationSchema,
   insertInvoiceSchema,
@@ -5376,36 +5376,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { insertSiteVisitSchema } = await import("@shared/schema");
       const { siteVisitService } = await import("./services/site-visit-service");
 
-      // Automatically create/find customer if needed
+      // UNIFIED: Automatically create/find customer using deduplication logic
       let customerId = null;
       if (req.body.customer && req.body.customer.name && req.body.customer.mobile) {
         const customerData = req.body.customer;
         
-        // Try to find existing customer by phone and name
-        const existingCustomers = await storage.listCustomers();
-        const existingCustomer = existingCustomers.find((customer: any) => 
-          (customer.phone === customerData.mobile) ||
-          (customer.name.toLowerCase() === customerData.name.toLowerCase() && customer.phone === customerData.mobile)
-        );
-
-        if (existingCustomer) {
-          customerId = existingCustomer.id;
-          console.log("Found existing customer:", existingCustomer.id, existingCustomer.name);
-        } else {
-          // Create new customer
-          try {
-            const newCustomer = await storage.createCustomer({
-              name: customerData.name,
-              phone: customerData.mobile,
-              email: customerData.email || '',
-              address: customerData.address || ''
-            });
-            customerId = newCustomer.id;
-            console.log("Created new customer:", newCustomer.id, newCustomer.name);
-          } catch (error) {
-            console.error("Error creating customer during site visit:", error);
-            // Continue without customer ID if creation fails
-          }
+        // Use unified customer creation with automatic deduplication
+        try {
+          const customer = await storage.createCustomer({
+            name: customerData.name,
+            mobile: customerData.mobile,
+            email: customerData.email || undefined,
+            address: customerData.address || undefined,
+            ebServiceNumber: customerData.ebServiceNumber || undefined,
+            propertyType: customerData.propertyType || undefined,
+            location: customerData.location || undefined,
+            // CRITICAL: Mark as created from site visit with basic profile
+            createdFrom: "site_visit",
+            profileCompleteness: "basic"
+          });
+          customerId = customer.id;
+          console.log(`Customer ${customer.mobile}: ${customerId} (${customer.profileCompleteness} profile, created from ${customer.createdFrom})`);
+        } catch (error) {
+          console.error("Error creating/updating customer during site visit:", error);
+          // Continue without customer ID if creation fails
         }
       }
 
