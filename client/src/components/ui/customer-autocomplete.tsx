@@ -93,9 +93,30 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     }
   };
 
+  // Normalize mobile number - remove non-digits, handle +91/0 prefixes
+  const normalizeMobileNumber = (mobile: string): string => {
+    if (!mobile) return '';
+    
+    // Remove all non-digit characters
+    let normalized = mobile.replace(/\D/g, '');
+    
+    // Handle Indian mobile formats
+    if (normalized.startsWith('91') && normalized.length === 12) {
+      // Remove country code +91
+      normalized = normalized.substring(2);
+    } else if (normalized.startsWith('0') && normalized.length === 11) {
+      // Remove leading zero
+      normalized = normalized.substring(1);
+    }
+    
+    return normalized;
+  };
+
   // Check for duplicate mobile number
   const checkDuplicateMobile = async (mobile: string) => {
-    if (!mobile || mobile.length < 10) {
+    const normalizedMobile = normalizeMobileNumber(mobile);
+    
+    if (!normalizedMobile || normalizedMobile.length < 10) {
       setDuplicateCustomer(null);
       onDuplicateDetected?.(null);
       return;
@@ -112,7 +133,7 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       }
 
       const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/customers/check-mobile/${encodeURIComponent(mobile)}`, {
+      const response = await fetch(`/api/customers/check-mobile/${encodeURIComponent(normalizedMobile)}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

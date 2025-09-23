@@ -1473,8 +1473,9 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
               navigateToStep(3);
             }}
             data-testid="button-confirm-update"
+            className="bg-yellow-600 hover:bg-yellow-700"
           >
-            Update and Continue
+            Update "{duplicateCustomer?.name}" and Continue
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

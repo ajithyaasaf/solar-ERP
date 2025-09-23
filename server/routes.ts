@@ -2258,8 +2258,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Normalize mobile number - remove non-digits, handle +91/0 prefixes
+  const normalizeMobileNumber = (mobile: string): string => {
+    if (!mobile) return '';
+    
+    // Remove all non-digit characters
+    let normalized = mobile.replace(/\D/g, '');
+    
+    // Handle Indian mobile formats
+    if (normalized.startsWith('91') && normalized.length === 12) {
+      // Remove country code +91
+      normalized = normalized.substring(2);
+    } else if (normalized.startsWith('0') && normalized.length === 11) {
+      // Remove leading zero
+      normalized = normalized.substring(1);
+    }
+    
+    return normalized;
+  };
+
   // Check if customer with mobile number already exists (for duplicate validation)
-  app.get("/api/customers/check-mobile/:mobile", verifyAuth, async (req, res) => {
+  app.get("/api/customers/check-mobile/:mobile", createRateLimitMiddleware(generalRateLimiter), verifyAuth, async (req, res) => {
     try {
       if (!req.authenticatedUser) {
         return res.status(401).json({ message: "Authentication required" });
@@ -2275,30 +2294,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const mobile = req.params.mobile;
+      const normalizedMobile = normalizeMobileNumber(mobile);
       
-      if (!mobile || mobile.length < 10) {
+      if (!normalizedMobile || normalizedMobile.length < 10) {
         return res.json({ exists: false, customer: null });
       }
 
-      console.log("Checking for existing customer with mobile:", mobile);
-      const existingCustomer = await storage.findCustomerByMobile(mobile);
+      console.log("Checking for existing customer with mobile:", normalizedMobile);
+      const existingCustomer = await storage.findCustomerByMobile(normalizedMobile);
       
       if (existingCustomer) {
         console.log("Found existing customer:", existingCustomer.name, existingCustomer.id);
+        // Return minimal customer fields for security
         res.json({ 
           exists: true, 
           customer: {
             id: existingCustomer.id,
             name: existingCustomer.name,
             mobile: existingCustomer.mobile,
-            email: existingCustomer.email,
             address: existingCustomer.address,
-            profileCompleteness: existingCustomer.profileCompleteness,
-            createdFrom: existingCustomer.createdFrom
+            propertyType: existingCustomer.propertyType
           }
         });
       } else {
-        console.log("No existing customer found with mobile:", mobile);
+        console.log("No existing customer found with mobile:", normalizedMobile);
         res.json({ exists: false, customer: null });
       }
     } catch (error) {
