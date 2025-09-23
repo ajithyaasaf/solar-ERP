@@ -172,8 +172,6 @@ export interface OfficeLocation {
   radius: number;
 }
 
-// Use unified customer interface from shared schema
-export type Customer = UnifiedCustomer;
 
 export interface Product {
   id: string;
@@ -1765,12 +1763,34 @@ export class FirestoreStorage implements IStorage {
         updatedAt: Timestamp.now()
       };
       
-      // Remove createdAt from update data since it should not be updated
-      const { createdAt, ...updateDataWithoutCreatedAt } = finalData;
+      // Helper function to prune undefined values in-place while preserving Firestore types
+      const deepPruneUndefined = (obj: any): void => {
+        if (!obj || typeof obj !== 'object') return;
+        if (obj instanceof Timestamp) return; // Preserve Firestore Timestamp instances
+        if (Array.isArray(obj)) {
+          for (const item of obj) {
+            deepPruneUndefined(item);
+          }
+          return;
+        }
+        
+        for (const key of Object.keys(obj)) {
+          const value = obj[key];
+          if (value === undefined) {
+            delete obj[key];
+          } else {
+            deepPruneUndefined(value);
+          }
+        }
+      };
+      
+      // Remove read-only fields (id, createdAt) and clean undefined values for Firestore update
+      const { id, createdAt, ...updateDataForFirestore } = finalData;
+      deepPruneUndefined(updateDataForFirestore);
       
       // Update existing customer
       const customerDoc = this.db.collection("customers").doc(existingCustomer.id);
-      await customerDoc.update(updateDataWithoutCreatedAt);
+      await customerDoc.update(updateDataForFirestore);
       
       // Return updated customer with proper data structure
       return {
