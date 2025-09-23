@@ -19,6 +19,7 @@ const customerFormSchema = insertCustomerSchema.extend({
   email: z.string().email({ message: "Please enter a valid email address" }).optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
   ebServiceNumber: z.string().optional().or(z.literal("")),
+  propertyType: z.enum(["residential", "commercial", "agri", "other"]).optional().or(z.literal("")),
   location: z.string().optional().or(z.literal("")),
   scope: z.string().optional().or(z.literal(""))
 }).omit({ profileCompleteness: true, createdFrom: true }); // Frontend doesn't need to handle these
