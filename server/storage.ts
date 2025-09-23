@@ -70,6 +70,9 @@ export const insertDepartmentSchema = z.object({
 // Import unified customer schema from shared location
 import { insertCustomerSchema, type UnifiedCustomer } from "@shared/schema";
 
+// Create Customer type alias for backward compatibility
+export type Customer = UnifiedCustomer;
+
 export const insertProductSchema = z.object({
   name: z.string(),
   description: z.string(),

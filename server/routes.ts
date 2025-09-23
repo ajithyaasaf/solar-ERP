@@ -2200,19 +2200,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: "Ajith Kumar",
             mobile: "9944325858",
             email: "ajith@example.com",
-            address: "123 Main Street, Chennai"
+            address: "123 Main Street, Chennai",
+            profileCompleteness: "full",
+            createdFrom: "customers_page"
           });
           await storage.createCustomer({
             name: "Priya Sharma", 
             mobile: "9876543210",
             email: "priya@example.com",
-            address: "456 Park Road, Bangalore"
+            address: "456 Park Road, Bangalore",
+            profileCompleteness: "full",
+            createdFrom: "customers_page"
           });
           await storage.createCustomer({
             name: "Rajesh Patel",
             mobile: "8765432109", 
             email: "rajesh@example.com",
-            address: "789 Garden Lane, Mumbai"
+            address: "789 Garden Lane, Mumbai",
+            profileCompleteness: "full",
+            createdFrom: "customers_page"
           });
           console.log("Sample customers created successfully");
           // Refresh customers list
