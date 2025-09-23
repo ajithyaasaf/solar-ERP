@@ -2258,6 +2258,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if customer with mobile number already exists (for duplicate validation)
+  app.get("/api/customers/check-mobile/:mobile", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Check if user has site visit permissions (allows customer search for site visits)
+      const hasSiteVisitPermission = req.authenticatedUser.permissions.includes("site_visit.view") || 
+                                   req.authenticatedUser.permissions.includes("site_visit.create") ||
+                                   req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasSiteVisitPermission) {
+        return res.status(403).json({ message: "Site visit permission required to check customers" });
+      }
+
+      const mobile = req.params.mobile;
+      
+      if (!mobile || mobile.length < 10) {
+        return res.json({ exists: false, customer: null });
+      }
+
+      console.log("Checking for existing customer with mobile:", mobile);
+      const existingCustomer = await storage.findCustomerByMobile(mobile);
+      
+      if (existingCustomer) {
+        console.log("Found existing customer:", existingCustomer.name, existingCustomer.id);
+        res.json({ 
+          exists: true, 
+          customer: {
+            id: existingCustomer.id,
+            name: existingCustomer.name,
+            mobile: existingCustomer.mobile,
+            email: existingCustomer.email,
+            address: existingCustomer.address,
+            profileCompleteness: existingCustomer.profileCompleteness,
+            createdFrom: existingCustomer.createdFrom
+          }
+        });
+      } else {
+        console.log("No existing customer found with mobile:", mobile);
+        res.json({ exists: false, customer: null });
+      }
+    } catch (error) {
+      console.error("Error checking customer mobile:", error);
+      res.status(500).json({ message: "Failed to check customer mobile" });
+    }
+  });
+
   // Customers with pagination and performance optimizations
   app.get("/api/customers", verifyAuth, async (req, res) => {
     try {
