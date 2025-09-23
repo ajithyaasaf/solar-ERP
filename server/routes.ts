@@ -5390,6 +5390,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.customer && req.body.customer.name && req.body.customer.mobile) {
         const customerData = req.body.customer;
         
+        console.log("=== CUSTOMER CREATION ATTEMPT ===");
+        console.log("Customer data to create:", JSON.stringify(customerData, null, 2));
+        
         // Use unified customer creation with automatic deduplication
         try {
           const customer = await storage.createCustomer({
@@ -5405,11 +5408,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             profileCompleteness: "basic"
           });
           customerId = customer.id;
-          console.log(`Customer ${customer.mobile}: ${customerId} (${customer.profileCompleteness} profile, created from ${customer.createdFrom})`);
+          console.log(`✅ Customer creation SUCCESS: ${customer.mobile} -> ID: ${customerId} (${customer.profileCompleteness} profile, created from ${customer.createdFrom})`);
+          
+          // Verify customer was actually created by checking if it exists
+          const verifyCustomer = await storage.findCustomerByMobile(customerData.mobile);
+          if (verifyCustomer) {
+            console.log(`✅ VERIFICATION PASSED: Customer ${customerData.mobile} exists in customers collection with ID: ${verifyCustomer.id}`);
+          } else {
+            console.error(`❌ VERIFICATION FAILED: Customer ${customerData.mobile} was created but not found in customers collection!`);
+          }
         } catch (error) {
-          console.error("Error creating/updating customer during site visit:", error);
+          console.error("❌ CUSTOMER CREATION ERROR during site visit:", error);
+          console.error("Error details:", {
+            message: error.message,
+            stack: error.stack,
+            customerData: customerData
+          });
           // Continue without customer ID if creation fails
         }
+        console.log("=== END CUSTOMER CREATION ===");
+      } else {
+        console.log("❌ No customer data provided or missing required fields (name/mobile)");
       }
 
       // Map user department to site visit schema department
