@@ -1,5 +1,5 @@
-# Quotation System Analysis and Implementation Plan
-## Prakash Green Energy - Site Visit to Quotation Workflow
+# UNIFIED QUOTATION SYSTEM - ENTERPRISE SOLUTION
+## Prakash Green Energy - Complete Proposal Generation Platform
 
 ---
 
@@ -35,179 +35,657 @@
 - Integration with site visit data
 - Professional template formatting
 
-### 1.3 The Real Quotation Requirements (From Sample Template)
-After analyzing your actual quotation template, I understand this is NOT a simple quotation but a **comprehensive proposal document** containing:
+### 1.3 ANALYZED QUOTATION CALCULATION LOGIC (From Sample Template)
 
-1. **Professional Header**: Company branding, customer details, reference information
-2. **Executive Summary**: Project overview, total cost, subsidy calculations
-3. **Financial Breakdown**: 
-   - Total amount: ₹2,04,000
-   - Subsidy amount: ₹78,000 
-   - Customer payment: ₹1,26,000
-4. **Bill of Materials**: Detailed component specifications with technical details
-5. **Terms & Conditions**: Multi-component warranty details (30yr panels, 15yr inverters)
-6. **Payment Terms**: Advance payment schedule, account details
-7. **Delivery Timeline**: Project completion estimates
-8. **Scope of Work**: Company responsibilities vs customer responsibilities
-9. **Technical Specifications**: Installation details, structure requirements, meter process
+**Sample Analysis - 3kW On-Grid System for Mr. P.S. Pradeep:**
+
+**Pricing Structure**:
+- **Total System Cost**: ₹2,04,000 (₹68,000 per kW for 3kW system)
+- **Government Subsidy**: ₹78,000 (₹26,000 per kW - fixed government rate)
+- **Customer Payment**: ₹1,26,000 (Total - Subsidy)
+- **Subsidy Credit**: Direct to customer's account after installation
+
+**Payment Schedule**:
+- **90% Advance**: ₹1,13,400 (90% of ₹1,26,000) with purchase order
+- **10% Balance**: ₹12,600 after completion
+
+**Key Business Rules Identified**:
+1. **Per-kW Pricing**: ₹68,000/kW for on-grid systems
+2. **Subsidy Rate**: ₹26,000/kW (government fixed rate)
+3. **Customer Pays**: (System Cost - Subsidy Amount)
+4. **Delivery**: 2-3 weeks from order confirmation
+
+**Enterprise Requirements Discovered**:
+- **Multiple Projects Per Customer**: Same customer requesting on-grid + water heater + pump
+- **Professional Document Generation**: Matching exact company format
+- **Unified Templates**: Same output regardless of entry method (site visit vs standalone)
+- **Complex Warranty Matrix**: Different warranties for different components
 
 ---
 
-## 2. IDENTIFIED PROBLEMS
+## 2. CRITICAL BUSINESS SCENARIOS IDENTIFIED
 
-### 2.1 Data Duplication Issue
+### 2.1 Multiple Projects Per Customer Challenge
+**Real-world Scenario**: During single site visit, customer requests:
+- **3kW On-Grid Solar System** (main requirement)
+- **500L Solar Water Heater** (additional request)
+- **3HP Solar Water Pump** (farm irrigation)
+
+**Current Problem**: No system to handle multiple quotations for same customer efficiently
+
+### 2.2 Data Duplication & Inconsistency
 - **Site visits collect 90% of quotation data** but no connection exists
-- Sales team must re-enter all project specifications manually
-- Risk of inconsistencies between field data and quotation data
+- Sales team re-enters customer details for each project type
+- Risk of pricing inconsistencies across projects for same customer
+- Multiple manual entries increase error probability
 
-### 2.2 Quotation Complexity Gap
-- Current basic quotation schema cannot handle comprehensive proposal requirements
-- Missing document generation capabilities
-- No template system for different project types (on-grid/off-grid/hybrid)
+### 2.3 Template Inconsistency Issue
+- **Separate quotation page** exists but uses different format/templates
+- **Site visit quotations** (when implemented) might use different templates
+- **No unified professional output** regardless of entry method
 
-### 2.3 Workflow Disconnect
-- No clear path from "Converted" site visit to quotation creation
-- Separate quotation page exists but lacks integration
-- Manual quotation creation doesn't leverage rich site visit data
+### 2.4 Enterprise Scalability Gaps
+- No centralized pricing engine for different system types
+- Missing warranty matrix for component combinations
+- No bulk quotation generation for multiple projects
+- Limited analytics on quotation performance
 
 ---
 
-## 3. PROPOSED SOLUTION: "INTELLIGENT PROPOSAL GENERATION SYSTEM"
+## 3. UNIFIED ENTERPRISE SOLUTION: "COMPLETE PROPOSAL MANAGEMENT SYSTEM"
 
-### 3.1 Strategy Overview
-**Approach**: Transform the existing quotation system into a comprehensive proposal generator that seamlessly integrates with site visit data while maintaining flexibility for standalone quotations.
+### 3.1 CORE PRINCIPLE: "ONE SYSTEM, MULTIPLE ENTRY POINTS"
+**Unified Architecture**: Whether quotation starts from site visit or standalone entry, it uses:
+- ✅ **Same quotation builder interface**
+- ✅ **Same professional templates**  
+- ✅ **Same pricing calculation engine**
+- ✅ **Same document generation system**
+- ✅ **Same workflow management**
 
-### 3.2 Dual-Entry System Design
-**Option A: Site Visit → Quotation** (80% of cases)
-- Pre-populated from site visit data
-- Technical specifications auto-filled
-- Customer details inherited
-- Project type determines template
+### 3.2 Multi-Project Customer Management
+**Customer-Centric Approach**:
+```
+Customer: Mr. P.S. Pradeep
+├── Project 1: 3kW On-Grid Solar (₹1,26,000)
+├── Project 2: 500L Water Heater (₹45,000)
+└── Project 3: 3HP Water Pump (₹85,000)
+Total Portfolio Value: ₹2,56,000
+```
 
-**Option B: Standalone Quotation** (20% of cases)  
-- Manual entry for walk-ins, phone inquiries
-- Full editing capabilities
-- Option to link to existing customer/site visit later
+**Benefits**:
+- **Bulk Pricing**: Discounts for multiple projects
+- **Unified Communication**: Single customer contact point
+- **Cross-selling**: Identify complementary products
+- **Relationship Management**: Complete customer view
+
+### 3.3 Dual-Entry Unified System Design
+**Entry Method A: Site Visit → Quotation** (80% of cases)
+- Pre-populated from site visit marketing data
+- Multiple quotations generated from single visit
+- Customer details inherited across all projects
+- Technical specifications auto-filled per project type
+
+**Entry Method B: Standalone Creation** (20% of cases)  
+- Manual entry using same quotation builder
+- Option to link existing customer (avoid duplicate entry)
+- Same professional templates and calculations
+- Ability to create multiple projects for customer
 
 ---
 
 ## 4. DETAILED IMPLEMENTATION PLAN
 
-### 4.1 Phase 1: Enhanced Quotation Data Model
+### 4.1 Phase 1: Enterprise Quotation Data Model
 **Duration**: 1-2 weeks
 
-**Changes to Schema (`shared/schema.ts`)**:
+**Enhanced Schema (`shared/schema.ts`)** - Based on Real Template Analysis:
 ```typescript
-// Expand quotation schema to match real-world requirements
+// Customer-centric quotation management
 export const quotationSchema = {
-  // Basic Info
-  quotationNumber: string,
+  // Basic Info & Relationships
+  quotationNumber: string, // "Q-1052" format
   customerId: string,
   siteVisitId?: string, // Link to source site visit
+  parentQuotationId?: string, // For multiple projects per customer
   
-  // Project Details  
-  projectType: 'on_grid' | 'off_grid' | 'hybrid' | 'water_heater' | 'water_pump',
-  systemCapacity: string, // "3kW", "5kW", etc.
+  // Project Classification
+  projectType: 'on_grid' | 'off_grid' | 'hybrid' | 'water_heater' | 'water_pump' | 'solar_camera' | 'dc_appliances',
+  systemCapacity: string, // "3kW", "5kW", "500L", "3HP"
+  projectTitle: string, // "3 kw On-Grid Solar Power Generation System"
   
-  // Financial Details
-  totalAmount: number,
-  subsidyAmount: number,
-  customerAmount: number,
-  
-  // Bill of Materials
-  components: Array<{
-    category: string, // "Solar Panels", "Inverter", "Structure"
-    item: string,
-    specification: string,
-    quantity: number,
-    rate?: number,
-    amount?: number
-  }>,
-  
-  // Terms & Conditions
-  warranties: Array<{
-    component: string,
-    duration: string,
-    conditions: string
-  }>,
-  
-  // Payment & Delivery
-  paymentTerms: {
-    advance: number,
-    onCompletion: number,
-    accountDetails?: string
+  // Calculated Pricing (Based on Analysis)
+  financials: {
+    totalSystemCost: number, // ₹2,04,000
+    subsidyAmount: number,   // ₹78,000 (₹26,000/kW)
+    customerPayment: number, // ₹1,26,000 (Total - Subsidy)
+    advanceAmount: number,   // 90% of customer payment
+    balanceAmount: number,   // 10% of customer payment
+    pricePerUnit: number,    // ₹68,000/kW for pricing reference
+    subsidyPerUnit: number   // ₹26,000/kW government rate
   },
-  deliveryPeriod: string,
   
-  // Scope of Work
-  companyScope: string[],
-  customerScope: string[],
+  // Bill of Materials (Professional Structure)
+  billOfMaterials: Array<{
+    category: 'solar_panels' | 'inverter' | 'mounting_structure' | 'accessories' | 'installation',
+    item: string,        // "Solar PV Panel Modules"
+    specification: string, // "Monocrystalline, 540W, Tier-1"
+    brand?: string,      // "Tata Power Solar"
+    quantity: number,
+    unit: string,        // "Nos", "Set", "Mtr"
+    rate?: number,       // Per unit cost
+    amount?: number      // Total component cost
+  }>,
   
-  // Document Generation
-  generatedDocumentUrl?: string,
-  templateUsed: string,
+  // Warranty Matrix (Component-Specific)
+  warranties: Array<{
+    component: 'solar_panels' | 'inverter' | 'mounting_structure' | 'installation',
+    manufacturingWarranty: string,  // "15 Years"
+    serviceWarranty: string,        // "15 Years"
+    performanceWarranty?: string,   // "90% till 15 years, 80% till 30 years"
+    replacementWarranty?: string,   // "10 Years"
+    exclusions: string[]            // ["Physical Damages"]
+  }>,
   
-  // Status & Tracking
-  status: 'draft' | 'sent' | 'approved' | 'converted' | 'rejected',
+  // Payment & Business Terms
+  paymentTerms: {
+    advancePercentage: number,     // 90
+    balancePercentage: number,     // 10
+    advanceTrigger: string,        // "Along with Purchase Order"
+    balanceTrigger: string,        // "After completion of work"
+    accountDetails?: {
+      bankName: string,
+      accountNumber: string,
+      ifscCode: string,
+      accountHolder: string
+    }
+  },
+  
+  // Delivery & Timeline
+  deliveryPeriod: string,          // "2-3 Weeks from order confirmation"
+  installationDuration?: string,   // "2-3 Days"
+  
+  // Scope of Work (Detailed)
+  companyScope: Array<{
+    category: string,              // "Structure", "Installation", "Documentation"
+    description: string,           // "South facing slant mounting 4-5 feet"
+    included: boolean
+  }>,
+  customerScope: Array<{
+    category: string,              // "Civil Work", "Electrical", "Documentation"
+    description: string,           // "Earth pit digging, 1 feet chamber"
+    customerResponsibility: boolean
+  }>,
+  
+  // Document Generation & Templates
+  templateData: {
+    templateType: string,          // "on_grid_template", "water_heater_template"
+    companyLetterhead: boolean,
+    customerReference: string,     // "Discussion with Mr. Selva Kumar"
+    subjectLine: string,          // Auto-generated based on project
+    introductionText: string,     // Company introduction paragraph
+    managingDirectorName: string,
+    contactPerson: string
+  },
+  
+  // Multi-Project Customer Management
+  customerProjectSummary?: {
+    totalProjects: number,
+    totalPortfolioValue: number,
+    bulkDiscountApplied?: number,
+    crossSellingOpportunities: string[]
+  },
+  
+  // Status & Workflow
+  status: 'draft' | 'review' | 'approved' | 'sent' | 'customer_approved' | 'converted' | 'rejected',
   createdBy: string,
+  reviewedBy?: string,
   sentDate?: Date,
-  approvedDate?: Date
+  customerResponseDate?: Date,
+  conversionDate?: Date,
+  
+  // Document Outputs
+  generatedDocuments: Array<{
+    type: 'pdf' | 'word' | 'email',
+    url: string,
+    generatedAt: Date,
+    version: number
+  }>
 }
 ```
 
-### 4.2 Phase 2: Site Visit Data Mapping System
+### 4.2 Phase 2: Centralized Pricing Engine
 **Duration**: 1 week
 
-**Data Mapping Functions**:
+**Pricing Calculator (`server/pricing/calculator.ts`)** - Based on Analyzed Logic:
 ```typescript
-// Create mapping functions to transform site visit data to quotation format
-const mapSiteVisitToQuotation = (siteVisit: SiteVisit) => {
-  // Extract marketing data
-  const marketingData = siteVisit.marketingData;
-  
-  // Determine project type and components
-  const projectType = marketingData?.projectType;
-  const components = generateBillOfMaterials(marketingData);
-  
-  // Calculate pricing based on system specifications
-  const pricing = calculateSystemPricing(components);
-  
-  return {
-    customerId: siteVisit.customer.id,
-    siteVisitId: siteVisit.id,
-    projectType,
-    systemCapacity: extractSystemCapacity(marketingData),
-    components,
-    totalAmount: pricing.total,
-    subsidyAmount: pricing.subsidy,
-    customerAmount: pricing.customerPayment,
-    // ... other mapped fields
+// Centralized pricing logic based on real company rates
+export class PricingEngine {
+  // Base rates per system type (analyzed from sample)
+  private static baseRates = {
+    on_grid: {
+      pricePerKW: 68000,    // ₹68,000/kW
+      subsidyPerKW: 26000,  // ₹26,000/kW (government rate)
+      maxSubsidyKW: 10      // Maximum subsidy applicable
+    },
+    off_grid: {
+      pricePerKW: 85000,    // Higher due to battery cost
+      subsidyPerKW: 0,      // No subsidy for off-grid
+      maxSubsidyKW: 0
+    },
+    hybrid: {
+      pricePerKW: 95000,    // Premium for hybrid functionality
+      subsidyPerKW: 26000,  // Grid-tie portion gets subsidy
+      maxSubsidyKW: 10
+    },
+    water_heater: {
+      pricePerLiter: 80,    // ₹80/liter capacity
+      fixedInstallation: 5000,
+      subsidyPerLiter: 15   // Government solar heater subsidy
+    },
+    water_pump: {
+      pricePerHP: 25000,    // ₹25,000/HP
+      subsidyPerHP: 0       // No subsidy for pumps
+    }
   };
+  
+  static calculateQuotation(projectType: string, capacity: number) {
+    const rates = this.baseRates[projectType];
+    const totalCost = this.calculateBaseCost(projectType, capacity);
+    const subsidyAmount = this.calculateSubsidy(projectType, capacity);
+    const customerPayment = totalCost - subsidyAmount;
+    
+    return {
+      totalSystemCost: totalCost,
+      subsidyAmount: subsidyAmount,
+      customerPayment: customerPayment,
+      advanceAmount: Math.round(customerPayment * 0.9),
+      balanceAmount: Math.round(customerPayment * 0.1),
+      pricePerUnit: rates.pricePerKW || rates.pricePerLiter || rates.pricePerHP,
+      subsidyPerUnit: rates.subsidyPerKW || rates.subsidyPerLiter || 0
+    };
+  }
+  
+  // Multi-project bulk pricing
+  static calculateBulkDiscount(quotations: QuotationType[]) {
+    const totalValue = quotations.reduce((sum, q) => sum + q.financials.customerPayment, 0);
+    let discount = 0;
+    
+    if (totalValue > 200000) discount = 0.05;      // 5% for ₹2L+
+    if (totalValue > 500000) discount = 0.08;      // 8% for ₹5L+
+    if (quotations.length >= 3) discount += 0.02;  // 2% for 3+ projects
+    
+    return Math.min(discount, 0.12); // Max 12% bulk discount
+  }
+}
+```
+
+### 4.3 Phase 3: Site Visit Data Mapping System  
+**Duration**: 1 week
+
+**Multi-Project Data Mapping (`server/mapping/siteVisitMapper.ts`)**:
+```typescript
+// Transform site visit data into multiple quotations based on customer requests
+export class SiteVisitMapper {
+  static generateQuotationsFromSiteVisit(siteVisit: SiteVisit): QuotationType[] {
+    const marketingData = siteVisit.marketingData;
+    const customer = siteVisit.customer;
+    const quotations: QuotationType[] = [];
+    
+    // Generate quotation for each requested project type
+    if (marketingData?.onGridConfig) {
+      quotations.push(this.createOnGridQuotation(siteVisit, marketingData.onGridConfig));
+    }
+    
+    if (marketingData?.offGridConfig) {
+      quotations.push(this.createOffGridQuotation(siteVisit, marketingData.offGridConfig));
+    }
+    
+    if (marketingData?.hybridConfig) {
+      quotations.push(this.createHybridQuotation(siteVisit, marketingData.hybridConfig));
+    }
+    
+    if (marketingData?.waterHeaterConfig) {
+      quotations.push(this.createWaterHeaterQuotation(siteVisit, marketingData.waterHeaterConfig));
+    }
+    
+    if (marketingData?.waterPumpConfig) {
+      quotations.push(this.createWaterPumpQuotation(siteVisit, marketingData.waterPumpConfig));
+    }
+    
+    // Apply bulk discount if multiple projects
+    if (quotations.length > 1) {
+      this.applyBulkPricing(quotations);
+    }
+    
+    return quotations;
+  }
+  
+  private static createOnGridQuotation(siteVisit: SiteVisit, config: OnGridConfig): QuotationType {
+    const capacity = parseFloat(config.systemCapacity); // Extract number from "3kW"
+    const pricing = PricingEngine.calculateQuotation('on_grid', capacity);
+    
+    return {
+      quotationNumber: this.generateQuotationNumber(),
+      customerId: siteVisit.customer.id,
+      siteVisitId: siteVisit.id,
+      projectType: 'on_grid',
+      systemCapacity: config.systemCapacity,
+      projectTitle: `${config.systemCapacity} On-Grid Solar Power Generation System`,
+      
+      financials: pricing,
+      
+      billOfMaterials: this.generateOnGridBOM(config),
+      warranties: this.getStandardWarranties('on_grid'),
+      
+      paymentTerms: {
+        advancePercentage: 90,
+        balancePercentage: 10,
+        advanceTrigger: "Along with Purchase Order",
+        balanceTrigger: "After completion of work"
+      },
+      
+      deliveryPeriod: "2-3 Weeks from order confirmation",
+      
+      companyScope: this.getOnGridCompanyScope(config),
+      customerScope: this.getOnGridCustomerScope(),
+      
+      templateData: {
+        templateType: "on_grid_template",
+        companyLetterhead: true,
+        customerReference: `Discussion with ${siteVisit.createdBy}`,
+        subjectLine: `Requirement of ${config.systemCapacity} On-Grid Solar Power Generation System - Reg`,
+        introductionText: this.getCompanyIntroduction(),
+        managingDirectorName: "Mr. M. Selva Prakash",
+        contactPerson: siteVisit.createdBy
+      },
+      
+      status: 'draft',
+      createdBy: siteVisit.createdBy
+    };
+  }
+  
+  // Method to generate Bill of Materials based on system configuration
+  private static generateOnGridBOM(config: OnGridConfig): BillOfMaterial[] {
+    const capacity = parseFloat(config.systemCapacity);
+    const panelWattage = 540; // Standard panel wattage
+    const panelCount = Math.ceil((capacity * 1000) / panelWattage);
+    
+    return [
+      {
+        category: 'solar_panels',
+        item: 'Solar PV Panel Modules',
+        specification: `Monocrystalline, ${panelWattage}W, Tier-1 Make`,
+        brand: config.panelBrand || 'Tata Power Solar',
+        quantity: panelCount,
+        unit: 'Nos',
+        rate: 18000,
+        amount: panelCount * 18000
+      },
+      {
+        category: 'inverter',
+        item: 'Solar On-Grid Inverter',
+        specification: `${config.systemCapacity}, ${config.phase} Phase`,
+        brand: config.inverterBrand || 'Solis',
+        quantity: 1,
+        unit: 'Set',
+        rate: 45000,
+        amount: 45000
+      },
+      {
+        category: 'mounting_structure',
+        item: 'Mounting Structure',
+        specification: 'Galvanized Iron, South facing slant mount',
+        quantity: 1,
+        unit: 'Set',
+        rate: 25000,
+        amount: 25000
+      },
+      {
+        category: 'accessories',
+        item: 'DC/AC Cables, MCB, Earthing',
+        specification: 'Complete electrical accessories',
+        quantity: 1,
+        unit: 'Set',
+        rate: 15000,
+        amount: 15000
+      },
+      {
+        category: 'installation',
+        item: 'Installation & Commissioning',
+        specification: 'Complete system installation',
+        quantity: 1,
+        unit: 'Job',
+        rate: capacity * 8000,
+        amount: capacity * 8000
+      }
+    ];
+  }
+}
+```
+
+### 4.4 Phase 4: Professional Template System
+**Duration**: 2-3 weeks
+
+**Template Engine (`server/templates/`)** - Matching Your Exact Format:
+```typescript
+// Professional document generation matching company format
+export class TemplateEngine {
+  static generateQuotationDocument(quotation: QuotationType, format: 'pdf' | 'word' | 'html') {
+    const template = this.getTemplate(quotation.templateData.templateType);
+    const compiledContent = this.compileTemplate(template, quotation);
+    
+    switch (format) {
+      case 'pdf':
+        return this.generatePDF(compiledContent);
+      case 'word':
+        return this.generateWordDoc(compiledContent);
+      case 'html':
+        return compiledContent;
+    }
+  }
+  
+  private static getTemplate(templateType: string): string {
+    // Return exact HTML structure matching your quotation format
+    return `
+      <div class="quotation-document">
+        <header class="company-header">
+          <img src="{{companyLogo}}" alt="Prakash Green Energy" />
+          <div class="contact-info">
+            <h1>PRAKASH GREEN ENERGY</h1>
+            <p>Complete Solar Solution Provider</p>
+          </div>
+        </header>
+        
+        <section class="customer-details">
+          <p>Dear sir,</p>
+          <p><strong>Sub:</strong> {{subjectLine}}</p>
+          <p><strong>Ref:</strong> {{customerReference}}</p>
+        </section>
+        
+        <section class="introduction">
+          {{introductionText}}
+        </section>
+        
+        <section class="quotation-summary">
+          <h2>{{projectTitle}}</h2>
+          <div class="pricing-summary">
+            <p><strong>Total Amount {{totalSystemCost}} – Subsidy Amount {{subsidyAmount}} = {{customerPayment}}</strong></p>
+            <p>{{systemCapacity}} Subsidy {{subsidyAmount}} Will be Credited to The Customer's Account</p>
+          </div>
+        </section>
+        
+        <section class="bill-of-materials">
+          <h3>Bill of Materials for {{projectType}} System</h3>
+          <table>
+            {{#each billOfMaterials}}
+            <tr>
+              <td>{{item}}</td>
+              <td>{{specification}}</td>
+              <td>{{quantity}} {{unit}}</td>
+              <td>₹{{amount}}</td>
+            </tr>
+            {{/each}}
+          </table>
+        </section>
+        
+        <section class="terms-conditions">
+          <h3>Terms & Conditions</h3>
+          <h4>Warranty Details:</h4>
+          <p><em>***Physical Damages will not be Covered***</em></p>
+          {{#each warranties}}
+          <div class="warranty-item">
+            <h5>{{component}}</h5>
+            <ul>
+              <li>{{manufacturingWarranty}} Manufacturing defect Warranty</li>
+              <li>{{serviceWarranty}} Service Warranty</li>
+              {{#if performanceWarranty}}
+              <li>{{performanceWarranty}}</li>
+              {{/if}}
+            </ul>
+          </div>
+          {{/each}}
+        </section>
+        
+        <section class="payment-terms">
+          <h4>Payment Details:</h4>
+          <ul>
+            <li>{{advancePercentage}}% Advance {{advanceTrigger}}</li>
+            <li>{{balancePercentage}}% {{balanceTrigger}}</li>
+          </ul>
+        </section>
+        
+        <section class="delivery">
+          <h4>Delivery Period:</h4>
+          <p>{{deliveryPeriod}}</p>
+        </section>
+        
+        <section class="scope-of-work">
+          <h4>Scope of Work</h4>
+          {{#each companyScope}}
+          <div>
+            <h5>{{category}}</h5>
+            <p>{{description}}</p>
+          </div>
+          {{/each}}
+        </section>
+        
+        <section class="customer-scope">
+          <h4>Customer's Scope of Work</h4>
+          {{#each customerScope}}
+          <div>
+            <h5>{{category}}</h5>
+            <p>{{description}}</p>
+          </div>
+          {{/each}}
+        </section>
+      </div>
+    `;
+  }
+}
+```
+
+### 4.5 Phase 5: UNIFIED QUOTATION BUILDER (Core Component)
+**Duration**: 2 weeks
+
+**Universal Quotation Builder (`components/quotations/unified-quotation-builder.tsx`)**:
+```typescript
+// Single component used by BOTH site visit and standalone quotation creation
+const UnifiedQuotationBuilder = ({ 
+  initialData, // Pre-populated from site visit OR empty for standalone
+  mode, // 'site_visit' | 'standalone' | 'edit'
+  customerId,
+  siteVisitId? 
+}) => {
+  const [quotations, setQuotations] = useState<QuotationType[]>(initialData || []);
+  const [activeQuotation, setActiveQuotation] = useState(0);
+  
+  // SAME interface regardless of entry method
+  return (
+    <div className="quotation-builder">
+      {/* Multi-Project Tabs */}
+      <div className="project-tabs">
+        {quotations.map((q, index) => (
+          <Tab 
+            key={index} 
+            active={activeQuotation === index}
+            onClick={() => setActiveQuotation(index)}
+          >
+            {q.projectTitle}
+          </Tab>
+        ))}
+        <Button onClick={addNewProject}>+ Add Project</Button>
+      </div>
+      
+      {/* Unified Builder Sections */}
+      <div className="builder-content">
+        <CustomerSection 
+          quotation={quotations[activeQuotation]}
+          readOnly={mode === 'site_visit'} // Customer details locked from site visit
+        />
+        
+        <ProjectDetailsSection
+          quotation={quotations[activeQuotation]}
+          onUpdate={updateQuotation}
+        />
+        
+        <PricingSection
+          quotation={quotations[activeQuotation]}
+          onUpdate={updateQuotation}
+          autoCalculate={true} // Uses centralized pricing engine
+        />
+        
+        <BillOfMaterialsSection
+          quotation={quotations[activeQuotation]}
+          onUpdate={updateQuotation}
+        />
+        
+        <TermsConditionsSection
+          quotation={quotations[activeQuotation]}
+          onUpdate={updateQuotation}
+        />
+        
+        <PreviewSection
+          quotation={quotations[activeQuotation]}
+          template={quotations[activeQuotation].templateData.templateType}
+        />
+      </div>
+      
+      {/* Actions - Same for both entry methods */}
+      <div className="builder-actions">
+        <Button onClick={saveDraft}>Save Draft</Button>
+        <Button onClick={generatePDF}>Generate PDF</Button>
+        <Button onClick={sendToCustomer}>Send to Customer</Button>
+        {quotations.length > 1 && (
+          <Button onClick={generateBulkQuotation}>Generate All Projects</Button>
+        )}
+      </div>
+    </div>
+  );
 };
 ```
 
-### 4.3 Phase 3: Template System Development  
-**Duration**: 2-3 weeks
+### 4.6 Phase 6: Integration Points Implementation
+**Duration**: 1 week
 
-**Template Engine**:
-- **On-Grid Template**: Based on your sample (3kW system format)
-- **Off-Grid Template**: Battery backup systems
-- **Hybrid Template**: Combined grid-tie with backup
-- **Water System Templates**: Pumps and heaters
-
-**Document Generation**:
-- HTML template with professional styling
-- PDF generation capability
-- Company branding integration
-- Dynamic content population
-
-### 4.4 Phase 4: Integration Implementation
-**Duration**: 2 weeks
-
-**Site Visit Details Modal Enhancement**:
+**Site Visit Integration**:
 ```typescript
-// Add "Generate Quotation" button to site visit details
+// Enhanced Site Visit Details Modal
 const SiteVisitDetailsModal = () => {
+  const handleGenerateQuotations = async () => {
+    // Generate multiple quotations from single site visit
+    const quotations = await SiteVisitMapper.generateQuotationsFromSiteVisit(siteVisit);
+    
+    // Navigate to unified quotation builder with pre-populated data
+    navigate('/quotations/builder', { 
+      state: { 
+        initialData: quotations,
+        mode: 'site_visit',
+        customerId: siteVisit.customer.id,
+        siteVisitId: siteVisit.id
+      }
+    });
+  };
+  
   const showGenerateQuotation = 
     siteVisit.visitOutcome === 'converted' && 
     siteVisit.marketingData && 
@@ -216,29 +694,41 @@ const SiteVisitDetailsModal = () => {
   return (
     // ... existing modal content
     {showGenerateQuotation && (
-      <Button onClick={handleGenerateQuotation}>
-        📋 Generate Quotation
+      <Button onClick={handleGenerateQuotations} className="w-full">
+        📋 Generate {getProjectCount(siteVisit.marketingData)} Quotation(s)
       </Button>
     )}
   );
 };
 ```
 
-**Quotation Builder Page**:
-- Pre-population from site visit data
-- Section-by-section editing
-- Real-time pricing calculations
-- Preview and PDF generation
-- Send to customer functionality
-
-### 4.5 Phase 5: Separate Quotation Page Enhancement
-**Duration**: 1 week
-
-**Current Quotation Page Strategy**:
-- **Keep existing separate quotation page** for standalone entries
-- **Enhance it** to use the same quotation builder component
-- **Add search functionality** to link existing customers/site visits
-- **Unified interface** whether starting from site visit or creating new
+**Standalone Quotation Page Enhancement**:
+```typescript
+// Updated quotations page - uses SAME builder component
+const QuotationsPage = () => {
+  const handleCreateNew = () => {
+    // Navigate to same unified builder with empty data
+    navigate('/quotations/builder', { 
+      state: { 
+        initialData: null,
+        mode: 'standalone'
+      }
+    });
+  };
+  
+  return (
+    <div className="quotations-page">
+      {/* Existing quotation list */}
+      <QuotationsList />
+      
+      {/* Same "Create New" button leads to unified builder */}
+      <Button onClick={handleCreateNew}>
+        + Create New Quotation
+      </Button>
+    </div>
+  );
+};
+```
 
 ---
 
@@ -278,44 +768,64 @@ POST /api/quotations/:id/send-to-customer
 
 ---
 
-## 6. USER EXPERIENCE FLOW
+## 6. UNIFIED USER EXPERIENCE FLOWS
 
-### 6.1 From Site Visit to Quotation
+### 6.1 Multi-Project Site Visit → Quotation Flow
 ```
 Site Visit Completed with "Converted" status
     ↓
-Site Visit Details Modal shows "Generate Quotation" button
+Site Visit Details Modal analyzes marketing data and shows:
+"Generate 3 Quotations" button (On-Grid + Water Heater + Pump)
     ↓
-Quotation Builder opens with:
-├── Customer details pre-filled
-├── Project type auto-selected
-├── System specifications populated from marketing data
-├── Bill of materials generated from configurations
-└── Default pricing applied
+UNIFIED QUOTATION BUILDER opens with:
+├── Tab 1: "3kW On-Grid Solar System" (₹1,26,000)
+├── Tab 2: "500L Solar Water Heater" (₹45,000)  
+├── Tab 3: "3HP Solar Water Pump" (₹85,000)
+└── Customer details PRE-POPULATED across all tabs
     ↓
-Sales team reviews and adjusts:
-├── Pricing modifications
-├── Component substitutions  
-├── Terms customization
-└── Delivery timeline
+Sales team uses SAME INTERFACE to:
+├── Review auto-calculated pricing (bulk discount applied)
+├── Modify specifications per project
+├── Adjust warranties and terms
+└── Preview professional documents
     ↓
-Generate professional PDF document
+Generate ALL project PDFs in company format
     ↓
-Send to customer via email/WhatsApp
+Send complete proposal package to customer
 ```
 
-### 6.2 Standalone Quotation Creation
+### 6.2 Standalone Quotation Creation Flow  
 ```
 Quotations Page → "Create New Quotation"
     ↓
-Quotation Builder opens blank
+SAME UNIFIED QUOTATION BUILDER opens (empty)
     ↓
-Manual entry of all details
+Sales team uses IDENTICAL INTERFACE to:
+├── Search/select existing customer OR create new
+├── Add multiple project tabs for same customer
+├── Enter specifications manually
+├── Use SAME pricing engine and templates
+└── Generate SAME professional format
     ↓
-Option to link existing customer/site visit
-    ↓
-Same generation and sending process
+Same PDF generation and customer sending process
 ```
+
+### 6.3 Enterprise Multi-Customer Bulk Operations
+```
+Dashboard → "Bulk Quotation Generation"
+    ↓
+Select multiple site visits with "Converted" status
+    ↓
+UNIFIED SYSTEM processes all at once:
+├── Generates quotations for each customer
+├── Applies bulk pricing rules
+├── Creates professional documents
+└── Prepares email campaigns
+    ↓
+Bulk send quotations to all customers
+```
+
+**KEY PRINCIPLE**: Whether starting from site visit data or creating standalone, users interact with the EXACT SAME quotation builder interface and get the EXACT SAME professional output.
 
 ---
 
