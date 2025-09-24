@@ -24,7 +24,9 @@ import {
   insertAttendancePolicySchema,
   insertEmployeeSchema,
   insertEmployeeDocumentSchema,
-  insertPerformanceReviewSchema
+  insertPerformanceReviewSchema,
+  insertQuotationSchema,
+  EnterpriseQuotation
 } from "@shared/schema";
 
 // Define our schemas since we're not using drizzle anymore
@@ -79,15 +81,6 @@ export const insertProductSchema = z.object({
   price: z.number()
 });
 
-export const insertQuotationSchema = z.object({
-  customerId: z.string(),
-  products: z.array(z.object({
-    productId: z.string(),
-    quantity: z.number()
-  })),
-  total: z.number(),
-  status: z.string().default("pending")
-});
 
 export const insertInvoiceSchema = z.object({
   quotationId: z.string(),
@@ -181,14 +174,8 @@ export interface Product {
   createdAt: Date;
 }
 
-export interface Quotation {
-  id: string;
-  customerId: string;
-  products: { productId: string; quantity: number }[];
-  total: number;
-  status: string;
-  createdAt: Date;
-}
+// Use enterprise quotation type from shared schema
+export type Quotation = EnterpriseQuotation;
 
 export interface Invoice {
   id: string;

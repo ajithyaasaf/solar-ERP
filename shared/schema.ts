@@ -148,11 +148,29 @@ export const technicalWorkTypes = [
   "light_fault", "repair", "painting", "cleaning", "others"
 ] as const;
 
-// Service types for multi-selection
+// Service types for multi-selection (Technical Department)
 export const serviceTypes = [
   "on_grid", "off_grid", "hybrid", "solar_panel", "camera", "water_pump", 
   "water_heater", "lights_accessories", "others"
 ] as const;
+
+// Unified project types for quotation system (aligned with site visit service types)
+export const unifiedProjectTypes = [
+  "on_grid", "off_grid", "hybrid", "water_heater", "water_pump", "solar_panel", "camera", "lights_accessories", "others"
+] as const;
+
+// Service type to quotation type mapping for seamless integration
+export const serviceTypeToQuotationMapping = {
+  "on_grid": "on_grid",
+  "off_grid": "off_grid", 
+  "hybrid": "hybrid",
+  "solar_panel": "solar_panel",
+  "camera": "camera",
+  "water_pump": "water_pump",
+  "water_heater": "water_heater",
+  "lights_accessories": "lights_accessories",
+  "others": "others"
+} as const;
 
 // Working status
 export const workingStatus = [
@@ -1332,10 +1350,8 @@ export type InsertUnifiedCustomer = z.infer<typeof insertCustomerSchema>;
 
 // ====== ENTERPRISE QUOTATION SYSTEM SCHEMAS ======
 
-// Project types for comprehensive quotation management
-export const quotationProjectTypes = [
-  "on_grid", "off_grid", "hybrid", "water_heater", "water_pump", "solar_camera", "dc_appliances"
-] as const;
+// Project types for comprehensive quotation management (uses unified types)
+export const quotationProjectTypes = unifiedProjectTypes;
 
 // Quotation status workflow
 export const quotationStatuses = [
@@ -1477,6 +1493,10 @@ export const insertQuotationSchema = z.object({
   systemCapacity: z.string(), // "3kW", "5kW", "500L", "3HP"
   projectTitle: z.string(), // "3 kw On-Grid Solar Power Generation System"
   
+  // Normalized capacity for calculations (optional for backward compatibility)
+  capacityValue: z.number().min(0).optional(), // Derived from systemCapacity if not provided
+  capacityUnit: z.enum(["kW", "L", "HP", "Watts"]).optional(), // Auto-detected from systemCapacity
+  
   // Calculated Pricing (Based on Analysis)
   financials: financialCalculationsSchema,
   
@@ -1531,6 +1551,10 @@ export interface EnterpriseQuotation {
   projectType: typeof quotationProjectTypes[number];
   systemCapacity: string;
   projectTitle: string;
+  
+  // Normalized capacity for calculations
+  capacityValue?: number;
+  capacityUnit?: "kW" | "L" | "HP" | "Watts";
   
   // Financial calculations
   financials: {
@@ -1665,5 +1689,54 @@ export type CustomerProjectSummary = z.infer<typeof customerProjectSummarySchema
 export type GeneratedDocument = z.infer<typeof generatedDocumentSchema>;
 
 export type InsertEnterpriseQuotation = z.infer<typeof insertQuotationSchema>;
+
+// Utility functions for capacity normalization (backward compatibility)
+export function normalizeSystemCapacity(systemCapacity: string): { capacityValue: number; capacityUnit: "kW" | "L" | "HP" | "Watts" } {
+  const capacity = systemCapacity.toLowerCase().trim();
+  
+  // Extract numeric value and unit
+  const match = capacity.match(/^(\d+(?:\.\d+)?)\s*([a-z]+)$/);
+  if (!match) {
+    throw new Error(`Invalid system capacity format: ${systemCapacity}`);
+  }
+  
+  const value = parseFloat(match[1]);
+  const unit = match[2];
+  
+  // Normalize unit variations
+  if (unit === 'kw' || unit === 'kilowatt' || unit === 'kilowatts') {
+    return { capacityValue: value, capacityUnit: "kW" };
+  }
+  if (unit === 'l' || unit === 'liter' || unit === 'liters' || unit === 'litre' || unit === 'litres') {
+    return { capacityValue: value, capacityUnit: "L" };
+  }
+  if (unit === 'hp' || unit === 'horsepower') {
+    return { capacityValue: value, capacityUnit: "HP" };
+  }
+  if (unit === 'w' || unit === 'watt' || unit === 'watts') {
+    return { capacityValue: value, capacityUnit: "Watts" };
+  }
+  
+  throw new Error(`Unsupported capacity unit: ${unit}`);
+}
+
+// Enhanced insert schema with capacity normalization preprocessing  
+export const insertQuotationSchemaWithNormalization = insertQuotationSchema.transform((data) => {
+  // If capacityValue/capacityUnit are missing but systemCapacity is provided, normalize it
+  if (!data.capacityValue || !data.capacityUnit) {
+    try {
+      const normalized = normalizeSystemCapacity(data.systemCapacity);
+      return {
+        ...data,
+        capacityValue: data.capacityValue || normalized.capacityValue,
+        capacityUnit: data.capacityUnit || normalized.capacityUnit
+      };
+    } catch (error) {
+      // If normalization fails, leave as is (validation will catch it later if needed)
+      return data;
+    }
+  }
+  return data;
+});
 
 

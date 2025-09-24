@@ -19,6 +19,8 @@ import {
   insertEmployeeDocumentSchema,
   insertPerformanceReviewSchema,
   insertCustomerSchema,
+  insertQuotationSchema,
+  insertQuotationSchemaWithNormalization,
   departments
 } from "@shared/schema";
 // Import all the necessary schemas from storage.ts since they've been moved there
@@ -28,7 +30,6 @@ import {
   insertDesignationSchema,
   insertPermissionGroupSchema,
   insertProductSchema,
-  insertQuotationSchema,
   insertInvoiceSchema,
   insertLeaveSchema
 } from "./storage";
@@ -2835,7 +2836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const quotationData = insertQuotationSchema.parse(req.body);
+      const quotationData = insertQuotationSchemaWithNormalization.parse(req.body);
       const quotation = await storage.createQuotation(quotationData);
       res.status(201).json(quotation);
     } catch (error) {
@@ -2858,7 +2859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const quotationData = insertQuotationSchema.partial().parse(req.body);
+      const quotationData = insertQuotationSchemaWithNormalization.partial().parse(req.body);
       const updatedQuotation = await storage.updateQuotation(
         req.params.id,
         quotationData,
