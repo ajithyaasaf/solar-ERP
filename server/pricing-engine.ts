@@ -1,15 +1,16 @@
 import { EnterpriseQuotation, QuotationProjectType } from "@shared/schema";
 
-// Real business pricing rates (₹ per kW)
+// Real business pricing rates (₹ per kW or per unit)
 export const PRICING_RATES = {
   on_grid: 68000,      // ₹68,000/kW for on-grid systems
   off_grid: 85000,     // ₹85,000/kW for off-grid systems
   hybrid: 95000,       // ₹95,000/kW for hybrid systems
   water_heater: 25000, // ₹25,000 per unit for water heater
   water_pump: 35000,   // ₹35,000 per unit for water pump
-  ev_charger: 45000,   // ₹45,000 per unit for EV charger
-  battery_storage: 55000, // ₹55,000/kWh for battery storage
-  grid_tie_inverter: 8000, // ₹8,000/kW for grid tie inverter
+  solar_panel: 40000,  // ₹40,000/kW for solar panels
+  camera: 15000,       // ₹15,000 per unit for cameras
+  lights_accessories: 10000, // ₹10,000 per set for lights & accessories
+  others: 20000,       // ₹20,000 per unit for other equipment
 } as const;
 
 // Government subsidy rates
@@ -19,9 +20,10 @@ export const SUBSIDY_RATES = {
   hybrid: 28000,       // ₹28,000/kW for hybrid
   water_heater: 5000,  // ₹5,000 per unit
   water_pump: 8000,    // ₹8,000 per unit
-  ev_charger: 10000,   // ₹10,000 per unit
-  battery_storage: 15000, // ₹15,000/kWh for battery
-  grid_tie_inverter: 2000, // ₹2,000/kW for inverter
+  solar_panel: 12000,  // ₹12,000/kW for solar panels
+  camera: 0,           // No subsidy for cameras
+  lights_accessories: 0, // No subsidy for lights & accessories
+  others: 0,           // No subsidy for other equipment
 } as const;
 
 // Bulk discount tiers (exact business rules)

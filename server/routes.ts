@@ -46,6 +46,13 @@ import {
   parseSystemCapacity,
   calculateMultiProjectPricing 
 } from "./pricing-engine";
+import { 
+  extractSiteVisitData, 
+  generateRecommendedQuotations,
+  generateQuotationsFromSiteVisit,
+  generateRecommendedProjects
+} from "./services/site-visit-quotation-mapper";
+import { generateQuotationRequestSchema } from "./validation/quotation-schemas";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced middleware to verify Firebase Auth token and load user profile
@@ -3073,41 +3080,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { siteVisitId } = req.params;
-      const { projectType, systemCapacity, additionalData } = req.body;
       
-      // This is a placeholder for the site visit to quotation mapping
-      // Will be fully implemented in Phase 3
-      const siteVisit = await storage.getSiteVisit?.(siteVisitId);
-      if (!siteVisit) {
-        return res.status(404).json({ message: "Site visit not found" });
+      // Validate request body
+      const validatedBody = generateQuotationRequestSchema.parse(req.body);
+      const { selectedProjects, includeSubsidy } = validatedBody;
+      
+      // Generate quotations using the site visit mapping service
+      const result = await generateQuotationsFromSiteVisit({
+        siteVisitId,
+        selectedProjects,
+        createdBy: user.id,
+        includeSubsidy
+      });
+      
+      if (!result.success) {
+        return res.status(400).json({
+          message: "Failed to generate quotations from site visit",
+          errors: result.errors,
+          summary: result.summary
+        });
       }
       
-      // Generate quotation number
-      const allQuotations = await storage.listQuotations();
-      const lastNumber = allQuotations
-        .map(q => q.quotationNumber)
-        .filter(num => num && num.startsWith('Q-'))
-        .map(num => parseInt(num.split('-')[1]) || 0)
-        .reduce((max, current) => Math.max(max, current), 1050);
-      
-      const quotationData = {
-        quotationNumber: `Q-${lastNumber + 1}`,
-        customerId: siteVisit.customer?.id || '',
-        siteVisitId,
-        projectType,
-        systemCapacity,
-        projectTitle: `${systemCapacity} ${projectType.replace('_', '-')} Solar System`,
-        createdBy: user.id,
-        status: 'draft' as const,
-        ...additionalData
-      };
-      
-      const validatedData = insertQuotationSchemaWithNormalization.parse(quotationData);
-      const quotation = await storage.createQuotation(validatedData);
-      
       res.status(201).json({
-        message: "Quotation generated from site visit successfully",
-        quotation
+        message: `${result.summary.totalGenerated} quotations generated from site visit successfully`,
+        quotations: result.quotations,
+        errors: result.errors.length > 0 ? result.errors : undefined,
+        summary: result.summary
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -3115,6 +3113,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error generating quotation from site visit:", error);
       res.status(500).json({ message: "Failed to generate quotation from site visit" });
+    }
+  });
+
+  // Get site visit data for quotation generation
+  app.get("/api/quotations/site-visit/:siteVisitId/data", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (
+        !user ||
+        !(["master_admin", "admin"].includes(user.role || "") || 
+         ["sales", "marketing"].includes(user.department || ""))
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { siteVisitId } = req.params;
+      
+      // Extract site visit data
+      const siteVisitData = await extractSiteVisitData(siteVisitId);
+      if (!siteVisitData) {
+        return res.status(404).json({ message: "Site visit not found or inaccessible" });
+      }
+      
+      // Generate recommended projects
+      const recommendedProjects = generateRecommendedProjects(siteVisitData);
+      
+      res.json({
+        siteVisitData,
+        recommendedProjects,
+        message: "Site visit data extracted successfully"
+      });
+    } catch (error) {
+      console.error("Error extracting site visit data:", error);
+      res.status(500).json({ message: "Failed to extract site visit data" });
+    }
+  });
+
+  // Generate recommended quotations from site visit  
+  app.post("/api/quotations/from-site-visit/:siteVisitId/generate-recommended", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (
+        !user ||
+        !(["master_admin", "admin"].includes(user.role || "") || 
+         ["sales", "marketing"].includes(user.department || ""))
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { siteVisitId } = req.params;
+      
+      // Generate recommended quotations
+      const result = await generateRecommendedQuotations(siteVisitId, user.id);
+      
+      if (!result.success) {
+        return res.status(400).json({
+          message: "Failed to generate recommended quotations",
+          errors: result.errors,
+          summary: result.summary
+        });
+      }
+      
+      res.status(201).json({
+        message: `${result.summary.totalGenerated} recommended quotations generated successfully`,
+        quotations: result.quotations,
+        errors: result.errors.length > 0 ? result.errors : undefined,
+        summary: result.summary
+      });
+    } catch (error) {
+      console.error("Error generating recommended quotations:", error);
+      res.status(500).json({ message: "Failed to generate recommended quotations" });
     }
   });
 
