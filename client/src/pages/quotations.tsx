@@ -157,8 +157,8 @@ export default function Quotations() {
           <CardTitle className="text-xl">Quotations</CardTitle>
           <CardDescription>Manage your customer quotations</CardDescription>
         </div>
-        <Link href="/quotations/new">
-          <Button className="bg-primary hover:bg-primary-dark text-white">
+        <Link href="/quotations/builder">
+          <Button className="bg-primary hover:bg-primary-dark text-white" data-testid="button-create-quotation">
             <PlusCircle className="h-4 w-4 mr-2" />
             New Quotation
           </Button>

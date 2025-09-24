@@ -18,6 +18,7 @@ import { Suspense, lazy } from "react";
 const Customers = lazy(() => import("@/pages/customers"));
 const Products = lazy(() => import("@/pages/products"));
 const Quotations = lazy(() => import("@/pages/quotations"));
+const QuotationBuilder = lazy(() => import("@/components/quotations/unified-quotation-builder"));
 const Invoices = lazy(() => import("@/pages/invoices"));
 const Attendance = lazy(() => import("@/pages/attendance"));
 const AttendanceManagement = lazy(() => import("@/pages/attendance-management"));
@@ -98,6 +99,37 @@ function Router() {
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
+      </Route>
+      
+      {/* Quotation Builder - enterprise permission based */}
+      <Route path="/quotations/builder">
+        <ProtectedRoute 
+          requiredPermissions={["quotations.create"]}
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <QuotationBuilder mode="standalone" />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Site Visit to Quotation Builder */}
+      <Route path="/site-visits/:siteVisitId/quotation">
+        {(params) => (
+          <ProtectedRoute 
+            requiredPermissions={["quotations.create"]}
+          >
+            <DashboardLayout>
+              <Suspense fallback={<PageLoader />}>
+                <QuotationBuilder 
+                  mode="site_visit" 
+                  siteVisitId={params.siteVisitId}
+                />
+              </Suspense>
+            </DashboardLayout>
+          </ProtectedRoute>
+        )}
       </Route>
       
       {/* Invoice management - enterprise permission based */}
