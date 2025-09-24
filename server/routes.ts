@@ -207,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               id: `quotation-${quotation.id}`,
               type: 'quotation_created' as const,
               title: "Quotation created",
-              description: `${quotation.quotationNumber || 'New quotation'} for ₹${quotation.total || 0}`,
+              description: `${quotation.quotationNumber || 'New quotation'} for ₹${quotation.financials?.finalCustomerPayment || 0}`,
               createdAt: quotation.createdAt,
               entityId: quotation.id,
               entityType: 'quotation',
@@ -307,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: `quotation-${recentQuotation.id}`,
             type: 'quotation_created' as const,
             title: "Quotation created",
-            description: `${recentQuotation.quotationNumber || 'New quotation'} for ₹${recentQuotation.total || 0}`,
+            description: `${recentQuotation.quotationNumber || 'New quotation'} for ₹${recentQuotation.financials?.finalCustomerPayment || 0}`,
             createdAt: recentQuotation.createdAt,
             entityId: recentQuotation.id,
             entityType: 'quotation',
@@ -2808,9 +2808,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
+        !(["master_admin", "admin"].includes(user.role || "") || 
+         ["sales", "marketing"].includes(user.department || ""))
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2830,13 +2829,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
+        !(["master_admin", "admin"].includes(user.role || "") || 
+         ["sales", "marketing"].includes(user.department || ""))
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const quotationData = insertQuotationSchemaWithNormalization.parse(req.body);
+      let quotationData = insertQuotationSchemaWithNormalization.parse(req.body);
+      
+      // Auto-generate quotation number if not provided
+      if (!quotationData.quotationNumber) {
+        const allQuotations = await storage.listQuotations();
+        const lastNumber = allQuotations
+          .map(q => q.quotationNumber)
+          .filter(num => num && num.startsWith('Q-'))
+          .map(num => parseInt(num.split('-')[1]) || 0)
+          .reduce((max, current) => Math.max(max, current), 1050); // Start from Q-1051
+        quotationData.quotationNumber = `Q-${lastNumber + 1}`;
+      }
+      
+      // Validate customer exists
+      const customer = await storage.getCustomer(quotationData.customerId);
+      if (!customer) {
+        return res.status(400).json({ message: "Customer not found" });
+      }
+      
+      // Set creator information
+      quotationData.createdBy = user.id;
+      
       const quotation = await storage.createQuotation(quotationData);
       res.status(201).json(quotation);
     } catch (error) {
@@ -2853,13 +2872,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
+        !(["master_admin", "admin"].includes(user.role || "") || 
+         ["sales", "marketing"].includes(user.department || ""))
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const quotationData = insertQuotationSchemaWithNormalization.partial().parse(req.body);
+      const quotationData = insertQuotationSchema.partial().parse(req.body);
       const updatedQuotation = await storage.updateQuotation(
         req.params.id,
         quotationData,
@@ -2888,6 +2906,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting quotation:", error);
       res.status(500).json({ message: "Failed to delete quotation" });
+    }
+  });
+
+  // Bulk quotation operations for multi-project customers
+  app.post("/api/quotations/bulk", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (
+        !user ||
+        !(["master_admin", "admin"].includes(user.role || "") || 
+         ["sales", "marketing"].includes(user.department || ""))
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { quotations, customerId } = req.body;
+      
+      if (!Array.isArray(quotations) || quotations.length === 0) {
+        return res.status(400).json({ message: "Quotations array is required" });
+      }
+      
+      // Validate customer exists
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(400).json({ message: "Customer not found" });
+      }
+      
+      // Get next quotation numbers
+      const allQuotations = await storage.listQuotations();
+      let lastNumber = allQuotations
+        .map(q => q.quotationNumber)
+        .filter(num => num && num.startsWith('Q-'))
+        .map(num => parseInt(num.split('-')[1]) || 0)
+        .reduce((max, current) => Math.max(max, current), 1050);
+      
+      const createdQuotations = [];
+      
+      for (const quotationData of quotations) {
+        const validatedData = insertQuotationSchemaWithNormalization.parse({
+          ...quotationData,
+          customerId,
+          quotationNumber: `Q-${++lastNumber}`,
+          createdBy: user.id
+        });
+        
+        const quotation = await storage.createQuotation(validatedData);
+        createdQuotations.push(quotation);
+      }
+      
+      res.status(201).json({
+        message: `${createdQuotations.length} quotations created successfully`,
+        quotations: createdQuotations
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error creating bulk quotations:", error);
+      res.status(500).json({ message: "Failed to create quotations" });
+    }
+  });
+
+  // Generate quotation from site visit (integration endpoint)
+  app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (
+        !user ||
+        !(["master_admin", "admin"].includes(user.role || "") || 
+         ["sales", "marketing"].includes(user.department || ""))
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { siteVisitId } = req.params;
+      const { projectType, systemCapacity, additionalData } = req.body;
+      
+      // This is a placeholder for the site visit to quotation mapping
+      // Will be fully implemented in Phase 3
+      const siteVisit = await storage.getSiteVisit?.(siteVisitId);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+      
+      // Generate quotation number
+      const allQuotations = await storage.listQuotations();
+      const lastNumber = allQuotations
+        .map(q => q.quotationNumber)
+        .filter(num => num && num.startsWith('Q-'))
+        .map(num => parseInt(num.split('-')[1]) || 0)
+        .reduce((max, current) => Math.max(max, current), 1050);
+      
+      const quotationData = {
+        quotationNumber: `Q-${lastNumber + 1}`,
+        customerId: siteVisit.customer?.id || '',
+        siteVisitId,
+        projectType,
+        systemCapacity,
+        projectTitle: `${systemCapacity} ${projectType.replace('_', '-')} Solar System`,
+        createdBy: user.id,
+        status: 'draft' as const,
+        ...additionalData
+      };
+      
+      const validatedData = insertQuotationSchemaWithNormalization.parse(quotationData);
+      const quotation = await storage.createQuotation(validatedData);
+      
+      res.status(201).json({
+        message: "Quotation generated from site visit successfully",
+        quotation
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error generating quotation from site visit:", error);
+      res.status(500).json({ message: "Failed to generate quotation from site visit" });
     }
   });
 
