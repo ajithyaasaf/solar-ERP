@@ -40,6 +40,12 @@ import { auth } from "./firebase";
 import { userService } from "./services/user-service";
 import { testFirebaseAdminSDK, testUserManagement } from "./test-firebase-admin";
 import { attendanceRateLimiter, generalRateLimiter, createRateLimitMiddleware } from "./utils/rate-limiter";
+import { 
+  calculatePricing, 
+  generateQuotationFinancials, 
+  parseSystemCapacity,
+  calculateMultiProjectPricing 
+} from "./pricing-engine";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced middleware to verify Firebase Auth token and load user profile
@@ -2856,6 +2862,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Set creator information
       quotationData.createdBy = user.id;
       
+      // Calculate pricing using the centralized pricing engine
+      try {
+        const { value, unit } = parseSystemCapacity(quotationData.systemCapacity);
+        const pricingResult = calculatePricing({
+          projectType: quotationData.projectType,
+          capacityValue: value,
+          capacityUnit: unit,
+          systemCapacity: quotationData.systemCapacity,
+          includeSubsidy: true,
+          customerProjectCount: 1,
+          totalCustomerValue: 0
+        });
+        
+        // Generate financial breakdown
+        quotationData.financials = generateQuotationFinancials(pricingResult);
+        
+        // Set normalized capacity fields for compatibility
+        quotationData.capacityValue = value;
+        quotationData.capacityUnit = unit as "kW" | "L" | "HP" | "Watts";
+        
+      } catch (pricingError) {
+        console.warn("Pricing calculation failed, using manual financials:", pricingError);
+        // Allow manual quotation creation if pricing fails
+      }
+      
       const quotation = await storage.createQuotation(quotationData);
       res.status(201).json(quotation);
     } catch (error) {
@@ -2942,22 +2973,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .reduce((max, current) => Math.max(max, current), 1050);
       
       const createdQuotations = [];
+      const errors = [];
       
-      for (const quotationData of quotations) {
-        const validatedData = insertQuotationSchemaWithNormalization.parse({
-          ...quotationData,
-          customerId,
-          quotationNumber: `Q-${++lastNumber}`,
-          createdBy: user.id
+      // Parse and validate all quotations first, collecting errors
+      const validPricingInputs: any[] = [];
+      const invalidQuotations: any[] = [];
+      
+      quotations.forEach((q, index) => {
+        try {
+          const { value, unit } = parseSystemCapacity(q.systemCapacity);
+          validPricingInputs.push({
+            projectType: q.projectType,
+            capacityValue: value,
+            capacityUnit: unit,
+            systemCapacity: q.systemCapacity,
+            includeSubsidy: true,
+            originalIndex: index
+          });
+        } catch (error) {
+          invalidQuotations.push({
+            index,
+            quotation: q,
+            error: `Invalid system capacity format: ${q.systemCapacity}`
+          });
+        }
+      });
+      
+      if (validPricingInputs.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid quotations to process",
+          errors: invalidQuotations
         });
-        
-        const quotation = await storage.createQuotation(validatedData);
-        createdQuotations.push(quotation);
+      }
+      
+      // Calculate pricing for valid quotations with bulk discounts
+      const multiProjectPricing = calculateMultiProjectPricing(validPricingInputs, customerId);
+      
+      // Add invalid quotations to errors first
+      errors.push(...invalidQuotations);
+      
+      // Process valid quotations with pricing
+      for (let validIndex = 0; validIndex < validPricingInputs.length; validIndex++) {
+        try {
+          const pricingInput = validPricingInputs[validIndex];
+          const originalIndex = pricingInput.originalIndex;
+          const quotationData = quotations[originalIndex];
+          const pricingResult = multiProjectPricing[validIndex];
+          
+          const validatedData = insertQuotationSchemaWithNormalization.parse({
+            ...quotationData,
+            customerId,
+            quotationNumber: `Q-${++lastNumber}`,
+            createdBy: user.id,
+            financials: generateQuotationFinancials(pricingResult),
+            capacityValue: pricingResult.breakdown.capacityUsed,
+            capacityUnit: pricingInput.capacityUnit as "kW" | "L" | "HP" | "Watts"
+          });
+          
+          const quotation = await storage.createQuotation(validatedData);
+          createdQuotations.push(quotation);
+        } catch (error) {
+          errors.push({
+            index: validPricingInputs[validIndex].originalIndex,
+            quotation: quotations[validPricingInputs[validIndex].originalIndex],
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
       }
       
       res.status(201).json({
         message: `${createdQuotations.length} quotations created successfully`,
-        quotations: createdQuotations
+        quotations: createdQuotations,
+        errors: errors.length > 0 ? errors : undefined,
+        summary: {
+          total: quotations.length,
+          successful: createdQuotations.length,
+          failed: errors.length
+        }
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
