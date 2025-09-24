@@ -80,6 +80,423 @@ const projectFormSchema = z.object({
 
 type ProjectFormData = z.infer<typeof projectFormSchema>;
 
+// Helper function to generate quotations from site visit technical data
+function generateQuotationsFromSiteVisit(siteVisitData: SiteVisitData): Partial<EnterpriseQuotation>[] {
+  const quotations: Partial<EnterpriseQuotation>[] = [];
+  
+  // Extract marketing data which contains the technical specifications
+  const marketingData = siteVisitData.marketingData;
+  if (!marketingData?.updateRequirements) {
+    return [];
+  }
+
+  // Generate quotations for all configured project types
+  const configMappings = [
+    { projectType: 'on_grid' as QuotationProjectType, config: marketingData.onGridConfig },
+    { projectType: 'off_grid' as QuotationProjectType, config: marketingData.offGridConfig },
+    { projectType: 'hybrid' as QuotationProjectType, config: marketingData.hybridConfig },
+    { projectType: 'water_heater' as QuotationProjectType, config: marketingData.waterHeaterConfig },
+    { projectType: 'water_pump' as QuotationProjectType, config: marketingData.waterPumpConfig }
+  ];
+  
+  for (const { projectType, config } of configMappings) {
+    if (config) {
+      const quotation = createQuotationFromConfig(projectType, config, siteVisitData);
+      quotations.push(quotation);
+    }
+  }
+  
+  return quotations;
+}
+
+// Get configuration data for specific project type
+function getConfigForProjectType(marketingData: any, projectType: QuotationProjectType) {
+  switch (projectType) {
+    case 'on_grid':
+      return marketingData.onGridConfig;
+    case 'off_grid':
+      return marketingData.offGridConfig;
+    case 'hybrid':
+      return marketingData.hybridConfig;
+    case 'water_heater':
+      return marketingData.waterHeaterConfig;
+    case 'water_pump':
+      return marketingData.waterPumpConfig;
+    default:
+      return null;
+  }
+}
+
+// Create detailed quotation from technical configuration
+function createQuotationFromConfig(
+  projectType: QuotationProjectType, 
+  config: any, 
+  siteVisitData: SiteVisitData
+): Partial<EnterpriseQuotation> {
+  // Generate system capacity based on configuration
+  const systemCapacity = generateSystemCapacity(projectType, config);
+  
+  // Generate project title
+  const projectTitle = generateProjectTitle(projectType, systemCapacity, config);
+  
+  // Generate Bill of Materials from technical specifications
+  const billOfMaterials = generateBOMFromConfig(projectType, config);
+  
+  // Generate warranty information
+  const warranties = generateWarranties(projectType, config);
+  
+  // Generate scope of work
+  const { companyScope, customerScope } = generateScopeOfWork(projectType, config);
+  
+  return {
+    projectType,
+    systemCapacity,
+    projectTitle,
+    billOfMaterials,
+    warranties,
+    companyScope,
+    customerScope,
+    paymentTerms: {
+      advancePercentage: 90,
+      balancePercentage: 10,
+      advanceTrigger: 'along_with_purchase_order',
+      balanceTrigger: 'after_completion_of_work'
+    },
+    templateData: {
+      templateType: getTemplateType(projectType),
+      companyLetterhead: true,
+      customerReference: `Based on site visit assessment`,
+      subjectLine: `Quotation for ${projectTitle}`,
+      introductionText: 'We are pleased to submit our technical and commercial offer for your solar power requirement based on our site assessment',
+      managingDirectorName: 'Mr. M. Selva Prakash',
+      contactPerson: 'Sales Team'
+    },
+    deliveryPeriod: '2-3 Weeks from order confirmation',
+    status: 'draft',
+    notes: `Generated from site visit. Technical specifications: ${JSON.stringify(config, null, 2)}`
+  };
+}
+
+// Generate system capacity from technical configuration
+function generateSystemCapacity(projectType: QuotationProjectType, config: any): string {
+  switch (projectType) {
+    case 'on_grid':
+    case 'off_grid':
+    case 'hybrid':
+      // Priority 1: Use panel capacity (most accurate for solar systems)
+      if (config.panelWatts && config.panelCount) {
+        const panelWatts = parseFloat(config.panelWatts.toString().replace(/[^0-9.]/g, ''));
+        const totalWatts = panelWatts * config.panelCount;
+        return `${(totalWatts / 1000).toFixed(1)}kW`;
+      }
+      
+      // Priority 2: Use inverter capacity
+      if (config.inverterKW && config.inverterQty) {
+        return `${(config.inverterKW * config.inverterQty)}kW`;
+      }
+      
+      // Priority 3: Parse inverter watts string
+      if (config.inverterWatts) {
+        const inverterString = config.inverterWatts.toString().toLowerCase();
+        let capacity = 0;
+        
+        if (inverterString.includes('kw')) {
+          capacity = parseFloat(inverterString.replace(/[^0-9.]/g, ''));
+        } else if (inverterString.includes('w')) {
+          capacity = parseFloat(inverterString.replace(/[^0-9.]/g, '')) / 1000;
+        } else {
+          // Assume kW if no unit specified
+          capacity = parseFloat(inverterString.replace(/[^0-9.]/g, ''));
+        }
+        
+        const qty = config.inverterQty || 1;
+        return `${(capacity * qty)}kW`;
+      }
+      
+      return '3kW'; // Default
+      
+    case 'water_heater':
+      return config.litre ? `${config.litre}L` : '200L';
+      
+    case 'water_pump':
+      return config.hp ? `${config.hp}HP` : '3HP';
+      
+    default:
+      return '1kW';
+  }
+}
+
+// Generate descriptive project title
+function generateProjectTitle(projectType: QuotationProjectType, systemCapacity: string, config: any): string {
+  const baseTitle = {
+    'on_grid': 'On-Grid Solar Power Generation System',
+    'off_grid': 'Off-Grid Solar Power Generation System',
+    'hybrid': 'Hybrid Solar Power Generation System',
+    'water_heater': 'Solar Water Heater System',
+    'water_pump': 'Solar Water Pump System',
+    'solar_panel': 'Solar Panel Installation',
+    'camera': 'Security Camera Installation',
+    'lights_accessories': 'Lights & Accessories Installation',
+    'others': 'Solar Equipment Installation'
+  }[projectType] || 'Solar System';
+  
+  return `${systemCapacity} ${baseTitle}`;
+}
+
+// Generate Bill of Materials from technical specifications
+function generateBOMFromConfig(projectType: QuotationProjectType, config: any): Array<any> {
+  const bom: Array<any> = [];
+  
+  switch (projectType) {
+    case 'on_grid':
+    case 'off_grid':
+    case 'hybrid':
+      // Solar panels
+      if (config.solarPanelMake && config.panelWatts && config.panelCount) {
+        bom.push({
+          category: 'solar_panels',
+          item: `${config.panelWatts}W Solar Panel`,
+          specification: `${config.solarPanelMake?.join(', ')} - ${config.panelWatts}W Monocrystalline`,
+          brand: config.solarPanelMake?.join(', '),
+          quantity: config.panelCount,
+          unit: 'Nos'
+        });
+      }
+      
+      // Inverters
+      if (config.inverterMake && config.inverterWatts) {
+        bom.push({
+          category: 'inverter',
+          item: `${config.inverterWatts} Inverter`,
+          specification: `${config.inverterMake?.join(', ')} - ${config.inverterWatts} ${config.inverterPhase} Inverter`,
+          brand: config.inverterMake?.join(', '),
+          quantity: config.inverterQty || 1,
+          unit: 'Nos'
+        });
+      }
+      
+      // Batteries (for off-grid and hybrid)
+      if ((projectType === 'off_grid' || projectType === 'hybrid') && config.batteryBrand && config.batteryAH) {
+        bom.push({
+          category: 'batteries',
+          item: `${config.batteryAH}AH Battery`,
+          specification: `${config.batteryBrand} - ${config.batteryAH}AH ${config.batteryType || 'Tubular'} Battery`,
+          brand: config.batteryBrand,
+          quantity: config.batteryCount || 1,
+          unit: 'Nos'
+        });
+      }
+      
+      // Mounting structure
+      if (config.structureType) {
+        bom.push({
+          category: 'mounting_structure',
+          item: 'Mounting Structure',
+          specification: `${config.structureType} - Height: ${config.structureHeight}ft`,
+          quantity: 1,
+          unit: 'Set'
+        });
+      }
+      
+      // Earthing
+      if (config.earth) {
+        bom.push({
+          category: 'electrical',
+          item: 'Earthing Kit',
+          specification: `${config.earth.toUpperCase()} Earthing with Lightning Arrester: ${config.lightningArrest ? 'Yes' : 'No'}`,
+          quantity: 1,
+          unit: 'Set'
+        });
+      }
+      
+      break;
+      
+    case 'water_heater':
+      if (config.brand && config.litre) {
+        bom.push({
+          category: 'solar_panels',
+          item: `${config.litre}L Solar Water Heater`,
+          specification: `${config.brand} - ${config.litre}L Capacity Solar Water Heater`,
+          brand: config.brand,
+          quantity: 1,
+          unit: 'Nos'
+        });
+      }
+      break;
+      
+    case 'water_pump':
+      if (config.hp && config.drive) {
+        bom.push({
+          category: 'electrical',
+          item: `${config.hp}HP Solar Water Pump`,
+          specification: `${config.hp}HP ${config.drive} Drive Solar Water Pump`,
+          quantity: 1,
+          unit: 'Nos'
+        });
+      }
+      
+      if (config.panelBrand && config.panelCount) {
+        bom.push({
+          category: 'solar_panels',
+          item: 'Solar Panels for Pump',
+          specification: `${config.panelBrand?.join(', ')} Solar Panels`,
+          brand: config.panelBrand?.join(', '),
+          quantity: config.panelCount,
+          unit: 'Nos'
+        });
+      }
+      break;
+  }
+  
+  // Add installation charges
+  bom.push({
+    category: 'installation',
+    item: 'Installation & Commissioning',
+    specification: 'Complete system installation, testing and commissioning',
+    quantity: 1,
+    unit: 'Job'
+  });
+  
+  return bom;
+}
+
+// Generate warranty information
+function generateWarranties(projectType: QuotationProjectType, config: any): Array<any> {
+  const warranties = [];
+  
+  switch (projectType) {
+    case 'on_grid':
+    case 'off_grid':
+    case 'hybrid':
+      warranties.push(
+        {
+          component: 'solar_panels',
+          manufacturingWarranty: '25 Years',
+          serviceWarranty: '5 Years',
+          performanceWarranty: '90% till 10 years, 80% till 25 years',
+          exclusions: ['Physical Damages', 'Natural Calamities']
+        },
+        {
+          component: 'inverter',
+          manufacturingWarranty: '5 Years',
+          serviceWarranty: '5 Years',
+          exclusions: ['Physical Damages', 'Power Surges']
+        }
+      );
+      
+      if (projectType === 'off_grid' || projectType === 'hybrid') {
+        warranties.push({
+          component: 'batteries',
+          manufacturingWarranty: '3 Years',
+          serviceWarranty: '2 Years',
+          exclusions: ['Physical Damages', 'Overcharging']
+        });
+      }
+      break;
+      
+    case 'water_heater':
+      warranties.push({
+        component: 'water_heater',
+        manufacturingWarranty: '5 Years',
+        serviceWarranty: '3 Years',
+        exclusions: ['Physical Damages', 'Scale Formation']
+      });
+      break;
+      
+    case 'water_pump':
+      warranties.push({
+        component: 'water_pump',
+        manufacturingWarranty: '2 Years',
+        serviceWarranty: '1 Year',
+        exclusions: ['Physical Damages', 'Dry Running']
+      });
+      break;
+  }
+  
+  return warranties;
+}
+
+// Generate scope of work
+function generateScopeOfWork(projectType: QuotationProjectType, config: any) {
+  const companyScope = [];
+  const customerScope = [];
+  
+  // Company responsibilities
+  companyScope.push(
+    {
+      category: 'installation',
+      description: 'Complete system design and installation',
+      included: true
+    },
+    {
+      category: 'electrical',
+      description: 'Electrical connections and safety measures',
+      included: true
+    },
+    {
+      category: 'documentation',
+      description: 'System documentation and user manual',
+      included: true
+    }
+  );
+  
+  // Add project-specific scope
+  if (config.civilWorkScope) {
+    companyScope.push({
+      category: 'civil_work',
+      description: config.civilWorkScope,
+      included: true
+    });
+  }
+  
+  if (config.netMeterScope) {
+    companyScope.push({
+      category: 'electrical',
+      description: `Net Meter: ${config.netMeterScope}`,
+      included: true
+    });
+  }
+  
+  // Customer responsibilities
+  customerScope.push(
+    {
+      category: 'site_preparation',
+      description: 'Provide clear access to installation site',
+      customerResponsibility: true
+    },
+    {
+      category: 'permissions',
+      description: 'Obtain necessary local permissions if required',
+      customerResponsibility: true
+    },
+    {
+      category: 'civil_work',
+      description: 'Basic civil work for foundation (if not included)',
+      customerResponsibility: true
+    }
+  );
+  
+  return { companyScope, customerScope };
+}
+
+// Get appropriate template type
+function getTemplateType(projectType: QuotationProjectType): 'on_grid_template' | 'off_grid_template' | 'hybrid_template' | 'water_heater_template' | 'water_pump_template' {
+  switch (projectType) {
+    case 'on_grid':
+      return 'on_grid_template';
+    case 'off_grid':
+      return 'off_grid_template';
+    case 'hybrid':
+      return 'hybrid_template';
+    case 'water_heater':
+      return 'water_heater_template';
+    case 'water_pump':
+      return 'water_pump_template';
+    default:
+      return 'on_grid_template';
+  }
+}
+
 export default function UnifiedQuotationBuilder({
   initialData = [],
   mode,
@@ -134,6 +551,24 @@ export default function UnifiedQuotationBuilder({
       setSelectedCustomer(customerData);
     }
   }, [customerData, mode]);
+
+  // Initialize quotations from site visit data
+  useEffect(() => {
+    if (siteVisitData && mode === 'site_visit' && quotations.length === 0) {
+      const generatedQuotations = generateQuotationsFromSiteVisit(siteVisitData);
+      if (generatedQuotations.length > 0) {
+        setQuotations(generatedQuotations);
+        // Set form for first quotation
+        const firstQuotation = generatedQuotations[0];
+        form.reset({
+          projectType: firstQuotation.projectType || 'on_grid',
+          systemCapacity: firstQuotation.systemCapacity || '',
+          projectTitle: firstQuotation.projectTitle || '',
+          customRequirements: firstQuotation.notes || ''
+        });
+      }
+    }
+  }, [siteVisitData, mode, quotations.length, form]);
 
   // Initialize form with existing quotation data
   useEffect(() => {
@@ -471,6 +906,11 @@ export default function UnifiedQuotationBuilder({
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
               Projects ({quotations.length})
+              {mode === 'site_visit' && (
+                <Badge variant="secondary" className="ml-2">
+                  Auto-generated from site visit
+                </Badge>
+              )}
             </CardTitle>
             <Button onClick={addNewProject} size="sm" data-testid="button-add-project">
               <Plus className="h-4 w-4 mr-2" />
@@ -516,6 +956,24 @@ export default function UnifiedQuotationBuilder({
 
             {quotations.map((quotation, index) => (
               <TabsContent key={index} value={index.toString()} className="space-y-6">
+                {/* Technical Specifications from Site Visit */}
+                {mode === 'site_visit' && siteVisitData?.marketingData && (
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardHeader>
+                      <CardTitle className="text-blue-900 flex items-center gap-2">
+                        <Zap className="h-5 w-5" />
+                        Technical Specifications (From Site Visit)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <TechnicalSpecificationsPanel 
+                        projectType={quotation?.projectType || 'on_grid'}
+                        marketingData={siteVisitData.marketingData}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Project Details Form */}
                 <Card>
                   <CardHeader>
