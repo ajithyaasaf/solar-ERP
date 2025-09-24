@@ -2,6 +2,7 @@ import { storage } from "../storage";
 import { calculatePricing, generateQuotationFinancials } from "../pricing-engine";
 import { QuotationProjectType } from "@shared/schema";
 import { normalizeCapacityForPricing, getStandardizedUnit } from "./capacity-normalizer";
+import { generateBOM } from "./bom-generator";
 
 // Service type to quotation project type mapping
 export const SERVICE_TYPE_MAPPING: Record<string, QuotationProjectType> = {
@@ -320,6 +321,9 @@ export async function generateQuotationsFromSiteVisit(
           totalCustomerValue: totalValue
         });
         
+        // Generate Bill of Materials
+        const bomData = generateBOM(project.projectType, project.systemCapacity);
+        
         // Create quotation data with required fields
         const quotationData = {
           quotationNumber: `Q-${++lastNumber}`,
@@ -333,8 +337,20 @@ export async function generateQuotationsFromSiteVisit(
           financials: generateQuotationFinancials(pricingResult),
           createdBy: request.createdBy,
           status: 'draft' as const,
-          notes: `Generated from site visit ${request.siteVisitId}. ${siteVisitMapping.notes || ''}`,
-          billOfMaterials: [],
+          notes: `Generated from site visit ${request.siteVisitId}. ${siteVisitMapping.notes || ''}\n\nSystem includes: ${bomData.totalComponents} components, ${bomData.systemCapacity} capacity`,
+          billOfMaterials: bomData.components.map(comp => ({
+            id: comp.id,
+            name: comp.name,
+            category: comp.category,
+            quantity: comp.quantity,
+            unit: comp.unit,
+            unitPrice: comp.unitPrice,
+            totalPrice: comp.totalPrice,
+            specifications: comp.specifications,
+            warranty: comp.warranty,
+            make: comp.make || '',
+            model: comp.model || ''
+          })),
           warranties: [],
           paymentTerms: {
             advance: 90,

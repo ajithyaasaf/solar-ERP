@@ -46,6 +46,7 @@ import {
   parseSystemCapacity,
   calculateMultiProjectPricing 
 } from "./pricing-engine";
+import { generateBOM } from "./services/bom-generator";
 import { 
   extractSiteVisitData, 
   generateRecommendedQuotations,
@@ -2892,6 +2893,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (pricingError) {
         console.warn("Pricing calculation failed, using manual financials:", pricingError);
         // Allow manual quotation creation if pricing fails
+      }
+      
+      // Generate Bill of Materials if not provided
+      if (!quotationData.billOfMaterials || quotationData.billOfMaterials.length === 0) {
+        try {
+          const bomData = generateBOM(quotationData.projectType, quotationData.systemCapacity);
+          quotationData.billOfMaterials = bomData.components.map(comp => ({
+            id: comp.id,
+            name: comp.name,
+            category: comp.category,
+            quantity: comp.quantity,
+            unit: comp.unit,
+            unitPrice: comp.unitPrice,
+            totalPrice: comp.totalPrice,
+            specifications: comp.specifications,
+            warranty: comp.warranty,
+            make: comp.make || '',
+            model: comp.model || ''
+          }));
+          
+          // Add BOM summary to notes
+          const bomSummary = `\nAuto-generated BOM: ${bomData.totalComponents} components, ₹${bomData.grandTotal.toLocaleString('en-IN')} total value`;
+          quotationData.notes = quotationData.notes ? `${quotationData.notes}${bomSummary}` : bomSummary.trim();
+        } catch (bomError) {
+          console.warn("BOM generation failed, proceeding without BOM:", bomError);
+        }
       }
       
       const quotation = await storage.createQuotation(quotationData);
