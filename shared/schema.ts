@@ -1330,4 +1330,340 @@ export type CustomerProfileCompleteness = typeof customerProfileCompleteness[num
 export type CustomerCreationSource = typeof customerCreationSources[number];
 export type InsertUnifiedCustomer = z.infer<typeof insertCustomerSchema>;
 
+// ====== ENTERPRISE QUOTATION SYSTEM SCHEMAS ======
+
+// Project types for comprehensive quotation management
+export const quotationProjectTypes = [
+  "on_grid", "off_grid", "hybrid", "water_heater", "water_pump", "solar_camera", "dc_appliances"
+] as const;
+
+// Quotation status workflow
+export const quotationStatuses = [
+  "draft", "review", "approved", "sent", "customer_approved", "converted", "rejected", "cancelled"
+] as const;
+
+// Bill of Materials component categories
+export const bomCategories = [
+  "solar_panels", "inverter", "mounting_structure", "accessories", "installation", "batteries", "electrical", "civil_work"
+] as const;
+
+// Warranty component types
+export const warrantyComponents = [
+  "solar_panels", "inverter", "mounting_structure", "installation", "batteries", "electrical_accessories"
+] as const;
+
+// Company scope categories
+export const companyScopeCategories = [
+  "structure", "installation", "documentation", "electrical", "commissioning"
+] as const;
+
+// Customer scope categories  
+export const customerScopeCategories = [
+  "civil_work", "electrical", "documentation", "site_preparation", "permissions"
+] as const;
+
+// Template types for document generation
+export const templateTypes = [
+  "on_grid_template", "off_grid_template", "hybrid_template", "water_heater_template", "water_pump_template"
+] as const;
+
+// Payment trigger types
+export const paymentTriggers = [
+  "along_with_purchase_order", "after_completion_of_work", "on_delivery", "before_installation", "custom"
+] as const;
+
+// Bill of Materials item schema
+export const billOfMaterialSchema = z.object({
+  category: z.enum(bomCategories),
+  item: z.string().min(1, "Item name is required"),
+  specification: z.string(),
+  brand: z.string().optional(),
+  quantity: z.number().min(1),
+  unit: z.string().default("Nos"), // "Nos", "Set", "Mtr", "Job"
+  rate: z.number().min(0).optional(),
+  amount: z.number().min(0).optional()
+});
+
+// Warranty details schema
+export const warrantySchema = z.object({
+  component: z.enum(warrantyComponents),
+  manufacturingWarranty: z.string(),  // "15 Years"
+  serviceWarranty: z.string(),        // "15 Years"
+  performanceWarranty: z.string().optional(), // "90% till 15 years, 80% till 30 years"
+  replacementWarranty: z.string().optional(), // "10 Years"
+  exclusions: z.array(z.string()).default(["Physical Damages"])
+});
+
+// Payment terms schema
+export const paymentTermsSchema = z.object({
+  advancePercentage: z.number().min(0).max(100).default(90),
+  balancePercentage: z.number().min(0).max(100).default(10),
+  advanceTrigger: z.enum(paymentTriggers).default("along_with_purchase_order"),
+  balanceTrigger: z.enum(paymentTriggers).default("after_completion_of_work"),
+  customAdvanceTrigger: z.string().optional(),
+  customBalanceTrigger: z.string().optional(),
+  accountDetails: z.object({
+    bankName: z.string(),
+    accountNumber: z.string(),
+    ifscCode: z.string(),
+    accountHolderName: z.string()
+  }).optional()
+});
+
+// Company scope item schema
+export const companyScopeSchema = z.object({
+  category: z.enum(companyScopeCategories),
+  description: z.string(),
+  included: z.boolean().default(true)
+});
+
+// Customer scope item schema
+export const customerScopeSchema = z.object({
+  category: z.enum(customerScopeCategories),
+  description: z.string(),
+  customerResponsibility: z.boolean().default(true)
+});
+
+// Template data schema for document generation
+export const templateDataSchema = z.object({
+  templateType: z.enum(templateTypes),
+  companyLetterhead: z.boolean().default(true),
+  customerReference: z.string(), // "Discussion with Mr. Selva Kumar"
+  subjectLine: z.string(),      // Auto-generated based on project
+  introductionText: z.string().default("We are pleased to submit our technical and commercial offer for your solar power requirement"),
+  managingDirectorName: z.string().default("Mr. M. Selva Prakash"),
+  contactPerson: z.string()
+});
+
+// Financial calculations schema
+export const financialCalculationsSchema = z.object({
+  totalSystemCost: z.number().min(0),     // ₹2,04,000
+  subsidyAmount: z.number().min(0),       // ₹78,000 (₹26,000/kW)
+  customerPayment: z.number().min(0),     // ₹1,26,000 (Total - Subsidy)
+  advanceAmount: z.number().min(0),       // 90% of customer payment
+  balanceAmount: z.number().min(0),       // 10% of customer payment
+  pricePerUnit: z.number().min(0),        // ₹68,000/kW for pricing reference
+  subsidyPerUnit: z.number().min(0).default(0), // ₹26,000/kW government rate
+  bulkDiscountApplied: z.number().min(0).default(0), // Bulk discount if multiple projects
+  finalCustomerPayment: z.number().min(0) // After bulk discount
+});
+
+// Multi-project customer management
+export const customerProjectSummarySchema = z.object({
+  totalProjects: z.number().min(1),
+  totalPortfolioValue: z.number().min(0),
+  bulkDiscountApplied: z.number().min(0).default(0),
+  crossSellingOpportunities: z.array(z.string()).default([])
+});
+
+// Generated documents tracking
+export const generatedDocumentSchema = z.object({
+  type: z.enum(["pdf", "word", "email"]),
+  url: z.string().url(),
+  generatedAt: z.date(),
+  version: z.number().min(1).default(1)
+});
+
+// Main Enterprise Quotation Schema
+export const insertQuotationSchema = z.object({
+  // Basic Info & Relationships
+  quotationNumber: z.string().optional(), // "Q-1052" format - auto-generated if not provided
+  customerId: z.string().min(1, "Customer ID is required"),
+  siteVisitId: z.string().optional(), // Link to source site visit
+  parentQuotationId: z.string().optional(), // For multiple projects per customer
+  
+  // Project Classification
+  projectType: z.enum(quotationProjectTypes),
+  systemCapacity: z.string(), // "3kW", "5kW", "500L", "3HP"
+  projectTitle: z.string(), // "3 kw On-Grid Solar Power Generation System"
+  
+  // Calculated Pricing (Based on Analysis)
+  financials: financialCalculationsSchema,
+  
+  // Bill of Materials (Professional Structure)
+  billOfMaterials: z.array(billOfMaterialSchema).default([]),
+  
+  // Warranty Matrix (Component-Specific)
+  warranties: z.array(warrantySchema).default([]),
+  
+  // Payment & Business Terms
+  paymentTerms: paymentTermsSchema,
+  
+  // Delivery & Timeline
+  deliveryPeriod: z.string().default("2-3 Weeks from order confirmation"),
+  installationDuration: z.string().optional(), // "2-3 Days"
+  
+  // Scope of Work (Detailed)
+  companyScope: z.array(companyScopeSchema).default([]),
+  customerScope: z.array(customerScopeSchema).default([]),
+  
+  // Document Generation & Templates
+  templateData: templateDataSchema,
+  
+  // Multi-Project Customer Management
+  customerProjectSummary: customerProjectSummarySchema.optional(),
+  
+  // Status & Workflow
+  status: z.enum(quotationStatuses).default("draft"),
+  createdBy: z.string(),
+  reviewedBy: z.string().optional(),
+  sentDate: z.date().optional(),
+  customerResponseDate: z.date().optional(),
+  conversionDate: z.date().optional(),
+  
+  // Document Outputs
+  generatedDocuments: z.array(generatedDocumentSchema).default([]),
+  
+  // Notes and additional information
+  notes: z.string().optional(),
+  internalNotes: z.string().optional() // Private notes not shown to customer
+});
+
+// Enhanced Quotation interface with all fields
+export interface EnterpriseQuotation {
+  id: string;
+  quotationNumber: string; // Generated: Q-1052, Q-1053, etc.
+  customerId: string;
+  siteVisitId?: string;
+  parentQuotationId?: string;
+  
+  // Project details
+  projectType: typeof quotationProjectTypes[number];
+  systemCapacity: string;
+  projectTitle: string;
+  
+  // Financial calculations
+  financials: {
+    totalSystemCost: number;
+    subsidyAmount: number;
+    customerPayment: number;
+    advanceAmount: number;
+    balanceAmount: number;
+    pricePerUnit: number;
+    subsidyPerUnit: number;
+    bulkDiscountApplied: number;
+    finalCustomerPayment: number;
+  };
+  
+  // Bill of materials
+  billOfMaterials: Array<{
+    category: typeof bomCategories[number];
+    item: string;
+    specification: string;
+    brand?: string;
+    quantity: number;
+    unit: string;
+    rate?: number;
+    amount?: number;
+  }>;
+  
+  // Warranties
+  warranties: Array<{
+    component: typeof warrantyComponents[number];
+    manufacturingWarranty: string;
+    serviceWarranty: string;
+    performanceWarranty?: string;
+    replacementWarranty?: string;
+    exclusions: string[];
+  }>;
+  
+  // Payment terms
+  paymentTerms: {
+    advancePercentage: number;
+    balancePercentage: number;
+    advanceTrigger: typeof paymentTriggers[number];
+    balanceTrigger: typeof paymentTriggers[number];
+    customAdvanceTrigger?: string;
+    customBalanceTrigger?: string;
+    accountDetails?: {
+      bankName: string;
+      accountNumber: string;
+      ifscCode: string;
+      accountHolderName: string;
+    };
+  };
+  
+  // Timeline
+  deliveryPeriod: string;
+  installationDuration?: string;
+  
+  // Scope of work
+  companyScope: Array<{
+    category: typeof companyScopeCategories[number];
+    description: string;
+    included: boolean;
+  }>;
+  
+  customerScope: Array<{
+    category: typeof customerScopeCategories[number];
+    description: string;
+    customerResponsibility: boolean;
+  }>;
+  
+  // Template data
+  templateData: {
+    templateType: typeof templateTypes[number];
+    companyLetterhead: boolean;
+    customerReference: string;
+    subjectLine: string;
+    introductionText: string;
+    managingDirectorName: string;
+    contactPerson: string;
+  };
+  
+  // Multi-project management
+  customerProjectSummary?: {
+    totalProjects: number;
+    totalPortfolioValue: number;
+    bulkDiscountApplied: number;
+    crossSellingOpportunities: string[];
+  };
+  
+  // Status and workflow
+  status: typeof quotationStatuses[number];
+  createdBy: string;
+  reviewedBy?: string;
+  sentDate?: Date;
+  customerResponseDate?: Date;
+  conversionDate?: Date;
+  
+  // Generated documents
+  generatedDocuments: Array<{
+    type: "pdf" | "word" | "email";
+    url: string;
+    generatedAt: Date;
+    version: number;
+  }>;
+  
+  // Additional information
+  notes?: string;
+  internalNotes?: string;
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+// Type exports for quotation system
+export type QuotationProjectType = typeof quotationProjectTypes[number];
+export type QuotationStatus = typeof quotationStatuses[number];
+export type BOMCategory = typeof bomCategories[number];
+export type WarrantyComponent = typeof warrantyComponents[number];
+export type CompanyScopeCategory = typeof companyScopeCategories[number];
+export type CustomerScopeCategory = typeof customerScopeCategories[number];
+export type TemplateType = typeof templateTypes[number];
+export type PaymentTrigger = typeof paymentTriggers[number];
+
+export type BillOfMaterial = z.infer<typeof billOfMaterialSchema>;
+export type Warranty = z.infer<typeof warrantySchema>;
+export type PaymentTerms = z.infer<typeof paymentTermsSchema>;
+export type CompanyScope = z.infer<typeof companyScopeSchema>;
+export type CustomerScope = z.infer<typeof customerScopeSchema>;
+export type TemplateData = z.infer<typeof templateDataSchema>;
+export type FinancialCalculations = z.infer<typeof financialCalculationsSchema>;
+export type CustomerProjectSummary = z.infer<typeof customerProjectSummarySchema>;
+export type GeneratedDocument = z.infer<typeof generatedDocumentSchema>;
+
+export type InsertEnterpriseQuotation = z.infer<typeof insertQuotationSchema>;
+
 
