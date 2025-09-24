@@ -34,11 +34,29 @@ import { useToast } from "@/hooks/use-toast";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
 
 interface Customer {
-  id: string;
+  id?: string;
   name: string;
   mobile: string;
   address: string;
   email?: string;
+}
+
+interface SiteVisitData {
+  customer?: {
+    id?: string;
+    name: string;
+    mobile: string;
+    address: string;
+    propertyType: string;
+    ebServiceNumber?: string;
+  };
+  id: string;
+  visitPurpose: string;
+  department: string;
+  status: string;
+  technicalData?: any;
+  marketingData?: any;
+  adminData?: any;
 }
 
 interface UnifiedQuotationBuilderProps {
@@ -90,8 +108,8 @@ export default function UnifiedQuotationBuilder({
   });
 
   // Load site visit data to get customer info
-  const { data: siteVisitData } = useQuery({
-    queryKey: ['/api/site-visits', siteVisitId],
+  const { data: siteVisitData } = useQuery<SiteVisitData>({
+    queryKey: [`/api/site-visits/${siteVisitId}`],
     enabled: !!siteVisitId && mode === 'site_visit',
   });
 
@@ -99,21 +117,21 @@ export default function UnifiedQuotationBuilder({
   const effectiveCustomerId = customerId || siteVisitData?.customer?.id;
 
   // Load customer data if customerId is available
-  const { data: customerData } = useQuery({
-    queryKey: ['/api/customers', effectiveCustomerId],
+  const { data: customerData } = useQuery<Customer>({
+    queryKey: [`/api/customers/${effectiveCustomerId}`],
     enabled: !!effectiveCustomerId && (mode === 'site_visit' || mode === 'edit'),
   });
 
   // Load existing quotation for edit mode
-  const { data: existingQuotation } = useQuery({
-    queryKey: ['/api/quotations', quotationId],
+  const { data: existingQuotation } = useQuery<EnterpriseQuotation>({
+    queryKey: [`/api/quotations/${quotationId}`],
     enabled: !!quotationId && mode === 'edit',
   });
 
   // Update selected customer when data is loaded
   useEffect(() => {
     if (customerData && (mode === 'site_visit' || mode === 'edit')) {
-      setSelectedCustomer(customerData as Customer);
+      setSelectedCustomer(customerData);
     }
   }, [customerData, mode]);
 
@@ -122,10 +140,10 @@ export default function UnifiedQuotationBuilder({
     if (existingQuotation && mode === 'edit') {
       setQuotations([existingQuotation]);
       form.reset({
-        projectType: (existingQuotation as any).projectType || 'on_grid',
-        systemCapacity: (existingQuotation as any).systemCapacity || '',
-        projectTitle: (existingQuotation as any).projectTitle || '',
-        customRequirements: (existingQuotation as any).notes || ''
+        projectType: existingQuotation.projectType || 'on_grid',
+        systemCapacity: existingQuotation.systemCapacity || '',
+        projectTitle: existingQuotation.projectTitle || '',
+        customRequirements: existingQuotation.notes || ''
       });
     }
   }, [existingQuotation, mode, form]);
@@ -146,10 +164,8 @@ export default function UnifiedQuotationBuilder({
   // Mutation for calculating pricing
   const calculatePricingMutation = useMutation({
     mutationFn: async (data: { projectType: QuotationProjectType; systemCapacity: string }) => {
-      return await apiRequest('/api/quotations/calculate-pricing', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
+      const response = await apiRequest('/api/quotations/calculate-pricing', 'POST', data);
+      return await response.json();
     },
     onSuccess: (pricingData) => {
       updateActiveQuotation({ financials: pricingData });
@@ -173,23 +189,33 @@ export default function UnifiedQuotationBuilder({
     mutationFn: async (quotationsData: Partial<EnterpriseQuotation>[]) => {
       if (mode === 'edit' && quotationId) {
         // Update existing quotation
-        return [await apiRequest(`/api/quotations/${quotationId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(quotationsData[0])
-        })];
+        const response = await apiRequest(`/api/quotations/${quotationId}`, 'PATCH', quotationsData[0]);
+        return [await response.json()];
       } else {
         // Create new quotations
         const responses = await Promise.all(
           quotationsData.map(async quotation => {
-            return await apiRequest('/api/quotations', {
-              method: 'POST',
-              body: JSON.stringify({
-                ...quotation,
-                customerId: selectedCustomer?.id,
-                siteVisitId,
-                createdBy: 'current-user' // This should be the actual user ID
-              })
-            });
+            const payload: any = {
+              ...quotation,
+              siteVisitId,
+              createdBy: 'current-user' // This should be the actual user ID
+            };
+            
+            // Only include customerId if we have a valid existing customer ID
+            if (selectedCustomer?.id) {
+              payload.customerId = selectedCustomer.id;
+            } else {
+              // For new customers, include customer details for server-side creation
+              payload.customerData = {
+                name: selectedCustomer?.name || '',
+                mobile: selectedCustomer?.mobile || '',
+                address: selectedCustomer?.address || '',
+                email: selectedCustomer?.email || ''
+              };
+            }
+            
+            const response = await apiRequest('/api/quotations', 'POST', payload);
+            return await response.json();
           })
         );
         return responses;
@@ -392,20 +418,36 @@ export default function UnifiedQuotationBuilder({
             <div className="space-y-2">
               <CustomerAutocomplete
                 value={selectedCustomer ? {
-                  id: selectedCustomer.id,
                   name: selectedCustomer.name,
                   mobile: selectedCustomer.mobile,
                   address: selectedCustomer.address,
-                  email: selectedCustomer.email || ''
-                } : null}
+                  email: selectedCustomer.email
+                } : {
+                  name: '',
+                  mobile: '',
+                  address: '',
+                  email: ''
+                }}
                 onChange={(customerData) => {
-                  if (customerData) {
+                  // For new customers (manual entry), don't set a customer ID
+                  // The server will handle customer creation based on mobile number
+                  setSelectedCustomer({
+                    id: undefined, // No ID indicates new customer to be created on server
+                    name: customerData.name,
+                    mobile: customerData.mobile,
+                    address: customerData.address,
+                    email: customerData.email || ''
+                  });
+                }}
+                onDuplicateDetected={(existingCustomer) => {
+                  if (existingCustomer) {
+                    // Use existing customer ID when duplicate is detected
                     setSelectedCustomer({
-                      id: customerData.id,
-                      name: customerData.name,
-                      mobile: customerData.mobile,
-                      address: customerData.address,
-                      email: customerData.email
+                      id: existingCustomer.id,
+                      name: existingCustomer.name,
+                      mobile: existingCustomer.mobile,
+                      address: existingCustomer.address,
+                      email: existingCustomer.email || ''
                     });
                   }
                 }}
@@ -635,10 +677,16 @@ export default function UnifiedQuotationBuilder({
                 )}
 
                 {/* Template Preview */}
-                {activeQuotation && selectedCustomer && activeQuotation.financials && (
+                {activeQuotation && selectedCustomer && selectedCustomer.id && activeQuotation.financials && (
                   <TemplateEngine
                     quotation={activeQuotation as EnterpriseQuotation}
-                    customer={selectedCustomer}
+                    customer={{
+                      id: selectedCustomer.id,
+                      name: selectedCustomer.name,
+                      mobile: selectedCustomer.mobile,
+                      address: selectedCustomer.address,
+                      email: selectedCustomer.email
+                    }}
                     onPdfGenerated={(url) => {
                       toast({
                         title: "PDF Generated",
