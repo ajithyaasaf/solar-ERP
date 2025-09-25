@@ -3020,6 +3020,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate PDF for quotation
+  app.post("/api/quotations/:id/generate-pdf", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "User not found in system" });
+      }
+      
+      // Check permissions using the existing permission system - require specific PDF generation permission
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.generate_pdf") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied - PDF generation permission required" });
+      }
+
+      const { id } = req.params;
+      
+      // Validate request body with Zod
+      const { generatePDFRequestSchema } = await import("@shared/schema");
+      const validatedRequest = generatePDFRequestSchema.parse(req.body);
+      
+      // Get quotation
+      const quotation = await storage.getQuotation(id);
+      if (!quotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+
+      // Check if quotation is complete enough for PDF generation
+      if (!quotation.systemConfiguration || !quotation.pricing) {
+        return res.status(400).json({ 
+          message: "Quotation incomplete - missing system configuration or pricing" 
+        });
+      }
+
+      // Import template engine
+      const { ExactTemplateEngine } = await import("./services/quotation-template-engine");
+      
+      // Generate PDF with validated options
+      const pdfResult = await ExactTemplateEngine.generateQuotationPDF(quotation, validatedRequest);
+      
+      // Update quotation to track PDF generation
+      await storage.updateQuotation(id, {
+        lastPDFGenerated: new Date(),
+        pdfDocumentId: pdfResult.documentId
+      });
+      
+      res.json({
+        message: "PDF generated successfully",
+        pdfUrl: pdfResult.pdfUrl,
+        documentId: pdfResult.documentId,
+        fileName: pdfResult.fileName,
+        generatedAt: pdfResult.generatedAt
+      });
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  // Send quotation to customer
+  app.post("/api/quotations/:id/send-to-customer", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "User not found in system" });
+      }
+      
+      // Check permissions using the existing permission system - require specific send permission
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.send") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied - Send quotation permission required" });
+      }
+
+      const { id } = req.params;
+      
+      // Validate request body with Zod
+      const { sendQuotationRequestSchema } = await import("@shared/schema");
+      const validatedRequest = sendQuotationRequestSchema.parse(req.body);
+      
+      // Get quotation
+      const quotation = await storage.getQuotation(id);
+      if (!quotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+
+      // Check if quotation is complete enough for sending
+      if (!quotation.systemConfiguration || !quotation.pricing) {
+        return res.status(400).json({ 
+          message: "Quotation incomplete - cannot send incomplete quotation to customer" 
+        });
+      }
+
+      // Import email service
+      const { QuotationEmailService } = await import("./services/quotation-email-service");
+      
+      // Attempt to send quotation (will throw if email service not configured)
+      const emailResult = await QuotationEmailService.sendQuotationToCustomer(quotation, validatedRequest.emailOptions);
+      
+      // Only update status if email was actually sent successfully
+      if (emailResult.status === 'sent') {
+        await storage.updateQuotation(id, {
+          status: 'sent',
+          sentAt: new Date(),
+          sentBy: user.id,
+          sentToEmail: emailResult.recipientEmail
+        });
+        
+        res.json({
+          message: "Quotation sent successfully",
+          emailId: emailResult.emailId,
+          sentTo: emailResult.recipientEmail,
+          sentAt: emailResult.sentAt
+        });
+      } else {
+        res.status(500).json({
+          message: "Failed to send quotation - email service error",
+          details: emailResult
+        });
+      }
+
+    } catch (error) {
+      console.error("Error sending quotation:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to send quotation" });
+    }
+  });
+
   // Invoices with pagination and performance optimizations
   app.get("/api/invoices", verifyAuth, async (req, res) => {
     try {

@@ -98,8 +98,8 @@ export default function Quotations() {
     queryKey: [`/api/quotations?page=${currentPage}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}${statusFilter && statusFilter !== "all" ? `&status=${statusFilter}` : ''}`]
   });
   
-  const quotations = quotationsResponse?.data || [];
-  const pagination = quotationsResponse?.pagination;
+  const quotations = (quotationsResponse as QuotationsResponse)?.data || [];
+  const pagination = (quotationsResponse as QuotationsResponse)?.pagination;
   
   // Prefetch next page for smoother pagination
   useEffect(() => {

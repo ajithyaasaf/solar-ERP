@@ -1730,6 +1730,26 @@ export type ProjectAnalysis = z.infer<typeof projectAnalysisSchema>;
 export type InsertQuotationDraft = z.infer<typeof insertQuotationDraftSchema>;
 export type InsertQuotation = z.infer<typeof insertQuotationSchema>;
 export type QuotationDocument = z.infer<typeof quotationDocumentSchema>;
+
+// Additional schemas for quotation API endpoints
+export const generatePDFRequestSchema = z.object({
+  templateType: z.enum(['standard', 'detailed', 'summary']).optional().default('standard'),
+  includeTerms: z.boolean().optional().default(true),
+  includePricing: z.boolean().optional().default(true)
+});
+
+export const sendQuotationRequestSchema = z.object({
+  emailOptions: z.object({
+    recipientEmail: z.string().email().optional(),
+    subject: z.string().min(1).optional(),
+    message: z.string().optional(),
+    attachPDF: z.boolean().optional().default(true),
+    sendCopy: z.boolean().optional().default(false)
+  }).optional()
+});
+
+export type GeneratePDFRequest = z.infer<typeof generatePDFRequestSchema>;
+export type SendQuotationRequest = z.infer<typeof sendQuotationRequestSchema>;
 export type QuotationCommunication = z.infer<typeof quotationCommunicationSchema>;
 export type PricingHistory = z.infer<typeof pricingHistorySchema>;
 export type QuotationTemplate = z.infer<typeof quotationTemplateSchema>;
