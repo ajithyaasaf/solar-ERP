@@ -1561,6 +1561,146 @@ export const quotationTemplateSchema = z.object({
   }).optional()
 });
 
+// Additional foundational quotation schemas for workflow integration
+
+// Quotation project type alias for clarity
+export type QuotationProjectType = MarketingProjectType;
+
+// Quotation project configuration wrapper interface
+export interface QuotationProjectConfig {
+  projectType: QuotationProjectType;
+  config: OnGridConfig | OffGridConfig | HybridConfig | WaterHeaterConfig | WaterPumpConfig;
+  systemCapacity: string;
+  estimatedValue: number;
+  requiredComponents: string[];
+}
+
+// Pricing input interface for quotation calculations
+export interface PricingInput {
+  projectType: QuotationProjectType;
+  systemConfiguration: OnGridConfig | OffGridConfig | HybridConfig | WaterHeaterConfig | WaterPumpConfig;
+  marketRates: {
+    solarPanelRate?: number;
+    inverterRate?: number;
+    batteryRate?: number;
+    structureRate?: number;
+    laborRate?: number;
+  };
+  subsidyEligible: boolean;
+  competitorPrice?: number;
+}
+
+// Pricing breakdown interface for detailed cost analysis
+export interface PricingBreakdown {
+  components: {
+    solarPanels: { quantity: number; rate: number; amount: number };
+    inverter: { quantity: number; rate: number; amount: number };
+    batteries?: { quantity: number; rate: number; amount: number };
+    structure: { quantity: number; rate: number; amount: number };
+    accessories: { items: Array<{ name: string; quantity: number; rate: number; amount: number }> };
+    installation: { rate: number; amount: number };
+  };
+  subtotal: number;
+  taxes: { cgst: number; sgst: number; igst?: number; total: number };
+  totalSystemCost: number;
+  subsidyBreakdown?: SubsidyInfo;
+  finalAmount: number;
+}
+
+// Subsidy information interface
+export interface SubsidyInfo {
+  isEligible: boolean;
+  subsidyType: "state" | "central" | "combined" | "none";
+  eligibleCapacity: number;
+  subsidyPerKW: number;
+  maximumSubsidy: number;
+  calculatedSubsidy: number;
+  subsidyTerms: string[];
+  documentationRequired: string[];
+}
+
+// Main quotation interface (approved/finalized quotations)
+export interface Quotation extends QuotationDraft {
+  quotationNumber: string; // Required for finalized quotations
+  version: number;
+  previousVersions: string[]; // IDs of previous versions
+  approvalWorkflow: {
+    submittedAt?: Date;
+    submittedBy?: string;
+    reviewedAt?: Date;
+    reviewedBy?: string;
+    approvedAt?: Date;
+    approvedBy?: string;
+    rejectedAt?: Date;
+    rejectedBy?: string;
+    rejectionReason?: string;
+  };
+  customerInteractions: {
+    sentAt?: Date;
+    sentBy?: string;
+    viewedAt?: Date;
+    respondedAt?: Date;
+    customerFeedback?: string;
+    negotiationHistory?: Array<{
+      date: Date;
+      type: "price_negotiation" | "specification_change" | "terms_update";
+      details: string;
+      updatedBy: string;
+    }>;
+  };
+  projectExecution?: {
+    workOrderIssued?: boolean;
+    workOrderDate?: Date;
+    expectedStartDate?: Date;
+    expectedCompletionDate?: Date;
+    actualStartDate?: Date;
+    actualCompletionDate?: Date;
+    projectManager?: string;
+    currentPhase?: "planning" | "procurement" | "installation" | "commissioning" | "completed";
+  };
+}
+
+// Insert schema for main quotation (extends draft with required fields)
+export const insertQuotationSchema = insertQuotationDraftSchema.extend({
+  quotationNumber: z.string().min(1, "Quotation number is required"),
+  version: z.number().min(1).default(1),
+  previousVersions: z.array(z.string()).default([]),
+  approvalWorkflow: z.object({
+    submittedAt: z.date().optional(),
+    submittedBy: z.string().optional(),
+    reviewedAt: z.date().optional(),
+    reviewedBy: z.string().optional(),
+    approvedAt: z.date().optional(),
+    approvedBy: z.string().optional(),
+    rejectedAt: z.date().optional(),
+    rejectedBy: z.string().optional(),
+    rejectionReason: z.string().optional()
+  }).default({}),
+  customerInteractions: z.object({
+    sentAt: z.date().optional(),
+    sentBy: z.string().optional(),
+    viewedAt: z.date().optional(),
+    respondedAt: z.date().optional(),
+    customerFeedback: z.string().optional(),
+    negotiationHistory: z.array(z.object({
+      date: z.date(),
+      type: z.enum(["price_negotiation", "specification_change", "terms_update"]),
+      details: z.string(),
+      updatedBy: z.string()
+    })).default([])
+  }).default({}),
+  projectExecution: z.object({
+    workOrderIssued: z.boolean().default(false),
+    workOrderDate: z.date().optional(),
+    expectedStartDate: z.date().optional(),
+    expectedCompletionDate: z.date().optional(),
+    actualStartDate: z.date().optional(),
+    actualCompletionDate: z.date().optional(),
+    projectManager: z.string().optional(),
+    currentPhase: z.enum(["planning", "procurement", "installation", "commissioning", "completed"]).optional()
+  }).optional()
+});
+
 // ====== QUOTATION TYPES ======
 export type QuotationStatus = typeof quotationStatus[number];
 export type ProjectStatus = typeof projectStatus[number];
@@ -1570,12 +1710,13 @@ export type Pricing = z.infer<typeof pricingSchema>;
 export type DataCompletenessReport = z.infer<typeof dataCompletenessReportSchema>;
 export type ProjectAnalysis = z.infer<typeof projectAnalysisSchema>;
 export type InsertQuotationDraft = z.infer<typeof insertQuotationDraftSchema>;
+export type InsertQuotation = z.infer<typeof insertQuotationSchema>;
 export type QuotationDocument = z.infer<typeof quotationDocumentSchema>;
 export type QuotationCommunication = z.infer<typeof quotationCommunicationSchema>;
 export type PricingHistory = z.infer<typeof pricingHistorySchema>;
 export type QuotationTemplate = z.infer<typeof quotationTemplateSchema>;
 
-// Main quotation interface
+// Main quotation interfaces
 export interface QuotationDraft extends InsertQuotationDraft {
   id: string;
   createdAt: Date;
