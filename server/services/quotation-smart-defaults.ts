@@ -22,6 +22,8 @@ import {
   type BOMItem,
   type Warranty,
   type Pricing,
+  type DefaultsApplied,
+  type SmartDefaultsResult,
   solarPanelBrands,
   inverterMakes,
   inverterPhases,
@@ -37,21 +39,7 @@ import {
   workScopeOptions,
 } from "@shared/schema";
 
-interface DefaultsApplied {
-  field: string;
-  value: any;
-  source: "explicit" | "inferred" | "default";
-  confidence: "high" | "medium" | "low";
-  reason: string;
-}
-
-interface SmartDefaultsResult {
-  quotationDraft: Partial<InsertQuotationDraft>;
-  appliedDefaults: DefaultsApplied[];
-  completenessScore: number;
-  missingCriticalFields: string[];
-  recommendations: string[];
-}
+// Types imported from schema - DefaultsApplied and SmartDefaultsResult are now defined there
 
 export class SmartDefaultEngine {
   

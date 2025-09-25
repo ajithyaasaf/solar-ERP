@@ -1701,6 +1701,24 @@ export const insertQuotationSchema = insertQuotationDraftSchema.extend({
   }).optional()
 });
 
+// DefaultsApplied interface for tracking smart default applications
+export interface DefaultsApplied {
+  field: string;
+  value: any;
+  source: "explicit" | "inferred" | "default";
+  confidence: "high" | "medium" | "low";
+  reason: string;
+}
+
+// SmartDefaultsResult interface for quotation generation results
+export interface SmartDefaultsResult {
+  quotationDraft: Partial<InsertQuotationDraft>;
+  appliedDefaults: DefaultsApplied[];
+  completenessScore: number;
+  missingCriticalFields: string[];
+  recommendations: string[];
+}
+
 // ====== QUOTATION TYPES ======
 export type QuotationStatus = typeof quotationStatus[number];
 export type ProjectStatus = typeof projectStatus[number];
