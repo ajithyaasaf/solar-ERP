@@ -1330,4 +1330,339 @@ export type CustomerProfileCompleteness = typeof customerProfileCompleteness[num
 export type CustomerCreationSource = typeof customerCreationSources[number];
 export type InsertUnifiedCustomer = z.infer<typeof insertCustomerSchema>;
 
+// ====== COMPREHENSIVE QUOTATION SYSTEM SCHEMAS ======
+
+// Quotation creation sources for workflow tracking
+export const quotationSources = [
+  "manual", "site_visit"
+] as const;
+
+// Quotation status lifecycle
+export const quotationStatuses = [
+  "draft", "pending_approval", "sent", "accepted", "rejected", "expired", "cancelled"
+] as const;
+
+// Project types for multi-project quotations
+export const quotationProjectTypes = [
+  "on_grid", "off_grid", "hybrid", "water_heater", "water_pump", "custom"
+] as const;
+
+// Terms and conditions templates
+export const termsTemplates = [
+  "standard", "residential", "commercial", "agri", "custom"
+] as const;
+
+// Payment terms
+export const paymentTerms = [
+  "advance_90_balance_10", "advance_50_balance_50", "full_advance", "credit_30_days", "custom"
+] as const;
+
+// Delivery timeframes
+export const deliveryTimeframes = [
+  "2_3_weeks", "3_4_weeks", "1_month", "6_8_weeks", "custom"
+] as const;
+
+// Warranty periods for different components
+export const warrantyPeriods = [
+  "1_year", "2_years", "5_years", "10_years", "25_years"
+] as const;
+
+// Pricing calculation mode
+export const pricingModes = [
+  "per_kw", "fixed_amount", "itemized"
+] as const;
+
+// Subsidy applicability
+export const subsidyTypes = [
+  "government", "state", "none", "custom"
+] as const;
+
+// Individual project configuration schemas for quotations
+export const quotationOnGridProjectSchema = z.object({
+  projectType: z.literal("on_grid"),
+  systemKW: z.number().min(0.1),
+  pricePerKW: z.number().min(0),
+  solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
+  panelWatts: z.enum(panelWatts),
+  panelCount: z.number().min(1),
+  inverterMake: z.array(z.enum(inverterMakes)).default([]),
+  inverterWatts: z.enum(inverterWatts),
+  inverterKW: z.number().min(0).optional(),
+  inverterQty: z.number().min(1).optional(),
+  inverterPhase: z.enum(inverterPhases),
+  lightningArrest: z.boolean().default(false),
+  earth: z.enum(earthingTypes),
+  floor: z.enum(floorLevels).optional(),
+  structureHeight: z.number().min(0),
+  structureType: z.enum(structureTypes).optional(),
+  gpStructure: z.object({
+    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
+    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+  }).optional(),
+  monoRail: z.object({
+    type: z.enum(monoRailOptions).optional()
+  }).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  netMeterScope: z.enum(workScopeOptions).optional(),
+  projectValue: z.number().min(0),
+  subsidyAmount: z.number().min(0).default(0),
+  customerPayment: z.number().min(0),
+  installationNotes: z.string().optional(),
+  warranty: z.object({
+    panel: z.enum(warrantyPeriods).default("25_years"),
+    inverter: z.enum(warrantyPeriods).default("5_years"),
+    installation: z.enum(warrantyPeriods).default("2_years")
+  }).optional()
+});
+
+export const quotationOffGridProjectSchema = z.object({
+  projectType: z.literal("off_grid"),
+  systemKW: z.number().min(0.1),
+  pricePerKW: z.number().min(0),
+  solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
+  panelWatts: z.enum(panelWatts),
+  panelCount: z.number().min(1),
+  inverterMake: z.array(z.enum(inverterMakes)).default([]),
+  inverterWatts: z.enum(inverterWatts),
+  inverterKW: z.number().min(0).optional(),
+  inverterQty: z.number().min(1).optional(),
+  inverterPhase: z.enum(inverterPhases),
+  batteryBrand: z.enum(batteryBrands),
+  batteryType: z.enum(batteryTypes).optional(),
+  batteryAH: z.enum(batteryAHOptions).optional(),
+  voltage: z.number().min(0),
+  batteryCount: z.number().min(1),
+  batteryStands: z.string().optional(),
+  lightningArrest: z.boolean().default(false),
+  earth: z.enum(earthingTypes),
+  floor: z.enum(floorLevels).optional(),
+  structureHeight: z.number().min(0),
+  structureType: z.enum(structureTypes).optional(),
+  gpStructure: z.object({
+    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
+    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+  }).optional(),
+  monoRail: z.object({
+    type: z.enum(monoRailOptions).optional()
+  }).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  projectValue: z.number().min(0),
+  subsidyAmount: z.number().min(0).default(0),
+  customerPayment: z.number().min(0),
+  installationNotes: z.string().optional(),
+  warranty: z.object({
+    panel: z.enum(warrantyPeriods).default("25_years"),
+    inverter: z.enum(warrantyPeriods).default("5_years"),
+    battery: z.enum(warrantyPeriods).default("2_years"),
+    installation: z.enum(warrantyPeriods).default("2_years")
+  }).optional()
+});
+
+export const quotationHybridProjectSchema = z.object({
+  projectType: z.literal("hybrid"),
+  systemKW: z.number().min(0.1),
+  pricePerKW: z.number().min(0),
+  solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
+  panelWatts: z.enum(panelWatts),
+  panelCount: z.number().min(1),
+  inverterMake: z.array(z.enum(inverterMakes)).default([]),
+  inverterWatts: z.enum(inverterWatts),
+  inverterKW: z.number().min(0).optional(),
+  inverterQty: z.number().min(1).optional(),
+  inverterPhase: z.enum(inverterPhases),
+  batteryBrand: z.enum(batteryBrands),
+  batteryType: z.enum(batteryTypes).optional(),
+  batteryAH: z.enum(batteryAHOptions).optional(),
+  voltage: z.number().min(0),
+  batteryCount: z.number().min(1),
+  batteryStands: z.string().optional(),
+  lightningArrest: z.boolean().default(false),
+  earth: z.enum(earthingTypes),
+  floor: z.enum(floorLevels).optional(),
+  structureHeight: z.number().min(0),
+  structureType: z.enum(structureTypes).optional(),
+  gpStructure: z.object({
+    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
+    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+  }).optional(),
+  monoRail: z.object({
+    type: z.enum(monoRailOptions).optional()
+  }).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  electricalWorkScope: z.enum(workScopeOptions).optional(),
+  netMeterScope: z.enum(workScopeOptions).optional(),
+  projectValue: z.number().min(0),
+  subsidyAmount: z.number().min(0).default(0),
+  customerPayment: z.number().min(0),
+  installationNotes: z.string().optional(),
+  warranty: z.object({
+    panel: z.enum(warrantyPeriods).default("25_years"),
+    inverter: z.enum(warrantyPeriods).default("5_years"),
+    battery: z.enum(warrantyPeriods).default("2_years"),
+    installation: z.enum(warrantyPeriods).default("2_years")
+  }).optional()
+});
+
+export const quotationWaterHeaterProjectSchema = z.object({
+  projectType: z.literal("water_heater"),
+  brand: z.enum(waterHeaterBrands),
+  litre: z.number().min(1),
+  heatingCoil: z.string().optional(),
+  floor: z.enum(floorLevels).optional(),
+  plumbingWorkScope: z.enum(workScopeOptions).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  projectValue: z.number().min(0),
+  subsidyAmount: z.number().min(0).default(0),
+  customerPayment: z.number().min(0),
+  installationNotes: z.string().optional(),
+  warranty: z.object({
+    heater: z.enum(warrantyPeriods).default("5_years"),
+    installation: z.enum(warrantyPeriods).default("1_year")
+  }).optional()
+});
+
+export const quotationWaterPumpProjectSchema = z.object({
+  projectType: z.literal("water_pump"),
+  hp: z.string(),
+  drive: z.string(),
+  solarPanel: z.string().optional(),
+  structureHeight: z.number().min(0),
+  panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
+  panelCount: z.number().min(1),
+  structureType: z.enum(structureTypes).optional(),
+  gpStructure: z.object({
+    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
+    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+  }).optional(),
+  monoRail: z.object({
+    type: z.enum(monoRailOptions).optional()
+  }).optional(),
+  plumbingWorkScope: z.enum(workScopeOptions).optional(),
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  projectValue: z.number().min(0),
+  subsidyAmount: z.number().min(0).default(0),
+  customerPayment: z.number().min(0),
+  installationNotes: z.string().optional(),
+  warranty: z.object({
+    pump: z.enum(warrantyPeriods).default("2_years"),
+    panel: z.enum(warrantyPeriods).default("25_years"),
+    installation: z.enum(warrantyPeriods).default("1_year")
+  }).optional()
+});
+
+// Union type for all project types
+export const quotationProjectSchema = z.discriminatedUnion("projectType", [
+  quotationOnGridProjectSchema,
+  quotationOffGridProjectSchema,
+  quotationHybridProjectSchema,
+  quotationWaterHeaterProjectSchema,
+  quotationWaterPumpProjectSchema
+]);
+
+// Site visit mapping metadata
+export const siteVisitMappingSchema = z.object({
+  sourceVisitId: z.string(),
+  mappedAt: z.date().default(() => new Date()),
+  mappedBy: z.string(),
+  completenessScore: z.number().min(0).max(100), // Percentage of fields auto-filled
+  missingCriticalFields: z.array(z.string()).default([]),
+  missingOptionalFields: z.array(z.string()).default([]),
+  dataQualityNotes: z.string().optional()
+});
+
+// Follow-up tracking for quotations
+export const quotationFollowUpSchema = z.object({
+  followUpDate: z.date(),
+  followUpType: z.enum(["call", "email", "whatsapp", "site_visit", "other"]),
+  followUpNotes: z.string().optional(),
+  nextFollowUpDate: z.date().optional(),
+  followUpBy: z.string(),
+  customerResponse: z.enum(["positive", "negative", "neutral", "no_response"]).optional(),
+  leadTemperature: z.enum(["hot", "warm", "cold"]).optional()
+});
+
+// Comprehensive quotation schema
+export const insertQuotationSchema = z.object({
+  // Basic quotation information
+  quotationNumber: z.string().min(1, "Quotation number is required"),
+  customerId: z.string().min(1, "Customer ID is required"),
+  
+  // Source tracking (critical for workflow differentiation)
+  source: z.enum(quotationSources),
+  siteVisitMapping: siteVisitMappingSchema.optional(), // Only for site_visit source
+  
+  // Multi-project support
+  projects: z.array(quotationProjectSchema).min(1, "At least one project is required"),
+  
+  // Pricing and financial details
+  totalSystemCost: z.number().min(0),
+  totalSubsidyAmount: z.number().min(0).default(0),
+  totalCustomerPayment: z.number().min(0),
+  advancePaymentPercentage: z.number().min(0).max(100).default(90),
+  advanceAmount: z.number().min(0),
+  balanceAmount: z.number().min(0),
+  
+  // Terms and delivery
+  paymentTerms: z.enum(paymentTerms).default("advance_90_balance_10"),
+  deliveryTimeframe: z.enum(deliveryTimeframes).default("2_3_weeks"),
+  termsTemplate: z.enum(termsTemplates).default("standard"),
+  customTerms: z.string().optional(),
+  
+  // Status and approval workflow
+  status: z.enum(quotationStatuses).default("draft"),
+  
+  // Follow-up and communication tracking
+  followUps: z.array(quotationFollowUpSchema).default([]),
+  lastFollowUpDate: z.date().optional(),
+  nextFollowUpDate: z.date().optional(),
+  
+  // Document and communication preferences
+  communicationPreference: z.enum(["email", "whatsapp", "sms", "print"]).default("whatsapp"),
+  documentVersion: z.number().default(1),
+  
+  // Administrative fields
+  preparedBy: z.string(),
+  approvedBy: z.string().optional(),
+  approvedAt: z.date().optional(),
+  sentAt: z.date().optional(),
+  validUntil: z.date().optional(),
+  
+  // Additional notes and attachments
+  internalNotes: z.string().optional(),
+  customerNotes: z.string().optional(),
+  attachments: z.array(z.string().url()).default([]),
+  
+  // Metadata
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date())
+});
+
+// Type definitions for quotation system
+export type QuotationSource = typeof quotationSources[number];
+export type QuotationStatus = typeof quotationStatuses[number];
+export type QuotationProjectType = typeof quotationProjectTypes[number];
+export type TermsTemplate = typeof termsTemplates[number];
+export type PaymentTerms = typeof paymentTerms[number];
+export type DeliveryTimeframe = typeof deliveryTimeframes[number];
+export type WarrantyPeriod = typeof warrantyPeriods[number];
+export type PricingMode = typeof pricingModes[number];
+export type SubsidyType = typeof subsidyTypes[number];
+
+export type QuotationOnGridProject = z.infer<typeof quotationOnGridProjectSchema>;
+export type QuotationOffGridProject = z.infer<typeof quotationOffGridProjectSchema>;
+export type QuotationHybridProject = z.infer<typeof quotationHybridProjectSchema>;
+export type QuotationWaterHeaterProject = z.infer<typeof quotationWaterHeaterProjectSchema>;
+export type QuotationWaterPumpProject = z.infer<typeof quotationWaterPumpProjectSchema>;
+export type QuotationProject = z.infer<typeof quotationProjectSchema>;
+export type SiteVisitMapping = z.infer<typeof siteVisitMappingSchema>;
+export type QuotationFollowUp = z.infer<typeof quotationFollowUpSchema>;
+export type InsertQuotation = z.infer<typeof insertQuotationSchema>;
+
+export interface Quotation extends InsertQuotation {
+  id: string;
+}
+
+// Create insert schema from drizzle-zod (for API validation)
+export const createInsertQuotationSchema = insertQuotationSchema;
+
 
