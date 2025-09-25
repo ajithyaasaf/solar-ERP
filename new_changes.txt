@@ -70,6 +70,58 @@ While `/quotations/new` is linked from the main quotations page, there is no act
 
 ## DATA MAPPING ANALYSIS
 
+### **Critical Field Discovery - Previously Missing Fields Identified**
+
+Upon comprehensive schema verification, the following **critical fields** were missing from the original mapping and have now been incorporated:
+
+#### **Technical Data Missing Fields:**
+- ✅ `pendingRemarks` → `pendingWorkIssues` (Critical for tracking unresolved installation issues)
+
+#### **On-Grid Config Missing Fields:**
+- ✅ `inverterKW` → `inverters.calculatedKW` (Critical for capacity calculations)  
+- ✅ `inverterQty` → `inverters.quantity` (Critical for equipment planning)
+- ✅ `floor` → `installation.floorLevel` (Important for water heater installations)
+
+#### **Off-Grid Config Missing Fields:**
+- ✅ `batteryStands` → `batteries.standConfiguration` (Important for installation planning)
+
+#### **Water Pump Config Missing Fields:**
+- ✅ `solarPanel` → `waterPump.solarPanelSpecification` (Critical field for pump specifications)
+
+#### **Marketing Root Level Missing Fields:**
+- ✅ `updateRequirements` → `customerRequirementsUpdated` (Track requirement changes)
+
+#### **Admin Data Missing Fields:**
+- ✅ `officialPersonalWork` → `personalWorkNotes` (Important for work classification tracking)
+
+#### **Site Visit Metadata Missing Fields (MAJOR DISCOVERY):**
+- ✅ `userId` → `quotationCreatedBy`
+- ✅ `department` → `sourceVisitDepartment` 
+- ✅ `visitPurpose` → `sourceVisitPurpose`
+- ✅ `siteInTime/siteOutTime` → `visitDateTime/visitEndTime`
+- ✅ `sitePhotos[]` → `visitPhotosCollection`
+- ✅ `siteOutPhotos[]` → `visitCheckoutPhotos`
+- ✅ `status` → `sourceVisitStatus`
+- ✅ `notes` → `visitGeneralNotes`
+
+#### **Follow-up System Integration Missing Fields (CRITICAL DISCOVERY):**
+- ✅ `isFollowUp` → `isFollowUpBasedQuotation`
+- ✅ `followUpOf` → `originalVisitReference`
+- ✅ `hasFollowUps` → `hasRelatedFollowUps`  
+- ✅ `followUpCount` → `totalFollowUpsCount`
+- ✅ `followUpReason/followUpDescription` → `followUpReason/followUpDetails`
+- ✅ `visitOutcome` → `visitFinalOutcome`
+- ✅ `outcomeNotes` → `outcomeDescription`
+- ✅ `scheduledFollowUpDate` → `nextFollowUpScheduled`
+- ✅ `customerCurrentStatus` → `customerStatusAtVisit`
+- ✅ `lastActivityType/lastActivityDate` → `lastCustomerActivityType/lastCustomerActivityDate`
+
+**TOTAL MISSING FIELDS IDENTIFIED: 26+ critical fields**
+
+This comprehensive verification ensures **no data loss** during site visit to quotation conversion and maintains **full traceability** of the quotation source and customer journey.
+
+---
+
 ### Site Visit Forms → Quotation Fields Mapping
 
 #### **Core Customer Information Mapping**
@@ -84,27 +136,78 @@ Site Visit Customer Data → Quotation Customer Details
 └── siteInLocation → installationLocation
 ```
 
+#### **Site Visit Metadata → Quotation Source Tracking**
+```
+Site Visit Core Data → Quotation Source Information
+├── userId → quotationCreatedBy
+├── department → sourceVisitDepartment
+├── visitPurpose → sourceVisitPurpose
+├── siteInTime → visitDateTime
+├── siteInLocation → visitLocation
+├── siteInPhotoUrl → visitStartPhoto
+├── siteOutTime → visitEndTime
+├── siteOutLocation → visitEndLocation
+├── siteOutPhotoUrl → visitEndPhoto
+├── sitePhotos[] → visitPhotosCollection
+├── siteOutPhotos[] → visitCheckoutPhotos
+├── status → sourceVisitStatus
+├── notes → visitGeneralNotes
+├── createdAt → sourceVisitDate
+└── updatedAt → sourceVisitLastModified
+```
+
+#### **Follow-up System Data → Quotation Follow-up Tracking**
+```
+Site Visit Follow-up Data → Quotation Follow-up Information
+├── isFollowUp → isFollowUpBasedQuotation
+├── followUpOf → originalVisitReference
+├── hasFollowUps → hasRelatedFollowUps
+├── followUpCount → totalFollowUpsCount
+├── followUpReason → followUpReason
+├── followUpDescription → followUpDetails
+├── visitOutcome → visitFinalOutcome
+├── outcomeNotes → outcomeDescription
+├── scheduledFollowUpDate → nextFollowUpScheduled
+├── outcomeSelectedAt → outcomeDecisionDate
+├── outcomeSelectedBy → outcomeDecisionBy
+├── customerCurrentStatus → customerStatusAtVisit
+├── lastActivityType → lastCustomerActivityType
+├── lastActivityDate → lastCustomerActivityDate
+└── activeFollowUpId → activeFollowUpReference
+```
+
 #### **Marketing Data → Project Specifications Mapping**
+
+**Marketing Form Root Level Mapping:**
+```
+marketingData → quotation.marketingInformation  
+├── updateRequirements → customerRequirementsUpdated
+└── projectType → selectedProjectType
+```
 
 **On-Grid Solar Project Mapping:**
 ```
 marketingData.onGridConfig → quotation.onGridProject
 ├── solarPanelMake[] → solarPanels.brands[]
 ├── panelWatts → solarPanels.wattagePerPanel
-├── panelCount → solarPanels.totalPanels
 ├── inverterMake[] → inverters.brands[]
 ├── inverterWatts → inverters.capacity
 ├── inverterPhase → inverters.phaseType
+├── inverterKW → inverters.calculatedKW
+├── inverterQty → inverters.quantity
 ├── lightningArrest → safetyEquipment.lightningArrest
 ├── earth → earthingSystem.type
-├── structureType → mountingStructure.type
+├── floor → installation.floorLevel
+├── panelCount → solarPanels.totalPanels
 ├── structureHeight → mountingStructure.height
-├── gpStructure.{lowerEndHeight, higherEndHeight} → mountingStructure.gpDetails
+├── projectValue → pricing.estimatedValue
+├── others → additionalSpecifications
+├── structureType → mountingStructure.type
+├── gpStructure.lowerEndHeight → mountingStructure.gpDetails.lowerHeight
+├── gpStructure.higherEndHeight → mountingStructure.gpDetails.higherHeight
 ├── monoRail.type → mountingStructure.monoRailType
 ├── civilWorkScope → workScope.civilWork
-├── netMeterScope → workScope.netMeterWork
-├── projectValue → pricing.estimatedValue
-└── others → additionalSpecifications
+└── netMeterScope → workScope.netMeterWork
 ```
 
 **Off-Grid Solar Project Mapping:**
@@ -117,6 +220,14 @@ marketingData.offGridConfig → quotation.offGridProject
 ├── voltage → batteries.systemVoltage
 ├── batteryCount → batteries.quantity
 └── batteryStands → batteries.standConfiguration
+```
+
+**Hybrid Solar Project Mapping:**
+```
+marketingData.hybridConfig → quotation.hybridProject
+├── [All On-Grid + Off-Grid mappings] +
+├── electricalWorkScope → workScope.electricalWork
+└── netMeterScope → workScope.netMeterWork (re-added for hybrid)
 ```
 
 **Hybrid Solar Project Mapping:**
@@ -144,13 +255,18 @@ marketingData.waterHeaterConfig → quotation.waterHeaterProject
 marketingData.waterPumpConfig → quotation.waterPumpProject
 ├── hp → waterPump.horsePower
 ├── drive → waterPump.driveType
+├── solarPanel → waterPump.solarPanelSpecification
+├── structureHeight → mountingStructure.height
 ├── panelBrand[] → solarPanels.brands[]
 ├── panelCount → solarPanels.totalPanels
-├── structureHeight → mountingStructure.height
+├── projectValue → pricing.estimatedValue
+├── others → additionalSpecifications
 ├── structureType → mountingStructure.type
+├── gpStructure.lowerEndHeight → mountingStructure.gpDetails.lowerHeight
+├── gpStructure.higherEndHeight → mountingStructure.gpDetails.higherHeight
+├── monoRail.type → mountingStructure.monoRailType
 ├── plumbingWorkScope → workScope.plumbingWork
-├── civilWorkScope → workScope.civilWork
-└── projectValue → pricing.estimatedValue
+└── civilWorkScope → workScope.civilWork
 ```
 
 #### **Technical Data → Installation Requirements Mapping**
@@ -159,9 +275,9 @@ technicalData → quotation.installationRequirements
 ├── serviceTypes[] → projectTypes[]
 ├── workType → installationType
 ├── workingStatus → installationStatus
+├── pendingRemarks → pendingWorkIssues
 ├── teamMembers[] → assignedTeam[]
-├── description → technicalNotes
-└── pendingRemarks → pendingIssues
+└── description → technicalNotes
 ```
 
 #### **Admin Data → Process & Documentation Mapping**
@@ -172,6 +288,7 @@ adminData → quotation.processTracking
 ├── purchase → procurementNotes
 ├── driving → logisticsNotes
 ├── officialCashTransactions → paymentNotes
+├── officialPersonalWork → personalWorkNotes
 └── others → administrativeNotes
 ```
 
@@ -233,8 +350,10 @@ interface DataCompleteness {
 - **Red indicators:** Critical missing fields that prevent quotation generation
 - **Orange indicators:** Important missing fields that affect accuracy
 - **Gray indicators:** Optional fields that can be auto-filled with defaults
+- **Blue indicators:** Fields with follow-up tracking requirements
 - **Progress bars:** Show completion percentage per project type
 - **Smart suggestions:** Auto-fill recommendations based on similar projects
+- **Follow-up badges:** Indicate if field comes from follow-up visit data
 
 #### **Progressive Field Completion**
 1. **Auto-fill available data** from site visit
@@ -363,6 +482,23 @@ interface ComprehensiveQuotation {
   // Source Tracking
   sourceType: 'manual' | 'site_visit';
   siteVisitId?: string;
+  sourceVisitDepartment?: 'technical' | 'marketing' | 'admin';
+  sourceVisitPurpose?: string;
+  visitDateTime?: Date;
+  visitLocation?: LocationData;
+  visitPhotos?: PhotoData[];
+  
+  // Follow-up System Integration
+  followUpInformation?: {
+    isFollowUpBased: boolean;
+    originalVisitReference?: string;
+    followUpReason?: string;
+    followUpDetails?: string;
+    customerStatusAtVisit?: 'converted' | 'on_process' | 'cancelled';
+    visitOutcome?: 'converted' | 'on_process' | 'cancelled';
+    hasScheduledFollowUp?: boolean;
+    nextFollowUpDate?: Date;
+  };
   
   // Customer Information (enhanced)
   customer: {
