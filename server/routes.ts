@@ -2910,7 +2910,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get site visits that can be converted to quotations
-      const siteVisits = await storage.listSiteVisits();
+      // TODO: Implement storage.listSiteVisits() method in storage interface
+      const siteVisits: any[] = []; // Temporary: return empty array until storage method is implemented
       
       // Filter for completed site visits with 'converted' outcome and marketing data
       const mappableSiteVisits = siteVisits.filter((visit: any) => 
