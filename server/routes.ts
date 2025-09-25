@@ -39,6 +39,7 @@ import { auth } from "./firebase";
 import { userService } from "./services/user-service";
 import { testFirebaseAdminSDK, testUserManagement } from "./test-firebase-admin";
 import { attendanceRateLimiter, generalRateLimiter, createRateLimitMiddleware } from "./utils/rate-limiter";
+import { DataCompletenessAnalyzer, SiteVisitDataMapper } from "./services/quotation-mapping-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced middleware to verify Firebase Auth token and load user profile
@@ -2887,6 +2888,262 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting quotation:", error);
       res.status(500).json({ message: "Failed to delete quotation" });
+    }
+  });
+
+
+  // ====== SITE VISIT INTEGRATION ROUTES FOR QUOTATION SYSTEM ======
+
+  // Get site visit data for quotation creation (with data mapping analysis)
+  app.get("/api/quotations/site-visits/mappable", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get site visits that can be converted to quotations
+      const siteVisits = await storage.listSiteVisits();
+      
+      // Filter for completed site visits with 'converted' outcome and marketing data
+      const mappableSiteVisits = siteVisits.filter((visit: any) => 
+        visit.status === 'completed' && 
+        visit.visitOutcome === 'converted' &&
+        visit.marketingData &&
+        visit.customer
+      );
+
+      // Add completeness analysis for each site visit using dedicated service
+      const enrichedSiteVisits = mappableSiteVisits.map((visit: any) => {
+        const completenessAnalysis = DataCompletenessAnalyzer.analyze(visit);
+        return {
+          ...visit,
+          completenessAnalysis
+        };
+      });
+
+      res.json({
+        data: enrichedSiteVisits,
+        total: enrichedSiteVisits.length
+      });
+    } catch (error) {
+      console.error("Error fetching mappable site visits:", error);
+      res.status(500).json({ message: "Failed to fetch site visits" });
+    }
+  });
+
+  // Get specific site visit data for quotation creation
+  app.get("/api/quotations/site-visits/:siteVisitId/mapping-data", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const siteVisit = await storage.getSiteVisit(req.params.siteVisitId);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // Perform comprehensive data mapping using dedicated service
+      const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, req.authenticatedUser.uid);
+      
+      res.json(mappingResult);
+    } catch (error) {
+      console.error("Error mapping site visit data:", error);
+      
+      // Handle specific mapping errors with actionable responses
+      if (error instanceof Error) {
+        // Handle completeness analysis failures
+        if ((error as any).validationError && (error as any).completenessAnalysis) {
+          const analysis = (error as any).completenessAnalysis;
+          return res.status(422).json({ 
+            message: "Site visit data incomplete for quotation creation",
+            error: error.message,
+            recommendedAction: analysis.recommendedAction,
+            completenessAnalysis: {
+              completenessScore: analysis.completenessScore,
+              missingCriticalFields: analysis.missingCriticalFields,
+              missingImportantFields: analysis.missingImportantFields,
+              missingOptionalFields: analysis.missingOptionalFields,
+              qualityGrade: analysis.qualityGrade,
+              canCreateQuotation: analysis.canCreateQuotation
+            },
+            needsAction: true
+          });
+        }
+        
+        // Handle project validation failures (now includes completeness analysis)
+        if ((error as any).projectValidationError) {
+          const analysis = (error as any).completenessAnalysis;
+          return res.status(422).json({ 
+            message: "No valid project configurations found in site visit",
+            error: error.message,
+            recommendedAction: (error as any).recommendedAction || "update_marketing_data",
+            missingData: (error as any).missingData,
+            completenessAnalysis: analysis ? {
+              completenessScore: analysis.completenessScore,
+              missingCriticalFields: analysis.missingCriticalFields,
+              missingImportantFields: analysis.missingImportantFields,
+              missingOptionalFields: analysis.missingOptionalFields,
+              qualityGrade: analysis.qualityGrade,
+              canCreateQuotation: analysis.canCreateQuotation
+            } : undefined,
+            needsAction: true
+          });
+        }
+        
+        // Handle any other mapping failures as 422 with complete context
+        return res.status(422).json({ 
+          message: "Site visit data incomplete for quotation creation",
+          error: error.message,
+          recommendedAction: "collect_missing_data",
+          completenessAnalysis: {
+            completenessScore: 0,
+            missingCriticalFields: ["Validation error occurred"],
+            missingImportantFields: [],
+            missingOptionalFields: [],
+            qualityGrade: "F" as const,
+            canCreateQuotation: false
+          },
+          needsAction: true
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to map site visit data" });
+    }
+  });
+
+  // Create quotation from site visit data
+  app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const siteVisit = await storage.getSiteVisit(req.params.siteVisitId);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // Map site visit data to quotation format using dedicated service
+      const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, req.authenticatedUser.uid);
+      
+      // Allow user to override mapped data with request body
+      const quotationData = {
+        ...mappingResult.quotationData,
+        ...req.body, // User can override any mapped values
+        source: "site_visit" as const,
+        siteVisitMapping: mappingResult.mappingMetadata,
+        preparedBy: req.authenticatedUser.uid
+      };
+
+      // Validate the quotation data
+      const validatedData = insertQuotationSchema.parse(quotationData);
+      
+      // Create the quotation
+      const quotation = await storage.createQuotation(validatedData);
+      
+      res.status(201).json({
+        quotation,
+        mappingResult: {
+          completenessScore: mappingResult.mappingMetadata.completenessScore,
+          missingCriticalFields: mappingResult.mappingMetadata.missingCriticalFields,
+          missingOptionalFields: mappingResult.mappingMetadata.missingOptionalFields,
+          businessRuleWarnings: mappingResult.businessRuleWarnings,
+          dataTransformations: mappingResult.dataTransformations
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Quotation data validation failed",
+          errors: error.errors 
+        });
+      }
+      
+      // Handle specific mapping errors with actionable responses
+      if (error instanceof Error) {
+        // Handle completeness analysis failures
+        if ((error as any).validationError && (error as any).completenessAnalysis) {
+          const analysis = (error as any).completenessAnalysis;
+          return res.status(422).json({ 
+            message: "Site visit data incomplete for quotation creation",
+            error: error.message,
+            recommendedAction: analysis.recommendedAction,
+            completenessAnalysis: {
+              completenessScore: analysis.completenessScore,
+              missingCriticalFields: analysis.missingCriticalFields,
+              missingImportantFields: analysis.missingImportantFields,
+              missingOptionalFields: analysis.missingOptionalFields,
+              qualityGrade: analysis.qualityGrade,
+              canCreateQuotation: analysis.canCreateQuotation
+            },
+            needsAction: true
+          });
+        }
+        
+        // Handle project validation failures (now includes completeness analysis)
+        if ((error as any).projectValidationError) {
+          const analysis = (error as any).completenessAnalysis;
+          return res.status(422).json({ 
+            message: "No valid project configurations found in site visit",
+            error: error.message,
+            recommendedAction: (error as any).recommendedAction || "update_marketing_data",
+            missingData: (error as any).missingData,
+            completenessAnalysis: analysis ? {
+              completenessScore: analysis.completenessScore,
+              missingCriticalFields: analysis.missingCriticalFields,
+              missingImportantFields: analysis.missingImportantFields,
+              missingOptionalFields: analysis.missingOptionalFields,
+              qualityGrade: analysis.qualityGrade,
+              canCreateQuotation: analysis.canCreateQuotation
+            } : undefined,
+            needsAction: true
+          });
+        }
+        
+        // Handle any other mapping failures as 422 with complete context
+        return res.status(422).json({ 
+          message: "Site visit data incomplete for quotation creation",
+          error: error.message,
+          recommendedAction: "collect_missing_data",
+          completenessAnalysis: {
+            completenessScore: 0,
+            missingCriticalFields: ["Validation error occurred"],
+            missingImportantFields: [],
+            missingOptionalFields: [],
+            qualityGrade: "F" as const,
+            canCreateQuotation: false
+          },
+          needsAction: true
+        });
+      }
+      
+      console.error("Error creating quotation from site visit:", error);
+      res.status(500).json({ message: "Failed to create quotation from site visit" });
     }
   });
 
