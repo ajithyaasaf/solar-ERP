@@ -122,9 +122,9 @@ interface AdminData {
 #### Scenario 1: Partial Marketing Data Entry
 ```
 Site Visit Marketing Form for "On-Grid 5kW System":
-❌ Filled: projectType = "on_grid"
-❌ Filled: solarPanelMake = ["Tata", "Waaree"] 
-❌ Filled: panelWatts = "540W"
+✅ Filled: projectType = "on_grid"
+✅ Filled: solarPanelMake = ["Tata", "Waaree"] 
+✅ Filled: panelWatts = "540W"
 ❌ Missing: inverterMake (customer undecided)
 ❌ Missing: inverterWatts (depends on final capacity)
 ❌ Missing: projectValue (needs calculation)
@@ -137,9 +137,9 @@ QUOTATION SYSTEM MUST: Allow completion of missing fields + accurate calculation
 #### Scenario 2: Multiple Project Types from Single Visit
 ```
 Single Customer Site Visit Result:
-✅ onGridConfig: Partially filled (0% complete)
-✅ waterHeaterConfig: Basic details only (0% complete) 
-✅ waterPumpConfig: Almost complete (0% complete)
+✅ onGridConfig: Partially filled (50% complete)
+✅ waterHeaterConfig: Basic details only (30% complete) 
+✅ waterPumpConfig: Almost complete (90% complete)
 
 QUOTATION SYSTEM MUST: Generate 3 separate quotations, each completable independently
 ```

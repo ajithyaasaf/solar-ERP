@@ -30,7 +30,6 @@ const Departments = lazy(() => import("@/pages/departments"));
 const OfficeLocations = lazy(() => import("@/pages/office-locations"));
 const SiteVisit = lazy(() => import("@/pages/site-visit"));
 const SiteVisitMonitoring = lazy(() => import("@/pages/site-visit-monitoring"));
-const NewQuotation = lazy(() => import("@/pages/new-quotation"));
 
 // Simple loading fallback component
 const PageLoader = () => (
@@ -96,19 +95,6 @@ function Router() {
           <DashboardLayout>
             <Suspense fallback={<PageLoader />}>
               <Quotations />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      
-      {/* New Quotation - enterprise permission based */}
-      <Route path="/quotations/new">
-        <ProtectedRoute 
-          requiredPermissions={["quotations.create"]}
-        >
-          <DashboardLayout>
-            <Suspense fallback={<PageLoader />}>
-              <NewQuotation />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
