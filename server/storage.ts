@@ -927,59 +927,51 @@ export interface IStorage {
   ): Promise<Quotation>;
   deleteQuotation(id: string): Promise<void>;
 
-  // Enhanced Quotation Draft Management (Site Visit → Quotation workflow)
-  listQuotationDrafts(filters?: { 
-    status?: string; 
-    projectType?: string; 
-    customerId?: string; 
+  // Enhanced quotation system methods
+  // Quotation Drafts
+  listQuotationDrafts(filters?: {
+    status?: string;
+    customerId?: string;
     createdBy?: string;
-    siteVisitId?: string;
   }): Promise<QuotationDraft[]>;
   getQuotationDraft(id: string): Promise<QuotationDraft | undefined>;
+  createQuotationDraft(data: InsertQuotationDraft): Promise<QuotationDraft>;
+  updateQuotationDraft(id: string, data: Partial<InsertQuotationDraft>): Promise<QuotationDraft>;
+  deleteQuotationDraft(id: string): Promise<void>;
+
+  // Finalized Quotations
+  listEnhancedQuotations(filters?: {
+    status?: string;
+    customerId?: string;
+    projectStatus?: string;
+  }): Promise<QuotationEnhanced[]>;
+  getEnhancedQuotation(id: string): Promise<QuotationEnhanced | undefined>;
+  createEnhancedQuotation(data: InsertQuotation): Promise<QuotationEnhanced>;
+  updateEnhancedQuotation(id: string, data: Partial<InsertQuotation>): Promise<QuotationEnhanced>;
+  finalizeQuotationDraft(draftId: string, quotationNumber: string): Promise<QuotationEnhanced>;
+
+  // Quotation Documents
+  getQuotationDocuments(quotationId: string): Promise<QuotationDocument[]>;
+  createQuotationDocument(data: z.infer<typeof quotationDocumentSchema>): Promise<QuotationDocument>;
+  deleteQuotationDocument(id: string): Promise<void>;
+
+  // Quotation Communications
+  getQuotationCommunications(quotationId: string): Promise<QuotationCommunication[]>;
+  createQuotationCommunication(data: z.infer<typeof quotationCommunicationSchema>): Promise<QuotationCommunication>;
+
+  // Pricing History
+  getQuotationPricingHistory(quotationId: string): Promise<PricingHistory[]>;
+  createPricingHistoryEntry(data: z.infer<typeof pricingHistorySchema>): Promise<PricingHistory>;
+
+  // Quotation Templates
+  getQuotationTemplate(id: string): Promise<QuotationTemplate | undefined>;
+  createQuotationTemplate(data: z.infer<typeof quotationTemplateSchema>): Promise<QuotationTemplate>;
+  updateQuotationTemplate(id: string, data: Partial<z.infer<typeof quotationTemplateSchema>>): Promise<QuotationTemplate>;
+
+  // Site Visit Integration Helper Methods
   getQuotationDraftBySiteVisit(siteVisitId: string): Promise<QuotationDraft | undefined>;
   getQuotationDraftsByCustomer(customerId: string): Promise<QuotationDraft[]>;
-  createQuotationDraft(data: InsertQuotationDraft): Promise<QuotationDraft>;
-  updateQuotationDraft(
-    id: string,
-    data: Partial<InsertQuotationDraft>
-  ): Promise<QuotationDraft>;
-  deleteQuotationDraft(id: string): Promise<void>;
-  
-  // Enhanced Quotation Management (Approved/Finalized quotations)
-  listQuotationsEnhanced(filters?: { 
-    status?: string; 
-    projectType?: string; 
-    customerId?: string; 
-    createdBy?: string;
-    approvedBy?: string;
-    quotationNumber?: string;
-  }): Promise<QuotationEnhanced[]>;
-  getQuotationEnhanced(id: string): Promise<QuotationEnhanced | undefined>;
-  getQuotationByNumber(quotationNumber: string): Promise<QuotationEnhanced | undefined>;
-  getQuotationsByCustomer(customerId: string): Promise<QuotationEnhanced[]>;
-  createQuotationEnhanced(data: InsertQuotation): Promise<QuotationEnhanced>;
-  updateQuotationEnhanced(
-    id: string,
-    data: Partial<InsertQuotation>
-  ): Promise<QuotationEnhanced>;
-  deleteQuotationEnhanced(id: string): Promise<void>;
-  
-  // Quotation Workflow Management
-  promoteQuotationDraftToFinal(draftId: string, quotationNumber: string): Promise<QuotationEnhanced>;
-  submitQuotationForApproval(id: string, submittedBy: string): Promise<QuotationEnhanced>;
-  approveQuotation(id: string, approvedBy: string): Promise<QuotationEnhanced>;
-  rejectQuotation(id: string, rejectedBy: string, reason: string): Promise<QuotationEnhanced>;
-  sendQuotationToCustomer(id: string, sentBy: string): Promise<QuotationEnhanced>;
-  
-  // Quotation Document Management
-  listQuotationDocuments(quotationId: string): Promise<QuotationDocument[]>;
-  getQuotationDocument(id: string): Promise<QuotationDocument | undefined>;
-  createQuotationDocument(data: z.infer<typeof quotationDocumentSchema>): Promise<QuotationDocument>;
-  updateQuotationDocument(
-    id: string,
-    data: Partial<z.infer<typeof quotationDocumentSchema>>
-  ): Promise<QuotationDocument>;
-  deleteQuotationDocument(id: string): Promise<void>;
+
   
   // Quotation Communication Tracking
   listQuotationCommunications(quotationId: string): Promise<QuotationCommunication[]>;

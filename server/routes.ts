@@ -2890,6 +2890,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ====== ENHANCED QUOTATION SYSTEM ROUTES ======
+
+  // Generate quotation draft from site visit
+  app.post("/api/quotation-drafts/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      // Allow admin roles or sales/marketing departments
+      const hasPermission = user.role === "master_admin" || user.role === "admin" || 
+                           user.department === "sales" || user.department === "marketing";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied - Sales/Marketing role required" });
+      }
+
+      const { siteVisitId } = req.params;
+      const siteVisit = await storage.getSiteVisit(siteVisitId);
+      
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // TODO: Check if draft already exists for this site visit
+      // This would require implementing getQuotationDraftBySiteVisit in storage
+      // For now, we'll allow creating new drafts
+
+      // Import enhanced quotation services dynamically
+      const SmartDefaultEngine = (await import("./services/quotation-smart-defaults")).SmartDefaultEngine;
+      const QuotationPricingEngine = (await import("./services/quotation-pricing-engine")).QuotationPricingEngine;
+
+      // Apply smart defaults to create draft
+      const smartDefaultsResult = SmartDefaultEngine.applySmartDefaults(siteVisit);
+      
+      // Apply pricing calculations if configuration exists
+      if (smartDefaultsResult.quotationDraft.systemConfiguration && smartDefaultsResult.quotationDraft.projectType) {
+        try {
+          const pricingResult = QuotationPricingEngine.calculateDetailedPricing(
+            smartDefaultsResult.quotationDraft.projectType,
+            smartDefaultsResult.quotationDraft.systemConfiguration
+          );
+          
+          // Update draft with pricing
+          smartDefaultsResult.quotationDraft.pricing = pricingResult.pricing;
+        } catch (pricingError) {
+          console.warn("Error calculating pricing, continuing without pricing:", pricingError);
+        }
+      }
+
+      // For now, return the draft without persisting
+      // TODO: Implement storage.createQuotationDraft when storage layer is complete
+      const quotationDraftData = {
+        ...smartDefaultsResult.quotationDraft,
+        createdBy: user.id,
+        siteVisitId: siteVisitId,
+        id: `draft-${Date.now()}`, // Temporary ID
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      res.status(201).json({
+        quotationDraft: quotationDraftData,
+        appliedDefaults: smartDefaultsResult.appliedDefaults,
+        completenessScore: smartDefaultsResult.completenessScore,
+        missingCriticalFields: smartDefaultsResult.missingCriticalFields,
+        recommendations: smartDefaultsResult.recommendations
+      });
+
+    } catch (error) {
+      console.error("Error generating quotation from site visit:", error);
+      res.status(500).json({ message: "Failed to generate quotation from site visit" });
+    }
+  });
+
+  // Recalculate quotation pricing
+  app.post("/api/quotations/:id/recalculate-pricing", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      // Allow admin roles or sales/marketing departments
+      const hasPermission = user.role === "master_admin" || user.role === "admin" || 
+                           user.department === "sales" || user.department === "marketing";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied - Sales/Marketing role required" });
+      }
+
+      const { id } = req.params;
+      const { systemConfiguration, projectType } = req.body;
+      
+      // Get existing quotation to check if it exists and get current pricing
+      // For now, use the basic getQuotation method
+      const existingQuotation = await storage.getQuotation(id);
+      if (!existingQuotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+
+      // Use provided config (required for this simplified version)
+      if (!systemConfiguration || !projectType) {
+        return res.status(400).json({ message: "System configuration and project type are required for recalculation" });
+      }
+
+      // Import pricing engine
+      const QuotationPricingEngine = (await import("./services/quotation-pricing-engine")).QuotationPricingEngine;
+      
+      // Calculate new pricing
+      const pricingResult = QuotationPricingEngine.calculateDetailedPricing(projectType, systemConfiguration);
+      
+      // TODO: Record pricing history when storage methods are implemented
+      // TODO: Update the stored quotation when storage methods are implemented
+      // For now, return the calculated pricing without persisting
+      
+      res.json({
+        message: "Pricing calculated successfully",
+        pricing: pricingResult.pricing,
+        breakdown: pricingResult.breakdown,
+        subsidyInfo: pricingResult.subsidyInfo,
+        summary: pricingResult.summary,
+        calculations: pricingResult.calculations
+      });
+
+    } catch (error) {
+      console.error("Error recalculating pricing:", error);
+      res.status(500).json({ message: "Failed to recalculate pricing" });
+    }
+  });
+
   // Invoices with pagination and performance optimizations
   app.get("/api/invoices", verifyAuth, async (req, res) => {
     try {
