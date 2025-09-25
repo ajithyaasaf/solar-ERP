@@ -133,6 +133,64 @@ export function UnifiedQuotationBuilder({
     },
   });
 
+  // Fetch customer site visits and populate quotation from most recent completed visit
+  const fetchCustomerSiteVisitMutation = useMutation({
+    mutationFn: async (mobile: string) => {
+      const response = await apiRequest(`/api/site-visits/customer-history?mobile=${encodeURIComponent(mobile)}`, 'GET');
+      return response.json();
+    },
+    onSuccess: async (siteVisits) => {
+      // Find the most recent completed site visit with technical data
+      const completedVisits = siteVisits.filter((visit: any) => 
+        visit.status === 'completed' && 
+        (visit.technicalData || visit.marketingData)
+      );
+
+      if (completedVisits.length > 0) {
+        // Sort by creation date and get the most recent
+        const mostRecentVisit = completedVisits.sort((a: any, b: any) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0];
+
+        // Generate quotation from this site visit
+        try {
+          const quotationResponse = await apiRequest(`/api/quotation-drafts/from-site-visit/${mostRecentVisit.id}`, 'POST');
+          const quotationData = await quotationResponse.json();
+          
+          if (quotationData.quotationDraft) {
+            // Update the current quotation with site visit data
+            setQuotations([quotationData.quotationDraft]);
+            toast({
+              title: "Success", 
+              description: `Populated quotation with data from site visit on ${new Date(mostRecentVisit.createdAt).toLocaleDateString()}`,
+            });
+          }
+        } catch (error) {
+          console.error('Error generating quotation from site visit:', error);
+          // If generation fails, still keep the customer info but show a warning
+          toast({
+            title: "Partial Success",
+            description: "Customer selected but couldn't load site visit data. Please fill technical details manually.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "No Site Visit Data",
+          description: "Customer selected but no completed site visits found. Please fill all details manually.",
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error('Error fetching customer site visits:', error);
+      toast({
+        title: "Warning",
+        description: "Customer selected but couldn't load site visit history. Please fill details manually.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Load quotations from site visit on mount or create empty quotation for standalone mode
   useEffect(() => {
     if (siteVisitId && mode === 'site_visit_completion' && quotations.length === 0) {
@@ -288,7 +346,25 @@ export function UnifiedQuotationBuilder({
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Generating quotation from site visit data...</p>
+          <p className="text-muted-foreground">
+            {mode === 'standalone_creation' 
+              ? "Initializing quotation builder..." 
+              : "Generating quotation from site visit data..."
+            }
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state when fetching customer site visit data
+  if (fetchCustomerSiteVisitMutation.isPending) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading customer site visit data...</p>
+          <p className="text-sm text-muted-foreground mt-2">Fetching technical specifications from completed visits</p>
         </div>
       </div>
     );
@@ -383,11 +459,18 @@ export function UnifiedQuotationBuilder({
                             address: quotation.customerAddress || '',
                             email: ''
                           }}
-                          onChange={(customerData) => updateQuotation(index, {
-                            customerName: customerData.name,
-                            customerMobile: customerData.mobile,
-                            customerAddress: customerData.address
-                          })}
+                          onChange={(customerData) => {
+                            updateQuotation(index, {
+                              customerName: customerData.name,
+                              customerMobile: customerData.mobile,
+                              customerAddress: customerData.address
+                            });
+                            
+                            // If customer has mobile number, fetch their site visit data
+                            if (customerData.mobile && customerData.mobile.length >= 10) {
+                              fetchCustomerSiteVisitMutation.mutate(customerData.mobile);
+                            }
+                          }}
                           placeholder="Start typing customer name or phone number..."
                         />
                       </div>
