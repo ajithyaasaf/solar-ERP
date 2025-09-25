@@ -3160,6 +3160,382 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ ENHANCED QUOTATION SYSTEM ENDPOINTS ============
+  // Complete integration with SiteVisitQuotationGenerator, PricingEngine, and BOMGenerator
+
+  // Generate comprehensive quotation from site visit
+  app.post("/api/quotations/generate-comprehensive/:siteVisitId", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied - Create quotation permission required" });
+      }
+
+      const { siteVisitId } = req.params;
+      const options = req.body || {};
+
+      // Get site visit data
+      const siteVisit = await storage.getSiteVisit(siteVisitId);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // Validate site visit readiness
+      const { SiteVisitQuotationGenerator } = await import("./services/site-visit-quotation-generator");
+      const readinessCheck = SiteVisitQuotationGenerator.validateSiteVisitForQuotation(siteVisit);
+      
+      if (!readinessCheck.isReady) {
+        return res.status(400).json({
+          message: "Site visit not ready for quotation generation",
+          blockers: readinessCheck.blockers,
+          recommendations: readinessCheck.recommendations,
+          completenessScore: readinessCheck.completenessScore
+        });
+      }
+
+      // Generate comprehensive quotation
+      const quotationResult = await SiteVisitQuotationGenerator.generateQuotation(siteVisit, options);
+
+      // Save quotation draft to storage
+      const savedQuotation = await storage.createQuotationDraft({
+        ...quotationResult.quotationDraft,
+        createdBy: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      res.status(201).json({
+        quotation: savedQuotation,
+        analysis: quotationResult.dataAnalysis,
+        pricing: quotationResult.pricingBreakdown,
+        bomValidation: quotationResult.bomValidation,
+        validation: quotationResult.validationResults,
+        metadata: quotationResult.metadata
+      });
+
+    } catch (error) {
+      console.error("Error generating comprehensive quotation:", error);
+      res.status(500).json({ 
+        message: "Failed to generate quotation",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Generate project-specific quotation
+  app.post("/api/quotations/generate-project/:siteVisitId/:projectType", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitId, projectType } = req.params;
+      const overrides = req.body || {};
+
+      // Get site visit data
+      const siteVisit = await storage.getSiteVisit(siteVisitId);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // Validate project type
+      const validProjectTypes = ['on_grid', 'off_grid', 'hybrid', 'water_heater', 'water_pump'];
+      if (!validProjectTypes.includes(projectType)) {
+        return res.status(400).json({ message: "Invalid project type" });
+      }
+
+      // Generate project-specific quotation
+      const { SiteVisitQuotationGenerator } = await import("./services/site-visit-quotation-generator");
+      const quotationResult = await SiteVisitQuotationGenerator.generateProjectSpecificQuotation(
+        siteVisit, 
+        projectType as any, 
+        overrides
+      );
+
+      // Save quotation draft
+      const savedQuotation = await storage.createQuotationDraft({
+        ...quotationResult.quotationDraft,
+        createdBy: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      res.status(201).json({
+        quotation: savedQuotation,
+        analysis: quotationResult.dataAnalysis,
+        pricing: quotationResult.pricingBreakdown,
+        validation: quotationResult.validationResults,
+        metadata: quotationResult.metadata
+      });
+
+    } catch (error) {
+      console.error("Error generating project-specific quotation:", error);
+      res.status(500).json({ 
+        message: "Failed to generate project quotation",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Calculate detailed pricing for quotation
+  app.post("/api/quotations/:id/calculate-detailed-pricing", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.edit") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+
+      // Get quotation
+      const quotation = await storage.getQuotationDraft(id);
+      if (!quotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+
+      // Calculate detailed pricing
+      const { PrecisePricingEngine } = await import("./services/quotation-pricing-engine");
+      const pricingResult = PrecisePricingEngine.calculateDetailedPricing(quotation);
+
+      // Update quotation with new pricing
+      const updatedQuotation = await storage.updateQuotationDraft(id, {
+        pricing: pricingResult.pricing,
+        updatedAt: new Date(),
+        updatedBy: user.id
+      });
+
+      res.json({
+        quotation: updatedQuotation,
+        pricing: pricingResult,
+        summary: PrecisePricingEngine.generatePricingSummary(pricingResult)
+      });
+
+    } catch (error) {
+      console.error("Error calculating detailed pricing:", error);
+      res.status(500).json({ 
+        message: "Failed to calculate pricing",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Regenerate BOM for quotation
+  app.post("/api/quotations/:id/regenerate-bom", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.edit") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      const { includeCustomItems } = req.body;
+
+      // Get quotation
+      const quotation = await storage.getQuotationDraft(id);
+      if (!quotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+
+      // Generate new BOM
+      const { BOMGenerator } = await import("./services/quotation-bom-generator");
+      const newBOM = BOMGenerator.generateBOM(quotation);
+
+      // Add custom items if specified
+      if (includeCustomItems && quotation.billOfMaterials) {
+        const existingCustomItems = quotation.billOfMaterials.filter(item => 
+          !newBOM.some(newItem => newItem.item === item.item)
+        );
+        newBOM.push(...existingCustomItems);
+        
+        // Renumber items
+        newBOM.forEach((item, index) => {
+          item.sno = index + 1;
+        });
+      }
+
+      // Validate BOM
+      const bomValidation = BOMGenerator.validateBOM(newBOM, quotation.projectType!);
+
+      // Update quotation with new BOM
+      const updatedQuotation = await storage.updateQuotationDraft(id, {
+        billOfMaterials: newBOM,
+        updatedAt: new Date(),
+        updatedBy: user.id
+      });
+
+      res.json({
+        quotation: updatedQuotation,
+        bomValidation,
+        summary: {
+          totalItems: newBOM.length,
+          isComplete: bomValidation.isComplete,
+          missingItems: bomValidation.missingItems,
+          recommendations: bomValidation.recommendations
+        }
+      });
+
+    } catch (error) {
+      console.error("Error regenerating BOM:", error);
+      res.status(500).json({ 
+        message: "Failed to regenerate BOM",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Quick estimate endpoint
+  app.post("/api/quotations/quick-estimate/:siteVisitId", verifyAuth, async (req, res) => {
+    try {
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitId } = req.params;
+      const { projectType, systemCapacity } = req.body;
+
+      // Validate inputs
+      if (!projectType || !systemCapacity) {
+        return res.status(400).json({ 
+          message: "Project type and system capacity are required" 
+        });
+      }
+
+      // Get site visit
+      const siteVisit = await storage.getSiteVisit(siteVisitId);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // Generate quick estimate
+      const { SiteVisitQuotationGenerator } = await import("./services/site-visit-quotation-generator");
+      const estimate = SiteVisitQuotationGenerator.generateQuickEstimate(
+        siteVisit, 
+        projectType, 
+        parseFloat(systemCapacity)
+      );
+
+      res.json(estimate);
+
+    } catch (error) {
+      console.error("Error generating quick estimate:", error);
+      res.status(500).json({ 
+        message: "Failed to generate estimate",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Validate quotation completeness
+  app.get("/api/quotations/:id/validate", verifyAuth, async (req, res) => {
+    try {
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+
+      // Get quotation
+      const quotation = await storage.getQuotationDraft(id);
+      if (!quotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+
+      // Validate quotation
+      const { SmartDefaultEngine } = await import("./services/quotation-smart-defaults");
+      const validationResults = SmartDefaultEngine.validateQuotationDraft(quotation);
+
+      // Validate BOM if present
+      let bomValidation = null;
+      if (quotation.billOfMaterials && quotation.projectType) {
+        const { BOMGenerator } = await import("./services/quotation-bom-generator");
+        bomValidation = BOMGenerator.validateBOM(quotation.billOfMaterials, quotation.projectType);
+      }
+
+      // Validate pricing if present
+      let pricingValidation = null;
+      if (quotation.pricing) {
+        const { PrecisePricingEngine } = await import("./services/quotation-pricing-engine");
+        pricingValidation = PrecisePricingEngine.validatePricing(quotation.pricing);
+      }
+
+      res.json({
+        quotationValidation: validationResults,
+        bomValidation,
+        pricingValidation,
+        overallScore: {
+          completeness: quotation.dataCompleteness || 0,
+          isValid: validationResults.isValid && (!bomValidation || bomValidation.isComplete),
+          readyForApproval: validationResults.isValid && 
+                           (!bomValidation || bomValidation.isComplete) && 
+                           (!pricingValidation || pricingValidation.isValid)
+        }
+      });
+
+    } catch (error) {
+      console.error("Error validating quotation:", error);
+      res.status(500).json({ 
+        message: "Failed to validate quotation",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Check site visit readiness for quotation
+  app.get("/api/quotations/check-readiness/:siteVisitId", verifyAuth, async (req, res) => {
+    try {
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitId } = req.params;
+
+      // Get site visit
+      const siteVisit = await storage.getSiteVisit(siteVisitId);
+      if (!siteVisit) {
+        return res.status(404).json({ message: "Site visit not found" });
+      }
+
+      // Check readiness
+      const { SiteVisitQuotationGenerator } = await import("./services/site-visit-quotation-generator");
+      const readinessCheck = SiteVisitQuotationGenerator.validateSiteVisitForQuotation(siteVisit);
+
+      res.json(readinessCheck);
+
+    } catch (error) {
+      console.error("Error checking site visit readiness:", error);
+      res.status(500).json({ 
+        message: "Failed to check readiness",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Invoices with pagination and performance optimizations
   app.get("/api/invoices", verifyAuth, async (req, res) => {
     try {

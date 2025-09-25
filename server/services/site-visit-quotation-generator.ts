@@ -78,7 +78,7 @@ export class SiteVisitQuotationGenerator {
 
       // Step 1: Analyze site visit data completeness
       processingSteps.push("Analyzing site visit data completeness");
-      const dataAnalysisReport = SiteVisitDataAnalyzer.analyzeSiteVisitData(siteVisit);
+      const dataAnalysisReport = SiteVisitDataAnalyzer.analyzeCompleteness(siteVisit);
       
       // Step 2: Apply smart defaults to create initial quotation draft
       processingSteps.push("Applying smart defaults to create quotation draft");
@@ -210,7 +210,7 @@ export class SiteVisitQuotationGenerator {
       customerName: baseDraft.customerName || siteVisit.customer.name,
       customerMobile: baseDraft.customerMobile || siteVisit.customer.mobile,
       customerAddress: baseDraft.customerAddress || siteVisit.customer.address,
-      customerEmail: baseDraft.customerEmail || siteVisit.customer.email,
+      customerEmail: baseDraft.customerEmail,
       propertyType: baseDraft.propertyType || siteVisit.customer.propertyType,
       ebServiceNumber: baseDraft.ebServiceNumber || siteVisit.customer.ebServiceNumber,
 
@@ -227,7 +227,7 @@ export class SiteVisitQuotationGenerator {
       systemConfiguration: baseDraft.systemConfiguration!,
 
       // Technical requirements
-      technicalRequirements,
+      technicalRequirements: technicalRequirements as any,
       installationScope: baseDraft.installationScope,
 
       // Financial information
@@ -520,16 +520,14 @@ export class SiteVisitQuotationGenerator {
     }
 
     // Generate recommendations
-    if (!siteVisit.customer.email) {
-      recommendations.push("Add customer email for better communication");
-    }
+    // Customer email check would go here if field exists
 
     if (!siteVisit.customer.ebServiceNumber && siteVisit.marketingData?.onGridConfig) {
       recommendations.push("EB service number recommended for on-grid systems");
     }
 
     // Calculate completeness score
-    const analysis = SiteVisitDataAnalyzer.analyzeSiteVisitData(siteVisit);
+    const analysis = SiteVisitDataAnalyzer.analyzeCompleteness(siteVisit);
     const completenessScore = analysis.overallCompleteness;
 
     return {
