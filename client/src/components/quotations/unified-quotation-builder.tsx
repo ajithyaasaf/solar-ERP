@@ -30,6 +30,10 @@ import {
 import { format } from "date-fns";
 import { QuotationFormSections } from "./quotation-form-sections";
 import { CompletionAssistant } from "./completion-assistant";
+import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface QuotationDraft {
   id?: string;
@@ -129,10 +133,29 @@ export function UnifiedQuotationBuilder({
     },
   });
 
-  // Load quotations from site visit on mount
+  // Load quotations from site visit on mount or create empty quotation for standalone mode
   useEffect(() => {
     if (siteVisitId && mode === 'site_visit_completion' && quotations.length === 0) {
       generateFromSiteVisitMutation.mutate(siteVisitId);
+    } else if (mode === 'standalone_creation' && quotations.length === 0) {
+      // Create an empty quotation template for standalone creation
+      const emptyQuotation: QuotationDraft = {
+        customerId: '',
+        customerName: '',
+        customerMobile: '',
+        customerAddress: '',
+        propertyType: 'residential',
+        projectType: 'Solar Installation',
+        systemCapacity: '',
+        projectTitle: 'New Solar Project',
+        systemConfiguration: {},
+        dataCompleteness: 0,
+        needsReview: true,
+        status: 'draft',
+        createdBy: '',
+        createdAt: new Date().toISOString(),
+      };
+      setQuotations([emptyQuotation]);
     }
   }, [siteVisitId, mode]);
 
@@ -349,20 +372,80 @@ export function UnifiedQuotationBuilder({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Customer Name</p>
-                      <p className="font-medium">{quotation.customerName}</p>
+                  {mode === 'standalone_creation' ? (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="customerName">Customer Name *</Label>
+                        <CustomerAutocomplete
+                          value={{
+                            name: quotation.customerName || '',
+                            mobile: quotation.customerMobile || '',
+                            address: quotation.customerAddress || '',
+                            email: ''
+                          }}
+                          onChange={(customerData) => updateQuotation(index, {
+                            customerName: customerData.name,
+                            customerMobile: customerData.mobile,
+                            customerAddress: customerData.address
+                          })}
+                          placeholder="Start typing customer name or phone number..."
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="customerMobile">Mobile Number *</Label>
+                          <Input
+                            id="customerMobile"
+                            value={quotation.customerMobile || ''}
+                            onChange={(e) => updateQuotation(index, { customerMobile: e.target.value })}
+                            placeholder="Customer mobile number"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="propertyType">Property Type</Label>
+                          <Select 
+                            value={quotation.propertyType || 'residential'} 
+                            onValueChange={(value) => updateQuotation(index, { propertyType: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select property type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="residential">Residential</SelectItem>
+                              <SelectItem value="commercial">Commercial</SelectItem>
+                              <SelectItem value="industrial">Industrial</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="customerAddress">Address *</Label>
+                        <Input
+                          id="customerAddress"
+                          value={quotation.customerAddress || ''}
+                          onChange={(e) => updateQuotation(index, { customerAddress: e.target.value })}
+                          placeholder="Customer address"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Mobile</p>
-                      <p className="font-medium">{quotation.customerMobile}</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Customer Name</p>
+                        <p className="font-medium">{quotation.customerName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Mobile</p>
+                        <p className="font-medium">{quotation.customerMobile}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <p className="text-sm text-muted-foreground">Address</p>
+                        <p className="font-medium">{quotation.customerAddress}</p>
+                      </div>
                     </div>
-                    <div className="md:col-span-2">
-                      <p className="text-sm text-muted-foreground">Address</p>
-                      <p className="font-medium">{quotation.customerAddress}</p>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
