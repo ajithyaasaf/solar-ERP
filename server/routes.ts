@@ -19,8 +19,6 @@ import {
   insertEmployeeDocumentSchema,
   insertPerformanceReviewSchema,
   insertCustomerSchema,
-  insertQuotationSchema,
-  insertQuotationSchemaWithNormalization,
   departments
 } from "@shared/schema";
 // Import all the necessary schemas from storage.ts since they've been moved there
@@ -30,6 +28,7 @@ import {
   insertDesignationSchema,
   insertPermissionGroupSchema,
   insertProductSchema,
+  insertQuotationSchema,
   insertInvoiceSchema,
   insertLeaveSchema
 } from "./storage";
@@ -40,20 +39,6 @@ import { auth } from "./firebase";
 import { userService } from "./services/user-service";
 import { testFirebaseAdminSDK, testUserManagement } from "./test-firebase-admin";
 import { attendanceRateLimiter, generalRateLimiter, createRateLimitMiddleware } from "./utils/rate-limiter";
-import { 
-  calculatePricing, 
-  generateQuotationFinancials, 
-  parseSystemCapacity,
-  calculateMultiProjectPricing 
-} from "./pricing-engine";
-import { generateBOM } from "./services/bom-generator";
-import { 
-  extractSiteVisitData, 
-  generateRecommendedQuotations,
-  generateQuotationsFromSiteVisit,
-  generateRecommendedProjects
-} from "./services/site-visit-quotation-mapper";
-import { generateQuotationRequestSchema } from "./validation/quotation-schemas";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced middleware to verify Firebase Auth token and load user profile
@@ -221,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               id: `quotation-${quotation.id}`,
               type: 'quotation_created' as const,
               title: "Quotation created",
-              description: `${quotation.quotationNumber || 'New quotation'} for ₹${quotation.financials?.finalCustomerPayment || 0}`,
+              description: `${quotation.quotationNumber || 'New quotation'} for ₹${quotation.total || 0}`,
               createdAt: quotation.createdAt,
               entityId: quotation.id,
               entityType: 'quotation',
@@ -321,7 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: `quotation-${recentQuotation.id}`,
             type: 'quotation_created' as const,
             title: "Quotation created",
-            description: `${recentQuotation.quotationNumber || 'New quotation'} for ₹${recentQuotation.financials?.finalCustomerPayment || 0}`,
+            description: `${recentQuotation.quotationNumber || 'New quotation'} for ₹${recentQuotation.total || 0}`,
             createdAt: recentQuotation.createdAt,
             entityId: recentQuotation.id,
             entityType: 'quotation',
@@ -2822,8 +2807,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
-        !(["master_admin", "admin"].includes(user.role || "") || 
-         ["sales", "marketing"].includes(user.department || ""))
+        !["master_admin", "admin", "sales_and_marketing"].includes(
+          user.role || user.department || "",
+        )
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2843,84 +2829,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
-        !(["master_admin", "admin"].includes(user.role || "") || 
-         ["sales", "marketing"].includes(user.department || ""))
+        !["master_admin", "admin", "sales_and_marketing"].includes(
+          user.role || user.department || "",
+        )
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
-      let quotationData = insertQuotationSchemaWithNormalization.parse(req.body);
-      
-      // Auto-generate quotation number if not provided
-      if (!quotationData.quotationNumber) {
-        const allQuotations = await storage.listQuotations();
-        const lastNumber = allQuotations
-          .map(q => q.quotationNumber)
-          .filter(num => num && num.startsWith('Q-'))
-          .map(num => parseInt(num.split('-')[1]) || 0)
-          .reduce((max, current) => Math.max(max, current), 1050); // Start from Q-1051
-        quotationData.quotationNumber = `Q-${lastNumber + 1}`;
-      }
-      
-      // Validate customer exists
-      const customer = await storage.getCustomer(quotationData.customerId);
-      if (!customer) {
-        return res.status(400).json({ message: "Customer not found" });
-      }
-      
-      // Set creator information
-      quotationData.createdBy = user.id;
-      
-      // Calculate pricing using the centralized pricing engine
-      try {
-        const { value, unit } = parseSystemCapacity(quotationData.systemCapacity);
-        const pricingResult = calculatePricing({
-          projectType: quotationData.projectType,
-          capacityValue: value,
-          capacityUnit: unit,
-          systemCapacity: quotationData.systemCapacity,
-          includeSubsidy: true,
-          customerProjectCount: 1,
-          totalCustomerValue: 0
-        });
-        
-        // Generate financial breakdown
-        quotationData.financials = generateQuotationFinancials(pricingResult);
-        
-        // Set normalized capacity fields for compatibility
-        quotationData.capacityValue = value;
-        quotationData.capacityUnit = unit as "kW" | "L" | "HP" | "Watts";
-        
-      } catch (pricingError) {
-        console.warn("Pricing calculation failed, using manual financials:", pricingError);
-        // Allow manual quotation creation if pricing fails
-      }
-      
-      // Generate Bill of Materials if not provided
-      if (!quotationData.billOfMaterials || quotationData.billOfMaterials.length === 0) {
-        try {
-          const bomData = generateBOM(quotationData.projectType, quotationData.systemCapacity);
-          quotationData.billOfMaterials = bomData.components.map(comp => ({
-            id: comp.id,
-            name: comp.name,
-            category: comp.category,
-            quantity: comp.quantity,
-            unit: comp.unit,
-            unitPrice: comp.unitPrice,
-            totalPrice: comp.totalPrice,
-            specifications: comp.specifications,
-            warranty: comp.warranty,
-            make: comp.make || '',
-            model: comp.model || ''
-          }));
-          
-          // Add BOM summary to notes
-          const bomSummary = `\nAuto-generated BOM: ${bomData.totalComponents} components, ₹${bomData.grandTotal.toLocaleString('en-IN')} total value`;
-          quotationData.notes = quotationData.notes ? `${quotationData.notes}${bomSummary}` : bomSummary.trim();
-        } catch (bomError) {
-          console.warn("BOM generation failed, proceeding without BOM:", bomError);
-        }
-      }
-      
+      const quotationData = insertQuotationSchema.parse(req.body);
       const quotation = await storage.createQuotation(quotationData);
       res.status(201).json(quotation);
     } catch (error) {
@@ -2937,8 +2852,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !user ||
-        !(["master_admin", "admin"].includes(user.role || "") || 
-         ["sales", "marketing"].includes(user.department || ""))
+        !["master_admin", "admin", "sales_and_marketing"].includes(
+          user.role || user.department || "",
+        )
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2971,246 +2887,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting quotation:", error);
       res.status(500).json({ message: "Failed to delete quotation" });
-    }
-  });
-
-  // Bulk quotation operations for multi-project customers
-  app.post("/api/quotations/bulk", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !(["master_admin", "admin"].includes(user.role || "") || 
-         ["sales", "marketing"].includes(user.department || ""))
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
-      const { quotations, customerId } = req.body;
-      
-      if (!Array.isArray(quotations) || quotations.length === 0) {
-        return res.status(400).json({ message: "Quotations array is required" });
-      }
-      
-      // Validate customer exists
-      const customer = await storage.getCustomer(customerId);
-      if (!customer) {
-        return res.status(400).json({ message: "Customer not found" });
-      }
-      
-      // Get next quotation numbers
-      const allQuotations = await storage.listQuotations();
-      let lastNumber = allQuotations
-        .map(q => q.quotationNumber)
-        .filter(num => num && num.startsWith('Q-'))
-        .map(num => parseInt(num.split('-')[1]) || 0)
-        .reduce((max, current) => Math.max(max, current), 1050);
-      
-      const createdQuotations = [];
-      const errors = [];
-      
-      // Parse and validate all quotations first, collecting errors
-      const validPricingInputs: any[] = [];
-      const invalidQuotations: any[] = [];
-      
-      quotations.forEach((q, index) => {
-        try {
-          const { value, unit } = parseSystemCapacity(q.systemCapacity);
-          validPricingInputs.push({
-            projectType: q.projectType,
-            capacityValue: value,
-            capacityUnit: unit,
-            systemCapacity: q.systemCapacity,
-            includeSubsidy: true,
-            originalIndex: index
-          });
-        } catch (error) {
-          invalidQuotations.push({
-            index,
-            quotation: q,
-            error: `Invalid system capacity format: ${q.systemCapacity}`
-          });
-        }
-      });
-      
-      if (validPricingInputs.length === 0) {
-        return res.status(400).json({ 
-          message: "No valid quotations to process",
-          errors: invalidQuotations
-        });
-      }
-      
-      // Calculate pricing for valid quotations with bulk discounts
-      const multiProjectPricing = calculateMultiProjectPricing(validPricingInputs, customerId);
-      
-      // Add invalid quotations to errors first
-      errors.push(...invalidQuotations);
-      
-      // Process valid quotations with pricing
-      for (let validIndex = 0; validIndex < validPricingInputs.length; validIndex++) {
-        try {
-          const pricingInput = validPricingInputs[validIndex];
-          const originalIndex = pricingInput.originalIndex;
-          const quotationData = quotations[originalIndex];
-          const pricingResult = multiProjectPricing[validIndex];
-          
-          const validatedData = insertQuotationSchemaWithNormalization.parse({
-            ...quotationData,
-            customerId,
-            quotationNumber: `Q-${++lastNumber}`,
-            createdBy: user.id,
-            financials: generateQuotationFinancials(pricingResult),
-            capacityValue: pricingResult.breakdown.capacityUsed,
-            capacityUnit: pricingInput.capacityUnit as "kW" | "L" | "HP" | "Watts"
-          });
-          
-          const quotation = await storage.createQuotation(validatedData);
-          createdQuotations.push(quotation);
-        } catch (error) {
-          errors.push({
-            index: validPricingInputs[validIndex].originalIndex,
-            quotation: quotations[validPricingInputs[validIndex].originalIndex],
-            error: error instanceof Error ? error.message : "Unknown error"
-          });
-        }
-      }
-      
-      res.status(201).json({
-        message: `${createdQuotations.length} quotations created successfully`,
-        quotations: createdQuotations,
-        errors: errors.length > 0 ? errors : undefined,
-        summary: {
-          total: quotations.length,
-          successful: createdQuotations.length,
-          failed: errors.length
-        }
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error("Error creating bulk quotations:", error);
-      res.status(500).json({ message: "Failed to create quotations" });
-    }
-  });
-
-  // Generate quotation from site visit (integration endpoint)
-  app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !(["master_admin", "admin"].includes(user.role || "") || 
-         ["sales", "marketing"].includes(user.department || ""))
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
-      const { siteVisitId } = req.params;
-      
-      // Validate request body
-      const validatedBody = generateQuotationRequestSchema.parse(req.body);
-      const { selectedProjects, includeSubsidy } = validatedBody;
-      
-      // Generate quotations using the site visit mapping service
-      const result = await generateQuotationsFromSiteVisit({
-        siteVisitId,
-        selectedProjects,
-        createdBy: user.id,
-        includeSubsidy
-      });
-      
-      if (!result.success) {
-        return res.status(400).json({
-          message: "Failed to generate quotations from site visit",
-          errors: result.errors,
-          summary: result.summary
-        });
-      }
-      
-      res.status(201).json({
-        message: `${result.summary.totalGenerated} quotations generated from site visit successfully`,
-        quotations: result.quotations,
-        errors: result.errors.length > 0 ? result.errors : undefined,
-        summary: result.summary
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error("Error generating quotation from site visit:", error);
-      res.status(500).json({ message: "Failed to generate quotation from site visit" });
-    }
-  });
-
-  // Get site visit data for quotation generation
-  app.get("/api/quotations/site-visit/:siteVisitId/data", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !(["master_admin", "admin"].includes(user.role || "") || 
-         ["sales", "marketing"].includes(user.department || ""))
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
-      const { siteVisitId } = req.params;
-      
-      // Extract site visit data
-      const siteVisitData = await extractSiteVisitData(siteVisitId);
-      if (!siteVisitData) {
-        return res.status(404).json({ message: "Site visit not found or inaccessible" });
-      }
-      
-      // Generate recommended projects
-      const recommendedProjects = generateRecommendedProjects(siteVisitData);
-      
-      res.json({
-        siteVisitData,
-        recommendedProjects,
-        message: "Site visit data extracted successfully"
-      });
-    } catch (error) {
-      console.error("Error extracting site visit data:", error);
-      res.status(500).json({ message: "Failed to extract site visit data" });
-    }
-  });
-
-  // Generate recommended quotations from site visit  
-  app.post("/api/quotations/from-site-visit/:siteVisitId/generate-recommended", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !(["master_admin", "admin"].includes(user.role || "") || 
-         ["sales", "marketing"].includes(user.department || ""))
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
-      const { siteVisitId } = req.params;
-      
-      // Generate recommended quotations
-      const result = await generateRecommendedQuotations(siteVisitId, user.id);
-      
-      if (!result.success) {
-        return res.status(400).json({
-          message: "Failed to generate recommended quotations",
-          errors: result.errors,
-          summary: result.summary
-        });
-      }
-      
-      res.status(201).json({
-        message: `${result.summary.totalGenerated} recommended quotations generated successfully`,
-        quotations: result.quotations,
-        errors: result.errors.length > 0 ? result.errors : undefined,
-        summary: result.summary
-      });
-    } catch (error) {
-      console.error("Error generating recommended quotations:", error);
-      res.status(500).json({ message: "Failed to generate recommended quotations" });
     }
   });
 
