@@ -822,127 +822,107 @@ export default function QuotationCreation() {
                         <span className="text-muted-foreground">Balance (10%):</span>
                         <span className="font-medium">₹{form.watch("balanceAmount")?.toLocaleString() || 0}</span>
                       </div>
-                      <Separator />
-                      <div className="text-sm text-muted-foreground">
-                        Balance payment after installation completion
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Delivery Timeline:</span>
+                        <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || '2-3 weeks'}</span>
                       </div>
+                    </div>
+                    
+                    {/* Terms Configuration */}
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="deliveryTimeframe"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Delivery Timeframe</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-delivery-timeframe">
+                                  <SelectValue placeholder="Select delivery timeframe" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1_2_weeks">1-2 weeks</SelectItem>
+                                <SelectItem value="2_3_weeks">2-3 weeks</SelectItem>
+                                <SelectItem value="3_4_weeks">3-4 weeks</SelectItem>
+                                <SelectItem value="1_month">1 month</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="communicationPreference"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Communication Preference</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-communication-preference">
+                                  <SelectValue placeholder="How to send quotation" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                <SelectItem value="email">Email</SelectItem>
+                                <SelectItem value="sms">SMS</SelectItem>
+                                <SelectItem value="print">Print Copy</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Additional Terms */}
+                {/* Additional Notes */}
                 <div className="space-y-4">
-                  <h4 className="font-medium">Terms & Conditions</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <h4 className="font-medium">Additional Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="deliveryTimeframe"
+                      name="internalNotes"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Delivery Timeframe</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-delivery-timeframe">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="1_2_weeks">1-2 Weeks</SelectItem>
-                              <SelectItem value="2_3_weeks">2-3 Weeks</SelectItem>
-                              <SelectItem value="3_4_weeks">3-4 Weeks</SelectItem>
-                              <SelectItem value="1_month">1 Month</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Internal Notes</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Notes for internal team (not visible to customer)" 
+                              className="min-h-[80px]" 
+                              data-testid="textarea-internal-notes"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
+                    
                     <FormField
                       control={form.control}
-                      name="termsTemplate"
+                      name="customerNotes"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Terms Template</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-terms-template">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="standard">Standard Terms</SelectItem>
-                              <SelectItem value="residential">Residential Terms</SelectItem>
-                              <SelectItem value="commercial">Commercial Terms</SelectItem>
-                              <SelectItem value="agri">Agricultural Terms</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="communicationPreference"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Communication</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-communication">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                              <SelectItem value="phone">Phone Call</SelectItem>
-                              <SelectItem value="email">Email</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel>Customer Notes</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Special instructions or notes for customer" 
+                              className="min-h-[80px]" 
+                              data-testid="textarea-customer-notes"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="customerNotes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Customer Notes</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Additional notes for customer..."
-                            {...field}
-                            data-testid="input-customer-notes"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="internalNotes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Internal Notes</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Internal notes (not visible to customer)..."
-                            {...field}
-                            data-testid="input-internal-notes"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
               </CardContent>
             </Card>
