@@ -18,6 +18,7 @@ import { Suspense, lazy } from "react";
 const Customers = lazy(() => import("@/pages/customers"));
 const Products = lazy(() => import("@/pages/products"));
 const Quotations = lazy(() => import("@/pages/quotations"));
+const QuotationCreation = lazy(() => import("@/pages/quotation-creation"));
 const Invoices = lazy(() => import("@/pages/invoices"));
 const Attendance = lazy(() => import("@/pages/attendance"));
 const AttendanceManagement = lazy(() => import("@/pages/attendance-management"));
@@ -95,6 +96,19 @@ function Router() {
           <DashboardLayout>
             <Suspense fallback={<PageLoader />}>
               <Quotations />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Quotation Creation - enterprise permission based */}
+      <Route path="/quotations/new">
+        <ProtectedRoute 
+          requiredPermissions={["quotations.create"]}
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <QuotationCreation />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>
