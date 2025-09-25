@@ -2909,16 +2909,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Get site visits that can be converted to quotations
-      // TODO: Implement storage.listSiteVisits() method in storage interface
-      const siteVisits: any[] = []; // Temporary: return empty array until storage method is implemented
+      // Get user for permission checks
+      const user = await storage.getUser(req.authenticatedUser.uid);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Import site visit service and get all site visits
+      const { siteVisitService } = await import("./services/site-visit-service");
       
-      // Filter for completed site visits with 'converted' outcome and marketing data
-      const mappableSiteVisits = siteVisits.filter((visit: any) => 
+      // Create filters to get all site visits that the user can see
+      const filters: any = { limit: 1000 }; // Get up to 1000 visits for filtering
+      
+      // Determine what the user can see based on permissions
+      if (user.role === 'master_admin' || await checkSiteVisitPermission(user, 'view_all')) {
+        // Can see all site visits - no additional filters needed
+      } else if (await checkSiteVisitPermission(user, 'view_team')) {
+        // Can see team/department site visits
+        filters.department = user.department;
+      } else {
+        // Can only see own site visits
+        filters.userId = user.uid;
+      }
+
+      const allSiteVisits = await siteVisitService.getSiteVisitsWithFilters(filters);
+      
+      // Filter for completed site visits with 'converted' outcome and basic required data
+      const mappableSiteVisits = allSiteVisits.filter((visit: any) => 
         visit.status === 'completed' && 
         visit.visitOutcome === 'converted' &&
-        visit.marketingData &&
-        visit.customer
+        visit.customer &&
+        visit.customer.name &&
+        visit.customer.mobile
       );
 
       // Add completeness analysis for each site visit using dedicated service
@@ -2955,7 +2977,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const siteVisit = await storage.getSiteVisit(req.params.siteVisitId);
+      // Get the site visit using the site visit service
+      const { siteVisitService } = await import("./services/site-visit-service");
+      const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
@@ -3044,7 +3068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const siteVisit = await storage.getSiteVisit(req.params.siteVisitId);
+      // Get the site visit using the site visit service
+      const { siteVisitService } = await import("./services/site-visit-service");
+      const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
