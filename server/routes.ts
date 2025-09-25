@@ -2896,6 +2896,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/quotation-drafts/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "User not found in system" });
+      }
+      
       // Allow admin roles or sales/marketing departments
       const hasPermission = user.role === "master_admin" || user.role === "admin" || 
                            user.department === "sales" || user.department === "marketing";
@@ -2965,6 +2969,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/quotations/:id/recalculate-pricing", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "User not found in system" });
+      }
+      
       // Allow admin roles or sales/marketing departments
       const hasPermission = user.role === "master_admin" || user.role === "admin" || 
                            user.department === "sales" || user.department === "marketing";
