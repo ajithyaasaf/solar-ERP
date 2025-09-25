@@ -164,7 +164,7 @@ export class PrecisePricingEngine {
     const taxCalculation = this.calculateTaxes(subtotal);
     
     // Calculate total system cost
-    const totalSystemCost = subtotal + taxCalculation.totalTax;
+    const totalSystemCost = subtotal + taxCalculation.total;
     
     // Calculate subsidies
     const subsidyInfo = this.calculateSubsidies(projectType, specs.capacity);
@@ -190,8 +190,14 @@ export class PrecisePricingEngine {
     
     // Create pricing object
     const pricing: Pricing = {
+      solarPanelCost: bomPricing.solarPanels?.amount || 0,
+      inverterCost: bomPricing.inverter?.amount || 0,
+      batteryCost: bomPricing.batteries?.amount || 0,
+      structureCost: bomPricing.structure?.amount || 0,
+      accessoriesCost: bomPricing.accessories?.items.reduce((sum, item) => sum + item.amount, 0) || 0,
+      installationCost: bomPricing.installation?.amount || 0,
       subtotal,
-      taxAmount: taxCalculation.totalTax,
+      taxAmount: taxCalculation.total,
       totalSystemCost,
       subsidyAmount: subsidyInfo.calculatedSubsidy,
       subsidyPercentage: (subsidyInfo.calculatedSubsidy / totalSystemCost) * 100,
@@ -199,6 +205,7 @@ export class PrecisePricingEngine {
       advancePercentage: PRICING_CONFIG.paymentTerms.advancePercentage,
       balancePercentage: PRICING_CONFIG.paymentTerms.balancePercentage,
       perKWCost: specs.capacity > 0 ? Math.round(finalCustomerPayment / specs.capacity) : 0,
+      competitorPrice: 0,
       marginAmount: this.calculateMargin(finalCustomerPayment, baseSystemCost),
       marginPercentage: this.calculateMarginPercentage(finalCustomerPayment, baseSystemCost),
     };
@@ -211,7 +218,7 @@ export class PrecisePricingEngine {
       heightAdjustment: adjustments.height,
       brandAdjustment: adjustments.brand,
       subtotal,
-      gstAmount: taxCalculation.totalTax,
+      gstAmount: taxCalculation.total,
       totalSystemCost,
       subsidyAmount: subsidyInfo.calculatedSubsidy,
       finalCustomerPayment,
@@ -264,7 +271,12 @@ export class PrecisePricingEngine {
       batteryAH: 0,
       litre: 0,
       hp: 0,
-      brands: {},
+      brands: {
+        solarPanel: undefined as string | undefined,
+        inverter: undefined as string | undefined,
+        battery: undefined as string | undefined,
+        waterHeater: undefined as string | undefined,
+      },
     };
     
     if (projectType === "on_grid" || projectType === "off_grid" || projectType === "hybrid") {
@@ -286,20 +298,20 @@ export class PrecisePricingEngine {
       // Battery for off-grid/hybrid
       if ((projectType === "off_grid" || projectType === "hybrid") && "batteryAH" in config) {
         specs.batteryAH = parseInt(config.batteryAH || "0");
-        if (config.batteryMake && config.batteryMake.length > 0) {
-          specs.brands.battery = config.batteryMake[0];
+        if (config.batteryBrand && config.batteryBrand) {
+          specs.brands.battery = config.batteryBrand;
         }
       }
     } else if (projectType === "water_heater") {
       const config = systemConfig as WaterHeaterConfig;
       specs.litre = config.litre || 0;
       
-      if (config.waterHeaterMake && config.waterHeaterMake.length > 0) {
-        specs.brands.waterHeater = config.waterHeaterMake[0];
+      if (config.brand) {
+        specs.brands.waterHeater = config.brand;
       }
     } else if (projectType === "water_pump") {
       const config = systemConfig as WaterPumpConfig;
-      specs.hp = config.hp || 0;
+      specs.hp = parseFloat(config.hp || "0");
     }
     
     return specs;

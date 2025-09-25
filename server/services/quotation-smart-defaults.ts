@@ -109,7 +109,11 @@ export class SmartDefaultEngine {
     config: OnGridConfig | OffGridConfig | HybridConfig | WaterHeaterConfig | WaterPumpConfig;
     completeness: number;
   }> {
-    const configs = [];
+    const configs: Array<{
+      type: QuotationProjectType;
+      config: OnGridConfig | OffGridConfig | HybridConfig | WaterHeaterConfig | WaterPumpConfig;
+      completeness: number;
+    }> = [];
 
     if (!siteVisit.marketingData) return configs;
 
@@ -217,46 +221,29 @@ export class SmartDefaultEngine {
     const draft: Partial<InsertQuotationDraft> = {};
 
     // Customer information from site visit
-    if (siteVisit.customerId) {
-      draft.customerId = siteVisit.customerId;
-      this.addDefault(appliedDefaults, "customerId", siteVisit.customerId, "explicit", "high", "From site visit data");
+    draft.customerId = siteVisit.customer.name; // Use name as identifier for now
+    draft.customerName = siteVisit.customer.name;
+    draft.customerMobile = siteVisit.customer.mobile;
+    draft.customerAddress = siteVisit.customer.address;
+    this.addDefault(appliedDefaults, "customerName", siteVisit.customer.name, "explicit", "high", "From site visit data");
+    this.addDefault(appliedDefaults, "customerMobile", siteVisit.customer.mobile, "explicit", "high", "From site visit data");
+    this.addDefault(appliedDefaults, "customerAddress", siteVisit.customer.address, "explicit", "high", "From site visit data");
+
+    // Optional customer fields
+    if (siteVisit.customer.ebServiceNumber) {
+      draft.ebServiceNumber = siteVisit.customer.ebServiceNumber;
+      this.addDefault(appliedDefaults, "ebServiceNumber", siteVisit.customer.ebServiceNumber, "explicit", "high", "From site visit data");
     }
 
-    if (siteVisit.customerName) {
-      draft.customerName = siteVisit.customerName;
-      this.addDefault(appliedDefaults, "customerName", siteVisit.customerName, "explicit", "high", "From site visit data");
-    }
-
-    if (siteVisit.customerMobile) {
-      draft.customerMobile = siteVisit.customerMobile;
-      this.addDefault(appliedDefaults, "customerMobile", siteVisit.customerMobile, "explicit", "high", "From site visit data");
-    }
-
-    if (siteVisit.customerAddress) {
-      draft.customerAddress = siteVisit.customerAddress;
-      this.addDefault(appliedDefaults, "customerAddress", siteVisit.customerAddress, "explicit", "high", "From site visit data");
-    }
-
-    if (siteVisit.customerEmail) {
-      draft.customerEmail = siteVisit.customerEmail;
-      this.addDefault(appliedDefaults, "customerEmail", siteVisit.customerEmail, "explicit", "high", "From site visit data");
-    }
-
-    // Property and service information
-    if (siteVisit.propertyType) {
-      draft.propertyType = siteVisit.propertyType;
-      this.addDefault(appliedDefaults, "propertyType", siteVisit.propertyType, "explicit", "high", "From site visit data");
-    }
-
-    if (siteVisit.ebServiceNumber) {
-      draft.ebServiceNumber = siteVisit.ebServiceNumber;
-      this.addDefault(appliedDefaults, "ebServiceNumber", siteVisit.ebServiceNumber, "explicit", "high", "From site visit data");
+    if (siteVisit.customer.propertyType) {
+      draft.propertyType = siteVisit.customer.propertyType;
+      this.addDefault(appliedDefaults, "propertyType", siteVisit.customer.propertyType, "explicit", "high", "From site visit data");
     }
 
     // Site visit linkage
     draft.siteVisitId = siteVisit.id;
-    draft.sourceVisitDate = siteVisit.visitDate;
-    draft.sourceVisitPurpose = siteVisit.purpose;
+    draft.sourceVisitDate = siteVisit.siteInTime;
+    draft.sourceVisitPurpose = siteVisit.visitPurpose;
     this.addDefault(appliedDefaults, "siteVisitId", siteVisit.id, "explicit", "high", "Site visit reference");
 
     // Project configuration
@@ -272,10 +259,8 @@ export class SmartDefaultEngine {
     draft.needsReview = true;
 
     // User tracking
-    if (siteVisit.createdBy) {
-      draft.createdBy = siteVisit.createdBy;
-      this.addDefault(appliedDefaults, "createdBy", siteVisit.createdBy, "explicit", "high", "From site visit creator");
-    }
+    draft.createdBy = siteVisit.userId;
+    this.addDefault(appliedDefaults, "createdBy", siteVisit.userId, "explicit", "high", "From site visit creator");
 
     return draft;
   }
@@ -448,7 +433,7 @@ export class SmartDefaultEngine {
     // Solar panels
     if (config.panelCount && config.panelWatts && config.solarPanelMake) {
       billOfMaterials.push({
-        category: "solar_panels",
+        sno: billOfMaterials.length + 1,
         item: `${config.solarPanelMake[0]} Solar Panel`,
         specification: `${config.panelWatts}W Monocrystalline`,
         quantity: config.panelCount,
@@ -461,7 +446,7 @@ export class SmartDefaultEngine {
     // Inverter
     if (config.inverterKW && config.inverterMake) {
       billOfMaterials.push({
-        category: "inverter",
+        sno: billOfMaterials.length + 1,
         item: `${config.inverterMake[0]} Inverter`,
         specification: `${config.inverterKW}kW ${config.inverterPhase || 'Single Phase'}`,
         quantity: config.inverterQty || 1,
@@ -472,13 +457,13 @@ export class SmartDefaultEngine {
     }
 
     // Batteries (for off-grid/hybrid)
-    if (config.batteryAH && config.batteryMake && 
+    if (config.batteryAH && config.batteryBrand && 
         (primaryConfig.type === "off_grid" || primaryConfig.type === "hybrid")) {
       billOfMaterials.push({
-        category: "battery",
-        item: `${config.batteryMake[0]} Battery`,
+        sno: billOfMaterials.length + 1,
+        item: `${config.batteryBrand} Battery`,
         specification: `${config.batteryAH}AH ${config.batteryType || 'Lead Acid'}`,
-        quantity: config.batteryQty || 4,
+        quantity: config.batteryCount || 4,
         unit: "nos",
         rate: 0,
         amount: 0
@@ -488,7 +473,7 @@ export class SmartDefaultEngine {
     // Structure
     if (config.structureType) {
       billOfMaterials.push({
-        category: "structure",
+        sno: billOfMaterials.length + 1,
         item: "Mounting Structure",
         specification: config.structureType === "gp_structure" ? "GI Structure" : "Mono Rail",
         quantity: 1,
@@ -501,7 +486,7 @@ export class SmartDefaultEngine {
     // Essential accessories
     billOfMaterials.push(
       {
-        category: "accessories",
+        sno: billOfMaterials.length + 1,
         item: "DC Cable",
         specification: "4sq mm Solar DC Cable",
         quantity: 100,
@@ -510,7 +495,7 @@ export class SmartDefaultEngine {
         amount: 0
       },
       {
-        category: "accessories",
+        sno: billOfMaterials.length + 2,
         item: "AC Cable",
         specification: "2.5sq mm AC Cable",
         quantity: 50,
@@ -519,7 +504,7 @@ export class SmartDefaultEngine {
         amount: 0
       },
       {
-        category: "accessories",
+        sno: billOfMaterials.length + 3,
         item: "Earthing Kit",
         specification: "Complete Earthing Kit",
         quantity: 1,
@@ -531,7 +516,7 @@ export class SmartDefaultEngine {
 
     if (config.lightningArrest) {
       billOfMaterials.push({
-        category: "accessories",
+        sno: billOfMaterials.length + 1,
         item: "Lightning Arrestor",
         specification: "DC/AC Lightning Arrestor",
         quantity: 1,
@@ -557,27 +542,24 @@ export class SmartDefaultEngine {
     const warranties: Warranty[] = [
       {
         component: "Solar Panels",
-        period: "25 years",
-        coverage: "Performance warranty - 80% power output",
-        conditions: "Normal weather conditions, proper installation"
+        manufacturingWarranty: "25 years manufacturing defects",
+        serviceWarranty: "1 year free service",
+        performanceWarranty: "25 years performance warranty - 80% power output"
       },
       {
         component: "Inverter",
-        period: "5 years",
-        coverage: "Complete replacement warranty",
-        conditions: "Manufacturing defects, proper installation"
+        manufacturingWarranty: "5 years manufacturing defects",
+        serviceWarranty: "2 years free service"
       },
       {
         component: "Structure",
-        period: "10 years",
-        coverage: "Rust and structural integrity",
-        conditions: "Proper installation, regular maintenance"
+        manufacturingWarranty: "10 years rust protection",
+        serviceWarranty: "1 year free service"
       },
       {
         component: "Installation",
-        period: "1 year",
-        coverage: "Workmanship and installation quality",
-        conditions: "Free service and repair"
+        manufacturingWarranty: "1 year workmanship warranty",
+        serviceWarranty: "1 year free service and repair"
       }
     ];
 
@@ -585,9 +567,8 @@ export class SmartDefaultEngine {
     if (primaryConfig.type === "off_grid" || primaryConfig.type === "hybrid") {
       warranties.push({
         component: "Battery",
-        period: "3 years",
-        coverage: "Replacement warranty for manufacturing defects",
-        conditions: "Proper charging cycles, maintenance"
+        manufacturingWarranty: "3 years manufacturing defects",
+        serviceWarranty: "1 year free service"
       });
     }
 
@@ -630,7 +611,6 @@ export class SmartDefaultEngine {
     // Add plumbing for water heater
     if (primaryConfig.type === "water_heater") {
       installationScope.customerScope.push("Plumbing connections");
-      installationScope.plumbingWork = "customer_scope" as const;
     }
 
     draft.installationScope = installationScope;
@@ -769,14 +749,18 @@ export class SmartDefaultEngine {
    * Get technical requirements from site visit
    */
   static extractTechnicalRequirements(siteVisit: SiteVisit) {
-    const requirements = {
+    const requirements: {
+      serviceTypes: string[];
+      workType: string | undefined;
+      specialRequirements: string;
+    } = {
       serviceTypes: [],
       workType: undefined,
       specialRequirements: ""
     };
 
     if (siteVisit.technicalData) {
-      requirements.serviceTypes = siteVisit.technicalData.serviceType || [];
+      requirements.serviceTypes = siteVisit.technicalData.serviceTypes || [];
       requirements.workType = siteVisit.technicalData.workType;
       requirements.specialRequirements = siteVisit.technicalData.description || "";
     }
