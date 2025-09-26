@@ -49,7 +49,8 @@ import {
   Zap,
   Battery,
   Droplets,
-  Wrench
+  Wrench,
+  Info
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -798,7 +799,7 @@ export default function QuotationCreation() {
     enabled: quotationSource === "manual"
   });
 
-  // Fetch site visit mapping data when selected
+  // Fetch complete site visit mapping data when selected - pulls ALL data without leaving anything
   const { data: mappingData, isLoading: isLoadingMapping } = useQuery({
     queryKey: ["/api/quotations/site-visits", selectedSiteVisit, "mapping-data"],
     enabled: !!selectedSiteVisit && quotationSource === "site_visit"
@@ -898,8 +899,8 @@ export default function QuotationCreation() {
       setSiteVisitMapping(mappingData);
       
       toast({
-        title: "Site Visit Data Mapped",
-        description: `Mapped with ${(mappingData as any).completenessAnalysis?.completenessScore || 0}% completeness.`
+        title: "Complete Site Visit Data Mapped", 
+        description: `All available data mapped with ${(mappingData as any).completenessAnalysis?.completenessScore || 0}% completeness. Grade: ${(mappingData as any).completenessAnalysis?.qualityGrade || 'Unknown'}`
       });
     }
   }, [mappingData, form]);
@@ -1302,9 +1303,71 @@ export default function QuotationCreation() {
                     <Alert>
                       <Check className="h-4 w-4" />
                       <AlertDescription>
-                        Project configurations have been automatically mapped from site visit marketing data.
+                        Complete site visit data has been mapped including all customer details, technical assessments, marketing configurations, administrative data, photos, and location information. No data has been left out from the original site visit.
                       </AlertDescription>
                     </Alert>
+                    
+                    {/* Data Completeness Analysis */}
+                    {(siteVisitMapping as any)?.completenessAnalysis && (
+                      <Card className="bg-blue-50 border-blue-200">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-sm">
+                            <Info className="h-4 w-4 text-blue-600" />
+                            Data Completeness Analysis
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Overall Quality Grade</span>
+                            <Badge variant="outline" className={
+                              (siteVisitMapping as any).completenessAnalysis.qualityGrade === "A" ? "bg-green-100 text-green-800" :
+                              (siteVisitMapping as any).completenessAnalysis.qualityGrade === "B" ? "bg-blue-100 text-blue-800" :
+                              (siteVisitMapping as any).completenessAnalysis.qualityGrade === "C" ? "bg-yellow-100 text-yellow-800" :
+                              "bg-red-100 text-red-800"
+                            }>
+                              Grade {(siteVisitMapping as any).completenessAnalysis.qualityGrade}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Data Completeness</span>
+                            <Badge variant="outline">
+                              {(siteVisitMapping as any).completenessAnalysis.completenessScore}% Complete
+                            </Badge>
+                          </div>
+                          
+                          {(siteVisitMapping as any).completenessAnalysis.missingCriticalFields?.length > 0 && (
+                            <div className="bg-red-50 border border-red-200 rounded p-2">
+                              <p className="text-sm font-medium text-red-800 mb-1">Missing Critical Fields:</p>
+                              <p className="text-xs text-red-600">
+                                {(siteVisitMapping as any).completenessAnalysis.missingCriticalFields.join(", ")}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {(siteVisitMapping as any).completenessAnalysis.missingImportantFields?.length > 0 && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
+                              <p className="text-sm font-medium text-yellow-800 mb-1">Missing Important Fields:</p>
+                              <p className="text-xs text-yellow-600">
+                                {(siteVisitMapping as any).completenessAnalysis.missingImportantFields.join(", ")}
+                              </p>
+                            </div>
+                          )}
+                          
+                          <div className="text-xs text-gray-500">
+                            <p className="font-medium mb-1">Data Sources Integrated:</p>
+                            <ul className="list-disc list-inside space-y-0.5">
+                              <li>Customer information and location data</li>
+                              <li>Technical assessment and service requirements</li>
+                              <li>Marketing project specifications and configurations</li>
+                              <li>Administrative processes and banking details</li>
+                              <li>Photo documentation and attachments</li>
+                              <li>Visit notes and follow-up information</li>
+                            </ul>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                     
                     {/* Display mapped projects */}
                     <div className="grid gap-4">

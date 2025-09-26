@@ -249,18 +249,54 @@ export class SiteVisitDataMapper {
     // Calculate comprehensive pricing with business rules
     const pricingCalculation = this.calculatePricing(projects, warnings);
 
-    // Prepare mapping metadata with enhanced tracking - keep field categories separate
+    // Prepare comprehensive mapping metadata with ALL site visit data sections preserved
     const mappingMetadata: SiteVisitMapping = {
       sourceVisitId: siteVisit.id,
       mappedAt: new Date(),
       mappedBy: userId,
       completenessScore: completenessAnalysis.completenessScore,
       missingCriticalFields: completenessAnalysis.missingCriticalFields,
-      missingOptionalFields: completenessAnalysis.missingOptionalFields, // Keep only truly optional fields
-      dataQualityNotes: `Auto-mapped from site visit ${siteVisit.id}. Quality Grade: ${completenessAnalysis.qualityGrade}. Important fields missing: ${completenessAnalysis.missingImportantFields.length}. ${warnings.length > 0 ? `Warnings: ${warnings.join('; ')}` : 'No warnings.'}`
+      missingOptionalFields: completenessAnalysis.missingOptionalFields,
+      dataQualityNotes: `Auto-mapped from site visit ${siteVisit.id}. Quality Grade: ${completenessAnalysis.qualityGrade}. Important fields missing: ${completenessAnalysis.missingImportantFields.length}. ${warnings.length > 0 ? `Warnings: ${warnings.join('; ')}` : 'No warnings.'}`,
+      // Include ALL site visit data sections in mapping metadata
+      originalSiteVisitData: {
+        visitInfo: {
+          id: siteVisit.id,
+          visitPurpose: siteVisit.visitPurpose,
+          status: siteVisit.status,
+          siteInTime: siteVisit.siteInTime,
+          siteOutTime: siteVisit.siteOutTime,
+          department: siteVisit.department,
+          userId: siteVisit.userId,
+          notes: siteVisit.notes,
+          visitOutcome: siteVisit.visitOutcome,
+          outcomeNotes: siteVisit.outcomeNotes,
+          scheduledFollowUpDate: siteVisit.scheduledFollowUpDate
+        },
+        customerData: siteVisit.customer,
+        technicalData: siteVisit.technicalData || null,
+        marketingData: siteVisit.marketingData || null,
+        adminData: siteVisit.adminData || null,
+        locationData: {
+          siteInLocation: siteVisit.siteInLocation || null,
+          siteOutLocation: siteVisit.siteOutLocation || null
+        },
+        photoData: {
+          siteInPhotoUrl: siteVisit.siteInPhotoUrl || null,
+          siteOutPhotoUrl: siteVisit.siteOutPhotoUrl || null,
+          sitePhotos: siteVisit.sitePhotos || [],
+          siteOutPhotos: siteVisit.siteOutPhotos || []
+        }
+      }
     };
 
-    // Build comprehensive quotation data
+    // Extract ALL attachments from site visit - photos, documents, etc.
+    const attachments = this.extractAllAttachments(siteVisit);
+    
+    // Build comprehensive internal notes from ALL departments and data sources
+    const comprehensiveInternalNotes = this.buildComprehensiveInternalNotes(siteVisit);
+    
+    // Build comprehensive quotation data with ALL site visit data preserved
     const quotationData: Partial<InsertQuotation> = {
       quotationNumber,
       customerId,
@@ -274,16 +310,16 @@ export class SiteVisitDataMapper {
       advanceAmount: pricingCalculation.advanceAmount,
       balanceAmount: pricingCalculation.balanceAmount,
       paymentTerms: "advance_90_balance_10",
-      deliveryTimeframe: BUSINESS_RULES.delivery.standardWeeks,
+      deliveryTimeframe: "2_3_weeks" as const,
       termsTemplate: this.selectTermsTemplate(siteVisit.customer.propertyType),
       status: "draft" as QuotationStatus,
-      followUps: [],
+      followUps: this.mapFollowUpData(siteVisit),
       communicationPreference: "whatsapp",
       documentVersion: 1,
       preparedBy: userId,
-      internalNotes: `Generated from site visit ${siteVisit.id} on ${new Date().toISOString()}. Visit outcome: ${siteVisit.visitOutcome}. Department: ${siteVisit.department}.`,
+      internalNotes: comprehensiveInternalNotes,
       customerNotes: this.extractCustomerNotes(siteVisit),
-      attachments: []
+      attachments // Now contains ALL photos and attachments from site visit
     };
 
     return {
@@ -691,5 +727,282 @@ export class SiteVisitDataMapper {
     }
 
     return notes.join(' | ');
+  }
+
+  /**
+   * Extract ALL attachments from site visit including ALL photos and documents
+   */
+  private static extractAllAttachments(siteVisit: any): string[] {
+    const attachments: string[] = [];
+
+    console.log("ATTACHMENT_EXTRACTION: Starting comprehensive attachment extraction for site visit:", siteVisit.id);
+
+    // Add check-in photo
+    if (siteVisit.siteInPhotoUrl) {
+      attachments.push(siteVisit.siteInPhotoUrl);
+      console.log("ATTACHMENT_EXTRACTION: Added check-in photo");
+    }
+
+    // Add check-out photo
+    if (siteVisit.siteOutPhotoUrl) {
+      attachments.push(siteVisit.siteOutPhotoUrl);
+      console.log("ATTACHMENT_EXTRACTION: Added check-out photo");
+    }
+
+    // Add all site photos from during visit
+    if (siteVisit.sitePhotos && Array.isArray(siteVisit.sitePhotos)) {
+      siteVisit.sitePhotos.forEach((photo: any, index: number) => {
+        if (photo.url) {
+          attachments.push(photo.url);
+          console.log(`ATTACHMENT_EXTRACTION: Added site photo ${index + 1}`);
+        }
+      });
+    }
+
+    // Add all checkout photos
+    if (siteVisit.siteOutPhotos && Array.isArray(siteVisit.siteOutPhotos)) {
+      siteVisit.siteOutPhotos.forEach((photo: any, index: number) => {
+        if (photo.url) {
+          attachments.push(photo.url);
+          console.log(`ATTACHMENT_EXTRACTION: Added checkout photo ${index + 1}`);
+        }
+      });
+    }
+
+    console.log(`ATTACHMENT_EXTRACTION: Extracted ${attachments.length} total attachments from site visit`);
+    return attachments;
+  }
+
+  /**
+   * Build comprehensive internal notes from ALL departments and data sources
+   */
+  private static buildComprehensiveInternalNotes(siteVisit: any): string {
+    const notesSections: string[] = [];
+
+    console.log("COMPREHENSIVE_NOTES: Building complete internal notes for site visit:", siteVisit.id);
+
+    // === VISIT OVERVIEW ===
+    notesSections.push("=== COMPREHENSIVE SITE VISIT DATA ===");
+    notesSections.push(`Site Visit ID: ${siteVisit.id}`);
+    notesSections.push(`Visit Date: ${siteVisit.siteInTime ? siteVisit.siteInTime.toISOString().split('T')[0] : 'Unknown'}`);
+    notesSections.push(`Department: ${siteVisit.department || 'Unknown'}`);
+    notesSections.push(`Purpose: ${siteVisit.visitPurpose || 'Unknown'}`);
+    notesSections.push(`Status: ${siteVisit.status || 'Unknown'}`);
+    notesSections.push(`Visit Outcome: ${siteVisit.visitOutcome || 'Not specified'}`);
+    
+    if (siteVisit.siteInTime && siteVisit.siteOutTime) {
+      const duration = new Date(siteVisit.siteOutTime).getTime() - new Date(siteVisit.siteInTime).getTime();
+      const hours = Math.floor(duration / (1000 * 60 * 60));
+      const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+      notesSections.push(`Visit Duration: ${hours}h ${minutes}m`);
+    }
+
+    // === CUSTOMER INFORMATION ===
+    if (siteVisit.customer) {
+      notesSections.push("\n=== CUSTOMER INFORMATION ===");
+      notesSections.push(`Customer Name: ${siteVisit.customer.name || 'Not provided'}`);
+      notesSections.push(`Mobile: ${siteVisit.customer.mobile || 'Not provided'}`);
+      notesSections.push(`Address: ${siteVisit.customer.address || 'Not provided'}`);
+      notesSections.push(`EB Service Number: ${siteVisit.customer.ebServiceNumber || 'Not provided'}`);
+      notesSections.push(`Property Type: ${siteVisit.customer.propertyType || 'Not specified'}`);
+      if (siteVisit.customer.location) {
+        notesSections.push(`Customer Location: Lat ${siteVisit.customer.location.latitude}, Lng ${siteVisit.customer.location.longitude}`);
+      }
+    }
+
+    // === TECHNICAL ASSESSMENT ===
+    if (siteVisit.technicalData) {
+      notesSections.push("\n=== TECHNICAL ASSESSMENT ===");
+      notesSections.push(`Service Types: ${siteVisit.technicalData.serviceTypes ? siteVisit.technicalData.serviceTypes.join(', ') : 'None specified'}`);
+      notesSections.push(`Work Type: ${siteVisit.technicalData.workType || 'Not specified'}`);
+      notesSections.push(`Working Status: ${siteVisit.technicalData.workingStatus || 'Not assessed'}`);
+      
+      if (siteVisit.technicalData.teamMembers && siteVisit.technicalData.teamMembers.length > 0) {
+        notesSections.push(`Team Members: ${siteVisit.technicalData.teamMembers.join(', ')}`);
+      }
+      
+      if (siteVisit.technicalData.pendingRemarks) {
+        notesSections.push(`Pending Remarks: ${siteVisit.technicalData.pendingRemarks}`);
+      }
+      
+      if (siteVisit.technicalData.description) {
+        notesSections.push(`Technical Description: ${siteVisit.technicalData.description}`);
+      }
+    } else {
+      notesSections.push("\n=== TECHNICAL ASSESSMENT ===");
+      notesSections.push("No technical assessment data recorded");
+    }
+
+    // === MARKETING PROJECT DETAILS ===
+    if (siteVisit.marketingData) {
+      notesSections.push("\n=== MARKETING PROJECT DETAILS ===");
+      notesSections.push(`Update Requirements: ${siteVisit.marketingData.updateRequirements ? 'Yes' : 'No'}`);
+      notesSections.push(`Project Type: ${siteVisit.marketingData.projectType || 'Not specified'}`);
+      
+      // On-Grid Configuration
+      if (siteVisit.marketingData.onGridConfig) {
+        const config = siteVisit.marketingData.onGridConfig;
+        notesSections.push("--- On-Grid System Configuration ---");
+        notesSections.push(`Project Value: ₹${config.projectValue || 0}`);
+        notesSections.push(`Inverter KW: ${config.inverterKW || 'Not specified'}`);
+        notesSections.push(`Panel Count: ${config.panelCount || 'Not specified'}`);
+        notesSections.push(`Panel Watts: ${config.panelWatts || 'Not specified'}`);
+        notesSections.push(`Inverter Phase: ${config.inverterPhase || 'Not specified'}`);
+        if (config.solarPanelMake && config.solarPanelMake.length > 0) {
+          notesSections.push(`Solar Panel Makes: ${config.solarPanelMake.join(', ')}`);
+        }
+        if (config.inverterMake && config.inverterMake.length > 0) {
+          notesSections.push(`Inverter Makes: ${config.inverterMake.join(', ')}`);
+        }
+        if (config.structureType) {
+          notesSections.push(`Structure Type: ${config.structureType}`);
+        }
+        if (config.civilWorkScope) {
+          notesSections.push(`Civil Work Scope: ${config.civilWorkScope}`);
+        }
+        if (config.netMeterScope) {
+          notesSections.push(`Net Meter Scope: ${config.netMeterScope}`);
+        }
+      }
+      
+      // Off-Grid Configuration
+      if (siteVisit.marketingData.offGridConfig) {
+        const config = siteVisit.marketingData.offGridConfig;
+        notesSections.push("--- Off-Grid System Configuration ---");
+        notesSections.push(`Project Value: ₹${config.projectValue || 0}`);
+        notesSections.push(`Inverter KW: ${config.inverterKW || 'Not specified'}`);
+        notesSections.push(`Battery Brand: ${config.batteryBrand || 'Not specified'}`);
+        notesSections.push(`Battery Type: ${config.batteryType || 'Not specified'}`);
+        notesSections.push(`Battery AH: ${config.batteryAH || 'Not specified'}`);
+        notesSections.push(`Battery Count: ${config.batteryCount || 'Not specified'}`);
+      }
+      
+      // Hybrid Configuration
+      if (siteVisit.marketingData.hybridConfig) {
+        const config = siteVisit.marketingData.hybridConfig;
+        notesSections.push("--- Hybrid System Configuration ---");
+        notesSections.push(`Project Value: ₹${config.projectValue || 0}`);
+        notesSections.push(`Inverter KW: ${config.inverterKW || 'Not specified'}`);
+        notesSections.push(`Battery Configuration: ${config.batteryBrand || 'Unknown'} ${config.batteryAH || ''}AH x${config.batteryCount || 0}`);
+      }
+      
+      // Water Heater Configuration
+      if (siteVisit.marketingData.waterHeaterConfig) {
+        const config = siteVisit.marketingData.waterHeaterConfig;
+        notesSections.push("--- Water Heater Configuration ---");
+        notesSections.push(`Brand: ${config.brand || 'Not specified'}`);
+        notesSections.push(`Capacity: ${config.litre || 'Not specified'} liters`);
+        notesSections.push(`Floor Level: ${config.floor || 'Not specified'}`);
+      }
+      
+      // Water Pump Configuration  
+      if (siteVisit.marketingData.waterPumpConfig) {
+        const config = siteVisit.marketingData.waterPumpConfig;
+        notesSections.push("--- Water Pump Configuration ---");
+        notesSections.push(`HP Rating: ${config.hp || 'Not specified'}`);
+        notesSections.push(`Drive Type: ${config.drive || 'Not specified'}`);
+        notesSections.push(`Panel Count: ${config.panelCount || 'Not specified'}`);
+      }
+    } else {
+      notesSections.push("\n=== MARKETING PROJECT DETAILS ===");
+      notesSections.push("No marketing project data recorded");
+    }
+
+    // === ADMINISTRATIVE DETAILS ===
+    if (siteVisit.adminData) {
+      notesSections.push("\n=== ADMINISTRATIVE DETAILS ===");
+      
+      if (siteVisit.adminData.bankProcess) {
+        notesSections.push(`Bank Process: ${siteVisit.adminData.bankProcess.step || 'Not specified'}`);
+        if (siteVisit.adminData.bankProcess.description) {
+          notesSections.push(`Bank Process Details: ${siteVisit.adminData.bankProcess.description}`);
+        }
+      }
+      
+      if (siteVisit.adminData.ebProcess) {
+        notesSections.push(`EB Process: ${siteVisit.adminData.ebProcess.type || 'Not specified'}`);
+        if (siteVisit.adminData.ebProcess.description) {
+          notesSections.push(`EB Process Details: ${siteVisit.adminData.ebProcess.description}`);
+        }
+      }
+      
+      if (siteVisit.adminData.purchase) {
+        notesSections.push(`Purchase Information: ${siteVisit.adminData.purchase}`);
+      }
+      
+      if (siteVisit.adminData.driving) {
+        notesSections.push(`Driving Information: ${siteVisit.adminData.driving}`);
+      }
+      
+      if (siteVisit.adminData.officialCashTransactions) {
+        notesSections.push(`Official Cash Transactions: ${siteVisit.adminData.officialCashTransactions}`);
+      }
+      
+      if (siteVisit.adminData.officialPersonalWork) {
+        notesSections.push(`Official Personal Work: ${siteVisit.adminData.officialPersonalWork}`);
+      }
+      
+      if (siteVisit.adminData.others) {
+        notesSections.push(`Other Administrative Details: ${siteVisit.adminData.others}`);
+      }
+    } else {
+      notesSections.push("\n=== ADMINISTRATIVE DETAILS ===");
+      notesSections.push("No administrative data recorded");
+    }
+
+    // === LOCATION INFORMATION ===
+    notesSections.push("\n=== LOCATION INFORMATION ===");
+    if (siteVisit.siteInLocation) {
+      notesSections.push(`Check-in Location: Lat ${siteVisit.siteInLocation.latitude}, Lng ${siteVisit.siteInLocation.longitude}`);
+      if (siteVisit.siteInLocation.address) {
+        notesSections.push(`Check-in Address: ${siteVisit.siteInLocation.address}`);
+      }
+    } else {
+      notesSections.push("No check-in location recorded");
+    }
+    
+    if (siteVisit.siteOutLocation) {
+      notesSections.push(`Check-out Location: Lat ${siteVisit.siteOutLocation.latitude}, Lng ${siteVisit.siteOutLocation.longitude}`);
+      if (siteVisit.siteOutLocation.address) {
+        notesSections.push(`Check-out Address: ${siteVisit.siteOutLocation.address}`);
+      }
+    } else {
+      notesSections.push("No check-out location recorded");
+    }
+
+    // === PHOTO DOCUMENTATION ===
+    const totalPhotos = (siteVisit.sitePhotos?.length || 0) + (siteVisit.siteOutPhotos?.length || 0) +
+                       (siteVisit.siteInPhotoUrl ? 1 : 0) + (siteVisit.siteOutPhotoUrl ? 1 : 0);
+    
+    notesSections.push("\n=== PHOTO DOCUMENTATION ===");
+    notesSections.push(`Total Photos Captured: ${totalPhotos}`);
+    if (siteVisit.siteInPhotoUrl) notesSections.push("✓ Check-in selfie captured");
+    if (siteVisit.siteOutPhotoUrl) notesSections.push("✓ Check-out selfie captured");
+    if (siteVisit.sitePhotos?.length > 0) {
+      notesSections.push(`✓ ${siteVisit.sitePhotos.length} site photos captured`);
+    }
+    if (siteVisit.siteOutPhotos?.length > 0) {
+      notesSections.push(`✓ ${siteVisit.siteOutPhotos.length} checkout photos captured`);
+    }
+
+    // === VISIT NOTES & OUTCOMES ===
+    notesSections.push("\n=== VISIT NOTES & OUTCOMES ===");
+    if (siteVisit.notes) {
+      notesSections.push(`Visit Notes: ${siteVisit.notes}`);
+    }
+    if (siteVisit.outcomeNotes) {
+      notesSections.push(`Outcome Notes: ${siteVisit.outcomeNotes}`);
+    }
+    if (siteVisit.scheduledFollowUpDate) {
+      notesSections.push(`Scheduled Follow-up: ${siteVisit.scheduledFollowUpDate.toISOString().split('T')[0]}`);
+    }
+
+    notesSections.push("\n=== END OF COMPREHENSIVE SITE VISIT DATA ===");
+    notesSections.push(`Mapped on: ${new Date().toISOString()}`);
+
+    const comprehensiveNotes = notesSections.join('\n');
+    console.log(`COMPREHENSIVE_NOTES: Generated ${notesSections.length} note sections with ${comprehensiveNotes.length} characters`);
+    
+    return comprehensiveNotes;
   }
 }
