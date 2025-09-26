@@ -156,6 +156,525 @@ interface SiteVisitMapping {
   };
 }
 
+// Manual Project Configuration Component
+function ManualProjectConfiguration({ form }: { form: any }) {
+  const [selectedProjectType, setSelectedProjectType] = useState<string | null>(null);
+  const [activeProjectIndex, setActiveProjectIndex] = useState<number | null>(null);
+
+  const projects = form.watch("projects") || [];
+
+  const addProject = (projectType: string) => {
+    const currentProjects = form.getValues("projects") || [];
+    let newProject: any = {
+      projectType,
+      projectValue: 0,
+      subsidyAmount: 0,
+      customerPayment: 0
+    };
+
+    // Add default fields based on project type
+    switch (projectType) {
+      case "on_grid":
+        newProject = {
+          ...newProject,
+          systemKW: 1,
+          pricePerKW: BUSINESS_RULES.pricing.onGridPerKW,
+          solarPanelMake: [],
+          panelWatts: "530",
+          panelCount: 1,
+          inverterMake: [],
+          inverterWatts: "3kw",
+          inverterPhase: "single_phase",
+          earth: "dc",
+          structureHeight: 0,
+          lightningArrest: false
+        };
+        break;
+      case "off_grid":
+        newProject = {
+          ...newProject,
+          systemKW: 1,
+          pricePerKW: BUSINESS_RULES.pricing.offGridPerKW,
+          solarPanelMake: [],
+          panelWatts: "530",
+          panelCount: 1,
+          inverterMake: [],
+          inverterWatts: "3kw",
+          inverterPhase: "single_phase",
+          batteryBrand: "exide",
+          voltage: 12,
+          batteryCount: 1,
+          earth: "dc",
+          structureHeight: 0,
+          lightningArrest: false
+        };
+        break;
+      case "hybrid":
+        newProject = {
+          ...newProject,
+          systemKW: 1,
+          pricePerKW: BUSINESS_RULES.pricing.hybridPerKW,
+          solarPanelMake: [],
+          panelWatts: "530",
+          panelCount: 1,
+          inverterMake: [],
+          inverterWatts: "3kw",
+          inverterPhase: "single_phase",
+          batteryBrand: "exide",
+          voltage: 12,
+          batteryCount: 1,
+          earth: "dc",
+          structureHeight: 0,
+          lightningArrest: false
+        };
+        break;
+      case "water_heater":
+        newProject = {
+          ...newProject,
+          brand: "venus",
+          litre: 100
+        };
+        break;
+      case "water_pump":
+        newProject = {
+          ...newProject,
+          hp: "1",
+          drive: "vfd",
+          structureHeight: 0,
+          panelBrand: [],
+          panelCount: 1
+        };
+        break;
+    }
+
+    // Calculate initial pricing
+    if (["on_grid", "off_grid", "hybrid"].includes(projectType)) {
+      newProject.projectValue = newProject.systemKW * newProject.pricePerKW;
+      newProject.subsidyAmount = newProject.systemKW * BUSINESS_RULES.subsidy[projectType as keyof typeof BUSINESS_RULES.subsidy];
+      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
+    }
+
+    form.setValue("projects", [...currentProjects, newProject]);
+    setActiveProjectIndex(currentProjects.length);
+    setSelectedProjectType(null);
+  };
+
+  const removeProject = (index: number) => {
+    const currentProjects = form.getValues("projects") || [];
+    const updatedProjects = currentProjects.filter((_: any, i: number) => i !== index);
+    form.setValue("projects", updatedProjects);
+    setActiveProjectIndex(null);
+  };
+
+  const updateProject = (index: number, updatedData: any) => {
+    const currentProjects = form.getValues("projects") || [];
+    const updatedProjects = [...currentProjects];
+    updatedProjects[index] = { ...updatedProjects[index], ...updatedData };
+
+    // Recalculate pricing for solar projects
+    if (["on_grid", "off_grid", "hybrid"].includes(updatedProjects[index].projectType)) {
+      const project = updatedProjects[index];
+      project.projectValue = project.systemKW * project.pricePerKW;
+      project.subsidyAmount = project.systemKW * BUSINESS_RULES.subsidy[project.projectType as keyof typeof BUSINESS_RULES.subsidy];
+      project.customerPayment = project.projectValue - project.subsidyAmount;
+    }
+
+    form.setValue("projects", updatedProjects);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Add Project Type Selection */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium">Project Configuration</h4>
+          <Select value={selectedProjectType || ""} onValueChange={setSelectedProjectType}>
+            <SelectTrigger className="w-48" data-testid="select-project-type">
+              <SelectValue placeholder="Add Project Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="on_grid">On-Grid Solar</SelectItem>
+              <SelectItem value="off_grid">Off-Grid Solar</SelectItem>
+              <SelectItem value="hybrid">Hybrid Solar</SelectItem>
+              <SelectItem value="water_heater">Solar Water Heater</SelectItem>
+              <SelectItem value="water_pump">Solar Water Pump</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedProjectType && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={() => addProject(selectedProjectType)}
+              data-testid="button-add-project"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add {selectedProjectType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Project
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSelectedProjectType(null)}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Project List */}
+      {projects.length === 0 && (
+        <Alert>
+          <Plus className="h-4 w-4" />
+          <AlertDescription>
+            No projects configured yet. Please add at least one project to continue.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {projects.length > 0 && (
+        <div className="space-y-4">
+          <h5 className="font-medium">Configured Projects ({projects.length})</h5>
+          <div className="grid gap-4">
+            {projects.map((project: any, index: number) => (
+              <Card key={index} className={`border transition-colors ${
+                activeProjectIndex === index ? 'border-primary bg-primary/5' : 'border-border'
+              }`}>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {project.projectType === 'on_grid' && <Zap className="h-5 w-5 text-blue-600" />}
+                      {project.projectType === 'off_grid' && <Battery className="h-5 w-5 text-green-600" />}
+                      {project.projectType === 'hybrid' && <Settings className="h-5 w-5 text-purple-600" />}
+                      {project.projectType === 'water_heater' && <Droplets className="h-5 w-5 text-orange-600" />}
+                      {project.projectType === 'water_pump' && <Wrench className="h-5 w-5 text-red-600" />}
+                      <h4 className="font-medium capitalize">
+                        {project.projectType.replace('_', ' ')} System
+                      </h4>
+                      <Badge variant="outline">
+                        ₹{project.projectValue?.toLocaleString() || 0}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveProjectIndex(activeProjectIndex === index ? null : index)}
+                        data-testid={`button-configure-project-${index}`}
+                      >
+                        {activeProjectIndex === index ? 'Collapse' : 'Configure'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeProject(index)}
+                        data-testid={`button-remove-project-${index}`}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                {activeProjectIndex === index && (
+                  <CardContent className="pt-0">
+                    <ProjectConfigurationForm
+                      project={project}
+                      projectIndex={index}
+                      onUpdate={(updatedData) => updateProject(index, updatedData)}
+                    />
+                  </CardContent>
+                )}
+
+                {activeProjectIndex !== index && (
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {project.systemKW && (
+                        <div>
+                          <span className="text-muted-foreground">System Capacity:</span>
+                          <div className="font-medium">{project.systemKW} kW</div>
+                        </div>
+                      )}
+                      {project.panelCount && (
+                        <div>
+                          <span className="text-muted-foreground">Solar Panels:</span>
+                          <div className="font-medium">{project.panelCount} panels</div>
+                        </div>
+                      )}
+                      {project.subsidyAmount > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">Govt. Subsidy:</span>
+                          <div className="font-medium text-green-600">₹{project.subsidyAmount.toLocaleString()}</div>
+                        </div>
+                      )}
+                      {project.customerPayment && (
+                        <div>
+                          <span className="text-muted-foreground">Customer Payment:</span>
+                          <div className="font-medium">₹{project.customerPayment.toLocaleString()}</div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Project Configuration Form Component
+function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
+  project: any;
+  projectIndex: number;
+  onUpdate: (data: any) => void;
+}) {
+  const handleFieldChange = (field: string, value: any) => {
+    onUpdate({ [field]: value });
+  };
+
+  const renderSolarSystemFields = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">System Capacity (kW)</label>
+        <Input
+          type="number"
+          step="0.1"
+          min="0.1"
+          value={project.systemKW || 1}
+          onChange={(e) => handleFieldChange('systemKW', parseFloat(e.target.value) || 1)}
+          data-testid={`input-system-kw-${projectIndex}`}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Price per kW (₹)</label>
+        <Input
+          type="number"
+          min="0"
+          value={project.pricePerKW || 0}
+          onChange={(e) => handleFieldChange('pricePerKW', parseFloat(e.target.value) || 0)}
+          data-testid={`input-price-per-kw-${projectIndex}`}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Panel Watts</label>
+        <Select value={project.panelWatts || "530"} onValueChange={(value) => handleFieldChange('panelWatts', value)}>
+          <SelectTrigger data-testid={`select-panel-watts-${projectIndex}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="530">530W</SelectItem>
+            <SelectItem value="535">535W</SelectItem>
+            <SelectItem value="550">550W</SelectItem>
+            <SelectItem value="590">590W</SelectItem>
+            <SelectItem value="610">610W</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Panel Count</label>
+        <Input
+          type="number"
+          min="1"
+          value={project.panelCount || 1}
+          onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
+          data-testid={`input-panel-count-${projectIndex}`}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Inverter Watts</label>
+        <Select value={project.inverterWatts || "3kw"} onValueChange={(value) => handleFieldChange('inverterWatts', value)}>
+          <SelectTrigger data-testid={`select-inverter-watts-${projectIndex}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="3kw">3kW</SelectItem>
+            <SelectItem value="4kw">4kW</SelectItem>
+            <SelectItem value="5kw">5kW</SelectItem>
+            <SelectItem value="10kw">10kW</SelectItem>
+            <SelectItem value="15kw">15kW</SelectItem>
+            <SelectItem value="30kw">30kW</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Inverter Phase</label>
+        <Select value={project.inverterPhase || "single_phase"} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
+          <SelectTrigger data-testid={`select-inverter-phase-${projectIndex}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="single_phase">Single Phase</SelectItem>
+            <SelectItem value="three_phase">Three Phase</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+
+  const renderBatteryFields = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Battery Brand</label>
+        <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
+          <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="exide">Exide</SelectItem>
+            <SelectItem value="utl">UTL</SelectItem>
+            <SelectItem value="exide_utl">Exide UTL</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Voltage (V)</label>
+        <Input
+          type="number"
+          min="0"
+          value={project.voltage || 12}
+          onChange={(e) => handleFieldChange('voltage', parseFloat(e.target.value) || 12)}
+          data-testid={`input-voltage-${projectIndex}`}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Battery Count</label>
+        <Input
+          type="number"
+          min="1"
+          value={project.batteryCount || 1}
+          onChange={(e) => handleFieldChange('batteryCount', parseInt(e.target.value) || 1)}
+          data-testid={`input-battery-count-${projectIndex}`}
+        />
+      </div>
+    </div>
+  );
+
+  if (project.projectType === 'water_heater') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Brand</label>
+          <Select value={project.brand || "venus"} onValueChange={(value) => handleFieldChange('brand', value)}>
+            <SelectTrigger data-testid={`select-heater-brand-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="venus">Venus</SelectItem>
+              <SelectItem value="pressurised">Pressurised</SelectItem>
+              <SelectItem value="non_pressurised">Non Pressurised</SelectItem>
+              <SelectItem value="hykon">Hykon</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Capacity (Litre)</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.litre || 100}
+            onChange={(e) => handleFieldChange('litre', parseInt(e.target.value) || 100)}
+            data-testid={`input-litre-${projectIndex}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Project Value (₹)</label>
+          <Input
+            type="number"
+            min="0"
+            value={project.projectValue || 0}
+            onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
+            data-testid={`input-project-value-${projectIndex}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (project.projectType === 'water_pump') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">HP</label>
+          <Input
+            value={project.hp || "1"}
+            onChange={(e) => handleFieldChange('hp', e.target.value)}
+            data-testid={`input-hp-${projectIndex}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Drive</label>
+          <Input
+            value={project.drive || "vfd"}
+            onChange={(e) => handleFieldChange('drive', e.target.value)}
+            data-testid={`input-drive-${projectIndex}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Panel Count</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.panelCount || 1}
+            onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
+            data-testid={`input-pump-panel-count-${projectIndex}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Structure Height</label>
+          <Input
+            type="number"
+            min="0"
+            value={project.structureHeight || 0}
+            onChange={(e) => handleFieldChange('structureHeight', parseFloat(e.target.value) || 0)}
+            data-testid={`input-structure-height-${projectIndex}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Project Value (₹)</label>
+          <Input
+            type="number"
+            min="0"
+            value={project.projectValue || 0}
+            onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
+            data-testid={`input-pump-project-value-${projectIndex}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {renderSolarSystemFields()}
+      {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && renderBatteryFields()}
+      
+      <Separator />
+      
+      {/* Pricing Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+        <div>
+          <span className="text-sm text-muted-foreground">Project Value:</span>
+          <div className="font-medium">₹{project.projectValue?.toLocaleString() || 0}</div>
+        </div>
+        <div>
+          <span className="text-sm text-muted-foreground">Govt. Subsidy:</span>
+          <div className="font-medium text-green-600">₹{project.subsidyAmount?.toLocaleString() || 0}</div>
+        </div>
+        <div>
+          <span className="text-sm text-muted-foreground">Customer Payment:</span>
+          <div className="font-medium text-lg">₹{project.customerPayment?.toLocaleString() || 0}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function QuotationCreation() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
@@ -763,14 +1282,7 @@ export default function QuotationCreation() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <Alert>
-                      <Plus className="h-4 w-4" />
-                      <AlertDescription>
-                        Manual project configuration is coming soon. Please use site visit integration for now.
-                      </AlertDescription>
-                    </Alert>
-                  </div>
+                  <ManualProjectConfiguration form={form} />
                 )}
               </CardContent>
             </Card>
