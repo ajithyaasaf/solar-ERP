@@ -50,11 +50,27 @@ import {
   Battery,
   Droplets,
   Wrench,
-  Info
+  Info,
+  Sun
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertQuotationSchema, type InsertQuotation, type QuotationProject } from "@shared/schema";
+import { 
+  insertQuotationSchema, 
+  type InsertQuotation, 
+  type QuotationProject,
+  solarPanelBrands,
+  inverterMakes,
+  panelWatts,
+  inverterWatts,
+  inverterPhases,
+  earthingTypes,
+  floorLevels,
+  structureTypes,
+  monoRailOptions,
+  heightRange,
+  workScopeOptions
+} from "@shared/schema";
 
 // Create form-compatible schema that validates against backend requirements
 const quotationFormSchema = z.object({
@@ -185,10 +201,24 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           panelCount: 1,
           inverterMake: [],
           inverterWatts: "3kw",
+          inverterKW: 3,
+          inverterQty: 1,
           inverterPhase: "single_phase",
+          lightningArrest: false,
           earth: "dc",
+          floor: "0",
           structureHeight: 0,
-          lightningArrest: false
+          structureType: "gp_structure",
+          gpStructure: {
+            lowerEndHeight: "0",
+            higherEndHeight: "0"
+          },
+          monoRail: {
+            type: "mini_rail"
+          },
+          civilWorkScope: "customer_scope",
+          netMeterScope: "customer_scope",
+          others: ""
         };
         break;
       case "off_grid":
@@ -201,13 +231,21 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           panelCount: 1,
           inverterMake: [],
           inverterWatts: "3kw",
+          inverterKW: 3,
+          inverterQty: 1,
           inverterPhase: "single_phase",
+          lightningArrest: false,
+          earth: "dc",
+          floor: "0",
+          structureHeight: 0,
+          structureType: "gp_structure",
           batteryBrand: "exide",
+          batteryType: "lead_acid",
+          batteryAH: "100",
           voltage: 12,
           batteryCount: 1,
-          earth: "dc",
-          structureHeight: 0,
-          lightningArrest: false
+          batteryStands: 1,
+          others: ""
         };
         break;
       case "hybrid":
@@ -220,20 +258,35 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           panelCount: 1,
           inverterMake: [],
           inverterWatts: "3kw",
+          inverterKW: 3,
+          inverterQty: 1,
           inverterPhase: "single_phase",
+          lightningArrest: false,
+          earth: "dc",
+          floor: "0",
+          structureHeight: 0,
+          structureType: "gp_structure",
           batteryBrand: "exide",
+          batteryType: "lead_acid",
+          batteryAH: "100",
           voltage: 12,
           batteryCount: 1,
-          earth: "dc",
-          structureHeight: 0,
-          lightningArrest: false
+          batteryStands: 1,
+          electricalWorkScope: "customer_scope",
+          netMeterScope: "customer_scope",
+          others: ""
         };
         break;
       case "water_heater":
         newProject = {
           ...newProject,
           brand: "venus",
-          litre: 100
+          litre: 100,
+          heatingCoil: "",
+          floor: "0",
+          plumbingWorkScope: "customer_scope",
+          civilWorkScope: "customer_scope",
+          others: ""
         };
         break;
       case "water_pump":
@@ -242,8 +295,19 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           hp: "1",
           drive: "vfd",
           structureHeight: 0,
+          structureType: "gp_structure",
           panelBrand: [],
-          panelCount: 1
+          panelCount: 1,
+          gpStructure: {
+            lowerEndHeight: "0",
+            higherEndHeight: "0"
+          },
+          monoRail: {
+            type: "mini_rail"
+          },
+          plumbingWorkScope: "customer_scope",
+          civilWorkScope: "customer_scope",
+          others: ""
         };
         break;
     }
@@ -516,157 +580,624 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   };
 
   const renderSolarSystemFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">System Capacity (kW)</label>
-        <Input
-          type="number"
-          step="0.1"
-          min="0.1"
-          value={project.systemKW || 1}
-          onChange={(e) => handleFieldChange('systemKW', parseFloat(e.target.value) || 1)}
-          data-testid={`input-system-kw-${projectIndex}`}
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">System Capacity (kW)</label>
+          <Input
+            type="number"
+            step="0.1"
+            min="0.1"
+            value={project.systemKW || 1}
+            onChange={(e) => handleFieldChange('systemKW', parseFloat(e.target.value) || 1)}
+            data-testid={`input-system-kw-${projectIndex}`}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Price per kW (₹)</label>
+          <Input
+            type="number"
+            min="0"
+            value={project.pricePerKW || 0}
+            onChange={(e) => handleFieldChange('pricePerKW', parseFloat(e.target.value) || 0)}
+            data-testid={`input-price-per-kw-${projectIndex}`}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Solar Panel Make * (Multiple Selection)</label>
+          <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+            {solarPanelBrands.map((brand) => (
+              <div key={brand} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`panel-${brand}-${projectIndex}`}
+                  checked={project.solarPanelMake?.includes(brand) || false}
+                  onCheckedChange={(checked) => {
+                    const currentMakes = project.solarPanelMake || [];
+                    const newMakes = checked 
+                      ? [...currentMakes, brand]
+                      : currentMakes.filter((m: string) => m !== brand);
+                    handleFieldChange('solarPanelMake', newMakes);
+                  }}
+                />
+                <label htmlFor={`panel-${brand}-${projectIndex}`} className="text-sm">
+                  {brand.replace('_', ' ').toUpperCase()}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Panel Watts</label>
+          <Select value={project.panelWatts || "530"} onValueChange={(value) => handleFieldChange('panelWatts', value)}>
+            <SelectTrigger data-testid={`select-panel-watts-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {panelWatts.map((watts) => (
+                <SelectItem key={watts} value={watts}>
+                  {watts}W
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Inverter Make * (Multiple Selection)</label>
+          <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+            {inverterMakes.map((make) => (
+              <div key={make} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`inverter-${make}-${projectIndex}`}
+                  checked={project.inverterMake?.includes(make) || false}
+                  onCheckedChange={(checked) => {
+                    const currentMakes = project.inverterMake || [];
+                    const newMakes = checked 
+                      ? [...currentMakes, make]
+                      : currentMakes.filter(m => m !== make);
+                    handleFieldChange('inverterMake', newMakes);
+                  }}
+                />
+                <label htmlFor={`inverter-${make}-${projectIndex}`} className="text-sm">
+                  {make.toUpperCase()}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Inverter Watts</label>
+          <Select value={project.inverterWatts || "3kw"} onValueChange={(value) => handleFieldChange('inverterWatts', value)}>
+            <SelectTrigger data-testid={`select-inverter-watts-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {inverterWatts.map((watts) => (
+                <SelectItem key={watts} value={watts}>
+                  {watts}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Inverter KW</label>
+          <Input
+            type="number"
+            value={project.inverterKW || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '') {
+                handleFieldChange('inverterKW', undefined);
+              } else {
+                handleFieldChange('inverterKW', parseFloat(value) || 0);
+              }
+            }}
+            min="0"
+            step="0.1"
+            placeholder="Enter inverter KW rating"
+            data-testid={`input-inverter-kw-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Inverter Qty</label>
+          <Input
+            type="number"
+            value={project.inverterQty || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '') {
+                handleFieldChange('inverterQty', undefined);
+              } else {
+                handleFieldChange('inverterQty', parseInt(value) || 1);
+              }
+            }}
+            min="1"
+            placeholder="Enter inverter quantity"
+            data-testid={`input-inverter-qty-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Inverter Phase</label>
+          <Select value={project.inverterPhase || "single_phase"} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
+            <SelectTrigger data-testid={`select-inverter-phase-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {inverterPhases.map((phase) => (
+                <SelectItem key={phase} value={phase}>
+                  {phase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Earth Connection</label>
+          <Select value={project.earth || "dc"} onValueChange={(value) => handleFieldChange('earth', value)}>
+            <SelectTrigger data-testid={`select-earth-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {earthingTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Panel Count</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.panelCount || 1}
+            onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
+            data-testid={`input-panel-count-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Structure Height (ft)</label>
+          <Input
+            type="number"
+            value={project.structureHeight || 0}
+            onChange={(e) => handleFieldChange('structureHeight', parseInt(e.target.value) || 0)}
+            min="0"
+            data-testid={`input-structure-height-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Floor Level *</label>
+          <Select value={project.floor || '0'} onValueChange={(value) => handleFieldChange('floor', value)}>
+            <SelectTrigger data-testid={`select-floor-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {floorLevels.map((floor) => (
+                <SelectItem key={floor} value={floor}>
+                  {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Project Value (₹)</label>
+          <Input
+            type="number"
+            value={project.projectValue || 0}
+            onChange={(e) => handleFieldChange('projectValue', parseInt(e.target.value) || 0)}
+            min="0"
+            data-testid={`input-project-value-${projectIndex}`}
+          />
+        </div>
+      </div>
+
+      {/* Structure Details Section */}
+      <div className="space-y-4">
+        <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Structure Type *</label>
+            <Select value={project.structureType || 'gp_structure'} onValueChange={(value) => handleFieldChange('structureType', value)}>
+              <SelectTrigger data-testid={`select-structure-type-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {structureTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {project.structureType === 'gp_structure' && (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Lower End Height (ft)</label>
+                <Select 
+                  value={project.gpStructure?.lowerEndHeight || '0'} 
+                  onValueChange={(value) => handleFieldChange('gpStructure', { 
+                    ...project.gpStructure, 
+                    lowerEndHeight: value 
+                  })}
+                >
+                  <SelectTrigger data-testid={`select-lower-height-${projectIndex}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {heightRange.map((height) => (
+                      <SelectItem key={height} value={height}>
+                        {height} ft
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Higher End Height (ft)</label>
+                <Select 
+                  value={project.gpStructure?.higherEndHeight || '0'} 
+                  onValueChange={(value) => handleFieldChange('gpStructure', { 
+                    ...project.gpStructure, 
+                    higherEndHeight: value 
+                  })}
+                >
+                  <SelectTrigger data-testid={`select-higher-height-${projectIndex}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {heightRange.map((height) => (
+                      <SelectItem key={height} value={height}>
+                        {height} ft
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+
+          {project.structureType === 'mono_rail' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mono Rail Type</label>
+              <Select 
+                value={project.monoRail?.type || 'mini_rail'} 
+                onValueChange={(value) => handleFieldChange('monoRail', { 
+                  ...project.monoRail, 
+                  type: value 
+                })}
+              >
+                <SelectTrigger data-testid={`select-mono-rail-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monoRailOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Work Scope Section */}
+      {project.projectType === 'on_grid' && (
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Civil Work Scope</label>
+              <Select value={project.civilWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('civilWorkScope', value)}>
+                <SelectTrigger data-testid={`select-civil-work-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Net Meter Scope</label>
+              <Select value={project.netMeterScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('netMeterScope', value)}>
+                <SelectTrigger data-testid={`select-net-meter-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hybrid specific scope */}
+      {project.projectType === 'hybrid' && (
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Electrical Work Scope</label>
+              <Select value={project.electricalWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('electricalWorkScope', value)}>
+                <SelectTrigger data-testid={`select-electrical-work-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Net Meter Scope</label>
+              <Select value={project.netMeterScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('netMeterScope', value)}>
+                <SelectTrigger data-testid={`select-net-meter-hybrid-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightning Arrestor */}
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id={`lightningArrest-${projectIndex}`}
+          checked={project.lightningArrest || false}
+          onCheckedChange={(checked) => handleFieldChange('lightningArrest', checked)}
         />
+        <label htmlFor={`lightningArrest-${projectIndex}`} className="text-sm font-medium">Lightning Arrestor Required</label>
       </div>
+
+      {/* Additional Notes */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">Price per kW (₹)</label>
-        <Input
-          type="number"
-          min="0"
-          value={project.pricePerKW || 0}
-          onChange={(e) => handleFieldChange('pricePerKW', parseFloat(e.target.value) || 0)}
-          data-testid={`input-price-per-kw-${projectIndex}`}
+        <label className="text-sm font-medium">Additional Notes</label>
+        <Textarea
+          value={project.others || ''}
+          onChange={(e) => handleFieldChange('others', e.target.value)}
+          placeholder="Any additional specifications or notes..."
+          data-testid={`textarea-notes-${projectIndex}`}
         />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Panel Watts</label>
-        <Select value={project.panelWatts || "530"} onValueChange={(value) => handleFieldChange('panelWatts', value)}>
-          <SelectTrigger data-testid={`select-panel-watts-${projectIndex}`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="530">530W</SelectItem>
-            <SelectItem value="535">535W</SelectItem>
-            <SelectItem value="550">550W</SelectItem>
-            <SelectItem value="590">590W</SelectItem>
-            <SelectItem value="610">610W</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Panel Count</label>
-        <Input
-          type="number"
-          min="1"
-          value={project.panelCount || 1}
-          onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
-          data-testid={`input-panel-count-${projectIndex}`}
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Inverter Watts</label>
-        <Select value={project.inverterWatts || "3kw"} onValueChange={(value) => handleFieldChange('inverterWatts', value)}>
-          <SelectTrigger data-testid={`select-inverter-watts-${projectIndex}`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="3kw">3kW</SelectItem>
-            <SelectItem value="4kw">4kW</SelectItem>
-            <SelectItem value="5kw">5kW</SelectItem>
-            <SelectItem value="10kw">10kW</SelectItem>
-            <SelectItem value="15kw">15kW</SelectItem>
-            <SelectItem value="30kw">30kW</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Inverter Phase</label>
-        <Select value={project.inverterPhase || "single_phase"} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
-          <SelectTrigger data-testid={`select-inverter-phase-${projectIndex}`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="single_phase">Single Phase</SelectItem>
-            <SelectItem value="three_phase">Three Phase</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
     </div>
   );
 
   const renderBatteryFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Battery Brand</label>
-        <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
-          <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="exide">Exide</SelectItem>
-            <SelectItem value="utl">UTL</SelectItem>
-            <SelectItem value="exide_utl">Exide UTL</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Voltage (V)</label>
-        <Input
-          type="number"
-          min="0"
-          value={project.voltage || 12}
-          onChange={(e) => handleFieldChange('voltage', parseFloat(e.target.value) || 12)}
-          data-testid={`input-voltage-${projectIndex}`}
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Battery Count</label>
-        <Input
-          type="number"
-          min="1"
-          value={project.batteryCount || 1}
-          onChange={(e) => handleFieldChange('batteryCount', parseInt(e.target.value) || 1)}
-          data-testid={`input-battery-count-${projectIndex}`}
-        />
+    <div className="space-y-4 mt-4">
+      <h4 className="font-medium text-sm text-gray-700">Battery Configuration</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Brand</label>
+          <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
+            <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="exide">Exide</SelectItem>
+              <SelectItem value="utl">UTL</SelectItem>
+              <SelectItem value="exide_utl">Exide UTL</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Type</label>
+          <Select value={project.batteryType || "lead_acid"} onValueChange={(value) => handleFieldChange('batteryType', value)}>
+            <SelectTrigger data-testid={`select-battery-type-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lead_acid">Lead Acid</SelectItem>
+              <SelectItem value="lithium">Lithium</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery AH</label>
+          <Select value={project.batteryAH || "100"} onValueChange={(value) => handleFieldChange('batteryAH', value)}>
+            <SelectTrigger data-testid={`select-battery-ah-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="100">100 AH</SelectItem>
+              <SelectItem value="120">120 AH</SelectItem>
+              <SelectItem value="150">150 AH</SelectItem>
+              <SelectItem value="200">200 AH</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Voltage (V)</label>
+          <Input
+            type="number"
+            min="0"
+            value={project.voltage || 12}
+            onChange={(e) => handleFieldChange('voltage', parseFloat(e.target.value) || 12)}
+            data-testid={`input-voltage-${projectIndex}`}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Count</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.batteryCount || 1}
+            onChange={(e) => handleFieldChange('batteryCount', parseInt(e.target.value) || 1)}
+            data-testid={`input-battery-count-${projectIndex}`}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Stands</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.batteryStands || 1}
+            onChange={(e) => handleFieldChange('batteryStands', parseInt(e.target.value) || 1)}
+            data-testid={`input-battery-stands-${projectIndex}`}
+          />
+        </div>
       </div>
     </div>
   );
 
   if (project.projectType === 'water_heater') {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Brand</label>
-          <Select value={project.brand || "venus"} onValueChange={(value) => handleFieldChange('brand', value)}>
-            <SelectTrigger data-testid={`select-heater-brand-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="venus">Venus</SelectItem>
-              <SelectItem value="pressurised">Pressurised</SelectItem>
-              <SelectItem value="non_pressurised">Non Pressurised</SelectItem>
-              <SelectItem value="hykon">Hykon</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Water Heater Brand *</label>
+            <Select value={project.brand || "venus"} onValueChange={(value) => handleFieldChange('brand', value)}>
+              <SelectTrigger data-testid={`select-heater-brand-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="venus">Venus</SelectItem>
+                <SelectItem value="pressurised">Pressurised</SelectItem>
+                <SelectItem value="non_pressurised">Non Pressurised</SelectItem>
+                <SelectItem value="hykon">Hykon</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Capacity (Litre) *</label>
+            <Input
+              type="number"
+              min="50"
+              value={project.litre || 100}
+              onChange={(e) => handleFieldChange('litre', parseInt(e.target.value) || 100)}
+              placeholder="100, 150, 200, 300..."
+              data-testid={`input-litre-${projectIndex}`}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Heating Coil Type</label>
+            <Input
+              value={project.heatingCoil || ''}
+              onChange={(e) => handleFieldChange('heatingCoil', e.target.value)}
+              placeholder="Standard, Premium, etc."
+              data-testid={`input-heating-coil-${projectIndex}`}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Floor Level *</label>
+            <Select value={project.floor || '0'} onValueChange={(value) => handleFieldChange('floor', value)}>
+              <SelectTrigger data-testid={`select-floor-heater-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {floorLevels.map((floor) => (
+                  <SelectItem key={floor} value={floor}>
+                    {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Project Value (₹)</label>
+            <Input
+              type="number"
+              min="0"
+              value={project.projectValue || 0}
+              onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
+              data-testid={`input-project-value-${projectIndex}`}
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Capacity (Litre)</label>
-          <Input
-            type="number"
-            min="1"
-            value={project.litre || 100}
-            onChange={(e) => handleFieldChange('litre', parseInt(e.target.value) || 100)}
-            data-testid={`input-litre-${projectIndex}`}
-          />
+
+        {/* Work Scope Section for Water Heater */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plumbing Work Scope</label>
+              <Select value={project.plumbingWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('plumbingWorkScope', value)}>
+                <SelectTrigger data-testid={`select-plumbing-work-heater-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Civil Work Scope</label>
+              <Select value={project.civilWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('civilWorkScope', value)}>
+                <SelectTrigger data-testid={`select-civil-work-heater-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
+
+        {/* Additional Notes */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Project Value (₹)</label>
-          <Input
-            type="number"
-            min="0"
-            value={project.projectValue || 0}
-            onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
-            data-testid={`input-project-value-${projectIndex}`}
+          <label className="text-sm font-medium">Additional Notes</label>
+          <Textarea
+            value={project.others || ''}
+            onChange={(e) => handleFieldChange('others', e.target.value)}
+            placeholder="Any additional specifications or notes..."
+            data-testid={`textarea-heater-notes-${projectIndex}`}
           />
         </div>
       </div>
@@ -675,51 +1206,237 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
   if (project.projectType === 'water_pump') {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">HP</label>
-          <Input
-            value={project.hp || "1"}
-            onChange={(e) => handleFieldChange('hp', e.target.value)}
-            data-testid={`input-hp-${projectIndex}`}
-          />
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motor HP *</label>
+            <Select value={project.hp || "1"} onValueChange={(value) => handleFieldChange('hp', value)}>
+              <SelectTrigger data-testid={`select-hp-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0.5">0.5 HP</SelectItem>
+                <SelectItem value="1">1 HP</SelectItem>
+                <SelectItem value="2">2 HP</SelectItem>
+                <SelectItem value="3">3 HP</SelectItem>
+                <SelectItem value="5">5 HP</SelectItem>
+                <SelectItem value="7.5">7.5 HP</SelectItem>
+                <SelectItem value="10">10 HP</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Drive Type</label>
+            <Select value={project.drive || "vfd"} onValueChange={(value) => handleFieldChange('drive', value)}>
+              <SelectTrigger data-testid={`select-drive-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vfd">VFD (Variable Frequency Drive)</SelectItem>
+                <SelectItem value="direct">Direct Drive</SelectItem>
+                <SelectItem value="submersible">Submersible</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Panel Brand * (Multiple Selection)</label>
+            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+              {solarPanelBrands.map((brand) => (
+                <div key={brand} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`pump-panel-${brand}-${projectIndex}`}
+                    checked={project.panelBrand?.includes(brand) || false}
+                    onCheckedChange={(checked) => {
+                      const currentMakes = project.panelBrand || [];
+                      const newMakes = checked 
+                        ? [...currentMakes, brand]
+                        : currentMakes.filter((m: string) => m !== brand);
+                      handleFieldChange('panelBrand', newMakes);
+                    }}
+                  />
+                  <label htmlFor={`pump-panel-${brand}-${projectIndex}`} className="text-sm">
+                    {brand.replace('_', ' ').toUpperCase()}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Panel Count *</label>
+            <Input
+              type="number"
+              min="1"
+              value={project.panelCount || 1}
+              onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
+              data-testid={`input-pump-panel-count-${projectIndex}`}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Structure Height (ft)</label>
+            <Input
+              type="number"
+              min="0"
+              value={project.structureHeight || 0}
+              onChange={(e) => handleFieldChange('structureHeight', parseFloat(e.target.value) || 0)}
+              data-testid={`input-pump-structure-height-${projectIndex}`}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Project Value (₹)</label>
+            <Input
+              type="number"
+              min="0"
+              value={project.projectValue || 0}
+              onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
+              data-testid={`input-pump-project-value-${projectIndex}`}
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Drive</label>
-          <Input
-            value={project.drive || "vfd"}
-            onChange={(e) => handleFieldChange('drive', e.target.value)}
-            data-testid={`input-drive-${projectIndex}`}
-          />
+
+        {/* Structure Details Section for Water Pump */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Structure Type *</label>
+              <Select value={project.structureType || 'gp_structure'} onValueChange={(value) => handleFieldChange('structureType', value)}>
+                <SelectTrigger data-testid={`select-pump-structure-type-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {structureTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {project.structureType === 'gp_structure' && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Lower End Height (ft)</label>
+                  <Select 
+                    value={project.gpStructure?.lowerEndHeight || '0'} 
+                    onValueChange={(value) => handleFieldChange('gpStructure', { 
+                      ...project.gpStructure, 
+                      lowerEndHeight: value 
+                    })}
+                  >
+                    <SelectTrigger data-testid={`select-pump-lower-height-${projectIndex}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heightRange.map((height) => (
+                        <SelectItem key={height} value={height}>
+                          {height} ft
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Higher End Height (ft)</label>
+                  <Select 
+                    value={project.gpStructure?.higherEndHeight || '0'} 
+                    onValueChange={(value) => handleFieldChange('gpStructure', { 
+                      ...project.gpStructure, 
+                      higherEndHeight: value 
+                    })}
+                  >
+                    <SelectTrigger data-testid={`select-pump-higher-height-${projectIndex}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {heightRange.map((height) => (
+                        <SelectItem key={height} value={height}>
+                          {height} ft
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {project.structureType === 'mono_rail' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Mono Rail Type</label>
+                <Select 
+                  value={project.monoRail?.type || 'mini_rail'} 
+                  onValueChange={(value) => handleFieldChange('monoRail', { 
+                    ...project.monoRail, 
+                    type: value 
+                  })}
+                >
+                  <SelectTrigger data-testid={`select-pump-mono-rail-${projectIndex}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monoRailOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Panel Count</label>
-          <Input
-            type="number"
-            min="1"
-            value={project.panelCount || 1}
-            onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
-            data-testid={`input-pump-panel-count-${projectIndex}`}
-          />
+
+        {/* Work Scope Section for Water Pump */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plumbing Work Scope</label>
+              <Select value={project.plumbingWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('plumbingWorkScope', value)}>
+                <SelectTrigger data-testid={`select-plumbing-work-pump-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Civil Work Scope</label>
+              <Select value={project.civilWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('civilWorkScope', value)}>
+                <SelectTrigger data-testid={`select-civil-work-pump-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
+
+        {/* Additional Notes */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Structure Height</label>
-          <Input
-            type="number"
-            min="0"
-            value={project.structureHeight || 0}
-            onChange={(e) => handleFieldChange('structureHeight', parseFloat(e.target.value) || 0)}
-            data-testid={`input-structure-height-${projectIndex}`}
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Project Value (₹)</label>
-          <Input
-            type="number"
-            min="0"
-            value={project.projectValue || 0}
-            onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
-            data-testid={`input-pump-project-value-${projectIndex}`}
+          <label className="text-sm font-medium">Additional Notes</label>
+          <Textarea
+            value={project.others || ''}
+            onChange={(e) => handleFieldChange('others', e.target.value)}
+            placeholder="Any additional specifications or notes..."
+            data-testid={`textarea-pump-notes-${projectIndex}`}
           />
         </div>
       </div>
