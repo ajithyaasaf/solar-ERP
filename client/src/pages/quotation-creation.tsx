@@ -247,11 +247,45 @@ function ManualProjectConfiguration({ form }: { form: any }) {
         break;
     }
 
-    // Calculate initial pricing
+    // Define subsidy mapping for safe lookups
+    const subsidyMapping = {
+      "on_grid": "onGridPerKW",
+      "off_grid": "offGridPerKW", 
+      "hybrid": "hybridPerKW",
+      "water_heater": null, // No subsidy
+      "water_pump": null    // No subsidy
+    } as const;
+
+    // Calculate initial pricing for all project types
     if (["on_grid", "off_grid", "hybrid"].includes(projectType)) {
       newProject.projectValue = newProject.systemKW * newProject.pricePerKW;
-      newProject.subsidyAmount = newProject.systemKW * BUSINESS_RULES.subsidy[projectType as keyof typeof BUSINESS_RULES.subsidy];
+      
+      // Get subsidy key safely with validation
+      const subsidyKey = subsidyMapping[projectType as keyof typeof subsidyMapping];
+      if (subsidyKey && BUSINESS_RULES.subsidy[subsidyKey] !== undefined) {
+        newProject.subsidyAmount = newProject.systemKW * BUSINESS_RULES.subsidy[subsidyKey];
+      } else {
+        newProject.subsidyAmount = 0;
+      }
+      
       newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
+    } else if (projectType === "water_heater") {
+      // Set default pricing for water heater based on capacity
+      newProject.projectValue = newProject.litre * 200; // ₹200 per litre as default
+      newProject.subsidyAmount = 0; // No subsidy for water heaters
+      newProject.customerPayment = newProject.projectValue;
+    } else if (projectType === "water_pump") {
+      // Set default pricing for water pump based on HP
+      const hpValue = parseFloat(newProject.hp) || 1;
+      newProject.projectValue = hpValue * 50000; // ₹50,000 per HP as default
+      newProject.subsidyAmount = 0; // No subsidy for water pumps
+      newProject.customerPayment = newProject.projectValue;
+    } else {
+      // Fallback for unknown project types
+      console.error(`Unknown project type: ${projectType}`);
+      newProject.projectValue = 0;
+      newProject.subsidyAmount = 0;
+      newProject.customerPayment = 0;
     }
 
     form.setValue("projects", [...currentProjects, newProject]);
@@ -271,12 +305,54 @@ function ManualProjectConfiguration({ form }: { form: any }) {
     const updatedProjects = [...currentProjects];
     updatedProjects[index] = { ...updatedProjects[index], ...updatedData };
 
-    // Recalculate pricing for solar projects
-    if (["on_grid", "off_grid", "hybrid"].includes(updatedProjects[index].projectType)) {
-      const project = updatedProjects[index];
+    // Define subsidy mapping for safe lookups (same as in addProject)
+    const subsidyMapping = {
+      "on_grid": "onGridPerKW",
+      "off_grid": "offGridPerKW", 
+      "hybrid": "hybridPerKW",
+      "water_heater": null, // No subsidy
+      "water_pump": null    // No subsidy
+    } as const;
+
+    // Recalculate pricing for all project types
+    const project = updatedProjects[index];
+    
+    if (["on_grid", "off_grid", "hybrid"].includes(project.projectType)) {
       project.projectValue = project.systemKW * project.pricePerKW;
-      project.subsidyAmount = project.systemKW * BUSINESS_RULES.subsidy[project.projectType as keyof typeof BUSINESS_RULES.subsidy];
+      
+      // Get subsidy key safely with validation
+      const subsidyKey = subsidyMapping[project.projectType as keyof typeof subsidyMapping];
+      if (subsidyKey && BUSINESS_RULES.subsidy[subsidyKey] !== undefined) {
+        project.subsidyAmount = project.systemKW * BUSINESS_RULES.subsidy[subsidyKey];
+      } else {
+        project.subsidyAmount = 0;
+      }
+      
       project.customerPayment = project.projectValue - project.subsidyAmount;
+    } else if (project.projectType === "water_heater") {
+      // Recalculate pricing for water heater
+      if (updatedData.hasOwnProperty('projectValue')) {
+        // If project value is directly updated, use it
+        project.customerPayment = project.projectValue - (project.subsidyAmount || 0);
+      } else if (updatedData.hasOwnProperty('litre')) {
+        // If litre is updated, recalculate based on capacity
+        project.projectValue = project.litre * 200; // ₹200 per litre
+        project.customerPayment = project.projectValue;
+      }
+    } else if (project.projectType === "water_pump") {
+      // Recalculate pricing for water pump
+      if (updatedData.hasOwnProperty('projectValue')) {
+        // If project value is directly updated, use it
+        project.customerPayment = project.projectValue - (project.subsidyAmount || 0);
+      } else if (updatedData.hasOwnProperty('hp')) {
+        // If HP is updated, recalculate based on HP
+        const hpValue = parseFloat(project.hp) || 1;
+        project.projectValue = hpValue * 50000; // ₹50,000 per HP
+        project.customerPayment = project.projectValue;
+      }
+    } else {
+      // Fallback for unknown project types
+      console.error(`Unknown project type during update: ${project.projectType}`);
     }
 
     form.setValue("projects", updatedProjects);
