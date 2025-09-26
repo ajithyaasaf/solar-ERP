@@ -72,7 +72,9 @@ import {
   structureTypes,
   monoRailOptions,
   heightRange,
-  workScopeOptions
+  workScopeOptions,
+  propertyTypes,
+  customerDetailsSchema
 } from "@shared/schema";
 
 // Use the proper quotation schema for validation
@@ -84,7 +86,9 @@ const quotationFormSchema = insertQuotationSchema.omit({
   // Override for frontend form compatibility
   projects: z.array(quotationProjectSchema).min(1, "At least one project is required"),
   followUps: z.array(quotationFollowUpSchema).default([]),
-  siteVisitMapping: siteVisitMappingSchema.optional()
+  siteVisitMapping: siteVisitMappingSchema.optional(),
+  // Add temporary customer data fields for site visit forms
+  customerData: customerDetailsSchema.optional()
 });
 
 type QuotationFormData = z.infer<typeof quotationFormSchema>;
@@ -161,6 +165,238 @@ interface SiteVisitMapping {
     canCreateQuotation: boolean;
     recommendedAction: string;
   };
+}
+
+// Site Visit Customer Details Form Component
+function SiteVisitCustomerDetailsForm({ form, siteVisitMapping }: { form: any; siteVisitMapping: any }) {
+  const [customerState, setCustomerState] = useState<any>({});
+
+  // Extract customer data from site visit mapping
+  const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customerData || {};
+
+  useEffect(() => {
+    // Initialize customer state with site visit data
+    const initialCustomerData = {
+      name: siteVisitCustomerData.name || "",
+      mobile: siteVisitCustomerData.mobile || "",
+      address: siteVisitCustomerData.address || "",
+      ebServiceNumber: siteVisitCustomerData.ebServiceNumber || "",
+      propertyType: siteVisitCustomerData.propertyType || "",
+      location: siteVisitCustomerData.location || ""
+    };
+    
+    setCustomerState(initialCustomerData);
+    
+    // Update form with customer data
+    form.setValue("customerData", initialCustomerData);
+    
+    // Set customerId if it exists
+    if (siteVisitCustomerData.id) {
+      form.setValue("customerId", siteVisitCustomerData.id);
+    }
+  }, [siteVisitMapping, form, siteVisitCustomerData]);
+
+  const updateCustomerField = (field: string, value: any) => {
+    const updatedCustomerData = { ...customerState, [field]: value };
+    setCustomerState(updatedCustomerData);
+    form.setValue("customerData", updatedCustomerData);
+    
+    // Mark as having customer data for validation
+    form.setValue("customerId", "temp-customer-from-site-visit");
+  };
+
+  const isFieldFromSiteVisit = (field: string) => {
+    return siteVisitCustomerData[field] && siteVisitCustomerData[field].toString().trim() !== "";
+  };
+
+  const renderFieldStatus = (field: string) => {
+    if (isFieldFromSiteVisit(field)) {
+      return (
+        <Badge variant="secondary" className="text-xs ml-2">
+          <Check className="h-3 w-3 mr-1" />
+          From Site Visit
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-xs ml-2 text-orange-600">
+        <AlertTriangle className="h-3 w-3 mr-1" />
+        Needs Input
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Site Visit Info Alert */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Customer information has been pre-filled from the site visit. You can review and complete any missing details below.
+        </AlertDescription>
+      </Alert>
+
+      {/* Customer Form Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Customer Name */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Customer Name *</label>
+            {renderFieldStatus("name")}
+          </div>
+          <Input
+            value={customerState.name || ""}
+            onChange={(e) => updateCustomerField("name", e.target.value)}
+            placeholder="Enter customer name"
+            className={isFieldFromSiteVisit("name") ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-customer-name"
+          />
+          {!customerState.name && (
+            <p className="text-xs text-red-600">Customer name is required</p>
+          )}
+        </div>
+
+        {/* Mobile Number */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Mobile Number *</label>
+            {renderFieldStatus("mobile")}
+          </div>
+          <Input
+            value={customerState.mobile || ""}
+            onChange={(e) => updateCustomerField("mobile", e.target.value)}
+            placeholder="Enter mobile number"
+            className={isFieldFromSiteVisit("mobile") ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-customer-mobile"
+          />
+          {!customerState.mobile && (
+            <p className="text-xs text-red-600">Mobile number is required</p>
+          )}
+        </div>
+
+        {/* Address */}
+        <div className="space-y-2 md:col-span-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Address *</label>
+            {renderFieldStatus("address")}
+          </div>
+          <Textarea
+            value={customerState.address || ""}
+            onChange={(e) => updateCustomerField("address", e.target.value)}
+            placeholder="Enter customer address"
+            className={isFieldFromSiteVisit("address") ? "bg-green-50 border-green-200" : ""}
+            data-testid="textarea-customer-address"
+          />
+          {!customerState.address && (
+            <p className="text-xs text-red-600">Address is required</p>
+          )}
+        </div>
+
+        {/* Property Type */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Property Type *</label>
+            {renderFieldStatus("propertyType")}
+          </div>
+          <Select value={customerState.propertyType || ""} onValueChange={(value) => updateCustomerField("propertyType", value)}>
+            <SelectTrigger 
+              className={isFieldFromSiteVisit("propertyType") ? "bg-green-50 border-green-200" : ""}
+              data-testid="select-property-type"
+            >
+              <SelectValue placeholder="Select property type" />
+            </SelectTrigger>
+            <SelectContent>
+              {propertyTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!customerState.propertyType && (
+            <p className="text-xs text-red-600">Property type is required</p>
+          )}
+        </div>
+
+        {/* EB Service Number */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">EB Service Number</label>
+            {renderFieldStatus("ebServiceNumber")}
+          </div>
+          <Input
+            value={customerState.ebServiceNumber || ""}
+            onChange={(e) => updateCustomerField("ebServiceNumber", e.target.value)}
+            placeholder="Enter EB service number (optional)"
+            className={isFieldFromSiteVisit("ebServiceNumber") ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-eb-service-number"
+          />
+        </div>
+
+        {/* Location */}
+        <div className="space-y-2 md:col-span-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Customer Location</label>
+            {renderFieldStatus("location")}
+          </div>
+          <Input
+            value={customerState.location || ""}
+            onChange={(e) => updateCustomerField("location", e.target.value)}
+            placeholder="Enter specific location details (optional)"
+            className={isFieldFromSiteVisit("location") ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-customer-location"
+          />
+        </div>
+      </div>
+
+      {/* Missing Fields Summary */}
+      {siteVisitMapping?.completenessAnalysis && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Info className="h-4 w-4 text-blue-600" />
+              Site Visit Data Completeness
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Completeness Score</span>
+              <Badge variant="outline">
+                {siteVisitMapping.completenessAnalysis.completenessScore}% Complete
+              </Badge>
+            </div>
+            
+            {siteVisitMapping.completenessAnalysis.missingCriticalFields?.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded p-2">
+                <p className="text-sm font-medium text-red-800 mb-1">Missing Critical Fields:</p>
+                <p className="text-xs text-red-600">
+                  {siteVisitMapping.completenessAnalysis.missingCriticalFields.join(", ")}
+                </p>
+              </div>
+            )}
+            
+            {siteVisitMapping.completenessAnalysis.missingImportantFields?.length > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
+                <p className="text-sm font-medium text-yellow-800 mb-1">Missing Important Fields:</p>
+                <p className="text-xs text-yellow-600">
+                  {siteVisitMapping.completenessAnalysis.missingImportantFields.join(", ")}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Help Text */}
+      <Alert>
+        <User className="h-4 w-4" />
+        <AlertDescription>
+          Fields marked with a green background were captured during the site visit. 
+          Please complete any missing required fields marked in orange to proceed.
+        </AlertDescription>
+      </Alert>
+    </div>
+  );
 }
 
 // Manual Project Configuration Component
@@ -648,7 +884,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     const currentMakes = project.inverterMake || [];
                     const newMakes = checked 
                       ? [...currentMakes, make]
-                      : currentMakes.filter(m => m !== make);
+                      : currentMakes.filter((m: string) => m !== make);
                     handleFieldChange('inverterMake', newMakes);
                   }}
                 />
@@ -1725,7 +1961,17 @@ export default function QuotationCreation() {
       case 0: // Source selection
         return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
       case 1: // Customer details
-        return values.customerId !== undefined && values.customerId !== "";
+        if (quotationSource === "manual") {
+          return values.customerId !== undefined && values.customerId !== "";
+        } else {
+          // For site visit source, check that customer data is complete
+          const customerData = values.customerData;
+          return customerData && 
+                 customerData.name && 
+                 customerData.mobile && 
+                 customerData.address && 
+                 customerData.propertyType;
+        }
       case 2: // Projects
         return values.projects && values.projects.length > 0;
       case 3: // Pricing
@@ -2020,7 +2266,7 @@ export default function QuotationCreation() {
                 </CardTitle>
                 <CardDescription>
                   {quotationSource === "site_visit" && siteVisitMapping ? 
-                    "Review and update customer details from site visit" :
+                    "Review and complete customer details from site visit" :
                     "Enter customer details for the quotation"
                   }
                 </CardDescription>
@@ -2065,60 +2311,10 @@ export default function QuotationCreation() {
                     </Alert>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {siteVisitMapping && (
-                      <Alert>
-                        <Check className="h-4 w-4" />
-                        <AlertDescription>
-                          {(siteVisitMapping as any).dataQualityNotes?.includes("Partial mapping") 
-                            ? "Customer details have been mapped from site visit. Project configurations need to be added manually."
-                            : "Customer details have been automatically populated from the selected site visit."
-                          }
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    {/* Display customer information */}
-                    {siteVisitMapping && (siteVisitMapping as any).originalSiteVisitData?.customerData && (
-                      <Card className="bg-muted/30">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm">Mapped Customer Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Name:</span>
-                              <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.name}</div>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Mobile:</span>
-                              <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.mobile}</div>
-                            </div>
-                            <div className="md:col-span-2">
-                              <span className="text-muted-foreground">Address:</span>
-                              <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.address}</div>
-                            </div>
-                            {(siteVisitMapping as any).originalSiteVisitData.customerData.ebServiceNumber && (
-                              <div>
-                                <span className="text-muted-foreground">EB Service Number:</span>
-                                <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.ebServiceNumber}</div>
-                              </div>
-                            )}
-                            {(siteVisitMapping as any).originalSiteVisitData.customerData.propertyType && (
-                              <div>
-                                <span className="text-muted-foreground">Property Type:</span>
-                                <div className="font-medium capitalize">{(siteVisitMapping as any).originalSiteVisitData.customerData.propertyType}</div>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    
-                    <div className="text-sm text-muted-foreground">
-                      Customer information is automatically mapped from site visit data.
-                    </div>
-                  </div>
+                  <SiteVisitCustomerDetailsForm 
+                    form={form}
+                    siteVisitMapping={siteVisitMapping}
+                  />
                 )}
               </CardContent>
             </Card>
