@@ -1550,7 +1550,7 @@ export default function QuotationCreation() {
 
   // Fetch complete site visit mapping data when selected - pulls ALL data without leaving anything
   const { data: mappingData, isLoading: isLoadingMapping } = useQuery({
-    queryKey: ["/api/quotations/site-visits", selectedSiteVisit, "mapping-data"],
+    queryKey: [`/api/quotations/site-visits/${selectedSiteVisit}/mapping-data`],
     enabled: !!selectedSiteVisit && quotationSource === "site_visit"
   });
 
