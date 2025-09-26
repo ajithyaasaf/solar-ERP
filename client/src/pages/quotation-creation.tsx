@@ -1549,9 +1549,17 @@ export default function QuotationCreation() {
   });
 
   // Fetch complete site visit mapping data when selected - pulls ALL data without leaving anything
-  const { data: mappingData, isLoading: isLoadingMapping } = useQuery({
+  const { data: mappingData, isLoading: isLoadingMapping, error: mappingError } = useQuery({
     queryKey: [`/api/quotations/site-visits/${selectedSiteVisit}/mapping-data`],
-    enabled: !!selectedSiteVisit && quotationSource === "site_visit"
+    enabled: !!selectedSiteVisit && quotationSource === "site_visit",
+    retry: false // Don't retry on error, we'll handle it manually
+  });
+
+  // Fallback: Fetch basic site visit data if mapping fails
+  const { data: fallbackSiteVisitData, isLoading: isLoadingFallback } = useQuery({
+    queryKey: [`/api/site-visits/${selectedSiteVisit}`],
+    enabled: !!selectedSiteVisit && quotationSource === "site_visit" && !!mappingError,
+    retry: false
   });
 
   // Create quotation mutation using proper apiRequest with auth
@@ -1653,6 +1661,50 @@ export default function QuotationCreation() {
       });
     }
   }, [mappingData, form]);
+
+  // Handle fallback data when mapping fails but site visit data is available
+  useEffect(() => {
+    if (fallbackSiteVisitData && mappingError && !mappingData) {
+      const siteVisit = fallbackSiteVisitData as any;
+      
+      // Create basic mapping metadata for partial data
+      const partialMapping = {
+        sourceVisitId: siteVisit.id,
+        mappedAt: new Date(),
+        completenessScore: 0,
+        missingCriticalFields: ["marketing_data"],
+        missingOptionalFields: [],
+        dataQualityNotes: "Partial mapping - customer data only. Project configurations missing from site visit marketing data.",
+        originalSiteVisitData: {
+          visitInfo: {
+            id: siteVisit.id,
+            visitPurpose: siteVisit.visitPurpose,
+            status: siteVisit.status,
+            department: siteVisit.department,
+            visitOutcome: siteVisit.visitOutcome
+          },
+          customerData: siteVisit.customer
+        }
+      };
+      
+      // Populate form with customer data only
+      form.reset({
+        ...form.getValues(),
+        source: "site_visit",
+        customerId: siteVisit.customer?.id || "",
+        projects: [], // Empty projects - user will need to add manually
+        siteVisitMapping: partialMapping
+      });
+      
+      setSiteVisitMapping(partialMapping);
+      
+      toast({
+        title: "Partial Site Visit Data Mapped",
+        description: "Customer information mapped successfully. Project configurations need to be added manually due to incomplete site visit data.",
+        variant: "default"
+      });
+    }
+  }, [fallbackSiteVisitData, mappingError, mappingData, form]);
 
   // Navigation functions
   const nextStep = () => {
@@ -2018,10 +2070,51 @@ export default function QuotationCreation() {
                       <Alert>
                         <Check className="h-4 w-4" />
                         <AlertDescription>
-                          Customer details have been automatically populated from the selected site visit.
+                          {(siteVisitMapping as any).dataQualityNotes?.includes("Partial mapping") 
+                            ? "Customer details have been mapped from site visit. Project configurations need to be added manually."
+                            : "Customer details have been automatically populated from the selected site visit."
+                          }
                         </AlertDescription>
                       </Alert>
                     )}
+                    
+                    {/* Display customer information */}
+                    {siteVisitMapping && (siteVisitMapping as any).originalSiteVisitData?.customerData && (
+                      <Card className="bg-muted/30">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm">Mapped Customer Information</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Name:</span>
+                              <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.name}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Mobile:</span>
+                              <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.mobile}</div>
+                            </div>
+                            <div className="md:col-span-2">
+                              <span className="text-muted-foreground">Address:</span>
+                              <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.address}</div>
+                            </div>
+                            {(siteVisitMapping as any).originalSiteVisitData.customerData.ebServiceNumber && (
+                              <div>
+                                <span className="text-muted-foreground">EB Service Number:</span>
+                                <div className="font-medium">{(siteVisitMapping as any).originalSiteVisitData.customerData.ebServiceNumber}</div>
+                              </div>
+                            )}
+                            {(siteVisitMapping as any).originalSiteVisitData.customerData.propertyType && (
+                              <div>
+                                <span className="text-muted-foreground">Property Type:</span>
+                                <div className="font-medium capitalize">{(siteVisitMapping as any).originalSiteVisitData.customerData.propertyType}</div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
                     <div className="text-sm text-muted-foreground">
                       Customer information is automatically mapped from site visit data.
                     </div>
