@@ -59,6 +59,9 @@ import {
   insertQuotationSchema, 
   type InsertQuotation, 
   type QuotationProject,
+  quotationProjectSchema,
+  quotationFollowUpSchema,
+  siteVisitMappingSchema,
   solarPanelBrands,
   inverterMakes,
   panelWatts,
@@ -72,29 +75,16 @@ import {
   workScopeOptions
 } from "@shared/schema";
 
-// Create form-compatible schema that validates against backend requirements
-const quotationFormSchema = z.object({
-  customerId: z.string().min(1, "Customer is required"),
-  source: z.enum(["manual", "site_visit"]),
-  projects: z.array(z.any()).min(1, "At least one project is required"), // Will be properly typed later
-  totalSystemCost: z.number().min(0),
-  totalSubsidyAmount: z.number().min(0).default(0),
-  totalCustomerPayment: z.number().min(0),
-  advancePaymentPercentage: z.number().min(0).max(100).default(90),
-  advanceAmount: z.number().min(0),
-  balanceAmount: z.number().min(0),
-  paymentTerms: z.enum(["advance_90_balance_10", "full_advance", "custom"]).default("advance_90_balance_10"),
-  deliveryTimeframe: z.enum(["1_2_weeks", "2_3_weeks", "3_4_weeks", "1_month"]).default("2_3_weeks"),
-  termsTemplate: z.enum(["standard", "residential", "commercial", "agri"]).default("standard"),
-  status: z.enum(["draft", "sent", "approved", "rejected"]).default("draft"),
-  followUps: z.array(z.any()).default([]),
-  communicationPreference: z.enum(["email", "whatsapp", "sms", "print"]).default("whatsapp"),
-  documentVersion: z.number().default(1),
-  preparedBy: z.string().default(""),
-  internalNotes: z.string().optional(),
-  customerNotes: z.string().optional(),
-  attachments: z.array(z.string()).default([]),
-  siteVisitMapping: z.any().optional()
+// Use the proper quotation schema for validation
+const quotationFormSchema = insertQuotationSchema.omit({
+  quotationNumber: true, // Generated server-side
+  createdAt: true,       // Set server-side
+  updatedAt: true        // Set server-side
+}).extend({
+  // Override for frontend form compatibility
+  projects: z.array(quotationProjectSchema).min(1, "At least one project is required"),
+  followUps: z.array(quotationFollowUpSchema).default([]),
+  siteVisitMapping: siteVisitMappingSchema.optional()
 });
 
 type QuotationFormData = z.infer<typeof quotationFormSchema>;
@@ -245,6 +235,8 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           voltage: 12,
           batteryCount: 1,
           batteryStands: 1,
+          electricalWorkScope: "customer_scope",
+          civilWorkScope: "customer_scope",
           others: ""
         };
         break;
@@ -963,6 +955,46 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               <label className="text-sm font-medium">Net Meter Scope</label>
               <Select value={project.netMeterScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('netMeterScope', value)}>
                 <SelectTrigger data-testid={`select-net-meter-hybrid-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Off-Grid Work Scope Section */}
+      {project.projectType === 'off_grid' && (
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Electrical Work Scope</label>
+              <Select value={project.electricalWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('electricalWorkScope', value)}>
+                <SelectTrigger data-testid={`select-electrical-work-offgrid-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workScopeOptions.map((scope) => (
+                    <SelectItem key={scope} value={scope}>
+                      {scope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Civil Work Scope</label>
+              <Select value={project.civilWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('civilWorkScope', value)}>
+                <SelectTrigger data-testid={`select-civil-work-offgrid-${projectIndex}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
