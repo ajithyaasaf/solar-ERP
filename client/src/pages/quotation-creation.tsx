@@ -171,8 +171,10 @@ interface SiteVisitMapping {
 function SiteVisitCustomerDetailsForm({ form, siteVisitMapping }: { form: any; siteVisitMapping: any }) {
   const [customerState, setCustomerState] = useState<any>({});
 
-  // Extract customer data from site visit mapping
-  const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customerData || {};
+  // Extract customer data from site visit mapping with fallback paths
+  const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customerData ?? 
+                                siteVisitMapping?.customer ?? 
+                                {};
 
   useEffect(() => {
     // Initialize customer state with site visit data
@@ -201,12 +203,15 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping }: { form: any; s
     setCustomerState(updatedCustomerData);
     form.setValue("customerData", updatedCustomerData);
     
-    // Mark as having customer data for validation
-    form.setValue("customerId", "temp-customer-from-site-visit");
+    // Set a flag to indicate we have customer data from site visit for validation
+    form.setValue("customerId", updatedCustomerData.name && updatedCustomerData.mobile && 
+                              updatedCustomerData.address && updatedCustomerData.propertyType ? 
+                              "customer-data-complete" : "customer-data-incomplete");
   };
 
   const isFieldFromSiteVisit = (field: string) => {
-    return siteVisitCustomerData[field] && siteVisitCustomerData[field].toString().trim() !== "";
+    const value = siteVisitCustomerData[field];
+    return value && typeof value === 'string' && value.trim() !== "";
   };
 
   const renderFieldStatus = (field: string) => {
@@ -298,7 +303,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping }: { form: any; s
             <label className="text-sm font-medium">Property Type *</label>
             {renderFieldStatus("propertyType")}
           </div>
-          <Select value={customerState.propertyType || ""} onValueChange={(value) => updateCustomerField("propertyType", value)}>
+          <Select value={customerState.propertyType || undefined} onValueChange={(value) => updateCustomerField("propertyType", value)}>
             <SelectTrigger 
               className={isFieldFromSiteVisit("propertyType") ? "bg-green-50 border-green-200" : ""}
               data-testid="select-property-type"
@@ -1964,13 +1969,16 @@ export default function QuotationCreation() {
         if (quotationSource === "manual") {
           return values.customerId !== undefined && values.customerId !== "";
         } else {
-          // For site visit source, check that customer data is complete
+          // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
-          return customerData && 
-                 customerData.name && 
-                 customerData.mobile && 
-                 customerData.address && 
-                 customerData.propertyType;
+          if (!customerData) return false;
+          
+          const isNameValid = customerData.name && customerData.name.trim().length >= 2;
+          const isMobileValid = customerData.mobile && customerData.mobile.trim().length >= 10;
+          const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
+          const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
+          
+          return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
         }
       case 2: // Projects
         return values.projects && values.projects.length > 0;
