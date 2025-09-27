@@ -176,8 +176,8 @@ export class QuotationTemplateService {
     const items: BillOfMaterialsItem[] = [];
     let slNo = 1;
 
-    if (project.type === 'on_grid' && project.onGridConfig) {
-      const config = project.onGridConfig;
+    if (project.projectType === 'on_grid') {
+      const config = project;
       
       // Solar Panel
       items.push({
@@ -292,8 +292,8 @@ export class QuotationTemplateService {
    * Calculate pricing breakdown with GST and subsidy
    */
   static calculatePricingBreakdown(project: QuotationProject): any {
-    if (project.type === 'on_grid' && project.onGridConfig) {
-      const config = project.onGridConfig;
+    if (project.projectType === 'on_grid') {
+      const config = project;
       const kw = config.inverterKW || 3;
       const ratePerKw = 68000; // ₹68,000 per kW
       const gstPercentage = 18;
@@ -347,7 +347,7 @@ export class QuotationTemplateService {
         address: customer.address,
         contactNumber: customer.mobile
       },
-      reference: `${pricingBreakdown?.kw}kw ${project.type.replace('_', '-')} Solar Power Generation System - Big`,
+      reference: `${pricingBreakdown?.kw}kw ${project.projectType?.replace('_', '-') || 'Solar'} Solar Power Generation System - Big`,
       pricingBreakdown,
       billOfMaterials,
       termsAndConditions: this.TERMS_AND_CONDITIONS,
