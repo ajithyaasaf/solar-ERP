@@ -1849,10 +1849,19 @@ export default function QuotationCreation() {
     if (mappingData && (mappingData as any).quotationData) {
       const data = (mappingData as any).quotationData;
       const metadata = (mappingData as any).mappingMetadata;
-      const originalSiteVisitData = metadata?.originalSiteVisitData;
+      const originalSiteVisitData = (mappingData as any).originalSiteVisitData;
+      
+      // Debug: Log the mapping data structure
+      console.log("=== SITE VISIT MAPPING DEBUG ===");
+      console.log("Full mapping data:", mappingData);
+      console.log("Original site visit data:", originalSiteVisitData);
+      console.log("Customer data path 1 (originalSiteVisitData.customer):", originalSiteVisitData?.customer);
+      console.log("Customer data path 2 (originalSiteVisitData.customerData):", originalSiteVisitData?.customerData);
+      console.log("Customer data path 3 (metadata.originalSiteVisitData):", metadata?.originalSiteVisitData);
+      console.log("================================");
       
       // Extract customer data from the original site visit data
-      const customerData = originalSiteVisitData?.customerData || originalSiteVisitData?.customer || data.customerData;
+      const customerData = originalSiteVisitData?.customer || originalSiteVisitData?.customerData || metadata?.originalSiteVisitData?.customer || data.customerData;
       
       // Auto-populate form with mapped data, ensuring proper QuotationProject structure
       const mappedProjects: QuotationProject[] = (data.projects || []).map((project: any) => {
