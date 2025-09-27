@@ -168,12 +168,14 @@ interface SiteVisitMapping {
 }
 
 // Site Visit Customer Details Form Component
-function SiteVisitCustomerDetailsForm({ form, siteVisitMapping }: { form: any; siteVisitMapping: any }) {
+function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisitData }: { form: any; siteVisitMapping: any; fallbackSiteVisitData?: any }) {
   const [customerState, setCustomerState] = useState<any>({});
 
   // Extract customer data from site visit mapping with fallback paths
+  // Try multiple paths since the structure may vary depending on how mapping was processed
   const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customerData ?? 
                                 siteVisitMapping?.customer ?? 
+                                fallbackSiteVisitData?.customer ?? 
                                 {};
 
   useEffect(() => {
@@ -1894,7 +1896,25 @@ export default function QuotationCreation() {
         siteVisitMapping: (mappingData as any).mappingMetadata
       });
       
-      setSiteVisitMapping(mappingData);
+      // Enhanced mapping data with customer info for SiteVisitCustomerDetailsForm
+      const enhancedMapping = {
+        ...mappingData,
+        mappingMetadata: {
+          ...(mappingData as any).mappingMetadata,
+          // Add customer data for the form component
+          customer: {
+            id: data.customerId,
+            name: (fallbackSiteVisitData as any)?.customer?.name || "",
+            mobile: (fallbackSiteVisitData as any)?.customer?.mobile || "",
+            address: (fallbackSiteVisitData as any)?.customer?.address || "",
+            ebServiceNumber: (fallbackSiteVisitData as any)?.customer?.ebServiceNumber || "",
+            propertyType: (fallbackSiteVisitData as any)?.customer?.propertyType || "",
+            location: (fallbackSiteVisitData as any)?.customer?.location || ""
+          }
+        }
+      };
+      
+      setSiteVisitMapping(enhancedMapping);
       
       toast({
         title: "Complete Site Visit Data Mapped", 
@@ -2322,6 +2342,7 @@ export default function QuotationCreation() {
                   <SiteVisitCustomerDetailsForm 
                     form={form}
                     siteVisitMapping={siteVisitMapping}
+                    fallbackSiteVisitData={fallbackSiteVisitData}
                   />
                 )}
               </CardContent>
