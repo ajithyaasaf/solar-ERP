@@ -178,11 +178,13 @@ export class DataCompletenessAnalyzer {
     else qualityGrade = 'F';
 
     // Determine if quotation can be created
-    // Allow quotation creation in two scenarios:
+    // Allow quotation creation in three scenarios:
     // 1. Traditional: All critical fields + converted outcome + completed status
     // 2. Marketing: Valid marketing project config + basic customer info (more flexible)
+    // 3. Partial: Allow partial data and let user complete missing fields (most flexible)
     const hasValidMarketingConfig = this.hasValidMarketingProjectConfig(siteVisit);
     const hasBasicCustomerInfo = siteVisit.customer?.name && siteVisit.customer?.mobile && siteVisit.customer?.address;
+    const hasAnyCustomerInfo = siteVisit.customer?.name || siteVisit.customer?.mobile; // At least name or mobile
     
     const canCreateQuotation = (
       // Traditional strict path
@@ -190,18 +192,18 @@ export class DataCompletenessAnalyzer {
        siteVisit.visitOutcome === 'converted' &&
        siteVisit.status === 'completed') ||
       // Marketing flexible path - allow when marketing data is complete
-      (hasValidMarketingConfig && hasBasicCustomerInfo)
+      (hasValidMarketingConfig && hasBasicCustomerInfo) ||
+      // Partial data path - allow even with minimal customer info (let user complete the rest)
+      (hasAnyCustomerInfo && siteVisit.department === 'marketing')
     );
 
-    // Determine recommended action
+    // Determine recommended action - be more flexible
     let recommendedAction: 'ready_for_quotation' | 'collect_missing_data' | 'invalid_for_quotation';
     if (!canCreateQuotation) {
-      if (!hasBasicCustomerInfo) {
-        recommendedAction = 'collect_missing_data';
-      } else if (!hasValidMarketingConfig && siteVisit.visitOutcome !== 'converted') {
+      if (!hasAnyCustomerInfo) {
         recommendedAction = 'invalid_for_quotation';
       } else {
-        recommendedAction = 'collect_missing_data';
+        recommendedAction = 'collect_missing_data'; // Allow partial data completion
       }
     } else {
       recommendedAction = 'ready_for_quotation';

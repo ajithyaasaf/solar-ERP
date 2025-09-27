@@ -171,10 +171,12 @@ interface SiteVisitMapping {
 function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisitData }: { form: any; siteVisitMapping: any; fallbackSiteVisitData?: any }) {
   const [customerState, setCustomerState] = useState<any>({});
 
-  // Extract customer data from site visit mapping with updated structure
+  // Extract customer data from site visit mapping with updated structure - be very flexible
   const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customer ?? 
                                 siteVisitMapping?.customer ?? 
+                                siteVisitMapping?.originalSiteVisitData?.customerData ??
                                 fallbackSiteVisitData?.customer ?? 
+                                fallbackSiteVisitData?.customerData ??
                                 {};
 
   useEffect(() => {
@@ -1851,17 +1853,13 @@ export default function QuotationCreation() {
       const metadata = (mappingData as any).mappingMetadata;
       const originalSiteVisitData = (mappingData as any).originalSiteVisitData;
       
-      // Debug: Log the mapping data structure
-      console.log("=== SITE VISIT MAPPING DEBUG ===");
-      console.log("Full mapping data:", mappingData);
-      console.log("Original site visit data:", originalSiteVisitData);
-      console.log("Customer data path 1 (originalSiteVisitData.customer):", originalSiteVisitData?.customer);
-      console.log("Customer data path 2 (originalSiteVisitData.customerData):", originalSiteVisitData?.customerData);
-      console.log("Customer data path 3 (metadata.originalSiteVisitData):", metadata?.originalSiteVisitData);
-      console.log("================================");
-      
-      // Extract customer data from the original site visit data
-      const customerData = originalSiteVisitData?.customer || originalSiteVisitData?.customerData || metadata?.originalSiteVisitData?.customer || data.customerData;
+      // Extract customer data from multiple possible paths - be flexible
+      const customerData = originalSiteVisitData?.customer || 
+                          originalSiteVisitData?.customerData || 
+                          metadata?.originalSiteVisitData?.customer ||
+                          metadata?.customer ||
+                          data.customerData ||
+                          {}; // Default to empty object to allow manual entry
       
       // Auto-populate form with mapped data, ensuring proper QuotationProject structure
       const mappedProjects: QuotationProject[] = (data.projects || []).map((project: any) => {
@@ -1958,10 +1956,10 @@ export default function QuotationCreation() {
     if (fallbackSiteVisitData && mappingError && !mappingData) {
       const siteVisit = fallbackSiteVisitData as any;
       
-      // Extract customer data
-      const customerData = siteVisit.customer || siteVisit.customerData;
+      // Extract customer data - be flexible with missing data
+      const customerData = siteVisit.customer || siteVisit.customerData || {};
       
-      // Set customer data in the form for fallback case
+      // Set customer data in the form for fallback case - allow partial data
       const customerFormData = {
         name: customerData?.name || "",
         mobile: customerData?.mobile || "",
@@ -1975,10 +1973,10 @@ export default function QuotationCreation() {
       const partialMapping = {
         sourceVisitId: siteVisit.id,
         mappedAt: new Date(),
-        completenessScore: 0,
-        missingCriticalFields: ["marketing_data"],
+        completenessScore: Object.values(customerFormData).filter(v => v && v.trim()).length * 16, // Rough percentage based on filled fields
+        missingCriticalFields: [],
         missingOptionalFields: [],
-        dataQualityNotes: "Partial mapping - customer data only. Project configurations missing from site visit marketing data.",
+        dataQualityNotes: "Fallback mapping - allowing partial customer data completion by user.",
         customer: customerData,
         originalSiteVisitData: {
           visitInfo: {
@@ -1988,6 +1986,7 @@ export default function QuotationCreation() {
             department: siteVisit.department,
             visitOutcome: siteVisit.visitOutcome
           },
+          customer: customerData,
           customerData: customerData
         }
       };
@@ -2005,8 +2004,8 @@ export default function QuotationCreation() {
       setSiteVisitMapping(partialMapping);
       
       toast({
-        title: "Partial Site Visit Data Mapped",
-        description: "Customer information mapped successfully. Project configurations need to be added manually due to incomplete site visit data.",
+        title: "Site Visit Data Retrieved",
+        description: "Available customer information loaded. Please complete any missing details below.",
         variant: "default"
       });
     }
