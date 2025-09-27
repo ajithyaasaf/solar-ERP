@@ -172,13 +172,21 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
   const [customerState, setCustomerState] = useState<any>({});
 
   // Extract customer data from site visit mapping with fallback paths
+  // Debug: Log the actual structure to understand the data format
+  console.log('DEBUG - siteVisitMapping structure:', siteVisitMapping);
+  console.log('DEBUG - fallbackSiteVisitData structure:', fallbackSiteVisitData);
+  
   // Try multiple paths since the structure may vary depending on how mapping was processed
-  const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customerData ?? 
+  const siteVisitCustomerData = siteVisitMapping?.quotationData?.customerData ?? 
+                                siteVisitMapping?.mappingMetadata?.originalSiteVisitData?.customer ?? 
+                                siteVisitMapping?.originalSiteVisitData?.customerData ?? 
                                 siteVisitMapping?.customer ?? 
                                 siteVisitMapping?.mappingMetadata?.originalSiteVisitData?.customerData ?? 
                                 siteVisitMapping?.mappingMetadata?.customer ?? 
                                 fallbackSiteVisitData?.customer ?? 
                                 {};
+
+  console.log('DEBUG - extracted siteVisitCustomerData:', siteVisitCustomerData);
 
   useEffect(() => {
     // Initialize customer state with site visit data
