@@ -79,15 +79,11 @@ export const insertProductSchema = z.object({
   price: z.number()
 });
 
-export const insertQuotationSchema = z.object({
-  customerId: z.string(),
-  products: z.array(z.object({
-    productId: z.string(),
-    quantity: z.number()
-  })),
-  total: z.number(),
-  status: z.string().default("pending")
-});
+// Import comprehensive quotation schema from shared location
+import { insertQuotationSchema as sharedInsertQuotationSchema, type Quotation as SharedQuotation } from "@shared/schema";
+
+// Use the comprehensive quotation schema from shared
+export const insertQuotationSchema = sharedInsertQuotationSchema;
 
 export const insertInvoiceSchema = z.object({
   quotationId: z.string(),
@@ -181,14 +177,8 @@ export interface Product {
   createdAt: Date;
 }
 
-export interface Quotation {
-  id: string;
-  customerId: string;
-  products: { productId: string; quantity: number }[];
-  total: number;
-  status: string;
-  createdAt: Date;
-}
+// Use the comprehensive quotation interface from shared
+export type Quotation = SharedQuotation;
 
 export interface Invoice {
   id: string;
