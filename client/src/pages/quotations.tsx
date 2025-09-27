@@ -43,6 +43,9 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
+// Import proper quotation types
+import { type Quotation, type QuotationProject } from "@shared/schema";
+
 // Types for pagination and quotations
 interface PaginationInfo {
   page: number;
@@ -54,18 +57,13 @@ interface PaginationInfo {
 }
 
 interface QuotationsResponse {
-  data: any[];
+  data: Quotation[];
   pagination: PaginationInfo;
 }
 
-interface Quotation {
-  id: string;
-  customerId: string;
-  customerName?: string;
-  total: number;
-  status: string;
-  createdAt: string;
-  products: any[];
+// Enhanced quotation display interface with customer name populated by API
+interface QuotationDisplay extends Quotation {
+  customerName?: string; // Populated by API join or lookup
 }
 
 export default function Quotations() {
@@ -94,11 +92,11 @@ export default function Quotations() {
     isLoading, 
     isFetching,
     isError 
-  } = useQuery({
+  } = useQuery<QuotationsResponse>({
     queryKey: [`/api/quotations?page=${currentPage}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}${statusFilter && statusFilter !== "all" ? `&status=${statusFilter}` : ''}`]
   });
   
-  const quotations = quotationsResponse?.data || [];
+  const quotations: QuotationDisplay[] = quotationsResponse?.data || [];
   const pagination = quotationsResponse?.pagination;
   
   // Prefetch next page for smoother pagination
@@ -110,12 +108,38 @@ export default function Quotations() {
     }
   }, [queryClient, currentPage, itemsPerPage, debouncedSearch, pagination?.hasNextPage, sortBy, sortOrder, statusFilter]);
 
-  // Status badge styles
+  // Status badge styles - updated for comprehensive workflow
   const statusStyles = {
     draft: "bg-gray-100 text-gray-800",
-    sent: "bg-blue-100 text-blue-800",
-    accepted: "bg-green-100 text-green-800",
+    review: "bg-orange-100 text-orange-800", 
+    approved: "bg-blue-100 text-blue-800",
+    sent: "bg-cyan-100 text-cyan-800",
+    customer_approved: "bg-green-100 text-green-800",
+    converted: "bg-emerald-100 text-emerald-800",
     rejected: "bg-red-100 text-red-800"
+  };
+
+  // Project type display helpers
+  const getProjectTypesDisplay = (projects: QuotationProject[]) => {
+    const types = projects.map(p => p.projectType);
+    const uniqueTypes = Array.from(new Set(types));
+    return uniqueTypes.map(type => type.replace('_', ' ').toUpperCase()).join(', ');
+  };
+
+  const getTotalSystemKW = (projects: QuotationProject[]) => {
+    return projects.reduce((total, project) => {
+      // Handle different project types that have systemKW
+      if ('systemKW' in project && typeof project.systemKW === 'number') {
+        return total + project.systemKW;
+      }
+      return total;
+    }, 0);
+  };
+
+  const getSourceBadgeStyle = (source: string) => {
+    return source === 'site_visit' 
+      ? "bg-purple-100 text-purple-800 border-purple-200"
+      : "bg-blue-100 text-blue-800 border-blue-200";
   };
   
   // Function to handle sort changes
@@ -190,8 +214,11 @@ export default function Quotations() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="review">Review</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
+                <SelectItem value="customer_approved">Customer Approved</SelectItem>
+                <SelectItem value="converted">Converted</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
@@ -228,8 +255,11 @@ export default function Quotations() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="createdAt">Date</SelectItem>
-                <SelectItem value="total">Amount</SelectItem>
+                <SelectItem value="quotationNumber">Quotation #</SelectItem>
+                <SelectItem value="totalCustomerPayment">Customer Payment</SelectItem>
+                <SelectItem value="totalSystemCost">System Cost</SelectItem>
                 <SelectItem value="status">Status</SelectItem>
+                <SelectItem value="source">Source</SelectItem>
               </SelectContent>
             </Select>
             
@@ -252,16 +282,19 @@ export default function Quotations() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Quotation</TableHead>
+                <TableHead>Quotation #</TableHead>
                 <TableHead>Customer</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("createdAt")}>
-                  Date {renderSortIndicator("createdAt")}
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("total")}>
-                  Amount {renderSortIndicator("total")}
+                <TableHead>Projects</TableHead>
+                <TableHead>System KW</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort("totalCustomerPayment")}>
+                  Customer Payment {renderSortIndicator("totalCustomerPayment")}
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort("status")}>
                   Status {renderSortIndicator("status")}
+                </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort("createdAt")}>
+                  Date {renderSortIndicator("createdAt")}
                 </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -269,44 +302,103 @@ export default function Quotations() {
             <TableBody>
               {isLoading && !quotations.length ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     <div className="mt-2">Loading quotations...</div>
                   </TableCell>
                 </TableRow>
               ) : quotations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                     {debouncedSearch || statusFilter ? "No quotations match your search" : "No quotations found"}
                   </TableCell>
                 </TableRow>
               ) : (
-                quotations.map((quotation: Quotation) => (
+                quotations.map((quotation: QuotationDisplay) => (
                   <TableRow key={quotation.id}>
-                    <TableCell className="font-medium">{quotation.id.substring(0, 6)}</TableCell>
-                    <TableCell>
-                      <div>{quotation.customerName || "Unknown"}</div>
+                    <TableCell className="font-medium">
+                      <div className="font-mono text-sm">
+                        {quotation.quotationNumber || `Q-${quotation.id.substring(0, 6)}`}
+                      </div>
                     </TableCell>
-                    <TableCell>{formatDate(quotation.createdAt)}</TableCell>
-                    <TableCell>{formatCurrency(quotation.total)}</TableCell>
                     <TableCell>
-                      <Badge className={cn("font-medium capitalize", 
+                      <div className="max-w-[150px]">
+                        <div className="font-medium text-sm truncate">
+                          {quotation.customerName || "Unknown Customer"}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[120px]">
+                        <div className="text-xs text-gray-600 truncate">
+                          {getProjectTypesDisplay(quotation.projects)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {quotation.projects.length} project{quotation.projects.length !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm font-medium">
+                        {getTotalSystemKW(quotation.projects) > 0 ? `${getTotalSystemKW(quotation.projects)} kW` : '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn("text-xs", getSourceBadgeStyle(quotation.source))}>
+                        {quotation.source === 'site_visit' ? 'Site Visit' : 'Manual'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-right">
+                        <div className="font-medium">{formatCurrency(quotation.totalCustomerPayment)}</div>
+                        {quotation.totalSubsidyAmount > 0 && (
+                          <div className="text-xs text-green-600">
+                            Subsidy: {formatCurrency(quotation.totalSubsidyAmount)}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn("font-medium capitalize text-xs", 
                         quotation.status in statusStyles 
                           ? statusStyles[quotation.status as keyof typeof statusStyles] 
                           : "bg-gray-100"
                       )}>
-                        {quotation.status}
+                        {quotation.status.replace('_', ' ')}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-gray-600">
+                        {formatDate(quotation.createdAt)}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <div className="flex items-center justify-end space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          title="View Details"
+                          data-testid={`button-view-${quotation.id}`}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          title="Edit Quotation"
+                          data-testid={`button-edit-${quotation.id}`}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          title="Download PDF"
+                          data-testid={`button-download-${quotation.id}`}
+                        >
                           <Download className="h-4 w-4" />
                         </Button>
                       </div>
@@ -318,7 +410,7 @@ export default function Quotations() {
               {/* Loading indicator for next page */}
               {isFetching && quotations.length > 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={9} className="text-center py-4">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
