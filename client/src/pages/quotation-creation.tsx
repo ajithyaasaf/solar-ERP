@@ -175,6 +175,8 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
   // Try multiple paths since the structure may vary depending on how mapping was processed
   const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customerData ?? 
                                 siteVisitMapping?.customer ?? 
+                                siteVisitMapping?.mappingMetadata?.originalSiteVisitData?.customerData ?? 
+                                siteVisitMapping?.mappingMetadata?.customer ?? 
                                 fallbackSiteVisitData?.customer ?? 
                                 {};
 
@@ -1915,6 +1917,12 @@ export default function QuotationCreation() {
       // Enhanced mapping data with customer info for SiteVisitCustomerDetailsForm
       const enhancedMapping = {
         ...mappingData,
+        // Add customer data directly at the expected paths
+        customer: customerData,
+        originalSiteVisitData: {
+          ...originalSiteVisitData,
+          customerData: customerData
+        },
         mappingMetadata: {
           ...metadata,
           // Add customer data for the form component from the original site visit
