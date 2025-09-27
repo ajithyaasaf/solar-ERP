@@ -2026,29 +2026,45 @@ export default function QuotationCreation() {
 
   const canProceed = () => {
     const values = form.getValues();
+    console.log("CAN_PROCEED DEBUG - Current step:", currentStep);
+    console.log("CAN_PROCEED DEBUG - Form values:", values);
+    
     switch (currentStep) {
       case 0: // Source selection
-        return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
+        const step0Result = quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
+        console.log("CAN_PROCEED DEBUG - Step 0 result:", step0Result);
+        return step0Result;
       case 1: // Customer details
         if (quotationSource === "manual") {
-          return values.customerId !== undefined && values.customerId !== "";
+          const step1ManualResult = values.customerId !== undefined && values.customerId !== "";
+          console.log("CAN_PROCEED DEBUG - Step 1 manual result:", step1ManualResult);
+          return step1ManualResult;
         } else {
           // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
-          if (!customerData) return false;
+          if (!customerData) {
+            console.log("CAN_PROCEED DEBUG - Step 1: No customer data");
+            return false;
+          }
           
           const isNameValid = customerData.name && customerData.name.trim().length >= 2;
           const isMobileValid = customerData.mobile && customerData.mobile.trim().length >= 10;
           const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
           const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
           
+          console.log("CAN_PROCEED DEBUG - Step 1 site visit validation:", { isNameValid, isMobileValid, isAddressValid, isPropertyTypeValid });
           return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
         }
       case 2: // Projects
-        return values.projects && values.projects.length > 0;
+        const step2Result = values.projects && values.projects.length > 0;
+        console.log("CAN_PROCEED DEBUG - Step 2 result:", step2Result, "Projects:", values.projects);
+        return step2Result;
       case 3: // Pricing
-        return (values.totalCustomerPayment || 0) > 0;
+        const step3Result = (values.totalCustomerPayment || 0) > 0;
+        console.log("CAN_PROCEED DEBUG - Step 3 result:", step3Result, "Total customer payment:", values.totalCustomerPayment);
+        return step3Result;
       default:
+        console.log("CAN_PROCEED DEBUG - Default case, returning true");
         return true;
     }
   };
@@ -2079,6 +2095,12 @@ export default function QuotationCreation() {
   }, [watchedProjects, form, quotationSource]);
 
   const onSubmit = (data: QuotationFormData) => {
+    console.log("SUBMIT CLICKED: Form submission started");
+    console.log("Form data:", data);
+    console.log("Form state errors:", form.formState.errors);
+    console.log("Can proceed?", canProceed());
+    console.log("Mutation pending?", createQuotationMutation.isPending);
+    
     // Validate business rules before submission
     const totalSystemCost = data.projects.reduce((sum, p) => sum + p.projectValue, 0);
     const totalSubsidyAmount = data.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
