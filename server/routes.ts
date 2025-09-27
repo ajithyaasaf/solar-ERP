@@ -40,6 +40,7 @@ import { userService } from "./services/user-service";
 import { testFirebaseAdminSDK, testUserManagement } from "./test-firebase-admin";
 import { attendanceRateLimiter, generalRateLimiter, createRateLimitMiddleware } from "./utils/rate-limiter";
 import { DataCompletenessAnalyzer, SiteVisitDataMapper } from "./services/quotation-mapping-service";
+import { registerQuotationRoutes } from "./routes/quotations";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced middleware to verify Firebase Auth token and load user profile
@@ -6791,6 +6792,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to export site visits data" });
     }
   });
+
+  // Register quotation routes
+  registerQuotationRoutes(app, verifyAuth);
 
   // Reverse Geocoding API endpoint using Google Maps
   app.get("/api/reverse-geocode", verifyAuth, async (req, res) => {

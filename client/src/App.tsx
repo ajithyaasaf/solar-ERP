@@ -157,7 +157,7 @@ function Router() {
       <Route path="/site-visit">
         <ProtectedRoute 
           requiredPermissions={["site_visit.view", "site_visit.create"]}
-          requiredDepartments={["technical", "marketing", "admin"]}
+          requiredDepartment={["technical", "marketing", "admin"]}
           allowMasterAdmin={true}
         >
           <DashboardLayout>
@@ -172,7 +172,7 @@ function Router() {
       <Route path="/site-visit-monitoring">
         <ProtectedRoute 
           requiredPermissions={["site_visit.view_all", "site_visit.reports"]}
-          requiredDepartments={["hr"]}
+          requiredDepartment={["hr"]}
           allowMasterAdmin={true}
         >
           <DashboardLayout>
@@ -200,7 +200,7 @@ function Router() {
       <Route path="/hr-management">
         <ProtectedRoute 
           requiredPermissions={["users.view"]}
-          requiredDepartments={["hr", "admin"]}
+          requiredDepartment={["hr", "admin"]}
           allowMasterAdmin={true}
         >
           <DashboardLayout>
