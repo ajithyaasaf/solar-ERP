@@ -1916,7 +1916,10 @@ export default function QuotationCreation() {
         internalNotes: data.internalNotes || "",
         customerNotes: data.customerNotes || "",
         attachments: data.attachments || [],
-        siteVisitMapping: metadata
+        siteVisitMapping: metadata ? {
+          ...metadata,
+          mappedAt: metadata.mappedAt instanceof Date ? metadata.mappedAt : new Date(metadata.mappedAt)
+        } : undefined
       });
       
       // Enhanced mapping data with customer info for SiteVisitCustomerDetailsForm
@@ -1998,7 +2001,10 @@ export default function QuotationCreation() {
         customerId: customerData?.id || "",
         customerData: customerFormData, // Add customer data for fallback case
         projects: [], // Empty projects - user will need to add manually
-        siteVisitMapping: partialMapping
+        siteVisitMapping: partialMapping ? {
+          ...partialMapping,
+          mappedAt: partialMapping.mappedAt instanceof Date ? partialMapping.mappedAt : new Date(partialMapping.mappedAt)
+        } : undefined
       });
       
       setSiteVisitMapping(partialMapping);
@@ -2026,45 +2032,29 @@ export default function QuotationCreation() {
 
   const canProceed = () => {
     const values = form.getValues();
-    console.log("CAN_PROCEED DEBUG - Current step:", currentStep);
-    console.log("CAN_PROCEED DEBUG - Form values:", values);
-    
     switch (currentStep) {
       case 0: // Source selection
-        const step0Result = quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
-        console.log("CAN_PROCEED DEBUG - Step 0 result:", step0Result);
-        return step0Result;
+        return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
       case 1: // Customer details
         if (quotationSource === "manual") {
-          const step1ManualResult = values.customerId !== undefined && values.customerId !== "";
-          console.log("CAN_PROCEED DEBUG - Step 1 manual result:", step1ManualResult);
-          return step1ManualResult;
+          return values.customerId !== undefined && values.customerId !== "";
         } else {
           // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
-          if (!customerData) {
-            console.log("CAN_PROCEED DEBUG - Step 1: No customer data");
-            return false;
-          }
+          if (!customerData) return false;
           
           const isNameValid = customerData.name && customerData.name.trim().length >= 2;
           const isMobileValid = customerData.mobile && customerData.mobile.trim().length >= 10;
           const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
           const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
           
-          console.log("CAN_PROCEED DEBUG - Step 1 site visit validation:", { isNameValid, isMobileValid, isAddressValid, isPropertyTypeValid });
           return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
         }
       case 2: // Projects
-        const step2Result = values.projects && values.projects.length > 0;
-        console.log("CAN_PROCEED DEBUG - Step 2 result:", step2Result, "Projects:", values.projects);
-        return step2Result;
+        return values.projects && values.projects.length > 0;
       case 3: // Pricing
-        const step3Result = (values.totalCustomerPayment || 0) > 0;
-        console.log("CAN_PROCEED DEBUG - Step 3 result:", step3Result, "Total customer payment:", values.totalCustomerPayment);
-        return step3Result;
+        return (values.totalCustomerPayment || 0) > 0;
       default:
-        console.log("CAN_PROCEED DEBUG - Default case, returning true");
         return true;
     }
   };
@@ -2095,12 +2085,6 @@ export default function QuotationCreation() {
   }, [watchedProjects, form, quotationSource]);
 
   const onSubmit = (data: QuotationFormData) => {
-    console.log("SUBMIT CLICKED: Form submission started");
-    console.log("Form data:", data);
-    console.log("Form state errors:", form.formState.errors);
-    console.log("Can proceed?", canProceed());
-    console.log("Mutation pending?", createQuotationMutation.isPending);
-    
     // Validate business rules before submission
     const totalSystemCost = data.projects.reduce((sum, p) => sum + p.projectValue, 0);
     const totalSubsidyAmount = data.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
