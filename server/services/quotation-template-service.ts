@@ -84,7 +84,7 @@ export interface QuotationTemplate {
 
 export class QuotationTemplateService {
   private static readonly COMPANY_DETAILS: CompanyDetails = {
-    name: "Prakash Green Energy",
+    name: "Prakash Greens Energy",
     logo: "/assets/company-logo.png",
     contact: {
       phone: ["6379049160", "9843577336", "8903465511"],
@@ -115,7 +115,7 @@ export class QuotationTemplateService {
         name: "Prakash Green Energy",
         bank: "ICICI",
         branch: "Subramaniapuram, Madurai",
-        accountNo: "615600014O",
+        accountNo: "6156000140",
         ifscCode: "ICIC0006156"
       }
     },
@@ -150,8 +150,7 @@ export class QuotationTemplateService {
       "1) EB Number",
       "2) EB Register Mobile Number",
       "3) Aadhaar Card",
-      "4) Aadhaar Card",
-      "5) Pan Card", 
+      "4) Pan Card", 
       "6) Passport Size Photo -1",
       "7) Property Tax Copy",
       "8) Bank Passbook",

@@ -55,7 +55,7 @@ export class QuotationPDFService {
           justify-content: space-between;
           align-items: flex-start;
           margin-bottom: 20px;
-          border-bottom: 2px solid #0066cc;
+          border-bottom: 2px solid #228B22;
           padding-bottom: 15px;
         }
         
@@ -66,7 +66,7 @@ export class QuotationPDFService {
         .company-name {
           font-size: 24px;
           font-weight: bold;
-          color: #0066cc;
+          color: #228B22;
           margin-bottom: 5px;
         }
         
@@ -120,10 +120,10 @@ export class QuotationPDFService {
         }
         
         .reference {
-          background: #f0f8ff;
+          background: #f0f8f0;
           padding: 10px;
           margin: 15px 0;
-          border-left: 4px solid #0066cc;
+          border-left: 4px solid #228B22;
         }
         
         .pricing-table {
@@ -140,7 +140,7 @@ export class QuotationPDFService {
         }
         
         .pricing-table th {
-          background: #0066cc;
+          background: #228B22;
           color: white;
           font-weight: bold;
         }
@@ -176,7 +176,7 @@ export class QuotationPDFService {
         }
         
         .bom-table th {
-          background: #0066cc;
+          background: #228B22;
           color: white;
           font-weight: bold;
         }
@@ -187,8 +187,8 @@ export class QuotationPDFService {
         }
         
         .terms-section h3 {
-          color: #0066cc;
-          border-bottom: 2px solid #0066cc;
+          color: #228B22;
+          border-bottom: 2px solid #228B22;
           padding-bottom: 5px;
         }
         
@@ -238,7 +238,10 @@ export class QuotationPDFService {
       <!-- Header -->
       <div class="header">
         <div class="company-info">
-          <div class="company-name">${template.header.name}</div>
+          <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <img src="/assets/prakash-logo.png" alt="${template.header.name}" style="height: 50px; margin-right: 15px;" onerror="this.style.display='none'">
+            <div class="company-name">${template.header.name}</div>
+          </div>
           <div class="tagline">PROVIDING PERFECT SOLAR SOLUTIONS</div>
           <div class="tagline">GET AUTHORIZED PRODUCT VERSIONS</div>
           <div class="contact-details">
@@ -341,7 +344,7 @@ export class QuotationPDFService {
       
       <!-- Bill of Materials -->
       <div class="page-break">
-        <h3 style="color: #0066cc; text-align: center;">Bill of Materials for On-Grid SPC System</h3>
+        <h3 style="color: #228B22; text-align: center;">Bill of Materials for On-Grid SPC System</h3>
         
         <table class="bom-table">
           <thead>
@@ -413,7 +416,7 @@ export class QuotationPDFService {
       
       <!-- Scope of Work -->
       <div class="scope-section">
-        <h3 style="color: #0066cc;">Scope of Work</h3>
+        <h3 style="color: #228B22;">Scope of Work</h3>
         
         <div>
           ${template.scopeOfWork.structure.map(item => `<div>${item}</div>`).join('')}
@@ -435,7 +438,7 @@ export class QuotationPDFService {
       
       <!-- Documents Required -->
       <div class="documents-section">
-        <h3 style="color: #0066cc; margin-top: 0;">Documents Required for Subsidy</h3>
+        <h3 style="color: #228B22; margin-top: 0;">Documents Required for Subsidy</h3>
         ${template.documentsRequiredForSubsidy.list.map(item => `<div>${item}</div>`).join('')}
         <br>
         <div class="highlight">${template.documentsRequiredForSubsidy.note}</div>
