@@ -212,12 +212,19 @@ export class DataCompletenessAnalyzer {
 
   /**
    * Check if marketing data has valid project configurations
+   * Now allows quotation creation when project type is selected, even with incomplete config
    */
   private static hasValidMarketingProjectConfig(siteVisit: any): boolean {
     const marketingData = siteVisit.marketingData;
-    if (!marketingData || !marketingData.projectType) return false;
+    if (!marketingData) return false;
 
-    // Check based on project type for valid configuration
+    // Allow quotation creation if project type is selected (more permissive)
+    // The mapProjects function will handle creating default projects for incomplete configurations
+    if (marketingData.projectType) {
+      return true; // Project type selected - allow quotation creation
+    }
+
+    // Legacy: Check for complete configurations (kept for backward compatibility)
     switch (marketingData.projectType) {
       case 'on_grid':
         return marketingData.onGridConfig && 
