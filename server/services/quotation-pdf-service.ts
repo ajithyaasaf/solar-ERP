@@ -5,7 +5,7 @@
 
 import { QuotationTemplate, QuotationTemplateService } from "./quotation-template-service";
 import { Quotation, QuotationProject } from "@shared/schema";
-import puppeteer from 'puppeteer';
+import * as pdf from 'html-pdf-node';
 
 export interface PDFGenerationOptions {
   format: 'A4';
@@ -465,7 +465,6 @@ export class QuotationPDFService {
     customer: any,
     options?: Partial<PDFGenerationOptions>
   ): Promise<Buffer> {
-    let browser;
     try {
       // Generate template
       const template = QuotationTemplateService.generateQuotationTemplate(
@@ -477,32 +476,25 @@ export class QuotationPDFService {
       // Generate HTML content
       const html = this.generateHTMLContent(template);
 
-      // Launch Puppeteer
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      
-      // Generate PDF
+      // Configure pdf options
       const pdfOptions = { ...this.DEFAULT_OPTIONS, ...options };
-      const pdfBuffer = await page.pdf({
+      
+      const htmlFile = { content: html };
+      const browserOptions = {
         format: pdfOptions.format,
         margin: pdfOptions.margin,
         printBackground: pdfOptions.printBackground,
-        displayHeaderFooter: pdfOptions.displayHeaderFooter
-      });
+        displayHeaderFooter: pdfOptions.displayHeaderFooter,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      };
 
+      // Generate PDF using html-pdf-node
+      const pdfBuffer = await pdf.generatePdf(htmlFile, browserOptions);
+      
       return pdfBuffer;
     } catch (error) {
       console.error('Error generating PDF:', error);
       throw new Error('Failed to generate quotation PDF');
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
     }
   }
 
