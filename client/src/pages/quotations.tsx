@@ -42,6 +42,8 @@ import {
   Filter
 } from "lucide-react";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 // Import proper quotation types
 import { type Quotation, type QuotationProject } from "@shared/schema";
@@ -68,6 +70,7 @@ interface QuotationDisplay extends Quotation {
 
 export default function Quotations() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -122,13 +125,19 @@ export default function Quotations() {
   };
 
   // Project type display helpers
-  const getProjectTypesDisplay = (projects: QuotationProject[]) => {
+  const getProjectTypesDisplay = (projects: QuotationProject[] | undefined) => {
+    if (!projects || !Array.isArray(projects) || projects.length === 0) {
+      return 'No projects';
+    }
     const types = projects.map(p => p.projectType);
     const uniqueTypes = Array.from(new Set(types));
     return uniqueTypes.map(type => type.replace('_', ' ').toUpperCase()).join(', ');
   };
 
-  const getTotalSystemKW = (projects: QuotationProject[]) => {
+  const getTotalSystemKW = (projects: QuotationProject[] | undefined) => {
+    if (!projects || !Array.isArray(projects) || projects.length === 0) {
+      return 0;
+    }
     return projects.reduce((total, project) => {
       // Handle different project types that have systemKW
       if ('systemKW' in project && typeof project.systemKW === 'number') {
@@ -142,6 +151,39 @@ export default function Quotations() {
     return source === 'site_visit' 
       ? "bg-purple-100 text-purple-800 border-purple-200"
       : "bg-blue-100 text-blue-800 border-blue-200";
+  };
+
+  // Download PDF handler
+  const handleDownloadPDF = async (quotationId: string, quotationNumber: string) => {
+    try {
+      const response = await apiRequest(`/api/quotations/${quotationId}/generate-pdf`, 'POST');
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `quotation-${quotationNumber || quotationId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: "PDF Downloaded",
+          description: "Quotation PDF has been downloaded successfully.",
+        });
+      } else {
+        throw new Error('Failed to generate PDF');
+      }
+    } catch (error: any) {
+      console.error("Error downloading PDF:", error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download quotation PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   // Function to handle sort changes
@@ -382,7 +424,7 @@ export default function Quotations() {
                           {getProjectTypesDisplay(quotation.projects)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {quotation.projects.length} project{quotation.projects.length !== 1 ? 's' : ''}
+                          {quotation.projects?.length || 0} project{(quotation.projects?.length || 0) !== 1 ? 's' : ''}
                         </div>
                       </div>
                     </TableCell>
@@ -446,6 +488,7 @@ export default function Quotations() {
                           className="h-8 w-8 p-0"
                           title="Download PDF"
                           data-testid={`button-download-${quotation.id}`}
+                          onClick={() => handleDownloadPDF(quotation.id, quotation.quotationNumber)}
                         >
                           <Download className="h-4 w-4" />
                         </Button>
