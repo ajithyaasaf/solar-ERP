@@ -445,6 +445,31 @@ export class SiteVisitDataMapper {
       return projects;
     }
 
+    // DEBUG: Log the actual marketing data structure to understand what's available
+    console.log("=== MARKETING DATA DEBUG ===");
+    console.log("Marketing data keys:", Object.keys(marketingData));
+    console.log("Project type:", marketingData.projectType);
+    console.log("Raw marketing data:", JSON.stringify(marketingData, null, 2));
+    
+    if (marketingData.onGridConfig) {
+      console.log("On-grid config found!");
+      console.log("On-grid config keys:", Object.keys(marketingData.onGridConfig));
+      console.log("On-grid details:");
+      console.log("  - inverterKW:", marketingData.onGridConfig.inverterKW);
+      console.log("  - solarPanelMake:", marketingData.onGridConfig.solarPanelMake);
+      console.log("  - inverterMake:", marketingData.onGridConfig.inverterMake);
+      console.log("  - panelCount:", marketingData.onGridConfig.panelCount);
+      console.log("  - panelWatts:", marketingData.onGridConfig.panelWatts);
+      console.log("  - projectValue:", marketingData.onGridConfig.projectValue);
+      console.log("  - structureType:", marketingData.onGridConfig.structureType);
+      console.log("  - civilWorkScope:", marketingData.onGridConfig.civilWorkScope);
+      console.log("  - netMeterScope:", marketingData.onGridConfig.netMeterScope);
+      console.log("  - All fields:", JSON.stringify(marketingData.onGridConfig, null, 2));
+    } else {
+      console.log("No onGridConfig found in marketing data");
+    }
+    console.log("===========================");
+
     // Support multi-project quotations by checking all possible project configurations
     // A single site visit can have multiple project types configured
 
