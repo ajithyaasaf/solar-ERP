@@ -2409,12 +2409,13 @@ export default function QuotationCreation() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {quotationSource === "site_visit" && siteVisitMapping ? (
+                {/* Show completeness analysis for site visit projects */}
+                {quotationSource === "site_visit" && siteVisitMapping && (
                   <div className="space-y-4">
                     <Alert>
                       <Check className="h-4 w-4" />
                       <AlertDescription>
-                        Complete site visit data has been mapped including all customer details, technical assessments, marketing configurations, administrative data, photos, and location information. No data has been left out from the original site visit.
+                        Site visit data has been mapped and is now editable. You can modify any configuration details, add missing information, or adjust specifications as needed.
                       </AlertDescription>
                     </Alert>
                     
@@ -2424,7 +2425,7 @@ export default function QuotationCreation() {
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-sm">
                             <Info className="h-4 w-4 text-blue-600" />
-                            Data Completeness Analysis
+                            Site Visit Data Completeness
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0 space-y-3">
@@ -2466,74 +2467,24 @@ export default function QuotationCreation() {
                           )}
                           
                           <div className="text-xs text-gray-500">
-                            <p className="font-medium mb-1">Data Sources Integrated:</p>
+                            <p className="font-medium mb-1">You can now edit all project details below:</p>
                             <ul className="list-disc list-inside space-y-0.5">
-                              <li>Customer information and location data</li>
-                              <li>Technical assessment and service requirements</li>
-                              <li>Marketing project specifications and configurations</li>
-                              <li>Administrative processes and banking details</li>
-                              <li>Photo documentation and attachments</li>
-                              <li>Visit notes and follow-up information</li>
+                              <li>Solar panel makes and specifications</li>
+                              <li>Inverter makes, capacity and phase details</li>
+                              <li>Structure types and installation heights</li>
+                              <li>Work scopes for civil and electrical work</li>
+                              <li>Battery configurations and earthing details</li>
+                              <li>Project pricing and payment calculations</li>
                             </ul>
                           </div>
                         </CardContent>
                       </Card>
                     )}
-                    
-                    {/* Display mapped projects */}
-                    <div className="grid gap-4">
-                      {form.watch("projects").map((project: any, index: number) => (
-                        <Card key={index} className="border">
-                          <CardHeader className="pb-4">
-                            <div className="flex items-center gap-2">
-                              {project.projectType === 'on_grid' && <Zap className="h-5 w-5 text-blue-600" />}
-                              {project.projectType === 'off_grid' && <Battery className="h-5 w-5 text-green-600" />}
-                              {project.projectType === 'hybrid' && <Settings className="h-5 w-5 text-purple-600" />}
-                              {project.projectType === 'water_heater' && <Droplets className="h-5 w-5 text-orange-600" />}
-                              {project.projectType === 'water_pump' && <Wrench className="h-5 w-5 text-red-600" />}
-                              <h4 className="font-medium capitalize">
-                                {project.projectType.replace('_', ' ')} System
-                              </h4>
-                              <Badge variant="outline">
-                                ₹{project.projectValue?.toLocaleString() || 0}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              {project.systemKW && (
-                                <div>
-                                  <span className="text-muted-foreground">System Capacity:</span>
-                                  <div className="font-medium">{project.systemKW} kW</div>
-                                </div>
-                              )}
-                              {project.panelCount && (
-                                <div>
-                                  <span className="text-muted-foreground">Solar Panels:</span>
-                                  <div className="font-medium">{project.panelCount} panels</div>
-                                </div>
-                              )}
-                              {project.subsidyAmount && (
-                                <div>
-                                  <span className="text-muted-foreground">Govt. Subsidy:</span>
-                                  <div className="font-medium text-green-600">₹{project.subsidyAmount.toLocaleString()}</div>
-                                </div>
-                              )}
-                              {project.customerPayment && (
-                                <div>
-                                  <span className="text-muted-foreground">Customer Payment:</span>
-                                  <div className="font-medium">₹{project.customerPayment.toLocaleString()}</div>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
                   </div>
-                ) : (
-                  <ManualProjectConfiguration form={form} />
                 )}
+                
+                {/* Always show the full editable configuration for both manual and site visit projects */}
+                <ManualProjectConfiguration form={form} />
               </CardContent>
             </Card>
           )}
