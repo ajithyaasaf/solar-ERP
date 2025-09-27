@@ -448,36 +448,59 @@ export class SiteVisitDataMapper {
     // Support multi-project quotations by checking all possible project configurations
     // A single site visit can have multiple project types configured
 
-    // Map on-grid project if configured
-    if (marketingData.onGridConfig && marketingData.onGridConfig.inverterKW) {
+    // Map on-grid project if configured - be more flexible with partial data
+    if (marketingData.onGridConfig && (
+        marketingData.onGridConfig.inverterKW ||
+        marketingData.onGridConfig.solarPanelMake?.length > 0 ||
+        marketingData.onGridConfig.inverterMake?.length > 0 ||
+        marketingData.onGridConfig.panelCount ||
+        marketingData.onGridConfig.projectValue ||
+        marketingData.onGridConfig.structureType ||
+        marketingData.onGridConfig.civilWorkScope ||
+        marketingData.onGridConfig.netMeterScope
+      )) {
       projects.push(this.mapOnGridProject(marketingData.onGridConfig, warnings, transformations));
       transformations.push({
         field: 'projects.on_grid',
         originalValue: 'site_visit_marketing_data',
         transformedValue: 'on_grid_project_config',
-        reason: 'On-grid configuration found and mapped'
+        reason: 'On-grid configuration found and mapped from detailed site visit data'
       });
     }
     
-    // Map off-grid project if configured
-    if (marketingData.offGridConfig && marketingData.offGridConfig.inverterKW) {
+    // Map off-grid project if configured - be more flexible with partial data
+    if (marketingData.offGridConfig && (
+        marketingData.offGridConfig.inverterKW ||
+        marketingData.offGridConfig.solarPanelMake?.length > 0 ||
+        marketingData.offGridConfig.inverterMake?.length > 0 ||
+        marketingData.offGridConfig.batteryCount ||
+        marketingData.offGridConfig.projectValue ||
+        marketingData.offGridConfig.structureType
+      )) {
       projects.push(this.mapOffGridProject(marketingData.offGridConfig, warnings, transformations));
       transformations.push({
         field: 'projects.off_grid',
         originalValue: 'site_visit_marketing_data',
         transformedValue: 'off_grid_project_config',
-        reason: 'Off-grid configuration found and mapped'
+        reason: 'Off-grid configuration found and mapped from detailed site visit data'
       });
     }
     
-    // Map hybrid project if configured
-    if (marketingData.hybridConfig && marketingData.hybridConfig.inverterKW) {
+    // Map hybrid project if configured - be more flexible with partial data
+    if (marketingData.hybridConfig && (
+        marketingData.hybridConfig.inverterKW ||
+        marketingData.hybridConfig.solarPanelMake?.length > 0 ||
+        marketingData.hybridConfig.inverterMake?.length > 0 ||
+        marketingData.hybridConfig.batteryCount ||
+        marketingData.hybridConfig.projectValue ||
+        marketingData.hybridConfig.structureType
+      )) {
       projects.push(this.mapHybridProject(marketingData.hybridConfig, warnings, transformations));
       transformations.push({
         field: 'projects.hybrid',
         originalValue: 'site_visit_marketing_data',
         transformedValue: 'hybrid_project_config',
-        reason: 'Hybrid configuration found and mapped'
+        reason: 'Hybrid configuration found and mapped from detailed site visit data'
       });
     }
     
