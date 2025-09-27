@@ -5,6 +5,7 @@
 
 import { QuotationTemplate, QuotationTemplateService } from "./quotation-template-service";
 import { Quotation, QuotationProject } from "@shared/schema";
+import puppeteer from 'puppeteer';
 
 export interface PDFGenerationOptions {
   format: 'A4';
@@ -456,13 +457,62 @@ export class QuotationPDFService {
   }
 
   /**
-   * Generate PDF from quotation data
+   * Generate PDF buffer from quotation data
    */
   static async generatePDF(
     quotation: Quotation,
     project: QuotationProject,
     customer: any,
     options?: Partial<PDFGenerationOptions>
+  ): Promise<Buffer> {
+    let browser;
+    try {
+      // Generate template
+      const template = QuotationTemplateService.generateQuotationTemplate(
+        quotation,
+        project,
+        customer
+      );
+
+      // Generate HTML content
+      const html = this.generateHTMLContent(template);
+
+      // Launch Puppeteer
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      // Generate PDF
+      const pdfOptions = { ...this.DEFAULT_OPTIONS, ...options };
+      const pdfBuffer = await page.pdf({
+        format: pdfOptions.format,
+        margin: pdfOptions.margin,
+        printBackground: pdfOptions.printBackground,
+        displayHeaderFooter: pdfOptions.displayHeaderFooter
+      });
+
+      return pdfBuffer;
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      throw new Error('Failed to generate quotation PDF');
+    } finally {
+      if (browser) {
+        await browser.close();
+      }
+    }
+  }
+
+  /**
+   * Generate HTML preview (for preview endpoint)
+   */
+  static async generateHTMLPreview(
+    quotation: Quotation,
+    project: QuotationProject,
+    customer: any
   ): Promise<{ html: string; template: QuotationTemplate }> {
     try {
       // Generate template
@@ -480,8 +530,8 @@ export class QuotationPDFService {
         template
       };
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw new Error('Failed to generate quotation PDF');
+      console.error('Error generating HTML preview:', error);
+      throw new Error('Failed to generate quotation HTML preview');
     }
   }
 }

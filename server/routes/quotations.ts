@@ -146,18 +146,19 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       const project = quotation.projects[0]; // Handle first project for now
 
-      const pdfResult = await QuotationPDFService.generatePDF(
+      const pdfBuffer = await QuotationPDFService.generatePDF(
         quotation,
         project,
         customer
       );
 
-      res.json({
-        message: "PDF generated successfully",
-        html: pdfResult.html,
-        template: pdfResult.template,
-        quotationNumber: quotation.quotationNumber
-      });
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="quotation-${quotation.quotationNumber || quotation.id}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send the PDF buffer
+      res.send(pdfBuffer);
     } catch (error) {
       console.error("Error generating PDF:", error);
       res.status(500).json({ message: "Failed to generate PDF" });
@@ -188,7 +189,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       const project = quotation.projects[0];
 
-      const pdfResult = await QuotationPDFService.generatePDF(
+      const htmlResult = await QuotationPDFService.generateHTMLPreview(
         quotation,
         project,
         customer
@@ -196,7 +197,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       // Return HTML for preview
       res.setHeader('Content-Type', 'text/html');
-      res.send(pdfResult.html);
+      res.send(htmlResult.html);
     } catch (error) {
       console.error("Error generating preview:", error);
       res.status(500).json({ message: "Failed to generate preview" });
