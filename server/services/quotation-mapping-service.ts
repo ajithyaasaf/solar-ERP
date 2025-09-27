@@ -169,14 +169,27 @@ export class DataCompletenessAnalyzer {
     else qualityGrade = 'F';
 
     // Determine if quotation can be created
-    const canCreateQuotation = missing.critical.length === 0 && 
-                              siteVisit.visitOutcome === 'converted' &&
-                              siteVisit.status === 'completed';
+    // Allow quotation creation in two scenarios:
+    // 1. Traditional: All critical fields + converted outcome + completed status
+    // 2. Marketing: Valid marketing project config + basic customer info (more flexible)
+    const hasValidMarketingConfig = this.hasValidMarketingProjectConfig(siteVisit);
+    const hasBasicCustomerInfo = siteVisit.customer?.name && siteVisit.customer?.mobile && siteVisit.customer?.address;
+    
+    const canCreateQuotation = (
+      // Traditional strict path
+      (missing.critical.length === 0 && 
+       siteVisit.visitOutcome === 'converted' &&
+       siteVisit.status === 'completed') ||
+      // Marketing flexible path - allow when marketing data is complete
+      (hasValidMarketingConfig && hasBasicCustomerInfo)
+    );
 
     // Determine recommended action
     let recommendedAction: 'ready_for_quotation' | 'collect_missing_data' | 'invalid_for_quotation';
     if (!canCreateQuotation) {
-      if (siteVisit.visitOutcome !== 'converted') {
+      if (!hasBasicCustomerInfo) {
+        recommendedAction = 'collect_missing_data';
+      } else if (!hasValidMarketingConfig && siteVisit.visitOutcome !== 'converted') {
         recommendedAction = 'invalid_for_quotation';
       } else {
         recommendedAction = 'collect_missing_data';
@@ -195,6 +208,58 @@ export class DataCompletenessAnalyzer {
       fieldCoverage,
       qualityGrade
     };
+  }
+
+  /**
+   * Check if marketing data has valid project configurations
+   */
+  private static hasValidMarketingProjectConfig(siteVisit: any): boolean {
+    const marketingData = siteVisit.marketingData;
+    if (!marketingData || !marketingData.projectType) return false;
+
+    // Check based on project type for valid configuration
+    switch (marketingData.projectType) {
+      case 'on_grid':
+        return marketingData.onGridConfig && 
+               marketingData.onGridConfig.solarPanelMake && 
+               marketingData.onGridConfig.solarPanelMake.length > 0 &&
+               marketingData.onGridConfig.inverterMake &&
+               marketingData.onGridConfig.inverterMake.length > 0 &&
+               (marketingData.onGridConfig.panelCount || 0) > 0;
+      
+      case 'off_grid':
+        return marketingData.offGridConfig &&
+               marketingData.offGridConfig.solarPanelMake &&
+               marketingData.offGridConfig.solarPanelMake.length > 0 &&
+               marketingData.offGridConfig.inverterMake &&
+               marketingData.offGridConfig.inverterMake.length > 0 &&
+               marketingData.offGridConfig.batteryBrand &&
+               (marketingData.offGridConfig.panelCount || 0) > 0;
+      
+      case 'hybrid':
+        return marketingData.hybridConfig &&
+               marketingData.hybridConfig.solarPanelMake &&
+               marketingData.hybridConfig.solarPanelMake.length > 0 &&
+               marketingData.hybridConfig.inverterMake &&
+               marketingData.hybridConfig.inverterMake.length > 0 &&
+               marketingData.hybridConfig.batteryBrand &&
+               (marketingData.hybridConfig.panelCount || 0) > 0;
+      
+      case 'water_heater':
+        return marketingData.waterHeaterConfig &&
+               marketingData.waterHeaterConfig.brand &&
+               (marketingData.waterHeaterConfig.litre || 0) > 0;
+      
+      case 'water_pump':
+        return marketingData.waterPumpConfig &&
+               marketingData.waterPumpConfig.hp &&
+               marketingData.waterPumpConfig.panelBrand &&
+               marketingData.waterPumpConfig.panelBrand.length > 0 &&
+               (marketingData.waterPumpConfig.panelCount || 0) > 0;
+      
+      default:
+        return false;
+    }
   }
 
   /**
@@ -249,7 +314,7 @@ export class SiteVisitDataMapper {
     // Calculate comprehensive pricing with business rules
     const pricingCalculation = this.calculatePricing(projects, warnings);
 
-    // Prepare comprehensive mapping metadata with ALL site visit data sections preserved
+    // Prepare comprehensive mapping metadata 
     const mappingMetadata: SiteVisitMapping = {
       sourceVisitId: siteVisit.id,
       mappedAt: new Date(),
@@ -257,37 +322,7 @@ export class SiteVisitDataMapper {
       completenessScore: completenessAnalysis.completenessScore,
       missingCriticalFields: completenessAnalysis.missingCriticalFields,
       missingOptionalFields: completenessAnalysis.missingOptionalFields,
-      dataQualityNotes: `Auto-mapped from site visit ${siteVisit.id}. Quality Grade: ${completenessAnalysis.qualityGrade}. Important fields missing: ${completenessAnalysis.missingImportantFields.length}. ${warnings.length > 0 ? `Warnings: ${warnings.join('; ')}` : 'No warnings.'}`,
-      // Include ALL site visit data sections in mapping metadata
-      originalSiteVisitData: {
-        visitInfo: {
-          id: siteVisit.id,
-          visitPurpose: siteVisit.visitPurpose,
-          status: siteVisit.status,
-          siteInTime: siteVisit.siteInTime,
-          siteOutTime: siteVisit.siteOutTime,
-          department: siteVisit.department,
-          userId: siteVisit.userId,
-          notes: siteVisit.notes,
-          visitOutcome: siteVisit.visitOutcome,
-          outcomeNotes: siteVisit.outcomeNotes,
-          scheduledFollowUpDate: siteVisit.scheduledFollowUpDate
-        },
-        customerData: siteVisit.customer,
-        technicalData: siteVisit.technicalData || null,
-        marketingData: siteVisit.marketingData || null,
-        adminData: siteVisit.adminData || null,
-        locationData: {
-          siteInLocation: siteVisit.siteInLocation || null,
-          siteOutLocation: siteVisit.siteOutLocation || null
-        },
-        photoData: {
-          siteInPhotoUrl: siteVisit.siteInPhotoUrl || null,
-          siteOutPhotoUrl: siteVisit.siteOutPhotoUrl || null,
-          sitePhotos: siteVisit.sitePhotos || [],
-          siteOutPhotos: siteVisit.siteOutPhotos || []
-        }
-      }
+      dataQualityNotes: `Auto-mapped from site visit ${siteVisit.id}. Quality Grade: ${completenessAnalysis.qualityGrade}. Important fields missing: ${completenessAnalysis.missingImportantFields.length}. ${warnings.length > 0 ? `Warnings: ${warnings.join('; ')}` : 'No warnings.'}`
     };
 
     // Extract ALL attachments from site visit - photos, documents, etc.
@@ -313,7 +348,7 @@ export class SiteVisitDataMapper {
       deliveryTimeframe: "2_3_weeks" as const,
       termsTemplate: this.selectTermsTemplate(siteVisit.customer.propertyType),
       status: "draft" as QuotationStatus,
-      followUps: this.mapFollowUpData(siteVisit),
+      followUps: [], // Default empty array, can be enhanced later with actual follow-up mapping
       communicationPreference: "whatsapp",
       documentVersion: 1,
       preparedBy: userId,
