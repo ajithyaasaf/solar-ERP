@@ -153,26 +153,45 @@ export default function Quotations() {
       : "bg-blue-100 text-blue-800 border-blue-200";
   };
 
-  // Download PDF handler
+  // Download PDF handler using client-side generation
   const handleDownloadPDF = async (quotationId: string, quotationNumber: string) => {
     try {
       const response = await apiRequest(`/api/quotations/${quotationId}/generate-pdf`, 'POST');
       
       if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `quotation-${quotationNumber || quotationId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+        const data = await response.json();
         
-        toast({
-          title: "PDF Downloaded",
-          description: "Quotation PDF has been downloaded successfully.",
-        });
+        // Create a temporary iframe to render the HTML
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '-10000px';
+        iframe.style.width = '210mm';
+        iframe.style.height = '297mm';
+        document.body.appendChild(iframe);
+        
+        // Write the HTML content to the iframe
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc) {
+          iframeDoc.open();
+          iframeDoc.write(data.html);
+          iframeDoc.close();
+          
+          // Wait for content to load then trigger print
+          setTimeout(() => {
+            iframe.contentWindow?.print();
+            
+            toast({
+              title: "PDF Generated",
+              description: "Please save or print the quotation from the print dialog.",
+            });
+            
+            // Clean up after a delay
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 1000);
+          }, 500);
+        }
       } else {
         throw new Error('Failed to generate PDF');
       }

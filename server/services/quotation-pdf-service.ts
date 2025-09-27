@@ -5,7 +5,6 @@
 
 import { QuotationTemplate, QuotationTemplateService } from "./quotation-template-service";
 import { Quotation, QuotationProject } from "@shared/schema";
-import * as pdf from 'html-pdf-node';
 
 export interface PDFGenerationOptions {
   format: 'A4';
@@ -457,7 +456,7 @@ export class QuotationPDFService {
   }
 
   /**
-   * Generate PDF buffer from quotation data
+   * Generate PDF buffer from quotation data (deprecated - now handled client-side)
    */
   static async generatePDF(
     quotation: Quotation,
@@ -465,37 +464,8 @@ export class QuotationPDFService {
     customer: any,
     options?: Partial<PDFGenerationOptions>
   ): Promise<Buffer> {
-    try {
-      // Generate template
-      const template = QuotationTemplateService.generateQuotationTemplate(
-        quotation,
-        project,
-        customer
-      );
-
-      // Generate HTML content
-      const html = this.generateHTMLContent(template);
-
-      // Configure pdf options
-      const pdfOptions = { ...this.DEFAULT_OPTIONS, ...options };
-      
-      const htmlFile = { content: html };
-      const browserOptions = {
-        format: pdfOptions.format,
-        margin: pdfOptions.margin,
-        printBackground: pdfOptions.printBackground,
-        displayHeaderFooter: pdfOptions.displayHeaderFooter,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      };
-
-      // Generate PDF using html-pdf-node
-      const pdfBuffer = await pdf.generatePdf(htmlFile, browserOptions);
-      
-      return pdfBuffer;
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw new Error('Failed to generate quotation PDF');
-    }
+    // This method is now deprecated since we're handling PDF generation client-side
+    throw new Error('PDF generation is now handled client-side');
   }
 
   /**

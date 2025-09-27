@@ -146,19 +146,19 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       const project = quotation.projects[0]; // Handle first project for now
 
-      const pdfBuffer = await QuotationPDFService.generatePDF(
+      // Generate HTML content for client-side PDF generation
+      const htmlResult = await QuotationPDFService.generateHTMLPreview(
         quotation,
         project,
         customer
       );
 
-      // Set headers for PDF download
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="quotation-${quotation.quotationNumber || quotation.id}.pdf"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      // Send the PDF buffer
-      res.send(pdfBuffer);
+      // Return HTML content and template data for client-side PDF generation
+      res.json({
+        html: htmlResult.html,
+        template: htmlResult.template,
+        quotationNumber: quotation.quotationNumber || quotation.id
+      });
     } catch (error) {
       console.error("Error generating PDF:", error);
       res.status(500).json({ message: "Failed to generate PDF" });
