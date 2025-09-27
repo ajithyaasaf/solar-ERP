@@ -1848,6 +1848,11 @@ export default function QuotationCreation() {
   useEffect(() => {
     if (mappingData && (mappingData as any).quotationData) {
       const data = (mappingData as any).quotationData;
+      const metadata = (mappingData as any).mappingMetadata;
+      const originalSiteVisitData = metadata?.originalSiteVisitData;
+      
+      // Extract customer data from the original site visit data
+      const customerData = originalSiteVisitData?.customerData || originalSiteVisitData?.customer || data.customerData;
       
       // Auto-populate form with mapped data, ensuring proper QuotationProject structure
       const mappedProjects: QuotationProject[] = (data.projects || []).map((project: any) => {
@@ -1872,10 +1877,21 @@ export default function QuotationCreation() {
         } as QuotationProject;
       });
       
+      // Set customer data in the form for site visit source
+      const customerFormData = {
+        name: customerData?.name || "",
+        mobile: customerData?.mobile || "",
+        address: customerData?.address || "",
+        propertyType: customerData?.propertyType || "",
+        ebServiceNumber: customerData?.ebServiceNumber || "",
+        location: customerData?.location || ""
+      };
+      
       form.reset({
         ...form.getValues(),
         source: "site_visit", // Ensure source is properly set
-        customerId: data.customerId || "",
+        customerId: data.customerId || customerData?.id || "",
+        customerData: customerFormData, // Add customer data for site visit form
         projects: mappedProjects,
         totalSystemCost: data.totalSystemCost || 0,
         totalSubsidyAmount: data.totalSubsidyAmount || 0,
@@ -1893,32 +1909,31 @@ export default function QuotationCreation() {
         internalNotes: data.internalNotes || "",
         customerNotes: data.customerNotes || "",
         attachments: data.attachments || [],
-        siteVisitMapping: (mappingData as any).mappingMetadata
+        siteVisitMapping: metadata
       });
       
       // Enhanced mapping data with customer info for SiteVisitCustomerDetailsForm
       const enhancedMapping = {
         ...mappingData,
         mappingMetadata: {
-          ...(mappingData as any).mappingMetadata,
-          // Add customer data for the form component
-          customer: {
-            id: data.customerId,
-            name: (fallbackSiteVisitData as any)?.customer?.name || "",
-            mobile: (fallbackSiteVisitData as any)?.customer?.mobile || "",
-            address: (fallbackSiteVisitData as any)?.customer?.address || "",
-            ebServiceNumber: (fallbackSiteVisitData as any)?.customer?.ebServiceNumber || "",
-            propertyType: (fallbackSiteVisitData as any)?.customer?.propertyType || "",
-            location: (fallbackSiteVisitData as any)?.customer?.location || ""
+          ...metadata,
+          // Add customer data for the form component from the original site visit
+          customer: customerData,
+          // Also add to originalSiteVisitData for compatibility
+          originalSiteVisitData: {
+            ...originalSiteVisitData,
+            customerData: customerData
           }
-        }
+        },
+        // Include completeness analysis at the top level
+        completenessAnalysis: metadata?.completenessAnalysis || (mappingData as any).completenessAnalysis
       };
       
       setSiteVisitMapping(enhancedMapping);
       
       toast({
         title: "Complete Site Visit Data Mapped", 
-        description: `All available data mapped with ${(mappingData as any).completenessAnalysis?.completenessScore || 0}% completeness. Grade: ${(mappingData as any).completenessAnalysis?.qualityGrade || 'Unknown'}`
+        description: `All available data mapped with ${metadata?.completenessAnalysis?.completenessScore || 0}% completeness. Grade: ${metadata?.completenessAnalysis?.qualityGrade || 'Unknown'}`
       });
     }
   }, [mappingData, form]);
