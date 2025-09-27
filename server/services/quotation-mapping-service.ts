@@ -475,6 +475,65 @@ export class SiteVisitDataMapper {
       });
     }
 
+    // Handle case where projectType is selected but detailed configuration is missing
+    // This happens when marketing team starts form but doesn't complete all details
+    if (projects.length === 0 && marketingData.projectType) {
+      warnings.push(`Project type '${marketingData.projectType}' selected but detailed configuration missing. Creating default project.`);
+      
+      // Create default project based on selected project type
+      switch (marketingData.projectType) {
+        case 'on_grid':
+          projects.push(this.mapOnGridProject({}, warnings, transformations));
+          transformations.push({
+            field: 'projects.on_grid_default',
+            originalValue: 'incomplete_marketing_data',
+            transformedValue: 'default_on_grid_project',
+            reason: 'Default on-grid project created due to incomplete marketing data'
+          });
+          break;
+        
+        case 'off_grid':
+          projects.push(this.mapOffGridProject({}, warnings, transformations));
+          transformations.push({
+            field: 'projects.off_grid_default',
+            originalValue: 'incomplete_marketing_data',
+            transformedValue: 'default_off_grid_project',
+            reason: 'Default off-grid project created due to incomplete marketing data'
+          });
+          break;
+        
+        case 'hybrid':
+          projects.push(this.mapHybridProject({}, warnings, transformations));
+          transformations.push({
+            field: 'projects.hybrid_default',
+            originalValue: 'incomplete_marketing_data',
+            transformedValue: 'default_hybrid_project',
+            reason: 'Default hybrid project created due to incomplete marketing data'
+          });
+          break;
+        
+        case 'water_heater':
+          projects.push(this.mapWaterHeaterProject({ litre: 100 }, warnings, transformations));
+          transformations.push({
+            field: 'projects.water_heater_default',
+            originalValue: 'incomplete_marketing_data',
+            transformedValue: 'default_water_heater_project',
+            reason: 'Default water heater project created due to incomplete marketing data'
+          });
+          break;
+        
+        case 'water_pump':
+          projects.push(this.mapWaterPumpProject({ hp: '1' }, warnings, transformations));
+          transformations.push({
+            field: 'projects.water_pump_default',
+            originalValue: 'incomplete_marketing_data',
+            transformedValue: 'default_water_pump_project',
+            reason: 'Default water pump project created due to incomplete marketing data'
+          });
+          break;
+      }
+    }
+
     // Warn if no projects were found
     if (projects.length === 0) {
       warnings.push("No valid project configurations found in marketing data");
