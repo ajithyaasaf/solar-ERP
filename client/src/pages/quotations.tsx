@@ -75,6 +75,8 @@ export default function Quotations() {
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc"); // Newest first by default
   const [statusFilter, setStatusFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [projectTypeFilter, setProjectTypeFilter] = useState("");
   
   // Debounce search input
   useEffect(() => {
@@ -93,7 +95,7 @@ export default function Quotations() {
     isFetching,
     isError 
   } = useQuery<QuotationsResponse>({
-    queryKey: [`/api/quotations?page=${currentPage}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}${statusFilter && statusFilter !== "all" ? `&status=${statusFilter}` : ''}`]
+    queryKey: [`/api/quotations?page=${currentPage}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}${statusFilter && statusFilter !== "all" ? `&status=${statusFilter}` : ''}${sourceFilter && sourceFilter !== "all" ? `&source=${sourceFilter}` : ''}${projectTypeFilter && projectTypeFilter !== "all" ? `&projectType=${projectTypeFilter}` : ''}`]
   });
   
   const quotations: QuotationDisplay[] = quotationsResponse?.data || [];
@@ -103,10 +105,10 @@ export default function Quotations() {
   useEffect(() => {
     if (pagination?.hasNextPage) {
       queryClient.prefetchQuery({
-        queryKey: [`/api/quotations?page=${currentPage + 1}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}${statusFilter && statusFilter !== "all" ? `&status=${statusFilter}` : ''}`]
+        queryKey: [`/api/quotations?page=${currentPage + 1}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}${statusFilter && statusFilter !== "all" ? `&status=${statusFilter}` : ''}${sourceFilter && sourceFilter !== "all" ? `&source=${sourceFilter}` : ''}${projectTypeFilter && projectTypeFilter !== "all" ? `&projectType=${projectTypeFilter}` : ''}`]
       });
     }
-  }, [queryClient, currentPage, itemsPerPage, debouncedSearch, pagination?.hasNextPage, sortBy, sortOrder, statusFilter]);
+  }, [queryClient, currentPage, itemsPerPage, debouncedSearch, pagination?.hasNextPage, sortBy, sortOrder, statusFilter, sourceFilter, projectTypeFilter]);
 
   // Status badge styles - updated for comprehensive workflow
   const statusStyles = {
@@ -189,18 +191,24 @@ export default function Quotations() {
         </Link>
       </CardHeader>
       <CardContent className="px-6">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+        <div className="mb-4 space-y-4">
+          {/* Search Bar */}
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
-              placeholder="Search by quotation or customer"
+              placeholder="Search by quotation number, customer name, or project type"
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="input-search-quotations"
             />
           </div>
+
+          {/* Filters and Controls Row */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-2 lg:space-y-0 gap-2">
           
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Filter */}
             <Select 
               value={statusFilter} 
               onValueChange={(value) => {
@@ -220,6 +228,45 @@ export default function Quotations() {
                 <SelectItem value="customer_approved">Customer Approved</SelectItem>
                 <SelectItem value="converted">Converted</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Source Filter */}
+            <Select 
+              value={sourceFilter} 
+              onValueChange={(value) => {
+                setSourceFilter(value);
+                setCurrentPage(1); // Reset to first page
+              }}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="All Sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="manual">Manual</SelectItem>
+                <SelectItem value="site_visit">Site Visit</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Project Type Filter */}
+            <Select 
+              value={projectTypeFilter} 
+              onValueChange={(value) => {
+                setProjectTypeFilter(value);
+                setCurrentPage(1); // Reset to first page
+              }}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="All Projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                <SelectItem value="on_grid">On Grid</SelectItem>
+                <SelectItem value="off_grid">Off Grid</SelectItem>
+                <SelectItem value="hybrid">Hybrid</SelectItem>
+                <SelectItem value="water_heater">Water Heater</SelectItem>
+                <SelectItem value="water_pump">Water Pump</SelectItem>
               </SelectContent>
             </Select>
             
@@ -277,6 +324,7 @@ export default function Quotations() {
             </Button>
           </div>
         </div>
+        </div>
 
         <div className="rounded-md border">
           <Table>
@@ -310,7 +358,7 @@ export default function Quotations() {
               ) : quotations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                    {debouncedSearch || statusFilter ? "No quotations match your search" : "No quotations found"}
+                    {debouncedSearch || statusFilter || sourceFilter || projectTypeFilter ? "No quotations match your filters" : "No quotations found"}
                   </TableCell>
                 </TableRow>
               ) : (
