@@ -112,6 +112,15 @@ export interface MappingResult {
     transformedValue: any;
     reason: string;
   }>;
+  originalSiteVisitData?: {
+    customer: any;
+    visitInfo: {
+      id: string;
+      department: string;
+      visitPurpose: string;
+      status: string;
+    };
+  };
 }
 
 export class DataCompletenessAnalyzer {
@@ -369,7 +378,17 @@ export class SiteVisitDataMapper {
       mappingMetadata,
       completenessAnalysis,
       businessRuleWarnings: warnings,
-      dataTransformations: transformations
+      dataTransformations: transformations,
+      // Include original site visit data for frontend access
+      originalSiteVisitData: {
+        customer: siteVisit.customer,
+        visitInfo: {
+          id: siteVisit.id,
+          department: siteVisit.department,
+          visitPurpose: siteVisit.visitPurpose,
+          status: siteVisit.status
+        }
+      }
     };
   }
 
