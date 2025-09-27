@@ -193,10 +193,13 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
     // Update form with customer data
     form.setValue("customerData", initialCustomerData);
     
-    // Set customerId if it exists
-    if (siteVisitCustomerData.id) {
+    // Set the real customerId from the mapping response, not sentinel values
+    if (siteVisitMapping?.quotationData?.customerId) {
+      form.setValue("customerId", siteVisitMapping.quotationData.customerId);
+    } else if (siteVisitCustomerData.id) {
       form.setValue("customerId", siteVisitCustomerData.id);
     }
+    // If no customer ID available, the backend will create/find the customer during submission
   }, [siteVisitMapping, form, siteVisitCustomerData]);
 
   const updateCustomerField = (field: string, value: any) => {
@@ -204,10 +207,8 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
     setCustomerState(updatedCustomerData);
     form.setValue("customerData", updatedCustomerData);
     
-    // Set a flag to indicate we have customer data from site visit for validation
-    form.setValue("customerId", updatedCustomerData.name && updatedCustomerData.mobile && 
-                              updatedCustomerData.address && updatedCustomerData.propertyType ? 
-                              "customer-data-complete" : "customer-data-incomplete");
+    // Keep the real customerId from mapping response, don't overwrite with sentinel strings
+    // The backend will handle customer ID resolution when the quotation is submitted
   };
 
   const isFieldFromSiteVisit = (field: string) => {
