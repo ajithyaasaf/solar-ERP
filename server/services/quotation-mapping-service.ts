@@ -445,30 +445,6 @@ export class SiteVisitDataMapper {
       return projects;
     }
 
-    // DEBUG: Log the actual marketing data structure to understand what's available
-    console.log("=== MARKETING DATA DEBUG ===");
-    console.log("Marketing data keys:", Object.keys(marketingData));
-    console.log("Project type:", marketingData.projectType);
-    console.log("Raw marketing data:", JSON.stringify(marketingData, null, 2));
-    
-    if (marketingData.onGridConfig) {
-      console.log("On-grid config found!");
-      console.log("On-grid config keys:", Object.keys(marketingData.onGridConfig));
-      console.log("On-grid details:");
-      console.log("  - inverterKW:", marketingData.onGridConfig.inverterKW);
-      console.log("  - solarPanelMake:", marketingData.onGridConfig.solarPanelMake);
-      console.log("  - inverterMake:", marketingData.onGridConfig.inverterMake);
-      console.log("  - panelCount:", marketingData.onGridConfig.panelCount);
-      console.log("  - panelWatts:", marketingData.onGridConfig.panelWatts);
-      console.log("  - projectValue:", marketingData.onGridConfig.projectValue);
-      console.log("  - structureType:", marketingData.onGridConfig.structureType);
-      console.log("  - civilWorkScope:", marketingData.onGridConfig.civilWorkScope);
-      console.log("  - netMeterScope:", marketingData.onGridConfig.netMeterScope);
-      console.log("  - All fields:", JSON.stringify(marketingData.onGridConfig, null, 2));
-    } else {
-      console.log("No onGridConfig found in marketing data");
-    }
-    console.log("===========================");
 
     // Support multi-project quotations by checking all possible project configurations
     // A single site visit can have multiple project types configured
@@ -629,20 +605,53 @@ export class SiteVisitDataMapper {
    * Map on-grid solar project with business rules
    */
   private static mapOnGridProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
-    const systemKW = config.inverterKW || 3;
-    const pricePerKW = BUSINESS_RULES.pricing.onGridPerKW;
-    const subsidyPerKW = BUSINESS_RULES.subsidy.onGridPerKW;
-
-    if (!config.inverterKW) {
+    // Extract inverter KW from multiple possible sources
+    let systemKW = config.inverterKW || 3;
+    
+    // If inverterKW is 0 or missing, try to extract from inverterWatts
+    if (!systemKW || systemKW === 0) {
+      if (config.inverterWatts) {
+        // Extract number from strings like "5kw", "3kW", "5000w", etc.
+        const wattsStr = config.inverterWatts.toString().toLowerCase();
+        const match = wattsStr.match(/(\d+(?:\.\d+)?)\s*(?:kw|k)?/);
+        if (match) {
+          systemKW = parseFloat(match[1]);
+          transformations.push({
+            field: 'onGridConfig.inverterKW',
+            originalValue: config.inverterWatts,
+            transformedValue: systemKW,
+            reason: `Extracted ${systemKW}kW from inverterWatts: ${config.inverterWatts}`
+          });
+        }
+      }
+    }
+    
+    // Final fallback to 3kW if still no valid value
+    if (!systemKW || systemKW === 0) {
+      systemKW = 3;
       transformations.push({
         field: 'onGridConfig.inverterKW',
-        originalValue: undefined,
+        originalValue: config.inverterKW,
         transformedValue: 3,
         reason: 'Default 3kW system applied due to missing inverter capacity'
       });
     }
 
-    const projectValue = config.projectValue || (systemKW * pricePerKW);
+    const pricePerKW = BUSINESS_RULES.pricing.onGridPerKW;
+    const subsidyPerKW = BUSINESS_RULES.subsidy.onGridPerKW;
+
+    // Calculate project value - use provided value or calculate from system size
+    let projectValue = config.projectValue;
+    if (!projectValue || projectValue === 0) {
+      projectValue = systemKW * pricePerKW;
+      transformations.push({
+        field: 'onGridConfig.projectValue',
+        originalValue: config.projectValue,
+        transformedValue: projectValue,
+        reason: `Calculated project value: ${systemKW}kW × ₹${pricePerKW}/kW = ₹${projectValue}`
+      });
+    }
+    
     const subsidyAmount = systemKW * subsidyPerKW;
     const customerPayment = projectValue - subsidyAmount;
 
