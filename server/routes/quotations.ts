@@ -28,7 +28,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       if (req.query.status) filters.status = req.query.status;
       if (req.query.search) filters.search = req.query.search;
 
-      const quotations = await storage.listQuotations(filters, { page, limit });
+      const quotations = await storage.listQuotations();
       
       res.json({
         data: quotations,
@@ -232,7 +232,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       }
 
       // Map site visit data to quotation
-      const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit);
+      const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
       
       // Create quotation with mapped data
       const quotationData = {
@@ -240,6 +240,8 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         createdBy: user.uid,
         quotationNumber: QuotationTemplateService.generateQuotationNumber(),
         source: 'site_visit' as const,
+        status: mappingResult.quotationData.status || 'draft' as const,
+        customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || '',
         siteVisitMapping: mappingResult.mappingMetadata
       };
 
@@ -269,8 +271,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       
       // Get all completed site visits
       const siteVisits = await siteVisitService.getSiteVisitsWithFilters({
-        status: 'completed',
-        visitOutcome: 'converted'
+        status: 'completed'
       });
 
       // Analyze each for quotation readiness
@@ -313,7 +314,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
       // Get mapping preview
-      const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit);
+      const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
       
       res.json({
         siteVisit,

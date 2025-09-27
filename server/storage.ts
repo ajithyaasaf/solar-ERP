@@ -1971,11 +1971,9 @@ export class FirestoreStorage implements IStorage {
       const data = doc.data() || {};
       return {
         id: doc.id,
-        customerId: data.customerId,
-        products: data.products,
-        total: data.total,
-        status: data.status,
-        createdAt: data.createdAt?.toDate() || new Date()
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date()
       } as Quotation;
     });
   }
@@ -1989,11 +1987,9 @@ export class FirestoreStorage implements IStorage {
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
-      customerId: data.customerId,
-      products: data.products,
-      total: data.total,
-      status: data.status,
-      createdAt: data.createdAt?.toDate() || new Date()
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date()
     } as Quotation;
   }
 
@@ -2036,6 +2032,7 @@ export class FirestoreStorage implements IStorage {
       id: updatedDoc.id,
       ...updatedData,
       createdAt: updatedData.createdAt?.toDate() || new Date(),
+      updatedAt: updatedData.updatedAt?.toDate() || new Date()
     } as Quotation;
   }
 
