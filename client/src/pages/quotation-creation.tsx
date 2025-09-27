@@ -1943,6 +1943,19 @@ export default function QuotationCreation() {
     if (fallbackSiteVisitData && mappingError && !mappingData) {
       const siteVisit = fallbackSiteVisitData as any;
       
+      // Extract customer data
+      const customerData = siteVisit.customer || siteVisit.customerData;
+      
+      // Set customer data in the form for fallback case
+      const customerFormData = {
+        name: customerData?.name || "",
+        mobile: customerData?.mobile || "",
+        address: customerData?.address || "",
+        propertyType: customerData?.propertyType || "",
+        ebServiceNumber: customerData?.ebServiceNumber || "",
+        location: customerData?.location || ""
+      };
+      
       // Create basic mapping metadata for partial data
       const partialMapping = {
         sourceVisitId: siteVisit.id,
@@ -1951,6 +1964,7 @@ export default function QuotationCreation() {
         missingCriticalFields: ["marketing_data"],
         missingOptionalFields: [],
         dataQualityNotes: "Partial mapping - customer data only. Project configurations missing from site visit marketing data.",
+        customer: customerData,
         originalSiteVisitData: {
           visitInfo: {
             id: siteVisit.id,
@@ -1959,7 +1973,7 @@ export default function QuotationCreation() {
             department: siteVisit.department,
             visitOutcome: siteVisit.visitOutcome
           },
-          customerData: siteVisit.customer
+          customerData: customerData
         }
       };
       
@@ -1967,7 +1981,8 @@ export default function QuotationCreation() {
       form.reset({
         ...form.getValues(),
         source: "site_visit",
-        customerId: siteVisit.customer?.id || "",
+        customerId: customerData?.id || "",
+        customerData: customerFormData, // Add customer data for fallback case
         projects: [], // Empty projects - user will need to add manually
         siteVisitMapping: partialMapping
       });
