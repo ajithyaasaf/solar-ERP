@@ -131,19 +131,24 @@ const WIZARD_STEPS = [
 const BUSINESS_RULES = {
   pricing: {
     onGridPerKW: 68000,
-    offGridPerKW: 68000,
-    hybridPerKW: 68000
+    offGridPerKW: 85000,  // Off-grid costs more due to battery storage
+    hybridPerKW: 95000,   // Hybrid costs most due to dual functionality
+    waterPumpPerHP: 45000, // Water pump pricing per HP
+    waterHeaterPerLitre: 350 // Water heater pricing per litre
   },
   subsidy: {
     onGridPerKW: 26000,
-    hybridPerKW: 26000,
+    hybridPerKW: 15000,   // Reduced subsidy for hybrid systems
     offGridPerKW: 0,
-    waterHeater: 0,
-    waterPump: 0
+    waterHeater: 0.3,     // 30% subsidy up to max ₹20,000
+    waterPump: 0.4        // 40% subsidy for agricultural use
   },
   payment: {
     advancePercentage: 90,
     balancePercentage: 10
+  },
+  gst: {
+    percentage: 18        // 18% GST as per backend implementation
   }
 };
 
@@ -573,15 +578,18 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else if (projectType === "water_heater") {
       // Set default pricing for water heater based on capacity
-      newProject.projectValue = newProject.litre * 200; // ₹200 per litre as default
-      newProject.subsidyAmount = 0; // No subsidy for water heaters
-      newProject.customerPayment = newProject.projectValue;
+      newProject.projectValue = newProject.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
+      // Calculate subsidy: 30% up to max ₹20,000
+      const maxSubsidy = Math.min(newProject.projectValue * BUSINESS_RULES.subsidy.waterHeater, 20000);
+      newProject.subsidyAmount = maxSubsidy;
+      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else if (projectType === "water_pump") {
       // Set default pricing for water pump based on HP
       const hpValue = parseFloat(newProject.hp) || 1;
-      newProject.projectValue = hpValue * 50000; // ₹50,000 per HP as default
-      newProject.subsidyAmount = 0; // No subsidy for water pumps
-      newProject.customerPayment = newProject.projectValue;
+      newProject.projectValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
+      // Calculate subsidy: 40% for agricultural use
+      newProject.subsidyAmount = newProject.projectValue * BUSINESS_RULES.subsidy.waterPump;
+      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else {
       // Fallback for unknown project types
       console.error(`Unknown project type: ${projectType}`);
@@ -634,23 +642,29 @@ function ManualProjectConfiguration({ form }: { form: any }) {
     } else if (project.projectType === "water_heater") {
       // Recalculate pricing for water heater
       if (updatedData.hasOwnProperty('projectValue')) {
-        // If project value is directly updated, use it
-        project.customerPayment = project.projectValue - (project.subsidyAmount || 0);
+        // If project value is directly updated, recalculate subsidy and payment
+        const maxSubsidy = Math.min(project.projectValue * BUSINESS_RULES.subsidy.waterHeater, 20000);
+        project.subsidyAmount = maxSubsidy;
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       } else if (updatedData.hasOwnProperty('litre')) {
         // If litre is updated, recalculate based on capacity
-        project.projectValue = project.litre * 200; // ₹200 per litre
-        project.customerPayment = project.projectValue;
+        project.projectValue = project.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
+        const maxSubsidy = Math.min(project.projectValue * BUSINESS_RULES.subsidy.waterHeater, 20000);
+        project.subsidyAmount = maxSubsidy;
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       }
     } else if (project.projectType === "water_pump") {
       // Recalculate pricing for water pump
       if (updatedData.hasOwnProperty('projectValue')) {
-        // If project value is directly updated, use it
-        project.customerPayment = project.projectValue - (project.subsidyAmount || 0);
+        // If project value is directly updated, recalculate subsidy and payment
+        project.subsidyAmount = project.projectValue * BUSINESS_RULES.subsidy.waterPump;
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       } else if (updatedData.hasOwnProperty('hp')) {
         // If HP is updated, recalculate based on HP
         const hpValue = parseFloat(project.hp) || 1;
-        project.projectValue = hpValue * 50000; // ₹50,000 per HP
-        project.customerPayment = project.projectValue;
+        project.projectValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
+        project.subsidyAmount = project.projectValue * BUSINESS_RULES.subsidy.waterPump;
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       }
     } else {
       // Fallback for unknown project types
