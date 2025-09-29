@@ -39,9 +39,23 @@ export class QuotationPDFService {
       // If it looks like a Firebase UID (long random string), resolve it to a name
       if (preparedBy && preparedBy.length > 20 && preparedBy.includes('X')) {
         const { userService } = await import("../services/user-service");
-        const allUsers = await userService.getAllUsers();
-        const user = allUsers.find(u => u.uid === preparedBy);
-        return user ? (user.displayName || user.email || preparedBy) : preparedBy;
+        const allUsersResult = await userService.getAllUsers();
+        
+        // Handle both array and object response formats
+        let users = [];
+        if (Array.isArray(allUsersResult)) {
+          users = allUsersResult;
+        } else if (allUsersResult && allUsersResult.success && Array.isArray(allUsersResult.users)) {
+          users = allUsersResult.users;
+        }
+        
+        if (users.length > 0) {
+          const user = users.find(u => u.uid === preparedBy);
+          return user ? (user.displayName || user.email || preparedBy) : preparedBy;
+        } else {
+          console.warn('No users found in getAllUsers result');
+          return preparedBy || "SM";
+        }
       }
       // Otherwise, assume it's already a name
       return preparedBy || "SM";
@@ -394,7 +408,7 @@ export class QuotationPDFService {
             </tr>
           </thead>
           <tbody>
-            ${template.billOfMaterials.map(item => `
+            ${(template.billOfMaterials || []).map(item => `
               <tr>
                 <td>${item.slNo}</td>
                 <td style="text-align: left;">${item.description}</td>
@@ -416,14 +430,15 @@ export class QuotationPDFService {
         
         <div class="warranty-item">
           <strong>✓ Warranty Details:</strong><br>
-          ${template.termsAndConditions.warrantyDetails.map(item => 
+          ${(template.termsAndConditions.warrantyDetails || []).map(item => 
             item.includes('***') ? `<div class="highlight">${item}</div>` : `<div>${item}</div>`
           ).join('')}
         </div>
         
+        ${template.termsAndConditions.solarInverterWarranty && template.termsAndConditions.solarInverterWarranty.length > 0 ? `
         <div class="warranty-item">
           ${template.termsAndConditions.solarInverterWarranty.map(item => `<div>${item}</div>`).join('')}
-        </div>
+        </div>` : ''}
         
         <div class="warranty-item">
           <strong>✓ Payment Details:</strong><br>
@@ -453,19 +468,19 @@ export class QuotationPDFService {
         <h3 style="color: #228B22;">Scope of Work</h3>
         
         <div>
-          ${template.scopeOfWork.structure.map(item => `<div>${item}</div>`).join('')}
+          ${(template.scopeOfWork.structure || []).map(item => `<div>${item}</div>`).join('')}
         </div>
         
         <div style="margin-top: 15px;">
-          ${template.scopeOfWork.netBiDirectionalMeter.map(item => `<div>${item}</div>`).join('')}
+          ${(template.scopeOfWork.netBiDirectionalMeter || []).map(item => `<div>${item}</div>`).join('')}
         </div>
         
         <div style="margin-top: 20px;">
           <strong>• Customer's Scope of Work:</strong><br>
           <div style="margin-left: 20px;">
-            ${template.scopeOfWork.customerScope.civilWork.map(item => `<div>${item}</div>`).join('')}
+            ${(template.scopeOfWork.customerScope.civilWork || []).map(item => `<div>${item}</div>`).join('')}
             <br>
-            ${template.scopeOfWork.customerScope.netBiDirectionalMeter.map(item => `<div>${item}</div>`).join('')}
+            ${(template.scopeOfWork.customerScope.netBiDirectionalMeter || []).map(item => `<div>${item}</div>`).join('')}
           </div>
         </div>
       </div>
@@ -473,7 +488,7 @@ export class QuotationPDFService {
       <!-- Documents Required -->
       <div class="documents-section">
         <h3 style="color: #228B22; margin-top: 0;">Documents Required for Subsidy</h3>
-        ${template.documentsRequiredForSubsidy.list.map(item => `<div>${item}</div>`).join('')}
+        ${(template.documentsRequiredForSubsidy.list || []).map(item => `<div>${item}</div>`).join('')}
         <br>
         <div class="highlight">${template.documentsRequiredForSubsidy.note}</div>
       </div>

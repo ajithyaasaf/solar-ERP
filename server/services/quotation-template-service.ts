@@ -868,10 +868,21 @@ export class QuotationTemplateService {
       billOfMaterials,
       termsAndConditions: {
         warrantyDetails: warrantyDetails,
+        solarInverterWarranty: [
+          "Solar On-Grid Inverter - 10 Years Manufacturing Warranty",
+          "Replacement Warranty for first 3 years", 
+          "Service Warranty for next 7 years"
+        ],
         paymentDetails: {
           advancePercentage: quotation.advancePaymentPercentage || 90,
           balancePercentage: 100 - (quotation.advancePaymentPercentage || 90),
-          bankDetails: accountDetails
+          bankDetails: accountDetails || {
+            name: "Prakash Green Energy",
+            bank: "State Bank of India",
+            branch: "Madurai Main Branch",
+            accountNo: "31746205818",
+            ifscCode: "SBIN0001766"
+          }
         },
         deliveryPeriod: this.getDeliveryTimeframeText(quotation.deliveryTimeframe)
       },
