@@ -77,6 +77,12 @@ import {
   customerDetailsSchema
 } from "@shared/schema";
 
+// Create extended project schema with GST fields
+const quotationProjectSchemaWithGST = quotationProjectSchema.and(z.object({
+  gstAmount: z.number().min(0).default(0),
+  totalWithGST: z.number().min(0).default(0)
+}));
+
 // Use the proper quotation schema for validation
 const quotationFormSchema = insertQuotationSchema.omit({
   quotationNumber: true, // Generated server-side
@@ -84,11 +90,14 @@ const quotationFormSchema = insertQuotationSchema.omit({
   updatedAt: true        // Set server-side
 }).extend({
   // Override for frontend form compatibility
-  projects: z.array(quotationProjectSchema).min(1, "At least one project is required"),
+  projects: z.array(quotationProjectSchemaWithGST).min(1, "At least one project is required"),
   followUps: z.array(quotationFollowUpSchema).default([]),
   siteVisitMapping: siteVisitMappingSchema.optional(),
   // Add temporary customer data fields for site visit forms
-  customerData: customerDetailsSchema.optional()
+  customerData: customerDetailsSchema.optional(),
+  // Add GST-related total fields
+  totalGSTAmount: z.number().min(0).default(0),
+  totalWithGST: z.number().min(0).default(0)
 });
 
 type QuotationFormData = z.infer<typeof quotationFormSchema>;
@@ -1810,6 +1819,8 @@ export default function QuotationCreation() {
       source: "manual",
       projects: [],
       totalSystemCost: 0,
+      totalGSTAmount: 0,
+      totalWithGST: 0,
       totalSubsidyAmount: 0,
       totalCustomerPayment: 0,
       advancePaymentPercentage: 90,
@@ -1950,6 +1961,8 @@ export default function QuotationCreation() {
         customerData: customerFormData, // Add customer data for site visit form
         projects: mappedProjects,
         totalSystemCost: data.totalSystemCost || 0,
+        totalGSTAmount: data.totalGSTAmount || 0,
+        totalWithGST: data.totalWithGST || 0,
         totalSubsidyAmount: data.totalSubsidyAmount || 0,
         totalCustomerPayment: data.totalCustomerPayment || 0,
         advancePaymentPercentage: data.advancePaymentPercentage || 90,
