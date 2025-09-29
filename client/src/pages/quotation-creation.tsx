@@ -1822,7 +1822,8 @@ export default function QuotationCreation() {
         title: "Quotation Created",
         description: `Quotation ${data.quotation?.quotationNumber || 'new'} has been created successfully.`
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/quotations"] });
+      // Invalidate all quotation-related queries (including filtered ones)
+      queryClient.invalidateQueries({ queryKey: ["/api/quotations"], exact: false });
       setLocation("/quotations");
     },
     onError: (error: any) => {

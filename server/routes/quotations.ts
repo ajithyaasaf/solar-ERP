@@ -25,17 +25,76 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       
       // Get filters
       const filters: any = {};
-      if (req.query.status) filters.status = req.query.status;
+      if (req.query.status && req.query.status !== "all") filters.status = req.query.status;
+      if (req.query.source && req.query.source !== "all") filters.source = req.query.source;
       if (req.query.search) filters.search = req.query.search;
+      
+      // Get sort parameters
+      const sortBy = (req.query.sortBy as string) || "createdAt";
+      const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
 
-      const quotations = await storage.listQuotations();
+      // Get all quotations and apply filters/sorting on the backend
+      let quotations = await storage.listQuotations();
+      
+      // Apply search filter
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase();
+        quotations = quotations.filter(q => 
+          q.quotationNumber?.toLowerCase().includes(searchTerm) ||
+          q.customerNotes?.toLowerCase().includes(searchTerm) ||
+          q.internalNotes?.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      // Apply status filter
+      if (filters.status) {
+        quotations = quotations.filter(q => q.status === filters.status);
+      }
+      
+      // Apply source filter
+      if (filters.source) {
+        quotations = quotations.filter(q => q.source === filters.source);
+      }
+      
+      // Apply sorting
+      quotations.sort((a, b) => {
+        let aVal: any = a[sortBy as keyof typeof a];
+        let bVal: any = b[sortBy as keyof typeof b];
+        
+        // Handle date sorting
+        if (sortBy === "createdAt" || sortBy === "updatedAt") {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        }
+        
+        // Handle numeric sorting
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+        }
+        
+        // Handle string sorting
+        const aStr = String(aVal || '').toLowerCase();
+        const bStr = String(bVal || '').toLowerCase();
+        return sortOrder === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+      });
+      
+      // Calculate total before pagination
+      const total = quotations.length;
+      
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedQuotations = quotations.slice(startIndex, endIndex);
       
       res.json({
-        data: quotations,
+        data: paginatedQuotations,
         pagination: {
           page,
           limit,
-          total: quotations.length // This would need proper count implementation
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: endIndex < total,
+          hasPrevPage: page > 1
         }
       });
     } catch (error) {
