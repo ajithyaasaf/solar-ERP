@@ -63,6 +63,19 @@ export class QuotationPDFService {
           flex: 1;
         }
         
+        .company-logo {
+          height: 60px;
+          max-width: 200px;
+          margin-right: 15px;
+          object-fit: contain;
+        }
+        
+        .company-logo-container {
+          display: flex;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        
         .company-name {
           font-size: 24px;
           font-weight: bold;
@@ -238,8 +251,8 @@ export class QuotationPDFService {
       <!-- Header -->
       <div class="header">
         <div class="company-info">
-          <div style="display: flex; align-items: center; margin-bottom: 10px;">
-            <img src="/assets/prakash-logo.png" alt="${template.header.name}" style="height: 50px; margin-right: 15px;" onerror="this.style.display='none'">
+          <div class="company-logo-container">
+            <img src="/assets/prakash-logo.png" alt="${template.header.name}" class="company-logo" onerror="this.src='/assets/prakash-logo-horizontal.png'; this.onerror=function(){this.style.display='none'};">
             <div class="company-name">${template.header.name}</div>
           </div>
           <div class="tagline">PROVIDING PERFECT SOLAR SOLUTIONS</div>
