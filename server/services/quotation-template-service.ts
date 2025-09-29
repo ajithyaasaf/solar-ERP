@@ -813,29 +813,51 @@ export class QuotationTemplateService {
   static generateQuotationTemplate(
     quotation: Quotation, 
     project: QuotationProject,
-    customer: any
+    customer: any,
+    preparedByName?: string
   ): QuotationTemplate {
     const pricingBreakdown = this.calculatePricingBreakdown(project);
     const billOfMaterials = this.generateBillOfMaterials(project);
+    
+    // Generate dynamic quote validity based on quotation settings
+    const validityDays = quotation.validUntil ? 
+      Math.ceil((new Date(quotation.validUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 7;
+    
+    // Generate proper project type name for reference
+    const projectTypeName = this.getProjectTypeDisplayName(project.projectType);
     
     return {
       header: this.COMPANY_DETAILS,
       quotationNumber: quotation.quotationNumber || this.generateQuotationNumber(),
       quotationDate: new Date().toLocaleDateString('en-GB'),
-      quoteRevision: 0,
-      quoteValidity: "7 Days",
-      preparedBy: "SM",
+      quoteRevision: quotation.documentVersion || 0,
+      quoteValidity: `${validityDays} Days`,
+      preparedBy: preparedByName || quotation.preparedBy || "SM",
       customer: {
         name: customer.name,
         address: customer.address,
         contactNumber: customer.mobile
       },
-      reference: `${pricingBreakdown?.kw}kw ${project.projectType?.replace('_', '-') || 'Solar'} Solar Power Generation System - Big`,
+      reference: `${pricingBreakdown?.kw}kw ${projectTypeName} Solar Power Generation System`,
       pricingBreakdown,
       billOfMaterials,
       termsAndConditions: this.TERMS_AND_CONDITIONS,
       scopeOfWork: this.SCOPE_OF_WORK,
       documentsRequiredForSubsidy: this.DOCUMENTS_REQUIRED
     };
+  }
+
+  /**
+   * Get display name for project type
+   */
+  private static getProjectTypeDisplayName(projectType: string): string {
+    switch (projectType) {
+      case 'on_grid': return 'On-Grid';
+      case 'off_grid': return 'Off-Grid';
+      case 'hybrid': return 'Hybrid';
+      case 'water_heater': return 'Water Heater';
+      case 'water_pump': return 'Water Pump';
+      default: return 'Solar';
+    }
   }
 }

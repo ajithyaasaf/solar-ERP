@@ -274,7 +274,7 @@ export class QuotationPDFService {
         
         <div class="contact-info">
           <div class="section-title">Contact us at</div>
-          Contact Person: Mr. Sabu Kumar<br>
+          Contact Person: ${template.preparedBy === 'SM' ? 'Mr. Sabu Kumar' : template.preparedBy}<br>
           Contact Number: +91 ${template.header.contact.phone[0]}
         </div>
       </div>
@@ -338,13 +338,14 @@ export class QuotationPDFService {
         <strong>Total Amount ${template.pricingBreakdown.totalCost.toLocaleString()} - Subsidy Amount ${template.pricingBreakdown.subsidyAmount.toLocaleString()} = ${template.pricingBreakdown.customerPayment.toLocaleString()}</strong>
       </div>
       
+      ${template.pricingBreakdown.subsidyAmount > 0 ? `
       <div class="subsidy-note">
-        <strong>3kw Subsidy 78,000 Will be Credited to The Customer's Account</strong>
-      </div>
+        <strong>${template.pricingBreakdown.kw}kw Subsidy ₹${template.pricingBreakdown.subsidyAmount.toLocaleString()} Will be Credited to The Customer's Account</strong>
+      </div>` : ''}
       
       <!-- Bill of Materials -->
       <div class="page-break">
-        <h3 style="color: #228B22; text-align: center;">Bill of Materials for On-Grid SPC System</h3>
+        <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${template.reference.split(' - ')[0]} System</h3>
         
         <table class="bom-table">
           <thead>
@@ -481,7 +482,8 @@ export class QuotationPDFService {
       const template = QuotationTemplateService.generateQuotationTemplate(
         quotation,
         project,
-        customer
+        customer,
+        quotation.preparedBy // Pass the prepared by name from quotation
       );
 
       // Generate HTML content
