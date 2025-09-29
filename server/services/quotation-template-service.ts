@@ -94,33 +94,57 @@ export class QuotationTemplateService {
     }
   };
 
-  private static readonly TERMS_AND_CONDITIONS = {
-    warrantyDetails: [
-      "***Physical Damage will not be Covered***",
-      "1. Solar (PV)Panel Module (30 Years)",
-      "   • 12 Years Manufacturing defect Warranty",
-      "   • 25 Years Service Warranty",
-      "   • 30% Power Output Warranty till the end of 25 Years",
-      "   • 90% Performance Warranty till the end of 25 Years"
-    ],
-    solarInverterWarranty: [
-      "2. Solar Inverter (Grid Tie)",
-      "   • Replacement Warranty for 10 Years",
-      "   • Service Warranty for 5 Years"
-    ],
-    paymentDetails: {
-      advancePercentage: 90,
-      balancePercentage: 10,
-      bankDetails: {
-        name: "Prakash Green Energy",
-        bank: "ICICI",
-        branch: "Subramaniapuram, Madurai",
-        accountNo: "6156000140",
-        ifscCode: "ICIC0006156"
-      }
-    },
-    deliveryPeriod: "2-3 Weeks from the date of confirmation of order"
-  };
+  // These will be generated dynamically from quotation data
+  private static generateWarrantyDetails(quotation: any) {
+    const warranty = quotation.detailedWarrantyTerms;
+    const exclusions = quotation.physicalDamageExclusions;
+    
+    let details = [];
+    
+    // Physical damage exclusions
+    if (exclusions?.enabled) {
+      details.push(exclusions.disclaimerText);
+    }
+    
+    // Solar panels warranty
+    if (warranty?.solarPanels) {
+      details.push("1. Solar (PV)Panel Modules (25 Years)");
+      details.push(`   • ${warranty.solarPanels.manufacturingDefect}`);
+      details.push(`   • ${warranty.solarPanels.serviceWarranty}`);
+      warranty.solarPanels.performanceWarranty?.forEach((item: string) => {
+        details.push(`   • ${item}`);
+      });
+    }
+    
+    // Inverter warranty
+    if (warranty?.inverter) {
+      details.push("2. Solar On grid Inverter (15Years)");
+      details.push(`   • ${warranty.inverter.replacementWarranty}`);
+      details.push(`   • ${warranty.inverter.serviceWarranty}`);
+    }
+    
+    // Installation warranty
+    if (warranty?.installation) {
+      details.push("3. Installation");
+      details.push(`   • ${warranty.installation.warrantyPeriod}`);
+      details.push(`   • ${warranty.installation.serviceWarranty}`);
+    }
+    
+    return details;
+  }
+  
+  private static generateAccountDetails(quotation: any) {
+    const account = quotation.accountDetails;
+    if (!account) return null;
+    
+    return {
+      name: account.accountHolderName || "Prakash Green Energy",
+      bank: account.bankName || "State Bank of India",
+      branch: account.branch || "Madurai Main Branch",
+      accountNo: account.accountNumber || "31746205818",
+      ifscCode: account.ifscCode || "SBIN0001766"
+    };
+  }
 
   private static readonly SCOPE_OF_WORK = {
     structure: [
@@ -145,19 +169,15 @@ export class QuotationTemplateService {
     }
   };
 
-  private static readonly DOCUMENTS_REQUIRED = {
-    list: [
-      "1) EB Number",
-      "2) EB Register Mobile Number",
-      "3) Aadhaar Card",
-      "4) Pan Card", 
-      "6) Passport Size Photo -1",
-      "7) Property Tax Copy",
-      "8) Bank Passbook",
-      "9) Cancelled Cheque"
-    ],
-    note: "All Required Documents should be in the same name as mentions the EB Service Number."
-  };
+  private static generateDocumentRequirements(quotation: any) {
+    const docs = quotation.documentRequirements;
+    if (!docs) return null;
+    
+    return {
+      list: docs.subsidyDocuments?.map((doc: string, index: number) => `${index + 1}) ${doc}`) || [],
+      note: docs.note || "All Required Documents should be in the same name as mentioned in the EB Service Number."
+    };
+  }
 
   /**
    * Generate quotation number in format Q-04-1052
@@ -826,6 +846,11 @@ export class QuotationTemplateService {
     // Generate proper project type name for reference
     const projectTypeName = this.getProjectTypeDisplayName(project.projectType);
     
+    // Generate dynamic content from quotation data
+    const warrantyDetails = this.generateWarrantyDetails(quotation);
+    const accountDetails = this.generateAccountDetails(quotation);
+    const documentRequirements = this.generateDocumentRequirements(quotation);
+    
     return {
       header: this.COMPANY_DETAILS,
       quotationNumber: quotation.quotationNumber || this.generateQuotationNumber(),
@@ -841,9 +866,30 @@ export class QuotationTemplateService {
       reference: `${pricingBreakdown?.kw}kw ${projectTypeName} Solar Power Generation System`,
       pricingBreakdown,
       billOfMaterials,
-      termsAndConditions: this.TERMS_AND_CONDITIONS,
+      termsAndConditions: {
+        warrantyDetails: warrantyDetails,
+        paymentDetails: {
+          advancePercentage: quotation.advancePaymentPercentage || 90,
+          balancePercentage: 100 - (quotation.advancePaymentPercentage || 90),
+          bankDetails: accountDetails
+        },
+        deliveryPeriod: this.getDeliveryTimeframeText(quotation.deliveryTimeframe)
+      },
       scopeOfWork: this.SCOPE_OF_WORK,
-      documentsRequiredForSubsidy: this.DOCUMENTS_REQUIRED
+      documentsRequiredForSubsidy: documentRequirements || {
+        list: [
+          "1) Aadhar Card",
+          "2) EB Bill (Last 3 Months)",
+          "3) House Tax Receipt",
+          "4) Land Patta",
+          "5) Building Plan Approval",
+          "6) Fire NOC (for Commercial)",
+          "7) Pollution NOC (for Commercial)", 
+          "8) Bank Passbook",
+          "9) Cancelled Cheque"
+        ],
+        note: "All Required Documents should be in the same name as mentioned in the EB Service Number."
+      }
     };
   }
 
@@ -858,6 +904,20 @@ export class QuotationTemplateService {
       case 'water_heater': return 'Water Heater';
       case 'water_pump': return 'Water Pump';
       default: return 'Solar';
+    }
+  }
+  
+  /**
+   * Convert delivery timeframe enum to readable text
+   */
+  private static getDeliveryTimeframeText(timeframe: string | undefined): string {
+    switch (timeframe) {
+      case '1_2_weeks': return '1-2 Weeks from the date of confirmation of order';
+      case '2_3_weeks': return '2-3 Weeks from the date of confirmation of order';
+      case '3_4_weeks': return '3-4 Weeks from the date of confirmation of order';
+      case '1_month': return '1 Month from the date of confirmation of order';
+      case '2_months': return '2 Months from the date of confirmation of order';
+      default: return '2-3 Weeks from the date of confirmation of order';
     }
   }
 }

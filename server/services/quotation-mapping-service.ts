@@ -67,8 +67,8 @@ const FIELD_MAPPING_MATRIX = {
 const BUSINESS_RULES = {
   pricing: {
     onGridPerKW: 68000,    // ₹68,000 per kW for on-grid systems
-    offGridPerKW: 68000,   // Same rate for off-grid
-    hybridPerKW: 68000     // Same rate for hybrid
+    offGridPerKW: 85000,   // Updated rate for off-grid
+    hybridPerKW: 95000     // Updated rate for hybrid
   },
   subsidy: {
     onGridPerKW: 26000,    // ₹26,000 per kW government subsidy

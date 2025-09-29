@@ -1632,6 +1632,57 @@ export const insertQuotationSchema = z.object({
   customerNotes: z.string().optional(),
   attachments: z.array(z.string().url()).default([]),
   
+  // Account Details for payment
+  accountDetails: z.object({
+    bankName: z.string().default("State Bank of India"),
+    accountNumber: z.string().default("31746205818"),
+    ifscCode: z.string().default("SBIN0001766"),
+    accountHolderName: z.string().default("Prakash Green Energy"),
+    branch: z.string().default("Madurai Main Branch")
+  }).optional(),
+  
+  // Physical Damage Exclusions
+  physicalDamageExclusions: z.object({
+    enabled: z.boolean().default(true),
+    disclaimerText: z.string().default("***Physical Damages will not be Covered***")
+  }).optional(),
+  
+  // Detailed Warranty Terms
+  detailedWarrantyTerms: z.object({
+    solarPanels: z.object({
+      manufacturingDefect: z.string().default("15 Years Manufacturing defect Warranty"),
+      serviceWarranty: z.string().default("15 Years Service Warranty"),
+      performanceWarranty: z.array(z.string()).default([
+        "90% Performance Warranty till the end of 15 years",
+        "80% Performance Warranty till the end of 25 years"
+      ])
+    }).optional(),
+    inverter: z.object({
+      replacementWarranty: z.string().default("Replacement Warranty for 10 Years"),
+      serviceWarranty: z.string().default("Service Warranty for 5 Years")
+    }).optional(),
+    installation: z.object({
+      warrantyPeriod: z.string().default("2 Years Installation Warranty"),
+      serviceWarranty: z.string().default("Complete service support during warranty period")
+    }).optional()
+  }).optional(),
+  
+  // Document Requirements for Subsidy
+  documentRequirements: z.object({
+    subsidyDocuments: z.array(z.string()).default([
+      "Aadhar Card",
+      "EB Bill (Last 3 Months)",
+      "House Tax Receipt",
+      "Land Patta",
+      "Building Plan Approval",
+      "Fire NOC (for Commercial)",
+      "Pollution NOC (for Commercial)", 
+      "Bank Passbook",
+      "Cancelled Cheque"
+    ]),
+    note: z.string().default("All Required Documents should be in the same name as mentioned in the EB Service Number.")
+  }).optional(),
+  
   // Metadata
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date())

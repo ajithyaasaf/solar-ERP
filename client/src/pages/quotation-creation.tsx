@@ -1831,6 +1831,50 @@ export default function QuotationCreation() {
       termsTemplate: "standard",
       status: "draft",
       followUps: [],
+      // Initialize critical business fields with defaults
+      accountDetails: {
+        bankName: "State Bank of India",
+        accountNumber: "31746205818",
+        ifscCode: "SBIN0001766",
+        accountHolderName: "Prakash Green Energy",
+        branch: "Madurai Main Branch"
+      },
+      physicalDamageExclusions: {
+        enabled: true,
+        disclaimerText: "***Physical Damages will not be Covered***"
+      },
+      detailedWarrantyTerms: {
+        solarPanels: {
+          manufacturingDefect: "15 Years Manufacturing defect Warranty",
+          serviceWarranty: "15 Years Service Warranty",
+          performanceWarranty: [
+            "90% Performance Warranty till the end of 15 years",
+            "80% Performance Warranty till the end of 25 years"
+          ]
+        },
+        inverter: {
+          replacementWarranty: "Replacement Warranty for 10 Years",
+          serviceWarranty: "Service Warranty for 5 Years"
+        },
+        installation: {
+          warrantyPeriod: "2 Years Installation Warranty",
+          serviceWarranty: "Complete service support during warranty period"
+        }
+      },
+      documentRequirements: {
+        subsidyDocuments: [
+          "Aadhar Card",
+          "EB Bill (Last 3 Months)",
+          "House Tax Receipt",
+          "Land Patta",
+          "Building Plan Approval",
+          "Fire NOC (for Commercial)",
+          "Pollution NOC (for Commercial)", 
+          "Bank Passbook",
+          "Cancelled Cheque"
+        ],
+        note: "All Required Documents should be in the same name as mentioned in the EB Service Number."
+      },
       communicationPreference: "whatsapp",
       documentVersion: 1,
       preparedBy: "",
