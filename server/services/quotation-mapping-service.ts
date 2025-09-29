@@ -913,9 +913,16 @@ export class SiteVisitDataMapper {
    */
   private static async getUserDisplayName(userId: string): Promise<string> {
     try {
-      // Use userService to get user by UID since storage.getUserByUid may not exist
-      const { userService } = await import("../services/user-service");
-      const user = await userService.getUserByUid(userId);
+      // Try storage method - if it fails, fallback to userService
+      let user;
+      try {
+        user = await storage.getUserByUid(userId);
+      } catch (storageError) {
+        // Fallback to importing userService
+        const { userService } = await import("../services/user-service");
+        const allUsers = await userService.getAllUsers();
+        user = allUsers.find(u => u.uid === userId);
+      }
       return user ? (user.displayName || user.email || userId) : userId;
     } catch (error) {
       console.error('Error getting user display name:', error);

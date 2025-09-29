@@ -32,6 +32,26 @@ export class QuotationPDFService {
   };
 
   /**
+   * Resolve user name from user ID or return the input if it's already a name
+   */
+  private static async resolveUserName(preparedBy: string): Promise<string> {
+    try {
+      // If it looks like a Firebase UID (long random string), resolve it to a name
+      if (preparedBy && preparedBy.length > 20 && preparedBy.includes('X')) {
+        const { userService } = await import("../services/user-service");
+        const allUsers = await userService.getAllUsers();
+        const user = allUsers.find(u => u.uid === preparedBy);
+        return user ? (user.displayName || user.email || preparedBy) : preparedBy;
+      }
+      // Otherwise, assume it's already a name
+      return preparedBy || "SM";
+    } catch (error) {
+      console.error('Error resolving user name:', error);
+      return preparedBy || "SM";
+    }
+  }
+
+  /**
    * Generate HTML content for quotation PDF
    */
   static generateHTMLContent(template: QuotationTemplate): string {
@@ -491,12 +511,15 @@ export class QuotationPDFService {
     customer: any
   ): Promise<{ html: string; template: QuotationTemplate }> {
     try {
+      // Resolve user name if preparedBy contains a user ID
+      const preparedByName = await this.resolveUserName(quotation.preparedBy);
+      
       // Generate template
       const template = QuotationTemplateService.generateQuotationTemplate(
         quotation,
         project,
         customer,
-        quotation.preparedBy // Pass the prepared by name from quotation
+        preparedByName // Pass the resolved user name
       );
 
       // Generate HTML content
