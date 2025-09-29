@@ -369,7 +369,7 @@ export class SiteVisitDataMapper {
       followUps: [], // Default empty array, can be enhanced later with actual follow-up mapping
       communicationPreference: "whatsapp",
       documentVersion: 1,
-      preparedBy: userId,
+      preparedBy: await this.getUserDisplayName(userId),
       internalNotes: comprehensiveInternalNotes,
       customerNotes: this.extractCustomerNotes(siteVisit),
       attachments // Now contains ALL photos and attachments from site visit
@@ -906,6 +906,21 @@ export class SiteVisitDataMapper {
     }
 
     return notes.join(' | ');
+  }
+
+  /**
+   * Get user display name from user ID
+   */
+  private static async getUserDisplayName(userId: string): Promise<string> {
+    try {
+      // Use userService to get user by UID since storage.getUserByUid may not exist
+      const { userService } = await import("../services/user-service");
+      const user = await userService.getUserByUid(userId);
+      return user ? (user.displayName || user.email || userId) : userId;
+    } catch (error) {
+      console.error('Error getting user display name:', error);
+      return userId; // Fallback to user ID if lookup fails
+    }
   }
 
   /**

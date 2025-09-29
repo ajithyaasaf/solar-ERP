@@ -3085,7 +3085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body, // User can override any mapped values
         source: "site_visit" as const,
         siteVisitMapping: mappingResult.mappingMetadata,
-        preparedBy: req.authenticatedUser.uid
+        preparedBy: req.authenticatedUser.user.displayName || req.authenticatedUser.user.email || req.authenticatedUser.uid
       };
 
       // Validate the quotation data
