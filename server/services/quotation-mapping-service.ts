@@ -916,12 +916,14 @@ export class SiteVisitDataMapper {
       // Try storage method - if it fails, fallback to userService
       let user;
       try {
-        user = await storage.getUserByUid(userId);
+        user = await storage.getUser(userId);
       } catch (storageError) {
         // Fallback to importing userService
         const { userService } = await import("../services/user-service");
-        const allUsers = await userService.getAllUsers();
-        user = allUsers.find(u => u.uid === userId);
+        const allUsersResult = await userService.getAllUsers();
+        if (allUsersResult.success && allUsersResult.users) {
+          user = allUsersResult.users.find((u: any) => u.uid === userId);
+        }
       }
       return user ? (user.displayName || user.email || userId) : userId;
     } catch (error) {
