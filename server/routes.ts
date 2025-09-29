@@ -2826,28 +2826,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/quotations", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const quotationData = insertQuotationSchema.parse(req.body);
-      const quotation = await storage.createQuotation(quotationData);
-      res.status(201).json(quotation);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error("Error creating quotation:", error);
-      res.status(500).json({ message: "Failed to create quotation" });
-    }
-  });
 
   app.patch("/api/quotations/:id", verifyAuth, async (req, res) => {
     try {
