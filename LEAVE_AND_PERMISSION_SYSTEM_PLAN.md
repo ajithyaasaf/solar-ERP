@@ -1,10 +1,10 @@
 # Leave and Permission Management System - Implementation Plan
 
 ## Document Version
-**Version:** 1.1 (Consolidated)  
+**Version:** 1.2 (Updated - Reporting Manager Approach)  
 **Date:** September 30, 2025  
 **Status:** Planning Phase  
-**Note:** This is the single consolidated planning document containing complete system analysis, existing infrastructure review, and implementation roadmap.
+**Note:** Updated to use simple Reporting Manager workflow instead of Team Lead/designation-based approach.
 
 ---
 
@@ -14,7 +14,9 @@
 Design and implement a comprehensive Leave and Permission Management System for Prakash Greens Energy that handles leave applications, approvals, and balance tracking across all departments.
 
 ### 1.2 Key Requirements
-- **Multi-level Approval Workflow**: Employee → Team Lead (TL) → HR
+- **Multi-level Approval Workflow**: Employee → Reporting Manager → HR
+  - Uses `reportingManagerId` field (set manually in User Management)
+  - Simple 3-person approval chain for 20-25 employee company
 - **Leave Types**:
   - Monthly Casual Leave: 1 day per employee per month
   - Monthly Permission: 2 hours per employee per month (flexible timing)
@@ -26,6 +28,7 @@ Design and implement a comprehensive Leave and Permission Management System for 
 - **Weekly Holidays**: Every Sunday (already in system)
 - **Visibility**: Clear leave balance display for employees and approvers
 - **Payroll Integration**: System should connect with existing payroll for deductions
+- **Reporting Manager Setup**: Admin assigns reporting manager to each employee via User Management UI
 
 ---
 
@@ -49,7 +52,7 @@ Design and implement a comprehensive Leave and Permission Management System for 
     status: "pending" | "approved" | "rejected"
   }
   ```
-  - **Status: Needs enhancement for TL/HR workflow**
+  - **Status: Needs enhancement for Manager/HR workflow**
   
 - ✅ Basic storage methods exist:
   - `createLeave()` - Line 2469
@@ -65,10 +68,13 @@ Design and implement a comprehensive Leave and Permission Management System for 
 
 #### **User Management & Hierarchy**
 - ✅ User model has all required fields:
-  - `reportingManagerId` - To identify Team Lead
+  - `reportingManagerId` - To identify Reporting Manager (field exists, nullable)
   - `department`, `designation` - For role-based access
-  - Team Lead designation exists (level 6)
   - HR department exists
+
+- 🔨 **Needs Enhancement**: User Management UI
+  - `reportingManagerId` field exists in schema but NOT in UI
+  - Need to add "Reporting Manager" dropdown in edit user dialog (`client/src/pages/user-management.tsx`)
 
 - ✅ Leave permissions already defined:
   - `leave.view_own`, `leave.view_team`, `leave.view_all`
@@ -99,12 +105,6 @@ Design and implement a comprehensive Leave and Permission Management System for 
    - Usage history
    - Auto-reset logic
 
-2. 🔨 **Enhanced: Leave Application Schema** (extend existing)
-   - Add `leaveType` field (casual_leave, permission, unpaid_leave)
-   - Add permission fields (time, hours)
-   - Add TL approval fields (tlApprovedAt, tlApprovedBy, tlRemarks)
-   - Add HR approval fields (hrApprovedAt, hrApprovedBy, hrRemarks)
-   - Enhance status (pending_tl, pending_hr, approved, rejected_by_tl, rejected_by_hr)
 
 3. 🔨 **New: Fixed Holidays Collection** (doesn't exist)
    - Annual holidays (May 1, Oct 2, Jan 26, Aug 15)
