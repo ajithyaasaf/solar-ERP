@@ -714,13 +714,13 @@ function ManualProjectConfiguration({ form }: { form: any }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Add Project Type Selection */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="font-medium">Project Configuration</h4>
+      <div className="space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h4 className="font-medium text-sm sm:text-base">Project Configuration</h4>
           <Select value={selectedProjectType || ""} onValueChange={setSelectedProjectType}>
-            <SelectTrigger className="w-48" data-testid="select-project-type">
+            <SelectTrigger className="w-full sm:w-56" data-testid="select-project-type">
               <SelectValue placeholder="Add Project Type" />
             </SelectTrigger>
             <SelectContent>
@@ -734,11 +734,12 @@ function ManualProjectConfiguration({ form }: { form: any }) {
         </div>
 
         {selectedProjectType && (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
               onClick={() => addProject(selectedProjectType)}
               data-testid="button-add-project"
+              className="w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add {selectedProjectType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Project
@@ -747,6 +748,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
               type="button"
               variant="outline"
               onClick={() => setSelectedProjectType(null)}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
@@ -765,25 +767,25 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       )}
 
       {projects.length > 0 && (
-        <div className="space-y-4">
-          <h5 className="font-medium">Configured Projects ({projects.length})</h5>
-          <div className="grid gap-4">
+        <div className="space-y-3 sm:space-y-4">
+          <h5 className="font-medium text-sm sm:text-base">Configured Projects ({projects.length})</h5>
+          <div className="grid gap-3 sm:gap-4">
             {projects.map((project: any, index: number) => (
               <Card key={index} className={`border transition-colors ${
                 activeProjectIndex === index ? 'border-primary bg-primary/5' : 'border-border'
               }`}>
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {project.projectType === 'on_grid' && <Zap className="h-5 w-5 text-blue-600" />}
-                      {project.projectType === 'off_grid' && <Battery className="h-5 w-5 text-green-600" />}
-                      {project.projectType === 'hybrid' && <Settings className="h-5 w-5 text-purple-600" />}
-                      {project.projectType === 'water_heater' && <Droplets className="h-5 w-5 text-orange-600" />}
-                      {project.projectType === 'water_pump' && <Wrench className="h-5 w-5 text-red-600" />}
-                      <h4 className="font-medium capitalize">
+                <CardHeader className="p-3 sm:p-4 pb-3 sm:pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {project.projectType === 'on_grid' && <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />}
+                      {project.projectType === 'off_grid' && <Battery className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0" />}
+                      {project.projectType === 'hybrid' && <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 shrink-0" />}
+                      {project.projectType === 'water_heater' && <Droplets className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 shrink-0" />}
+                      {project.projectType === 'water_pump' && <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 shrink-0" />}
+                      <h4 className="font-medium text-sm sm:text-base capitalize">
                         {project.projectType.replace('_', ' ')} System
                       </h4>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="text-xs">
                         ₹{project.projectValue?.toLocaleString() || 0}
                       </Badge>
                     </div>
@@ -794,6 +796,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
                         size="sm"
                         onClick={() => setActiveProjectIndex(activeProjectIndex === index ? null : index)}
                         data-testid={`button-configure-project-${index}`}
+                        className="text-xs sm:text-sm"
                       >
                         {activeProjectIndex === index ? 'Collapse' : 'Configure'}
                       </Button>
@@ -803,6 +806,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
                         size="sm"
                         onClick={() => removeProject(index)}
                         data-testid={`button-remove-project-${index}`}
+                        className="text-xs sm:text-sm"
                       >
                         Remove
                       </Button>
@@ -811,7 +815,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
                 </CardHeader>
 
                 {activeProjectIndex === index && (
-                  <CardContent className="pt-0">
+                  <CardContent className="p-3 sm:p-4 pt-0">
                     <ProjectConfigurationForm
                       project={project}
                       projectIndex={index}
@@ -821,8 +825,8 @@ function ManualProjectConfiguration({ form }: { form: any }) {
                 )}
 
                 {activeProjectIndex !== index && (
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                  <CardContent className="p-3 sm:p-4 pt-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                       {project.systemKW && (
                         <div>
                           <span className="text-muted-foreground">System Capacity:</span>
@@ -2229,67 +2233,108 @@ export default function QuotationCreation() {
   };
 
   return (
-    <div className="container mx-auto py-6" data-testid="quotation-creation-page">
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
+    <div className="container mx-auto px-4 py-4 md:py-6" data-testid="quotation-creation-page">
+      <div className="mb-4 md:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 md:mb-6">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLocation("/quotations")}
             data-testid="button-back"
+            className="self-start"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Quotations
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">Create New Quotation</h1>
-            <p className="text-muted-foreground">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">Create New Quotation</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Generate professional quotations for solar energy systems
             </p>
           </div>
         </div>
 
-        {/* Progress indicator */}
-        <div className="flex items-center gap-4 mb-6">
-          {WIZARD_STEPS.map((step, index) => {
-            const isActive = index === currentStep;
-            const isCompleted = index < currentStep;
-            const IconComponent = step.icon;
-            
-            return (
-              <div key={step.id} className="flex items-center">
-                <div 
-                  className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                    isCompleted 
-                      ? "bg-primary border-primary text-primary-foreground" 
-                      : isActive 
-                        ? "border-primary text-primary" 
-                        : "border-muted-foreground text-muted-foreground"
-                  }`}
-                  data-testid={`step-indicator-${step.id}`}
-                >
-                  {isCompleted ? (
-                    <Check className="h-5 w-5" />
-                  ) : (
-                    <IconComponent className="h-5 w-5" />
+        {/* Progress indicator - Mobile: Simplified, Desktop: Full */}
+        <div className="mb-4 md:mb-6">
+          {/* Mobile Progress - Compact horizontal dots */}
+          <div className="flex md:hidden items-center justify-between gap-2 mb-3">
+            {WIZARD_STEPS.map((step, index) => {
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              const IconComponent = step.icon;
+              
+              return (
+                <div key={step.id} className="flex flex-col items-center flex-1">
+                  <div 
+                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                      isCompleted 
+                        ? "bg-primary border-primary text-primary-foreground" 
+                        : isActive 
+                          ? "border-primary text-primary" 
+                          : "border-muted-foreground text-muted-foreground"
+                    }`}
+                    data-testid={`step-indicator-${step.id}`}
+                  >
+                    {isCompleted ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <IconComponent className="h-4 w-4" />
+                    )}
+                  </div>
+                  {isActive && (
+                    <div className="mt-2 text-center">
+                      <p className="text-xs font-medium text-primary truncate max-w-[80px]">
+                        {step.title}
+                      </p>
+                    </div>
                   )}
                 </div>
-                
-                <div className="ml-3 min-w-0 flex-1">
-                  <p className={`text-sm font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                    {step.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {step.description}
-                  </p>
+              );
+            })}
+          </div>
+
+          {/* Desktop Progress - Full stepper */}
+          <div className="hidden md:flex items-center gap-4">
+            {WIZARD_STEPS.map((step, index) => {
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              const IconComponent = step.icon;
+              
+              return (
+                <div key={step.id} className="flex items-center">
+                  <div 
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+                      isCompleted 
+                        ? "bg-primary border-primary text-primary-foreground" 
+                        : isActive 
+                          ? "border-primary text-primary" 
+                          : "border-muted-foreground text-muted-foreground"
+                    }`}
+                    data-testid={`step-indicator-${step.id}`}
+                  >
+                    {isCompleted ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <IconComponent className="h-5 w-5" />
+                    )}
+                  </div>
+                  
+                  <div className="ml-3 min-w-0 flex-1">
+                    <p className={`text-sm font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                      {step.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {step.description}
+                    </p>
+                  </div>
+                  
+                  {index < WIZARD_STEPS.length - 1 && (
+                    <div className={`mx-4 h-px bg-border flex-1`} />
+                  )}
                 </div>
-                
-                {index < WIZARD_STEPS.length - 1 && (
-                  <div className={`mx-4 h-px bg-border flex-1`} />
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -2320,18 +2365,18 @@ export default function QuotationCreation() {
                     }}
                     data-testid="card-manual-creation"
                   >
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
-                          <FileText className="h-6 w-6" />
+                    <CardHeader className="p-4 sm:p-6">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600 shrink-0">
+                          <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
-                        <div>
-                          <CardTitle className="text-lg">Manual Creation</CardTitle>
-                          <CardDescription>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg">Manual Creation</CardTitle>
+                          <CardDescription className="text-sm mt-1">
                             Create quotation from scratch with custom inputs
                           </CardDescription>
                         </div>
-                        <div className="ml-auto">
+                        <div className="shrink-0">
                           <div className={`w-4 h-4 rounded-full border-2 ${
                             quotationSource === "manual" ? "border-primary bg-primary" : "border-muted-foreground"
                           }`} />
@@ -2351,18 +2396,18 @@ export default function QuotationCreation() {
                     }}
                     data-testid="card-site-visit-integration"
                   >
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-green-100 text-green-600">
-                          <Zap className="h-6 w-6" />
+                    <CardHeader className="p-4 sm:p-6">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="p-2 rounded-lg bg-green-100 text-green-600 shrink-0">
+                          <Zap className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
-                        <div>
-                          <CardTitle className="text-lg">From Site Visit</CardTitle>
-                          <CardDescription>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg">From Site Visit</CardTitle>
+                          <CardDescription className="text-sm mt-1">
                             Auto-populate from existing site visit data
                           </CardDescription>
                         </div>
-                        <div className="ml-auto">
+                        <div className="shrink-0">
                           <div className={`w-4 h-4 rounded-full border-2 ${
                             quotationSource === "site_visit" ? "border-primary bg-primary" : "border-muted-foreground"
                           }`} />
@@ -2393,28 +2438,29 @@ export default function QuotationCreation() {
                               onClick={() => setSelectedSiteVisit(visit.id)}
                               data-testid={`card-site-visit-${visit.id}`}
                             >
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h5 className="font-medium">{visit.customer.name}</h5>
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center flex-wrap gap-2 mb-1">
+                                      <h5 className="font-medium text-sm sm:text-base">{visit.customer.name}</h5>
                                       <Badge 
                                         variant={visit.completenessAnalysis.qualityGrade === 'A' ? 'default' : 
                                                 visit.completenessAnalysis.qualityGrade === 'B' ? 'secondary' : 'destructive'}
+                                        className="text-xs"
                                       >
                                         Grade {visit.completenessAnalysis.qualityGrade}
                                       </Badge>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">{visit.customer.mobile}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">{visit.customer.address}</p>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">{visit.customer.mobile}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{visit.customer.address}</p>
                                   </div>
-                                  <div className="text-right">
-                                    <div className="text-sm font-medium mb-1">
+                                  <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1">
+                                    <div className="text-xs sm:text-sm font-medium">
                                       {visit.completenessAnalysis.completenessScore}% Complete
                                     </div>
                                     <Progress 
                                       value={visit.completenessAnalysis.completenessScore} 
-                                      className="w-20 h-2"
+                                      className="w-16 sm:w-20 h-2"
                                     />
                                   </div>
                                 </div>
@@ -2620,55 +2666,55 @@ export default function QuotationCreation() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   {/* Pricing Summary */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Pricing Summary</h4>
-                    <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Base System Cost:</span>
-                        <span className="font-medium">₹{form.watch("totalSystemCost")?.toLocaleString() || 0}</span>
+                  <div className="space-y-3 sm:space-y-4">
+                    <h4 className="font-medium text-sm sm:text-base">Pricing Summary</h4>
+                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">Base System Cost:</span>
+                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("totalSystemCost")?.toLocaleString() || 0}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">GST (18%):</span>
-                        <span className="font-medium text-blue-600">₹{form.watch("totalGSTAmount")?.toLocaleString() || 0}</span>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">GST (18%):</span>
+                        <span className="font-medium text-sm sm:text-base text-blue-600 text-right">₹{form.watch("totalGSTAmount")?.toLocaleString() || 0}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total with GST:</span>
-                        <span className="font-medium">₹{form.watch("totalWithGST")?.toLocaleString() || 0}</span>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">Total with GST:</span>
+                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("totalWithGST")?.toLocaleString() || 0}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Government Subsidy:</span>
-                        <span className="font-medium text-green-600">-₹{form.watch("totalSubsidyAmount")?.toLocaleString() || 0}</span>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">Government Subsidy:</span>
+                        <span className="font-medium text-sm sm:text-base text-green-600 text-right">-₹{form.watch("totalSubsidyAmount")?.toLocaleString() || 0}</span>
                       </div>
                       <Separator />
-                      <div className="flex justify-between">
-                        <span className="font-medium">Customer Payment:</span>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="font-medium text-sm sm:text-base">Customer Payment:</span>
                         <span className="font-bold text-lg">₹{form.watch("totalCustomerPayment")?.toLocaleString() || 0}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Payment Terms */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Payment Terms</h4>
-                    <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Advance (90%):</span>
-                        <span className="font-medium">₹{form.watch("advanceAmount")?.toLocaleString() || 0}</span>
+                  <div className="space-y-3 sm:space-y-4">
+                    <h4 className="font-medium text-sm sm:text-base">Payment Terms</h4>
+                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">Advance (90%):</span>
+                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("advanceAmount")?.toLocaleString() || 0}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Balance (10%):</span>
-                        <span className="font-medium">₹{form.watch("balanceAmount")?.toLocaleString() || 0}</span>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">Balance (10%):</span>
+                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("balanceAmount")?.toLocaleString() || 0}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Delivery Timeline:</span>
-                        <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || '2-3 weeks'}</span>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs sm:text-sm text-muted-foreground">Delivery Timeline:</span>
+                        <span className="font-medium text-sm sm:text-base text-right">{form.watch("deliveryTimeframe")?.replace('_', '-') || '2-3 weeks'}</span>
                       </div>
                     </div>
                     
                     {/* Terms Configuration */}
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       <FormField
                         control={form.control}
                         name="deliveryTimeframe"
@@ -2779,47 +2825,47 @@ export default function QuotationCreation() {
                   Final review before creating the quotation
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4 sm:space-y-6">
                 {/* Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Quotation Summary</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="space-y-3 sm:space-y-4">
+                    <h4 className="font-medium text-sm sm:text-base">Quotation Summary</h4>
+                    <div className="space-y-2 text-xs sm:text-sm">
+                      <div className="flex justify-between items-center gap-2">
                         <span className="text-muted-foreground">Source:</span>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           {quotationSource === "site_visit" ? "Site Visit" : "Manual"}
                         </Badge>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center gap-2">
                         <span className="text-muted-foreground">Projects:</span>
                         <span className="font-medium">{form.watch("projects").length} system(s)</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center gap-2">
                         <span className="text-muted-foreground">Total Value:</span>
                         <span className="font-medium">₹{form.watch("totalCustomerPayment")?.toLocaleString() || 0}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center gap-2">
                         <span className="text-muted-foreground">Delivery:</span>
                         <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || 'TBD'}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Quality Check</h4>
+                  <div className="space-y-3 sm:space-y-4">
+                    <h4 className="font-medium text-sm sm:text-base">Quality Check</h4>
                     {quotationSource === "site_visit" && siteVisitMapping && (
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
+                      <div className="space-y-2 text-xs sm:text-sm">
+                        <div className="flex justify-between items-center gap-2">
                           <span className="text-muted-foreground">Data Completeness:</span>
                           <Badge variant={
                             (siteVisitMapping as any).completenessAnalysis?.qualityGrade === 'A' ? 'default' :
                             (siteVisitMapping as any).completenessAnalysis?.qualityGrade === 'B' ? 'secondary' : 'destructive'
-                          }>
+                          } className="text-xs">
                             Grade {(siteVisitMapping as any).completenessAnalysis?.qualityGrade || 'Unknown'}
                           </Badge>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center gap-2">
                           <span className="text-muted-foreground">Completeness Score:</span>
                           <span className="font-medium">
                             {(siteVisitMapping as any).completenessAnalysis?.completenessScore || 0}%
@@ -2862,13 +2908,14 @@ export default function QuotationCreation() {
           )}
 
           {/* Navigation buttons */}
-          <div className="flex justify-between">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sticky bottom-0 bg-background pt-4 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 border-t sm:border-0 sm:static sm:bg-transparent">
             <Button
               type="button"
               variant="outline"
               onClick={prevStep}
               disabled={currentStep === 0}
               data-testid="button-previous"
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
@@ -2879,6 +2926,7 @@ export default function QuotationCreation() {
                 type="submit"
                 disabled={!canProceed() || createQuotationMutation.isPending}
                 data-testid="button-submit"
+                className="w-full sm:w-auto order-1 sm:order-2"
               >
                 {createQuotationMutation.isPending ? "Creating..." : "Create Quotation"}
               </Button>
@@ -2888,6 +2936,7 @@ export default function QuotationCreation() {
                 onClick={nextStep}
                 disabled={!canProceed()}
                 data-testid="button-next"
+                className="w-full sm:w-auto order-1 sm:order-2"
               >
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
