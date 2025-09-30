@@ -4007,18 +4007,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Leave balance not found. Please contact HR." });
       }
       
-      // Convert date strings to Date objects before validation
+      // Convert date strings to Date objects and handle nullable fields before validation
       const processedBody = {
         ...req.body,
         startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
         endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
         permissionDate: req.body.permissionDate ? new Date(req.body.permissionDate) : undefined,
+        userDepartment: req.body.userDepartment || null,
+        userDesignation: req.body.userDesignation || null,
+        reportingManagerId: req.body.reportingManagerId || null,
       };
       
       // Validate request body using schema
       const validatedBody = insertLeaveApplicationSchema.partial().parse(processedBody);
       
       // Prepare leave application data
+      const now = new Date();
       const leaveData = {
         ...validatedBody,
         userId: user.id,
@@ -4032,6 +4036,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           casualLeaveAvailable: balance.casualLeaveBalance - balance.casualLeaveUsed,
           permissionHoursAvailable: balance.permissionHoursBalance - balance.permissionHoursUsed,
         },
+        applicationDate: now,
+        createdAt: now,
+        updatedAt: now,
       };
       
       // Validate balance availability
@@ -4054,6 +4061,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(leave);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Leave application validation error:", JSON.stringify(error.errors, null, 2));
+        console.error("Request body:", JSON.stringify(req.body, null, 2));
         return res.status(400).json({ errors: error.errors });
       }
       console.error("Error creating leave application:", error);
