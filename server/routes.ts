@@ -4013,13 +4013,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
         endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
         permissionDate: req.body.permissionDate ? new Date(req.body.permissionDate) : undefined,
-        userDepartment: req.body.userDepartment || null,
-        userDesignation: req.body.userDesignation || null,
-        reportingManagerId: req.body.reportingManagerId || null,
       };
       
+      // Create a validation schema that accepts partial data but handles nullable fields correctly
+      const leaveApplicationValidationSchema = insertLeaveApplicationSchema.pick({
+        leaveType: true,
+        startDate: true,
+        endDate: true,
+        totalDays: true,
+        permissionDate: true,
+        permissionStartTime: true,
+        permissionEndTime: true,
+        permissionHours: true,
+        reason: true,
+      }).partial();
+      
       // Validate request body using schema
-      const validatedBody = insertLeaveApplicationSchema.partial().parse(processedBody);
+      const validatedBody = leaveApplicationValidationSchema.parse(processedBody);
       
       // Prepare leave application data
       const now = new Date();
@@ -4028,14 +4038,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id,
         employeeId: user.employeeId || user.id,
         userName: user.displayName,
-        userDepartment: user.department,
-        userDesignation: user.designation,
-        reportingManagerId: user.reportingManagerId,
+        userDepartment: user.department || null,
+        userDesignation: user.designation || null,
+        reportingManagerId: user.reportingManagerId || null,
         status: "pending_manager" as const,
         balanceAtApplication: {
           casualLeaveAvailable: balance.casualLeaveBalance - balance.casualLeaveUsed,
           permissionHoursAvailable: balance.permissionHoursBalance - balance.permissionHoursUsed,
         },
+        affectsPayroll: false,
+        deductionAmount: 0,
         applicationDate: now,
         createdAt: now,
         updatedAt: now,
