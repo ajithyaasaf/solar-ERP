@@ -12,10 +12,13 @@ import { RecentInvoices } from "@/components/dashboard/recent-invoices";
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { CheckInModal } from "@/components/dashboard/check-in-modal";
+import { LeaveBalanceWidget } from "@/components/leave/leave-balance-widget";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
   const { user } = useAuthContext();
+  const [, setLocation] = useLocation();
   const [showCheckInModal, setShowCheckInModal] = useState(false);
 
   // For now, we'll use the working API endpoints and calculate attendance from users
@@ -279,7 +282,7 @@ export default function Dashboard() {
   return (
     <>
       {/* Dashboard Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-6">
         {/* Overall Stats Card */}
         <StatsCard
           title="Overall Performance"
@@ -303,6 +306,12 @@ export default function Dashboard() {
           date={summaryData.attendance.date}
           items={summaryData.attendance.items}
           onCheckInOut={() => setShowCheckInModal(true)}
+        />
+
+        {/* Leave Balance Widget */}
+        <LeaveBalanceWidget
+          onApplyLeave={() => setLocation("/leave")}
+          onViewHistory={() => setLocation("/leave")}
         />
 
         {/* Pending Approvals */}
