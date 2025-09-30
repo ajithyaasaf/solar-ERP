@@ -1716,4 +1716,172 @@ export interface Quotation extends InsertQuotation {
 // Create insert schema from drizzle-zod (for API validation)
 export const createInsertQuotationSchema = insertQuotationSchema;
 
+// ================================
+// LEAVE MANAGEMENT SYSTEM SCHEMAS
+// ================================
+
+// Leave types
+export const leaveTypes = [
+  "casual_leave",    // Monthly 1 day leave
+  "permission",      // Monthly 2 hours permission
+  "unpaid_leave"     // Any additional leave (unpaid)
+] as const;
+
+// Leave statuses for Employee → Reporting Manager → HR workflow
+export const leaveStatuses = [
+  "pending_manager",    // Waiting for Reporting Manager approval
+  "pending_hr",         // Manager approved, waiting for HR
+  "approved",           // Fully approved by HR
+  "rejected_by_manager", // Rejected by Reporting Manager
+  "rejected_by_hr",     // Rejected by HR
+  "cancelled"           // Cancelled by employee
+] as const;
+
+// Fixed holidays for the year
+export const FIXED_ANNUAL_HOLIDAYS = [
+  { name: "May Day", month: 5, day: 1 },
+  { name: "Independence Day", month: 8, day: 15 },
+  { name: "Gandhi Jayanti", month: 10, day: 2 },
+  { name: "Republic Day", month: 1, day: 26 }
+] as const;
+
+// Leave Balance Schema - Monthly allocation tracking
+export const insertLeaveBalanceSchema = z.object({
+  userId: z.string(),
+  employeeId: z.string(),
+  
+  // Monthly balances (reset every month)
+  casualLeaveBalance: z.number().default(1),        // 1 per month
+  permissionHoursBalance: z.number().default(2),    // 2 hours per month
+  
+  // Used balances (current month)
+  casualLeaveUsed: z.number().default(0),
+  permissionHoursUsed: z.number().default(0),
+  
+  // Period tracking
+  year: z.number(),
+  month: z.number().min(1).max(12),
+  
+  // History
+  casualLeaveHistory: z.array(z.object({
+    date: z.date(),
+    days: z.number(),
+    leaveId: z.string()
+  })).default([]),
+  
+  permissionHistory: z.array(z.object({
+    date: z.date(),
+    hours: z.number(),
+    leaveId: z.string()
+  })).default([]),
+  
+  // Metadata
+  lastResetDate: z.date(),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date())
+});
+
+export type InsertLeaveBalance = z.infer<typeof insertLeaveBalanceSchema>;
+
+export interface LeaveBalance extends InsertLeaveBalance {
+  id: string;
+}
+
+// Leave Application Schema - Employee → Reporting Manager → HR workflow
+export const insertLeaveApplicationSchema = z.object({
+  // Employee details
+  userId: z.string(),
+  employeeId: z.string(),
+  userName: z.string(),
+  userDepartment: z.enum(departments).nullable(),
+  userDesignation: z.enum(designations).nullable(),
+  
+  // Leave details
+  leaveType: z.enum(leaveTypes),
+  
+  // For casual_leave and unpaid_leave
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
+  totalDays: z.number().min(0).optional(),
+  
+  // For permission (2 hours)
+  permissionDate: z.date().optional(),
+  permissionStartTime: z.string().optional(),  // Format: "09:00 AM"
+  permissionEndTime: z.string().optional(),    // Format: "11:00 AM"
+  permissionHours: z.number().min(0).max(2).optional(),
+  
+  // Common fields
+  reason: z.string().min(10, "Reason must be at least 10 characters"),
+  
+  // Approval workflow - Employee → Reporting Manager → HR
+  status: z.enum(leaveStatuses).default("pending_manager"),
+  
+  // Reporting Manager approval
+  reportingManagerId: z.string().nullable(),
+  reportingManagerName: z.string().optional(),
+  managerApprovedAt: z.date().optional(),
+  managerApprovedBy: z.string().optional(),
+  managerRemarks: z.string().optional(),
+  
+  // HR approval
+  hrApprovedAt: z.date().optional(),
+  hrApprovedBy: z.string().optional(),
+  hrRemarks: z.string().optional(),
+  
+  // Rejection handling
+  rejectedAt: z.date().optional(),
+  rejectedBy: z.string().optional(),
+  rejectionReason: z.string().optional(),
+  
+  // Balance validation (snapshot at time of application)
+  balanceAtApplication: z.object({
+    casualLeaveAvailable: z.number(),
+    permissionHoursAvailable: z.number()
+  }).optional(),
+  
+  // Payroll impact (for unpaid leaves)
+  affectsPayroll: z.boolean().default(false),
+  deductionAmount: z.number().default(0),
+  
+  // Metadata
+  applicationDate: z.date().default(() => new Date()),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date())
+});
+
+export type InsertLeaveApplication = z.infer<typeof insertLeaveApplicationSchema>;
+
+export interface LeaveApplication extends InsertLeaveApplication {
+  id: string;
+}
+
+// Fixed Holidays Schema
+export const insertFixedHolidaySchema = z.object({
+  name: z.string(),
+  date: z.date(),
+  year: z.number(),
+  
+  // Holiday types
+  type: z.enum(["national", "company", "regional"]).default("national"),
+  isPaid: z.boolean().default(true),
+  isOptional: z.boolean().default(false),
+  
+  // Applicability
+  applicableDepartments: z.array(z.enum(departments)).optional(), // null = all departments
+  
+  description: z.string().optional(),
+  createdBy: z.string(),
+  createdAt: z.date().default(() => new Date())
+});
+
+export type InsertFixedHoliday = z.infer<typeof insertFixedHolidaySchema>;
+
+export interface FixedHoliday extends InsertFixedHoliday {
+  id: string;
+}
+
+// Type exports for leave management
+export type LeaveType = typeof leaveTypes[number];
+export type LeaveStatus = typeof leaveStatuses[number];
+
 

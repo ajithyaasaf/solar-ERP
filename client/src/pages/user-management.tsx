@@ -600,6 +600,49 @@ export default function UserManagement() {
                   </p>
                 )}
               </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="edit-reporting-manager">Reporting Manager</Label>
+                <Select
+                  value={editUser.reportingManagerId || "none"}
+                  onValueChange={(value) =>
+                    setEditUser({
+                      ...editUser,
+                      reportingManagerId: value === "none" ? null : value,
+                    })
+                  }
+                >
+                  <SelectTrigger id="edit-reporting-manager" data-testid="select-reporting-manager">
+                    <SelectValue placeholder="Select reporting manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Reporting Manager</SelectItem>
+                    {Array.isArray(users) &&
+                      users
+                        .filter((u: any) => 
+                          u.id !== editUser.id && 
+                          (u.role === "admin" || u.role === "master_admin" || 
+                           ["ceo", "gm", "officer", "team_leader"].includes(u.designation))
+                        )
+                        .map((u: any) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.displayName || u.email} 
+                            {u.designation && ` (${designationNames[u.designation] || u.designation})`}
+                          </SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+                {!editUser.reportingManagerId && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Set who this employee reports to for leave approvals. Leave applications will be routed to this manager.
+                  </p>
+                )}
+                {editUser.reportingManagerId && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Leave requests from this employee will go to their reporting manager for approval.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
