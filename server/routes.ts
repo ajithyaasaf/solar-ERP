@@ -4033,7 +4033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Prepare leave application data
       const now = new Date();
-      const leaveData = {
+      const leaveData: any = {
         ...validatedBody,
         userId: user.id,
         employeeId: user.employeeId || user.id,
@@ -4052,6 +4052,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: now,
         updatedAt: now,
       };
+      
+      // Remove undefined fields to avoid Firestore errors
+      Object.keys(leaveData).forEach(key => {
+        if (leaveData[key] === undefined) {
+          delete leaveData[key];
+        }
+      });
       
       // Validate balance availability
       if (leaveData.leaveType === "casual_leave" && leaveData.totalDays) {
