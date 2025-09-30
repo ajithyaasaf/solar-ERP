@@ -2825,6 +2825,13 @@ export class FirestoreStorage implements IStorage {
       updatedAt: Timestamp.fromDate(validatedData.updatedAt),
     };
     
+    // Remove undefined fields to avoid Firestore errors
+    Object.keys(leaveData).forEach(key => {
+      if (leaveData[key] === undefined) {
+        delete leaveData[key];
+      }
+    });
+    
     await leaveRef.set(leaveData);
     
     return {
@@ -2851,6 +2858,13 @@ export class FirestoreStorage implements IStorage {
     if (validatedData.hrApprovedAt) updateData.hrApprovedAt = Timestamp.fromDate(validatedData.hrApprovedAt);
     if (validatedData.rejectedAt) updateData.rejectedAt = Timestamp.fromDate(validatedData.rejectedAt);
     if (validatedData.applicationDate) updateData.applicationDate = Timestamp.fromDate(validatedData.applicationDate);
+    
+    // Remove undefined fields to avoid Firestore errors
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
     
     await leaveDoc.update(updateData);
     
