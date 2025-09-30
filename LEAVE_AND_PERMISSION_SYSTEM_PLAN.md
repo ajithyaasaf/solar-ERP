@@ -1,9 +1,10 @@
 # Leave and Permission Management System - Implementation Plan
 
 ## Document Version
-**Version:** 1.0  
+**Version:** 1.1 (Consolidated)  
 **Date:** September 30, 2025  
-**Status:** Planning Phase
+**Status:** Planning Phase  
+**Note:** This is the single consolidated planning document containing complete system analysis, existing infrastructure review, and implementation roadmap.
 
 ---
 
@@ -30,31 +31,129 @@ Design and implement a comprehensive Leave and Permission Management System for 
 
 ## 2. CURRENT SYSTEM ANALYSIS
 
-### 2.1 Existing Infrastructure
-✅ **User Management**
-- Users have: uid, email, displayName, role, department, designation, employeeId, reportingManagerId
-- Hierarchy: master_admin → admin → employee
-- Team Lead designation exists (level 6)
-- HR is a separate department
+### 2.1 What Already Exists ✅
 
-✅ **Attendance System**
-- Check-in/Check-out tracking
-- Overtime management
-- Sunday marked as holiday (day 0)
-- Working hours calculation
+#### **Pages & Navigation**
+- ✅ `/leave` page exists at `client/src/pages/leave.tsx`
+  - Basic table with search functionality
+  - "Apply Leave" button (UI only, not functional)
+  - **Status: Needs major enhancement**
+- ✅ Sidebar navigation has "Leave Management" menu item (line 82-86 in `sidebar.tsx`)
+- ✅ Route already configured in `App.tsx` with leave permissions
 
-✅ **Payroll System**
-- Monthly salary processing
-- EPF/ESI calculations
-- Dynamic earnings and deductions
-- Handles various attendance statuses
+#### **Database & Backend**
+- ✅ Basic leave schema exists in `server/storage.ts` (lines 95-101):
+  ```typescript
+  insertLeaveSchema = {
+    userId, startDate, endDate, reason,
+    status: "pending" | "approved" | "rejected"
+  }
+  ```
+  - **Status: Needs enhancement for TL/HR workflow**
+  
+- ✅ Basic storage methods exist:
+  - `createLeave()` - Line 2469
+  - `updateLeave()` - Line 2494  
+  - `getLeave()` - Available
+  - `listLeaves()` - Available
 
-✅ **Permissions Framework**
-- Existing leave permissions: leave.view_own, leave.view_team, leave.view_all, leave.request, leave.approve, leave.reject, leave.cancel
+- ✅ Basic API endpoints exist in `server/routes.ts`:
+  - `GET /api/leaves` - Line 3788 (with filters)
+  - `GET /api/leaves/:id` - Line 3827
+  - `POST /api/leaves` - Line 3850
+  - `PATCH /api/leaves/:id` - Line 3871
 
-### 2.2 Integration Points
+#### **User Management & Hierarchy**
+- ✅ User model has all required fields:
+  - `reportingManagerId` - To identify Team Lead
+  - `department`, `designation` - For role-based access
+  - Team Lead designation exists (level 6)
+  - HR department exists
+
+- ✅ Leave permissions already defined:
+  - `leave.view_own`, `leave.view_team`, `leave.view_all`
+  - `leave.request`, `leave.approve`, `leave.reject`, `leave.cancel`
+
+#### **Reusable Components Available**
+- ✅ Dashboard components:
+  - `pending-approvals-card.tsx` - Can be used for leave approvals
+  - `stats-card.tsx` - For leave statistics
+  - `attendance-card.tsx` - Reference for balance widget
+  
+- ✅ UI components (Shadcn):
+  - All form components (input, select, date-picker, time-input)
+  - Dialog, Card, Table, Badge, Tabs
+  - Calendar component available
+
+#### **Integration Points Ready**
+- ✅ Attendance System - Check-in/out tracking, working hours
+- ✅ Payroll System - Monthly processing, EPF/ESI, deductions
+- ✅ Sunday holiday tracking (day 0 in system)
+- ✅ Enterprise RBAC permission system
+
+### 2.2 What Needs to Be Built 🔨
+
+#### **Database Schema Enhancements**
+1. 🔨 **New: Leave Balance Collection** (doesn't exist)
+   - Monthly balance tracking (1 CL, 2h permission)
+   - Usage history
+   - Auto-reset logic
+
+2. 🔨 **Enhanced: Leave Application Schema** (extend existing)
+   - Add `leaveType` field (casual_leave, permission, unpaid_leave)
+   - Add permission fields (time, hours)
+   - Add TL approval fields (tlApprovedAt, tlApprovedBy, tlRemarks)
+   - Add HR approval fields (hrApprovedAt, hrApprovedBy, hrRemarks)
+   - Enhance status (pending_tl, pending_hr, approved, rejected_by_tl, rejected_by_hr)
+
+3. 🔨 **New: Fixed Holidays Collection** (doesn't exist)
+   - Annual holidays (May 1, Oct 2, Jan 26, Aug 15)
+   - Holiday management
+
+#### **Backend Services to Create**
+1. 🔨 `server/services/leave-balance-service.ts` - New file
+   - Monthly balance reset
+   - Balance calculations
+   - History management
+
+2. 🔨 `server/services/leave-service.ts` - New file
+   - Application validation
+   - TL/HR approval workflow
+   - Payroll integration
+
+3. 🔨 Enhanced storage methods in `server/storage.ts`:
+   - `getLeaveBalance()`, `updateLeaveBalance()`, `createLeaveBalance()`
+   - `approveLeaveTL()`, `approveLeaveHR()`, `rejectLeave()`
+   - `getFixedHolidays()`, `createFixedHoliday()`
+
+#### **API Enhancements Needed**
+1. 🔨 New endpoints in `server/routes.ts`:
+   - `GET /api/leave-balance/:userId` - Current balance
+   - `GET /api/leave-balance/team/:tlUserId` - Team balances
+   - `GET /api/leave-balance/all` - All balances (HR)
+   - `PUT /api/leaves/:id/approve-tl` - TL approval
+   - `PUT /api/leaves/:id/approve-hr` - HR approval
+   - `PUT /api/leaves/:id/reject-tl` - TL rejection
+   - `PUT /api/leaves/:id/reject-hr` - HR rejection
+   - `GET /api/holidays` - Fixed holidays
+
+#### **Frontend Components to Create**
+1. 🔨 New folder: `client/src/components/leave/`
+   - `leave-application-form.tsx` - Multi-step form
+   - `leave-balance-widget.tsx` - Dashboard widget
+   - `leave-history-table.tsx` - User history
+   - `tl-approval-list.tsx` - Team Lead approvals
+   - `hr-approval-list.tsx` - HR approvals
+   - `leave-calendar-view.tsx` - Calendar visualization
+   - `permission-time-picker.tsx` - 2-hour time picker
+
+2. 🔨 Page enhancements:
+   - `client/src/pages/leave.tsx` - Add tabs, forms, approvals
+   - `client/src/pages/dashboard.tsx` - Add leave widgets
+
+### 2.3 Integration Strategy
 1. **Attendance System**: Verify employee presence before leave approval
-2. **Payroll System**: Calculate deductions for unpaid leaves
+2. **Payroll System**: Calculate deductions for unpaid leaves using existing perDaySalary
 3. **User Hierarchy**: Use reportingManagerId to identify Team Lead
 4. **Permission System**: Leverage existing RBAC for feature access
 
@@ -866,31 +965,115 @@ async function getLeaveStatistics(month, year, department) {
 
 ---
 
-## 20. CONCLUSION & NEXT STEPS
+## 20. IMPLEMENTATION TIMELINE & FILE STRUCTURE
 
-### 20.1 Summary
-This comprehensive leave and permission management system will:
-- ✅ Streamline leave application and approval process
-- ✅ Provide clear visibility of leave balances
-- ✅ Integrate seamlessly with existing payroll
-- ✅ Ensure compliance with company leave policy
-- ✅ Reduce manual administrative overhead
+### 20.1 Development Timeline (5 Weeks)
 
-### 20.2 Immediate Next Steps
-1. **Review & Approval**: Client review of this plan document
-2. **Clarifications**: Address any questions or modifications
-3. **Development Start**: Begin Phase 1 backend implementation
-4. **Regular Updates**: Weekly progress meetings
+| Week | Phase | Tasks | Files to Create/Modify |
+|------|-------|-------|------------------------|
+| **1** | Backend Schema & Services | - Add schemas to `shared/schema.ts`<br>- Create leave services<br>- Update storage interface | `shared/schema.ts` ✏️<br>`server/services/leave-service.ts` ✨<br>`server/services/leave-balance-service.ts` ✨<br>`server/storage.ts` ✏️ |
+| **2** | API Layer | - Add approval endpoints<br>- Balance management APIs<br>- Holiday management | `server/routes.ts` ✏️ |
+| **3** | Frontend Components | - Create leave components<br>- Build forms and approvals | `client/src/components/leave/*.tsx` ✨ (7 files) |
+| **4** | Page Integration | - Complete leave page<br>- Dashboard widgets | `client/src/pages/leave.tsx` ✏️<br>`client/src/pages/dashboard.tsx` ✏️ |
+| **5** | Testing & Deployment | - Integration testing<br>- User training<br>- Deployment | All files (testing & deployment) |
 
-### 20.3 Sign-off Required
-- [ ] Client approval on leave types and balances
-- [ ] Client approval on approval workflow
-- [ ] Client approval on payroll integration approach
-- [ ] Client approval on UI/UX designs
-- [ ] Client approval on implementation timeline
+**Legend:** ✨ = New file, ✏️ = Modify existing
+
+### 20.2 File Structure Summary
+
+```
+📁 Backend Files
+server/
+├── services/
+│   ├── leave-service.ts                    ✨ NEW
+│   ├── leave-balance-service.ts            ✨ NEW
+│   └── payroll-service.ts                  ✏️ ENHANCE (add leave deduction)
+├── routes.ts                                ✏️ ENHANCE (add leave routes)
+└── storage.ts                               ✏️ ENHANCE (add leave methods)
+
+shared/
+└── schema.ts                                ✏️ ENHANCE (add complete leave schemas)
+
+📁 Frontend Files
+client/src/
+├── components/
+│   ├── leave/                               ✨ NEW FOLDER
+│   │   ├── leave-application-form.tsx      ✨ NEW
+│   │   ├── leave-balance-widget.tsx        ✨ NEW
+│   │   ├── leave-history-table.tsx         ✨ NEW
+│   │   ├── tl-approval-list.tsx            ✨ NEW
+│   │   ├── hr-approval-list.tsx            ✨ NEW
+│   │   ├── leave-calendar-view.tsx         ✨ NEW
+│   │   └── permission-time-picker.tsx      ✨ NEW
+│   └── dashboard/
+│       └── pending-approvals-card.tsx       ♻️ REUSE (for leave)
+├── pages/
+│   ├── leave.tsx                            ✏️ MAJOR ENHANCEMENT
+│   └── dashboard.tsx                        ✏️ ADD leave widgets
+└── lib/
+    └── leave-utils.ts                       ✨ NEW (helper functions)
+```
+
+### 20.3 Existing Infrastructure to Leverage
+
+**Already Available (No Work Needed):**
+- ✅ `/leave` route configured in `App.tsx`
+- ✅ Sidebar menu item in `sidebar.tsx`
+- ✅ Leave permissions in permission system
+- ✅ Basic leave endpoints in `routes.ts`
+- ✅ User hierarchy with `reportingManagerId`
+- ✅ All UI components (Shadcn)
+- ✅ Form handling (react-hook-form + zod)
+- ✅ Data fetching (TanStack Query)
 
 ---
 
-**Document End**
+## 21. CONCLUSION & NEXT STEPS
 
-*For questions or clarifications, please contact the development team.*
+### 21.1 Summary
+This comprehensive leave and permission management system will:
+- ✅ Streamline leave application and approval process (Employee → TL → HR)
+- ✅ Provide clear visibility of leave balances (1 casual leave + 2h permission/month)
+- ✅ Integrate seamlessly with existing payroll for unpaid leave deductions
+- ✅ Ensure compliance with company leave policy
+- ✅ Reduce manual administrative overhead
+- ✅ Build on existing infrastructure (50% foundation already exists)
+
+### 21.2 What's Already Done vs What's Needed
+
+**Existing (50%):**
+- Basic leave page, routes, navigation ✅
+- User hierarchy and permissions ✅
+- Basic schema and endpoints ✅
+- UI component library ✅
+
+**To Build (50%):**
+- Enhanced schemas (leave balance, holidays) 🔨
+- Approval workflow services 🔨
+- Frontend components (7 new components) 🔨
+- TL/HR approval interfaces 🔨
+
+### 21.3 Immediate Next Steps
+1. ✅ **Review Document**: Client review of consolidated plan
+2. ✅ **Confirm Requirements**: 
+   - Leave types correct? (1 casual + 2h permission/month)
+   - Workflow correct? (Employee → TL → HR)
+   - Holidays correct? (May 1, Oct 2, Jan 26, Aug 15)
+3. 🔨 **Begin Phase 1**: Start backend schema and service development
+4. 📅 **Weekly Updates**: Progress tracking and adjustments
+
+### 21.4 Sign-off Checklist
+- [ ] Approve leave types and monthly balances
+- [ ] Approve TL → HR approval workflow
+- [ ] Approve fixed annual holidays
+- [ ] Approve payroll integration approach
+- [ ] Approve 5-week implementation timeline
+- [ ] Ready to start development
+
+---
+
+**Document Status:** ✅ Ready for Client Review & Implementation
+
+**Next Action:** Awaiting client approval to begin Phase 1 development
+
+*This is the single consolidated planning document. All updates will be made to this file.*
