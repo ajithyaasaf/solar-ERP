@@ -129,17 +129,29 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
     }
   }, [permissionStartTime, permissionEndTime]);
 
+  const isProfileComplete = !!(
+    user?.uid &&
+    user?.employeeId &&
+    user?.displayName &&
+    user?.department &&
+    user?.designation
+  );
+
   const applyLeaveMutation = useMutation({
     mutationFn: async (data: LeaveApplicationFormData) => {
+      if (!isProfileComplete) {
+        throw new Error("User profile is incomplete. Please contact HR to update your profile.");
+      }
+
       const payload: any = {
-        userId: user?.uid,
-        employeeId: user?.employeeId,
-        userName: user?.displayName,
-        userDepartment: user?.department,
-        userDesignation: user?.designation,
+        userId: user!.uid,
+        employeeId: user!.employeeId,
+        userName: user!.displayName,
+        userDepartment: user!.department,
+        userDesignation: user!.designation,
         leaveType: data.leaveType,
         reason: data.reason,
-        reportingManagerId: user?.reportingManagerId || null,
+        reportingManagerId: user!.reportingManagerId || null,
       };
 
       if (data.leaveType === "casual_leave" || data.leaveType === "unpaid_leave") {
@@ -234,6 +246,15 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="form-leave-application">
+      {!isProfileComplete && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Your profile is incomplete. Please contact HR to update your employee ID, name, department, and designation before applying for leave.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
@@ -389,7 +410,7 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         </Button>
         <Button
           type="submit"
-          disabled={applyLeaveMutation.isPending}
+          disabled={applyLeaveMutation.isPending || !isProfileComplete}
           data-testid="button-submit"
         >
           {applyLeaveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
