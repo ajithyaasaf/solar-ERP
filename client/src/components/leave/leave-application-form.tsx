@@ -131,7 +131,6 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
 
   const missingFields: string[] = [];
   if (!user?.uid) missingFields.push("User ID");
-  if (!user?.employeeId) missingFields.push("Employee ID");
   if (!user?.displayName) missingFields.push("Name");
   if (!user?.department) missingFields.push("Department");
   if (!user?.designation) missingFields.push("Designation");
@@ -146,7 +145,7 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
 
       const payload: any = {
         userId: user!.uid,
-        employeeId: user!.employeeId,
+        employeeId: user!.employeeId || user!.uid,
         userName: user!.displayName,
         userDepartment: user!.department,
         userDesignation: user!.designation,
