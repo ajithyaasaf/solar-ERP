@@ -129,13 +129,14 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
     }
   }, [permissionStartTime, permissionEndTime]);
 
-  const isProfileComplete = !!(
-    user?.uid &&
-    user?.employeeId &&
-    user?.displayName &&
-    user?.department &&
-    user?.designation
-  );
+  const missingFields: string[] = [];
+  if (!user?.uid) missingFields.push("User ID");
+  if (!user?.employeeId) missingFields.push("Employee ID");
+  if (!user?.displayName) missingFields.push("Name");
+  if (!user?.department) missingFields.push("Department");
+  if (!user?.designation) missingFields.push("Designation");
+  
+  const isProfileComplete = missingFields.length === 0;
 
   const applyLeaveMutation = useMutation({
     mutationFn: async (data: LeaveApplicationFormData) => {
@@ -250,7 +251,7 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Your profile is incomplete. Please contact HR to update your employee ID, name, department, and designation before applying for leave.
+            Your profile is incomplete. Missing: <strong>{missingFields.join(", ")}</strong>. Please contact HR to update your profile before applying for leave.
           </AlertDescription>
         </Alert>
       )}
