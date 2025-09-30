@@ -24,7 +24,16 @@ import {
   insertAttendancePolicySchema,
   insertEmployeeSchema,
   insertEmployeeDocumentSchema,
-  insertPerformanceReviewSchema
+  insertPerformanceReviewSchema,
+  insertLeaveBalanceSchema,
+  insertLeaveApplicationSchema,
+  insertFixedHolidaySchema,
+  LeaveBalance,
+  LeaveApplication,
+  FixedHoliday,
+  InsertLeaveBalance,
+  InsertLeaveApplication,
+  InsertFixedHoliday
 } from "@shared/schema";
 
 // Define our schemas since we're not using drizzle anymore
@@ -939,6 +948,37 @@ export interface IStorage {
     id: string,
     data: Partial<z.infer<typeof insertLeaveSchema>>,
   ): Promise<Leave>;
+  
+  // Comprehensive Leave Management System
+  // Leave Balance Management
+  getLeaveBalance(userId: string, month: number, year: number): Promise<LeaveBalance | undefined>;
+  getCurrentLeaveBalance(userId: string): Promise<LeaveBalance | undefined>;
+  createLeaveBalance(data: z.infer<typeof insertLeaveBalanceSchema>): Promise<LeaveBalance>;
+  updateLeaveBalance(id: string, data: Partial<z.infer<typeof insertLeaveBalanceSchema>>): Promise<LeaveBalance>;
+  listLeaveBalancesByYear(year: number): Promise<LeaveBalance[]>;
+  resetMonthlyLeaveBalances(month: number, year: number): Promise<void>;
+  
+  // Leave Application Management
+  getLeaveApplication(id: string): Promise<LeaveApplication | undefined>;
+  createLeaveApplication(data: z.infer<typeof insertLeaveApplicationSchema>): Promise<LeaveApplication>;
+  updateLeaveApplication(id: string, data: Partial<z.infer<typeof insertLeaveApplicationSchema>>): Promise<LeaveApplication>;
+  listLeaveApplicationsByUser(userId: string): Promise<LeaveApplication[]>;
+  listLeaveApplicationsByManager(managerId: string, status?: string): Promise<LeaveApplication[]>;
+  listLeaveApplicationsByHR(status?: string): Promise<LeaveApplication[]>;
+  listAllLeaveApplications(filters?: { status?: string; month?: number; year?: number }): Promise<LeaveApplication[]>;
+  approveLeaveByManager(leaveId: string, managerId: string, remarks?: string): Promise<LeaveApplication>;
+  approveLeaveByHR(leaveId: string, hrId: string, remarks?: string): Promise<LeaveApplication>;
+  rejectLeave(leaveId: string, rejectedBy: string, reason: string, rejectedByRole: 'manager' | 'hr'): Promise<LeaveApplication>;
+  cancelLeaveApplication(leaveId: string, userId: string): Promise<LeaveApplication>;
+  
+  // Fixed Holidays Management
+  getFixedHoliday(id: string): Promise<FixedHoliday | undefined>;
+  createFixedHoliday(data: z.infer<typeof insertFixedHolidaySchema>): Promise<FixedHoliday>;
+  updateFixedHoliday(id: string, data: Partial<z.infer<typeof insertFixedHolidaySchema>>): Promise<FixedHoliday>;
+  deleteFixedHoliday(id: string): Promise<boolean>;
+  listFixedHolidays(year?: number): Promise<FixedHoliday[]>;
+  initializeFixedHolidays(year: number, createdBy: string): Promise<void>;
+  
   // Activity logs
   createActivityLog(data: z.infer<typeof insertActivityLogSchema>): Promise<ActivityLog>;
   listActivityLogs(limit?: number): Promise<ActivityLog[]>;
@@ -2519,6 +2559,741 @@ export class FirestoreStorage implements IStorage {
       endDate: updatedData.endDate?.toDate() || new Date(),
       createdAt: updatedData.createdAt?.toDate() || new Date(),
     } as Leave;
+  }
+
+  // ===================== Comprehensive Leave Management System =====================
+  
+  // Leave Balance Management
+  async getLeaveBalance(userId: string, month: number, year: number): Promise<LeaveBalance | undefined> {
+    const balanceRef = this.db.collection("leave_balances");
+    const snapshot = await balanceRef
+      .where("userId", "==", userId)
+      .where("month", "==", month)
+      .where("year", "==", year)
+      .get();
+    
+    if (snapshot.empty) return undefined;
+    
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    return {
+      id: doc.id,
+      userId: data.userId,
+      employeeId: data.employeeId,
+      casualLeaveBalance: data.casualLeaveBalance,
+      permissionHoursBalance: data.permissionHoursBalance,
+      casualLeaveUsed: data.casualLeaveUsed,
+      permissionHoursUsed: data.permissionHoursUsed,
+      year: data.year,
+      month: data.month,
+      casualLeaveHistory: data.casualLeaveHistory?.map((h: any) => ({
+        date: h.date?.toDate() || new Date(),
+        days: h.days,
+        leaveId: h.leaveId
+      })) || [],
+      permissionHistory: data.permissionHistory?.map((h: any) => ({
+        date: h.date?.toDate() || new Date(),
+        hours: h.hours,
+        leaveId: h.leaveId
+      })) || [],
+      lastResetDate: data.lastResetDate?.toDate() || new Date(),
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+    } as LeaveBalance;
+  }
+
+  async getCurrentLeaveBalance(userId: string): Promise<LeaveBalance | undefined> {
+    const now = new Date();
+    return this.getLeaveBalance(userId, now.getMonth() + 1, now.getFullYear());
+  }
+
+  async createLeaveBalance(data: z.infer<typeof insertLeaveBalanceSchema>): Promise<LeaveBalance> {
+    // Validate the input data
+    const validatedData = insertLeaveBalanceSchema.parse(data);
+    
+    const balanceRef = this.db.collection("leave_balances").doc();
+    const balanceData = {
+      ...validatedData,
+      casualLeaveHistory: validatedData.casualLeaveHistory.map(h => ({
+        date: Timestamp.fromDate(h.date),
+        days: h.days,
+        leaveId: h.leaveId
+      })),
+      permissionHistory: validatedData.permissionHistory.map(h => ({
+        date: Timestamp.fromDate(h.date),
+        hours: h.hours,
+        leaveId: h.leaveId
+      })),
+      lastResetDate: Timestamp.fromDate(validatedData.lastResetDate),
+      createdAt: Timestamp.fromDate(validatedData.createdAt),
+      updatedAt: Timestamp.fromDate(validatedData.updatedAt),
+    };
+    
+    await balanceRef.set(balanceData);
+    
+    return {
+      id: balanceRef.id,
+      ...validatedData,
+    };
+  }
+
+  async updateLeaveBalance(id: string, data: Partial<z.infer<typeof insertLeaveBalanceSchema>>): Promise<LeaveBalance> {
+    // Validate the partial input data
+    const validatedData = insertLeaveBalanceSchema.partial().parse(data);
+    
+    const balanceDoc = this.db.collection("leave_balances").doc(id);
+    const updateData: any = { 
+      ...validatedData, 
+      updatedAt: Timestamp.now() 
+    };
+    
+    // Convert date fields to Timestamp if present
+    if (validatedData.casualLeaveHistory) {
+      updateData.casualLeaveHistory = validatedData.casualLeaveHistory.map(h => ({
+        date: Timestamp.fromDate(h.date),
+        days: h.days,
+        leaveId: h.leaveId
+      }));
+    }
+    if (validatedData.permissionHistory) {
+      updateData.permissionHistory = validatedData.permissionHistory.map(h => ({
+        date: Timestamp.fromDate(h.date),
+        hours: h.hours,
+        leaveId: h.leaveId
+      }));
+    }
+    if (validatedData.lastResetDate) {
+      updateData.lastResetDate = Timestamp.fromDate(validatedData.lastResetDate);
+    }
+    
+    await balanceDoc.update(updateData);
+    
+    const updatedDoc = await balanceDoc.get();
+    if (!updatedDoc.exists) throw new Error("Leave balance not found");
+    
+    const updatedData = updatedDoc.data() || {};
+    return {
+      id: updatedDoc.id,
+      userId: updatedData.userId,
+      employeeId: updatedData.employeeId,
+      casualLeaveBalance: updatedData.casualLeaveBalance,
+      permissionHoursBalance: updatedData.permissionHoursBalance,
+      casualLeaveUsed: updatedData.casualLeaveUsed,
+      permissionHoursUsed: updatedData.permissionHoursUsed,
+      year: updatedData.year,
+      month: updatedData.month,
+      casualLeaveHistory: updatedData.casualLeaveHistory?.map((h: any) => ({
+        date: h.date?.toDate() || new Date(),
+        days: h.days,
+        leaveId: h.leaveId
+      })) || [],
+      permissionHistory: updatedData.permissionHistory?.map((h: any) => ({
+        date: h.date?.toDate() || new Date(),
+        hours: h.hours,
+        leaveId: h.leaveId
+      })) || [],
+      lastResetDate: updatedData.lastResetDate?.toDate() || new Date(),
+      createdAt: updatedData.createdAt?.toDate() || new Date(),
+      updatedAt: updatedData.updatedAt?.toDate() || new Date(),
+    } as LeaveBalance;
+  }
+
+  async listLeaveBalancesByYear(year: number): Promise<LeaveBalance[]> {
+    const balanceRef = this.db.collection("leave_balances");
+    const snapshot = await balanceRef.where("year", "==", year).get();
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId,
+        employeeId: data.employeeId,
+        casualLeaveBalance: data.casualLeaveBalance,
+        permissionHoursBalance: data.permissionHoursBalance,
+        casualLeaveUsed: data.casualLeaveUsed,
+        permissionHoursUsed: data.permissionHoursUsed,
+        year: data.year,
+        month: data.month,
+        casualLeaveHistory: data.casualLeaveHistory?.map((h: any) => ({
+          date: h.date?.toDate() || new Date(),
+          days: h.days,
+          leaveId: h.leaveId
+        })) || [],
+        permissionHistory: data.permissionHistory?.map((h: any) => ({
+          date: h.date?.toDate() || new Date(),
+          hours: h.hours,
+          leaveId: h.leaveId
+        })) || [],
+        lastResetDate: data.lastResetDate?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as LeaveBalance;
+    });
+  }
+
+  async resetMonthlyLeaveBalances(month: number, year: number): Promise<void> {
+    const usersSnapshot = await this.db.collection("users").where("isActive", "!=", false).get();
+    
+    for (const userDoc of usersSnapshot.docs) {
+      const userId = userDoc.id;
+      const userData = userDoc.data();
+      
+      // Check if balance already exists for this month
+      const existingBalance = await this.getLeaveBalance(userId, month, year);
+      
+      if (!existingBalance) {
+        // Create new balance for the month
+        await this.createLeaveBalance({
+          userId,
+          employeeId: userData.employeeId || userId,
+          casualLeaveBalance: 1,
+          permissionHoursBalance: 2,
+          casualLeaveUsed: 0,
+          permissionHoursUsed: 0,
+          year,
+          month,
+          casualLeaveHistory: [],
+          permissionHistory: [],
+          lastResetDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+  }
+
+  // Leave Application Management
+  async getLeaveApplication(id: string): Promise<LeaveApplication | undefined> {
+    const leaveDoc = this.db.collection("leave_applications").doc(id);
+    const docSnap = await leaveDoc.get();
+    
+    if (!docSnap.exists) return undefined;
+    
+    const data = docSnap.data() || {};
+    return {
+      id: docSnap.id,
+      userId: data.userId,
+      employeeId: data.employeeId,
+      userName: data.userName,
+      userDepartment: data.userDepartment,
+      userDesignation: data.userDesignation,
+      leaveType: data.leaveType,
+      startDate: data.startDate?.toDate(),
+      endDate: data.endDate?.toDate(),
+      totalDays: data.totalDays,
+      permissionDate: data.permissionDate?.toDate(),
+      permissionStartTime: data.permissionStartTime,
+      permissionEndTime: data.permissionEndTime,
+      permissionHours: data.permissionHours,
+      reason: data.reason,
+      status: data.status,
+      reportingManagerId: data.reportingManagerId,
+      reportingManagerName: data.reportingManagerName,
+      managerApprovedAt: data.managerApprovedAt?.toDate(),
+      managerApprovedBy: data.managerApprovedBy,
+      managerRemarks: data.managerRemarks,
+      hrApprovedAt: data.hrApprovedAt?.toDate(),
+      hrApprovedBy: data.hrApprovedBy,
+      hrRemarks: data.hrRemarks,
+      rejectedAt: data.rejectedAt?.toDate(),
+      rejectedBy: data.rejectedBy,
+      rejectionReason: data.rejectionReason,
+      balanceAtApplication: data.balanceAtApplication,
+      affectsPayroll: data.affectsPayroll,
+      deductionAmount: data.deductionAmount,
+      applicationDate: data.applicationDate?.toDate() || new Date(),
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+    } as LeaveApplication;
+  }
+
+  async createLeaveApplication(data: z.infer<typeof insertLeaveApplicationSchema>): Promise<LeaveApplication> {
+    // Validate the input data
+    const validatedData = insertLeaveApplicationSchema.parse(data);
+    
+    const leaveRef = this.db.collection("leave_applications").doc();
+    const leaveData: any = {
+      ...validatedData,
+      startDate: validatedData.startDate ? Timestamp.fromDate(validatedData.startDate) : undefined,
+      endDate: validatedData.endDate ? Timestamp.fromDate(validatedData.endDate) : undefined,
+      permissionDate: validatedData.permissionDate ? Timestamp.fromDate(validatedData.permissionDate) : undefined,
+      managerApprovedAt: validatedData.managerApprovedAt ? Timestamp.fromDate(validatedData.managerApprovedAt) : undefined,
+      hrApprovedAt: validatedData.hrApprovedAt ? Timestamp.fromDate(validatedData.hrApprovedAt) : undefined,
+      rejectedAt: validatedData.rejectedAt ? Timestamp.fromDate(validatedData.rejectedAt) : undefined,
+      applicationDate: Timestamp.fromDate(validatedData.applicationDate),
+      createdAt: Timestamp.fromDate(validatedData.createdAt),
+      updatedAt: Timestamp.fromDate(validatedData.updatedAt),
+    };
+    
+    await leaveRef.set(leaveData);
+    
+    return {
+      id: leaveRef.id,
+      ...validatedData,
+    };
+  }
+
+  async updateLeaveApplication(id: string, data: Partial<z.infer<typeof insertLeaveApplicationSchema>>): Promise<LeaveApplication> {
+    // Validate the partial input data
+    const validatedData = insertLeaveApplicationSchema.partial().parse(data);
+    
+    const leaveDoc = this.db.collection("leave_applications").doc(id);
+    const updateData: any = { 
+      ...validatedData, 
+      updatedAt: Timestamp.now() 
+    };
+    
+    // Convert optional date fields to Timestamp if present
+    if (validatedData.startDate) updateData.startDate = Timestamp.fromDate(validatedData.startDate);
+    if (validatedData.endDate) updateData.endDate = Timestamp.fromDate(validatedData.endDate);
+    if (validatedData.permissionDate) updateData.permissionDate = Timestamp.fromDate(validatedData.permissionDate);
+    if (validatedData.managerApprovedAt) updateData.managerApprovedAt = Timestamp.fromDate(validatedData.managerApprovedAt);
+    if (validatedData.hrApprovedAt) updateData.hrApprovedAt = Timestamp.fromDate(validatedData.hrApprovedAt);
+    if (validatedData.rejectedAt) updateData.rejectedAt = Timestamp.fromDate(validatedData.rejectedAt);
+    if (validatedData.applicationDate) updateData.applicationDate = Timestamp.fromDate(validatedData.applicationDate);
+    
+    await leaveDoc.update(updateData);
+    
+    const result = await this.getLeaveApplication(id);
+    if (!result) throw new Error("Leave application not found after update");
+    return result;
+  }
+
+  async listLeaveApplicationsByUser(userId: string): Promise<LeaveApplication[]> {
+    const leaveRef = this.db.collection("leave_applications");
+    const snapshot = await leaveRef
+      .where("userId", "==", userId)
+      .orderBy("applicationDate", "desc")
+      .get();
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId,
+        employeeId: data.employeeId,
+        userName: data.userName,
+        userDepartment: data.userDepartment,
+        userDesignation: data.userDesignation,
+        leaveType: data.leaveType,
+        startDate: data.startDate?.toDate(),
+        endDate: data.endDate?.toDate(),
+        totalDays: data.totalDays,
+        permissionDate: data.permissionDate?.toDate(),
+        permissionStartTime: data.permissionStartTime,
+        permissionEndTime: data.permissionEndTime,
+        permissionHours: data.permissionHours,
+        reason: data.reason,
+        status: data.status,
+        reportingManagerId: data.reportingManagerId,
+        reportingManagerName: data.reportingManagerName,
+        managerApprovedAt: data.managerApprovedAt?.toDate(),
+        managerApprovedBy: data.managerApprovedBy,
+        managerRemarks: data.managerRemarks,
+        hrApprovedAt: data.hrApprovedAt?.toDate(),
+        hrApprovedBy: data.hrApprovedBy,
+        hrRemarks: data.hrRemarks,
+        rejectedAt: data.rejectedAt?.toDate(),
+        rejectedBy: data.rejectedBy,
+        rejectionReason: data.rejectionReason,
+        balanceAtApplication: data.balanceAtApplication,
+        affectsPayroll: data.affectsPayroll,
+        deductionAmount: data.deductionAmount,
+        applicationDate: data.applicationDate?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as LeaveApplication;
+    });
+  }
+
+  async listLeaveApplicationsByManager(managerId: string, status?: string): Promise<LeaveApplication[]> {
+    const leaveRef = this.db.collection("leave_applications");
+    let query: any = leaveRef.where("reportingManagerId", "==", managerId);
+    
+    if (status) {
+      query = query.where("status", "==", status);
+    }
+    
+    const snapshot = await query.orderBy("applicationDate", "desc").get();
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId,
+        employeeId: data.employeeId,
+        userName: data.userName,
+        userDepartment: data.userDepartment,
+        userDesignation: data.userDesignation,
+        leaveType: data.leaveType,
+        startDate: data.startDate?.toDate(),
+        endDate: data.endDate?.toDate(),
+        totalDays: data.totalDays,
+        permissionDate: data.permissionDate?.toDate(),
+        permissionStartTime: data.permissionStartTime,
+        permissionEndTime: data.permissionEndTime,
+        permissionHours: data.permissionHours,
+        reason: data.reason,
+        status: data.status,
+        reportingManagerId: data.reportingManagerId,
+        reportingManagerName: data.reportingManagerName,
+        managerApprovedAt: data.managerApprovedAt?.toDate(),
+        managerApprovedBy: data.managerApprovedBy,
+        managerRemarks: data.managerRemarks,
+        hrApprovedAt: data.hrApprovedAt?.toDate(),
+        hrApprovedBy: data.hrApprovedBy,
+        hrRemarks: data.hrRemarks,
+        rejectedAt: data.rejectedAt?.toDate(),
+        rejectedBy: data.rejectedBy,
+        rejectionReason: data.rejectionReason,
+        balanceAtApplication: data.balanceAtApplication,
+        affectsPayroll: data.affectsPayroll,
+        deductionAmount: data.deductionAmount,
+        applicationDate: data.applicationDate?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as LeaveApplication;
+    });
+  }
+
+  async listLeaveApplicationsByHR(status?: string): Promise<LeaveApplication[]> {
+    const leaveRef = this.db.collection("leave_applications");
+    let query: any = leaveRef;
+    
+    if (status) {
+      query = query.where("status", "==", status);
+    }
+    
+    const snapshot = await query.orderBy("applicationDate", "desc").get();
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId,
+        employeeId: data.employeeId,
+        userName: data.userName,
+        userDepartment: data.userDepartment,
+        userDesignation: data.userDesignation,
+        leaveType: data.leaveType,
+        startDate: data.startDate?.toDate(),
+        endDate: data.endDate?.toDate(),
+        totalDays: data.totalDays,
+        permissionDate: data.permissionDate?.toDate(),
+        permissionStartTime: data.permissionStartTime,
+        permissionEndTime: data.permissionEndTime,
+        permissionHours: data.permissionHours,
+        reason: data.reason,
+        status: data.status,
+        reportingManagerId: data.reportingManagerId,
+        reportingManagerName: data.reportingManagerName,
+        managerApprovedAt: data.managerApprovedAt?.toDate(),
+        managerApprovedBy: data.managerApprovedBy,
+        managerRemarks: data.managerRemarks,
+        hrApprovedAt: data.hrApprovedAt?.toDate(),
+        hrApprovedBy: data.hrApprovedBy,
+        hrRemarks: data.hrRemarks,
+        rejectedAt: data.rejectedAt?.toDate(),
+        rejectedBy: data.rejectedBy,
+        rejectionReason: data.rejectionReason,
+        balanceAtApplication: data.balanceAtApplication,
+        affectsPayroll: data.affectsPayroll,
+        deductionAmount: data.deductionAmount,
+        applicationDate: data.applicationDate?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as LeaveApplication;
+    });
+  }
+
+  async listAllLeaveApplications(filters?: { status?: string; month?: number; year?: number }): Promise<LeaveApplication[]> {
+    const leaveRef = this.db.collection("leave_applications");
+    let query: any = leaveRef;
+    
+    if (filters?.status) {
+      query = query.where("status", "==", filters.status);
+    }
+    
+    const snapshot = await query.orderBy("applicationDate", "desc").get();
+    
+    let results = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId,
+        employeeId: data.employeeId,
+        userName: data.userName,
+        userDepartment: data.userDepartment,
+        userDesignation: data.userDesignation,
+        leaveType: data.leaveType,
+        startDate: data.startDate?.toDate(),
+        endDate: data.endDate?.toDate(),
+        totalDays: data.totalDays,
+        permissionDate: data.permissionDate?.toDate(),
+        permissionStartTime: data.permissionStartTime,
+        permissionEndTime: data.permissionEndTime,
+        permissionHours: data.permissionHours,
+        reason: data.reason,
+        status: data.status,
+        reportingManagerId: data.reportingManagerId,
+        reportingManagerName: data.reportingManagerName,
+        managerApprovedAt: data.managerApprovedAt?.toDate(),
+        managerApprovedBy: data.managerApprovedBy,
+        managerRemarks: data.managerRemarks,
+        hrApprovedAt: data.hrApprovedAt?.toDate(),
+        hrApprovedBy: data.hrApprovedBy,
+        hrRemarks: data.hrRemarks,
+        rejectedAt: data.rejectedAt?.toDate(),
+        rejectedBy: data.rejectedBy,
+        rejectionReason: data.rejectionReason,
+        balanceAtApplication: data.balanceAtApplication,
+        affectsPayroll: data.affectsPayroll,
+        deductionAmount: data.deductionAmount,
+        applicationDate: data.applicationDate?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as LeaveApplication;
+    });
+    
+    // Filter by month/year if provided
+    if (filters?.month && filters?.year) {
+      results = results.filter(leave => {
+        const date = leave.startDate || leave.permissionDate;
+        if (date) {
+          return date.getMonth() + 1 === filters.month && date.getFullYear() === filters.year;
+        }
+        return false;
+      });
+    }
+    
+    return results;
+  }
+
+  async approveLeaveByManager(leaveId: string, managerId: string, remarks?: string): Promise<LeaveApplication> {
+    const leave = await this.getLeaveApplication(leaveId);
+    if (!leave) throw new Error("Leave application not found");
+    
+    const manager = await this.getUser(managerId);
+    if (!manager) throw new Error("Manager not found");
+    
+    await this.updateLeaveApplication(leaveId, {
+      status: "pending_hr",
+      managerApprovedAt: new Date(),
+      managerApprovedBy: managerId,
+      managerRemarks: remarks,
+      reportingManagerName: manager.displayName,
+    });
+    
+    const result = await this.getLeaveApplication(leaveId);
+    if (!result) throw new Error("Leave application not found after approval");
+    return result;
+  }
+
+  async approveLeaveByHR(leaveId: string, hrId: string, remarks?: string): Promise<LeaveApplication> {
+    const leave = await this.getLeaveApplication(leaveId);
+    if (!leave) throw new Error("Leave application not found");
+    
+    // Get current leave balance
+    const balance = await this.getCurrentLeaveBalance(leave.userId);
+    if (!balance) throw new Error("Leave balance not found");
+    
+    // Update leave application
+    await this.updateLeaveApplication(leaveId, {
+      status: "approved",
+      hrApprovedAt: new Date(),
+      hrApprovedBy: hrId,
+      hrRemarks: remarks,
+    });
+    
+    // Update leave balance based on leave type
+    if (leave.leaveType === "casual_leave" && leave.totalDays) {
+      await this.updateLeaveBalance(balance.id, {
+        casualLeaveUsed: balance.casualLeaveUsed + leave.totalDays,
+        casualLeaveHistory: [
+          ...balance.casualLeaveHistory,
+          {
+            date: leave.startDate || new Date(),
+            days: leave.totalDays,
+            leaveId: leaveId,
+          }
+        ]
+      });
+    } else if (leave.leaveType === "permission" && leave.permissionHours) {
+      await this.updateLeaveBalance(balance.id, {
+        permissionHoursUsed: balance.permissionHoursUsed + leave.permissionHours,
+        permissionHistory: [
+          ...balance.permissionHistory,
+          {
+            date: leave.permissionDate || new Date(),
+            hours: leave.permissionHours,
+            leaveId: leaveId,
+          }
+        ]
+      });
+    }
+    
+    const result = await this.getLeaveApplication(leaveId);
+    if (!result) throw new Error("Leave application not found after approval");
+    return result;
+  }
+
+  async rejectLeave(leaveId: string, rejectedBy: string, reason: string, rejectedByRole: 'manager' | 'hr'): Promise<LeaveApplication> {
+    const status = rejectedByRole === 'manager' ? 'rejected_by_manager' : 'rejected_by_hr';
+    
+    await this.updateLeaveApplication(leaveId, {
+      status,
+      rejectedAt: new Date(),
+      rejectedBy,
+      rejectionReason: reason,
+    });
+    
+    const result = await this.getLeaveApplication(leaveId);
+    if (!result) throw new Error("Leave application not found after rejection");
+    return result;
+  }
+
+  async cancelLeaveApplication(leaveId: string, userId: string): Promise<LeaveApplication> {
+    const leave = await this.getLeaveApplication(leaveId);
+    if (!leave) throw new Error("Leave application not found");
+    
+    if (leave.userId !== userId) {
+      throw new Error("Unauthorized: You can only cancel your own leave applications");
+    }
+    
+    if (leave.status === "approved") {
+      throw new Error("Cannot cancel approved leave. Please contact HR.");
+    }
+    
+    await this.updateLeaveApplication(leaveId, {
+      status: "cancelled",
+    });
+    
+    const result = await this.getLeaveApplication(leaveId);
+    if (!result) throw new Error("Leave application not found after cancellation");
+    return result;
+  }
+
+  // Fixed Holidays Management
+  async getFixedHoliday(id: string): Promise<FixedHoliday | undefined> {
+    const holidayDoc = this.db.collection("fixed_holidays").doc(id);
+    const docSnap = await holidayDoc.get();
+    
+    if (!docSnap.exists) return undefined;
+    
+    const data = docSnap.data() || {};
+    return {
+      id: docSnap.id,
+      name: data.name,
+      date: data.date?.toDate() || new Date(),
+      year: data.year,
+      type: data.type,
+      isPaid: data.isPaid,
+      isOptional: data.isOptional,
+      applicableDepartments: data.applicableDepartments,
+      description: data.description,
+      createdBy: data.createdBy,
+      createdAt: data.createdAt?.toDate() || new Date(),
+    } as FixedHoliday;
+  }
+
+  async createFixedHoliday(data: z.infer<typeof insertFixedHolidaySchema>): Promise<FixedHoliday> {
+    // Validate the input data
+    const validatedData = insertFixedHolidaySchema.parse(data);
+    
+    const holidayRef = this.db.collection("fixed_holidays").doc();
+    const holidayData = {
+      ...validatedData,
+      date: Timestamp.fromDate(validatedData.date),
+      createdAt: Timestamp.fromDate(validatedData.createdAt),
+    };
+    
+    await holidayRef.set(holidayData);
+    
+    return {
+      id: holidayRef.id,
+      ...validatedData,
+    };
+  }
+
+  async updateFixedHoliday(id: string, data: Partial<z.infer<typeof insertFixedHolidaySchema>>): Promise<FixedHoliday> {
+    // Validate the partial input data
+    const validatedData = insertFixedHolidaySchema.partial().parse(data);
+    
+    const holidayDoc = this.db.collection("fixed_holidays").doc(id);
+    const updateData: any = { ...validatedData };
+    
+    // Convert date field to Timestamp if present
+    if (validatedData.date) updateData.date = Timestamp.fromDate(validatedData.date);
+    if (validatedData.createdAt) updateData.createdAt = Timestamp.fromDate(validatedData.createdAt);
+    
+    await holidayDoc.update(updateData);
+    
+    const result = await this.getFixedHoliday(id);
+    if (!result) throw new Error("Fixed holiday not found after update");
+    return result;
+  }
+
+  async deleteFixedHoliday(id: string): Promise<boolean> {
+    const holidayDoc = this.db.collection("fixed_holidays").doc(id);
+    await holidayDoc.delete();
+    return true;
+  }
+
+  async listFixedHolidays(year?: number): Promise<FixedHoliday[]> {
+    const holidayRef = this.db.collection("fixed_holidays");
+    let query: any = holidayRef;
+    
+    if (year) {
+      query = query.where("year", "==", year);
+    }
+    
+    const snapshot = await query.orderBy("date", "asc").get();
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        date: data.date?.toDate() || new Date(),
+        year: data.year,
+        type: data.type,
+        isPaid: data.isPaid,
+        isOptional: data.isOptional,
+        applicableDepartments: data.applicableDepartments,
+        description: data.description,
+        createdBy: data.createdBy,
+        createdAt: data.createdAt?.toDate() || new Date(),
+      } as FixedHoliday;
+    });
+  }
+
+  async initializeFixedHolidays(year: number, createdBy: string): Promise<void> {
+    const FIXED_ANNUAL_HOLIDAYS = [
+      { name: "May Day", month: 5, day: 1 },
+      { name: "Independence Day", month: 8, day: 15 },
+      { name: "Gandhi Jayanti", month: 10, day: 2 },
+      { name: "Republic Day", month: 1, day: 26 }
+    ];
+    
+    for (const holiday of FIXED_ANNUAL_HOLIDAYS) {
+      const existingHolidays = await this.listFixedHolidays(year);
+      const alreadyExists = existingHolidays.some(h => 
+        h.name === holiday.name && h.year === year
+      );
+      
+      if (!alreadyExists) {
+        await this.createFixedHoliday({
+          name: holiday.name,
+          date: new Date(year, holiday.month - 1, holiday.day),
+          year,
+          type: "national",
+          isPaid: true,
+          isOptional: false,
+          createdBy,
+          createdAt: new Date(),
+        });
+      }
+    }
   }
 
   // ===================== Phase 2: Enterprise RBAC Implementation =====================

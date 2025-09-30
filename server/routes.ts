@@ -19,6 +19,8 @@ import {
   insertEmployeeDocumentSchema,
   insertPerformanceReviewSchema,
   insertCustomerSchema,
+  insertLeaveApplicationSchema,
+  insertFixedHolidaySchema,
   departments
 } from "@shared/schema";
 // Import all the necessary schemas from storage.ts since they've been moved there
@@ -3896,6 +3898,478 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating leave:", error);
       res.status(500).json({ message: "Failed to update leave" });
+    }
+  });
+
+  // ===================== Comprehensive Leave Management System API Routes =====================
+  
+  // Leave Balance Routes
+  app.get("/api/leave-balance/current", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const balance = await storage.getCurrentLeaveBalance(user.id);
+      if (!balance) {
+        // Initialize balance for current month if doesn't exist
+        const now = new Date();
+        await storage.createLeaveBalance({
+          userId: user.id,
+          employeeId: user.employeeId || user.id,
+          casualLeaveBalance: 1,
+          permissionHoursBalance: 2,
+          casualLeaveUsed: 0,
+          permissionHoursUsed: 0,
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          casualLeaveHistory: [],
+          permissionHistory: [],
+          lastResetDate: now,
+        });
+        const newBalance = await storage.getCurrentLeaveBalance(user.id);
+        return res.json(newBalance);
+      }
+      
+      res.json(balance);
+    } catch (error) {
+      console.error("Error fetching leave balance:", error);
+      res.status(500).json({ message: "Failed to fetch leave balance" });
+    }
+  });
+
+  app.get("/api/leave-balance/:userId", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Check permissions: user can view own balance, managers can view team, HR can view all
+      if (req.params.userId !== user.id && user.department !== "hr" && user.role !== "master_admin") {
+        // Check if user is the reporting manager
+        const targetUser = await storage.getUser(req.params.userId);
+        if (!targetUser || targetUser.reportingManagerId !== user.id) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      
+      const balance = await storage.getCurrentLeaveBalance(req.params.userId);
+      if (!balance) {
+        return res.status(404).json({ message: "Leave balance not found" });
+      }
+      
+      res.json(balance);
+    } catch (error) {
+      console.error("Error fetching leave balance:", error);
+      res.status(500).json({ message: "Failed to fetch leave balance" });
+    }
+  });
+
+  app.post("/api/leave-balance/reset", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
+        return res.status(403).json({ message: "Access denied - System settings permission required" });
+      }
+      
+      // Validate month and year input
+      const resetSchema = z.object({
+        month: z.number().min(1).max(12),
+        year: z.number().min(2020).max(2100)
+      });
+      
+      const { month, year } = resetSchema.parse(req.body);
+      await storage.resetMonthlyLeaveBalances(month, year);
+      
+      res.json({ message: "Leave balances reset successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error resetting leave balances:", error);
+      res.status(500).json({ message: "Failed to reset leave balances" });
+    }
+  });
+
+  // Leave Application Routes
+  app.post("/api/leave-applications", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Get current leave balance
+      const balance = await storage.getCurrentLeaveBalance(user.id);
+      if (!balance) {
+        return res.status(400).json({ message: "Leave balance not found. Please contact HR." });
+      }
+      
+      // Validate request body using schema
+      const validatedBody = insertLeaveApplicationSchema.partial().parse(req.body);
+      
+      // Prepare leave application data
+      const leaveData = {
+        ...validatedBody,
+        userId: user.id,
+        employeeId: user.employeeId || user.id,
+        userName: user.displayName,
+        userDepartment: user.department,
+        userDesignation: user.designation,
+        reportingManagerId: user.reportingManagerId,
+        status: "pending_manager" as const,
+        balanceAtApplication: {
+          casualLeaveAvailable: balance.casualLeaveBalance - balance.casualLeaveUsed,
+          permissionHoursAvailable: balance.permissionHoursBalance - balance.permissionHoursUsed,
+        },
+      };
+      
+      // Validate balance availability
+      if (leaveData.leaveType === "casual_leave" && leaveData.totalDays) {
+        const available = balance.casualLeaveBalance - balance.casualLeaveUsed;
+        if (available < leaveData.totalDays) {
+          leaveData.leaveType = "unpaid_leave";
+          leaveData.affectsPayroll = true;
+        }
+      } else if (leaveData.leaveType === "permission" && leaveData.permissionHours) {
+        const available = balance.permissionHoursBalance - balance.permissionHoursUsed;
+        if (available < leaveData.permissionHours) {
+          return res.status(400).json({ 
+            message: `Insufficient permission hours. Available: ${available} hours` 
+          });
+        }
+      }
+      
+      const leave = await storage.createLeaveApplication(leaveData);
+      res.status(201).json(leave);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error creating leave application:", error);
+      res.status(500).json({ message: "Failed to create leave application" });
+    }
+  });
+
+  app.get("/api/leave-applications/my", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const leaves = await storage.listLeaveApplicationsByUser(user.id);
+      res.json(leaves);
+    } catch (error) {
+      console.error("Error fetching leave applications:", error);
+      res.status(500).json({ message: "Failed to fetch leave applications" });
+    }
+  });
+
+  app.get("/api/leave-applications/pending-manager", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const leaves = await storage.listLeaveApplicationsByManager(user.id, "pending_manager");
+      res.json(leaves);
+    } catch (error) {
+      console.error("Error fetching pending manager leaves:", error);
+      res.status(500).json({ message: "Failed to fetch pending manager leaves" });
+    }
+  });
+
+  app.get("/api/leave-applications/pending-hr", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || user.department !== "hr") {
+        return res.status(403).json({ message: "Access denied - HR only" });
+      }
+      
+      const leaves = await storage.listLeaveApplicationsByHR("pending_hr");
+      res.json(leaves);
+    } catch (error) {
+      console.error("Error fetching pending HR leaves:", error);
+      res.status(500).json({ message: "Failed to fetch pending HR leaves" });
+    }
+  });
+
+  app.get("/api/leave-applications/all", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || (user.department !== "hr" && user.role !== "master_admin")) {
+        return res.status(403).json({ message: "Access denied - HR or Admin only" });
+      }
+      
+      const { status, month, year } = req.query;
+      const leaves = await storage.listAllLeaveApplications({
+        status: status as string,
+        month: month ? parseInt(month as string) : undefined,
+        year: year ? parseInt(year as string) : undefined,
+      });
+      res.json(leaves);
+    } catch (error) {
+      console.error("Error fetching all leave applications:", error);
+      res.status(500).json({ message: "Failed to fetch all leave applications" });
+    }
+  });
+
+  app.get("/api/leave-applications/:id", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const leave = await storage.getLeaveApplication(req.params.id);
+      if (!leave) {
+        return res.status(404).json({ message: "Leave application not found" });
+      }
+      
+      // Check permissions
+      const canView = leave.userId === user.id || 
+                      leave.reportingManagerId === user.id || 
+                      user.department === "hr" || 
+                      user.role === "master_admin";
+      
+      if (!canView) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(leave);
+    } catch (error) {
+      console.error("Error fetching leave application:", error);
+      res.status(500).json({ message: "Failed to fetch leave application" });
+    }
+  });
+
+  app.put("/api/leave-applications/:id/approve-manager", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.approve"))) {
+        return res.status(403).json({ message: "Access denied - Leave approval permission required" });
+      }
+      
+      const leave = await storage.getLeaveApplication(req.params.id);
+      if (!leave) {
+        return res.status(404).json({ message: "Leave application not found" });
+      }
+      
+      if (leave.reportingManagerId !== user.id) {
+        return res.status(403).json({ message: "Access denied - You are not the reporting manager" });
+      }
+      
+      if (leave.status !== "pending_manager") {
+        return res.status(400).json({ message: "Leave is not pending manager approval" });
+      }
+      
+      // Validate remarks input
+      const approvalSchema = z.object({
+        remarks: z.string().optional()
+      });
+      
+      const { remarks } = approvalSchema.parse(req.body);
+      const updatedLeave = await storage.approveLeaveByManager(req.params.id, user.id, remarks);
+      
+      res.json(updatedLeave);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error approving leave (manager):", error);
+      res.status(500).json({ message: "Failed to approve leave" });
+    }
+  });
+
+  app.put("/api/leave-applications/:id/approve-hr", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.approve")) || user.department !== "hr") {
+        return res.status(403).json({ message: "Access denied - HR department with leave approval permission required" });
+      }
+      
+      const leave = await storage.getLeaveApplication(req.params.id);
+      if (!leave) {
+        return res.status(404).json({ message: "Leave application not found" });
+      }
+      
+      if (leave.status !== "pending_hr") {
+        return res.status(400).json({ message: "Leave is not pending HR approval" });
+      }
+      
+      // Validate remarks input
+      const approvalSchema = z.object({
+        remarks: z.string().optional()
+      });
+      
+      const { remarks } = approvalSchema.parse(req.body);
+      const updatedLeave = await storage.approveLeaveByHR(req.params.id, user.id, remarks);
+      
+      res.json(updatedLeave);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error approving leave (HR):", error);
+      res.status(500).json({ message: "Failed to approve leave" });
+    }
+  });
+
+  app.put("/api/leave-applications/:id/reject", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.reject"))) {
+        return res.status(403).json({ message: "Access denied - Leave rejection permission required" });
+      }
+      
+      const leave = await storage.getLeaveApplication(req.params.id);
+      if (!leave) {
+        return res.status(404).json({ message: "Leave application not found" });
+      }
+      
+      // Determine role: manager or hr
+      let rejectedByRole: 'manager' | 'hr';
+      if (user.department === "hr") {
+        rejectedByRole = "hr";
+      } else if (leave.reportingManagerId === user.id) {
+        rejectedByRole = "manager";
+      } else {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Validate reason input
+      const rejectSchema = z.object({
+        reason: z.string().min(10, "Rejection reason must be at least 10 characters")
+      });
+      
+      const { reason } = rejectSchema.parse(req.body);
+      const updatedLeave = await storage.rejectLeave(req.params.id, user.id, reason, rejectedByRole);
+      
+      res.json(updatedLeave);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error rejecting leave:", error);
+      res.status(500).json({ message: "Failed to reject leave" });
+    }
+  });
+
+  app.put("/api/leave-applications/:id/cancel", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedLeave = await storage.cancelLeaveApplication(req.params.id, user.id);
+      
+      res.json(updatedLeave);
+    } catch (error: any) {
+      console.error("Error cancelling leave:", error);
+      res.status(500).json({ message: error.message || "Failed to cancel leave" });
+    }
+  });
+
+  // Fixed Holidays Routes
+  app.get("/api/holidays", verifyAuth, async (req, res) => {
+    try {
+      const { year } = req.query;
+      const holidays = await storage.listFixedHolidays(year ? parseInt(year as string) : undefined);
+      res.json(holidays);
+    } catch (error) {
+      console.error("Error fetching holidays:", error);
+      res.status(500).json({ message: "Failed to fetch holidays" });
+    }
+  });
+
+  app.post("/api/holidays", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
+        return res.status(403).json({ message: "Access denied - System settings permission required" });
+      }
+      
+      // Validate request body using schema
+      const validatedBody = insertFixedHolidaySchema.omit({ createdBy: true, createdAt: true }).parse(req.body);
+      
+      const holidayData = {
+        ...validatedBody,
+        createdBy: user.id,
+      };
+      
+      const holiday = await storage.createFixedHoliday(holidayData);
+      res.status(201).json(holiday);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error creating holiday:", error);
+      res.status(500).json({ message: "Failed to create holiday" });
+    }
+  });
+
+  app.put("/api/holidays/:id", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
+        return res.status(403).json({ message: "Access denied - System settings permission required" });
+      }
+      
+      // Validate request body using partial schema
+      const validatedBody = insertFixedHolidaySchema.partial().parse(req.body);
+      
+      const holiday = await storage.updateFixedHoliday(req.params.id, validatedBody);
+      res.json(holiday);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error updating holiday:", error);
+      res.status(500).json({ message: "Failed to update holiday" });
+    }
+  });
+
+  app.delete("/api/holidays/:id", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
+        return res.status(403).json({ message: "Access denied - System settings permission required" });
+      }
+      
+      await storage.deleteFixedHoliday(req.params.id);
+      res.json({ message: "Holiday deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting holiday:", error);
+      res.status(500).json({ message: "Failed to delete holiday" });
+    }
+  });
+
+  app.post("/api/holidays/initialize", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
+        return res.status(403).json({ message: "Access denied - System settings permission required" });
+      }
+      
+      // Validate year input
+      const initializeSchema = z.object({
+        year: z.number().min(2020).max(2100)
+      });
+      
+      const { year } = initializeSchema.parse(req.body);
+      await storage.initializeFixedHolidays(year, user.id);
+      res.json({ message: "Fixed holidays initialized successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ errors: error.errors });
+      }
+      console.error("Error initializing holidays:", error);
+      res.status(500).json({ message: "Failed to initialize holidays" });
     }
   });
 
