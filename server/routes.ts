@@ -4007,8 +4007,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Leave balance not found. Please contact HR." });
       }
       
+      // Convert date strings to Date objects before validation
+      const processedBody = {
+        ...req.body,
+        startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+        permissionDate: req.body.permissionDate ? new Date(req.body.permissionDate) : undefined,
+      };
+      
       // Validate request body using schema
-      const validatedBody = insertLeaveApplicationSchema.partial().parse(req.body);
+      const validatedBody = insertLeaveApplicationSchema.partial().parse(processedBody);
       
       // Prepare leave application data
       const leaveData = {
