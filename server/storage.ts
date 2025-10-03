@@ -36,6 +36,9 @@ import {
   InsertFixedHoliday
 } from "@shared/schema";
 
+// Import additional schemas from shared
+import { paymentModes, maritalStatus as sharedMaritalStatus, bloodGroups as sharedBloodGroups, employeeStatus as sharedEmployeeStatus } from "@shared/schema";
+
 // Define our schemas since we're not using drizzle anymore
 export const insertUserSchema = z.object({
   uid: z.string(),
@@ -51,7 +54,52 @@ export const insertUserSchema = z.object({
   payrollGrade: z.enum(["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"]).nullable().optional(),
   joinDate: z.date().optional(),
   isActive: z.boolean().default(true),
-  photoURL: z.string().nullable().optional()
+  photoURL: z.string().nullable().optional(),
+  
+  // Statutory Information
+  esiNumber: z.string().optional(),
+  epfNumber: z.string().optional(),
+  aadharNumber: z.string().optional(),
+  panNumber: z.string().optional(),
+  
+  // Personal Details
+  fatherName: z.string().optional(),
+  spouseName: z.string().optional(),
+  dateOfBirth: z.date().optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  maritalStatus: z.enum(sharedMaritalStatus).optional(),
+  bloodGroup: z.enum(sharedBloodGroups).optional(),
+  
+  // Professional Information
+  educationalQualification: z.string().optional(),
+  experienceYears: z.number().min(0).optional(),
+  
+  // Employment Lifecycle
+  dateOfLeaving: z.date().optional(),
+  employeeStatus: z.enum(sharedEmployeeStatus).default("active"),
+  
+  // Contact Information
+  contactNumber: z.string().optional(),
+  emergencyContactPerson: z.string().optional(),
+  emergencyContactNumber: z.string().optional(),
+  permanentAddress: z.string().optional(),
+  presentAddress: z.string().optional(),
+  location: z.string().optional(),
+  
+  // Payroll Information
+  paymentMode: z.enum(paymentModes).optional(),
+  bankAccountNumber: z.string().optional(),
+  bankName: z.string().optional(),
+  ifscCode: z.string().optional(),
+  
+  // Document Management
+  documents: z.object({
+    marksheets: z.array(z.string()).optional(),
+    certificates: z.array(z.string()).optional(),
+    idProofs: z.array(z.string()).optional(),
+    bankDocuments: z.array(z.string()).optional(),
+    others: z.array(z.string()).optional()
+  }).optional()
 });
 
 export const insertDesignationSchema = z.object({
@@ -142,6 +190,51 @@ export interface User {
   isActive: boolean;
   createdAt: Date;
   photoURL?: string;
+  
+  // Statutory Information
+  esiNumber?: string;
+  epfNumber?: string;
+  aadharNumber?: string;
+  panNumber?: string;
+  
+  // Personal Details
+  fatherName?: string;
+  spouseName?: string;
+  dateOfBirth?: Date;
+  gender?: "male" | "female" | "other";
+  maritalStatus?: "single" | "married" | "divorced" | "widowed" | "separated";
+  bloodGroup?: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | "unknown";
+  
+  // Professional Information
+  educationalQualification?: string;
+  experienceYears?: number;
+  
+  // Employment Lifecycle
+  dateOfLeaving?: Date;
+  employeeStatus?: "active" | "inactive" | "probation" | "notice_period" | "terminated" | "on_leave";
+  
+  // Contact Information
+  contactNumber?: string;
+  emergencyContactPerson?: string;
+  emergencyContactNumber?: string;
+  permanentAddress?: string;
+  presentAddress?: string;
+  location?: string;
+  
+  // Payroll Information
+  paymentMode?: "cash" | "bank" | "cheque";
+  bankAccountNumber?: string;
+  bankName?: string;
+  ifscCode?: string;
+  
+  // Document Management
+  documents?: {
+    marksheets?: string[];
+    certificates?: string[];
+    idProofs?: string[];
+    bankDocuments?: string[];
+    others?: string[];
+  };
 }
 
 export interface Designation {

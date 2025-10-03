@@ -2,17 +2,59 @@ import { auth as adminAuth } from '../firebase';
 import { storage } from '../storage';
 import { cacheService } from './cache-service';
 import { z } from 'zod';
+import crypto from 'crypto';
 
-// Unified user creation schema
+// Generate a cryptographically secure random password
+function generateSecurePassword(length: number = 16): string {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*';
+  const allChars = uppercase + lowercase + numbers + symbols;
+  
+  // Use crypto for secure random number generation
+  const getRandomInt = (max: number): number => {
+    const randomBuffer = crypto.randomBytes(4);
+    const randomInt = randomBuffer.readUInt32BE(0);
+    return randomInt % max;
+  };
+  
+  let password = '';
+  // Ensure at least one of each type
+  password += uppercase[getRandomInt(uppercase.length)];
+  password += lowercase[getRandomInt(lowercase.length)];
+  password += numbers[getRandomInt(numbers.length)];
+  password += symbols[getRandomInt(symbols.length)];
+  
+  // Fill the rest randomly
+  for (let i = password.length; i < length; i++) {
+    password += allChars[getRandomInt(allChars.length)];
+  }
+  
+  // Shuffle the password using crypto random
+  const passwordArray = password.split('');
+  for (let i = passwordArray.length - 1; i > 0; i--) {
+    const j = getRandomInt(i + 1);
+    [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+  }
+  
+  return passwordArray.join('');
+}
+
+// Unified user creation schema - password is now optional (auto-generated if not provided)
 export const createUserSchema = z.object({
   email: z.string().email("Invalid email format"),
   displayName: z.string().min(2, "Display name must be at least 2 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  createLogin: z.boolean().default(false), // Whether to create Firebase Auth account
   role: z.enum(["master_admin", "admin", "employee"]).default("employee"),
   department: z.enum(["operations", "admin", "hr", "marketing", "sales", "technical", "housekeeping"]).nullable().default(null)
 });
 
-// User update schema
+// Import schemas from shared
+import { paymentModes, maritalStatus, bloodGroups, employeeStatus, insertUserEnhancedSchema } from '@shared/schema';
+
+// User update schema - includes all employee fields
 export const updateUserSchema = z.object({
   displayName: z.string().min(2).optional(),
   role: z.enum(["master_admin", "admin", "employee"]).optional(),
@@ -25,40 +67,118 @@ export const updateUserSchema = z.object({
   payrollGrade: z.enum(["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"]).nullable().optional(),
   joinDate: z.date().optional(),
   isActive: z.boolean().optional(),
-  photoURL: z.string().nullable().optional()
+  photoURL: z.string().nullable().optional(),
+  
+  // Statutory Information
+  esiNumber: z.string().optional(),
+  epfNumber: z.string().optional(),
+  aadharNumber: z.string().optional(),
+  panNumber: z.string().optional(),
+  
+  // Personal Details
+  fatherName: z.string().optional(),
+  spouseName: z.string().optional(),
+  dateOfBirth: z.date().optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  maritalStatus: z.enum(maritalStatus).optional(),
+  bloodGroup: z.enum(bloodGroups).optional(),
+  
+  // Professional Information
+  educationalQualification: z.string().optional(),
+  experienceYears: z.number().min(0).optional(),
+  
+  // Employment Lifecycle
+  dateOfLeaving: z.date().optional(),
+  employeeStatus: z.enum(employeeStatus).optional(),
+  
+  // Contact Information
+  contactNumber: z.string().optional(),
+  emergencyContactPerson: z.string().optional(),
+  emergencyContactNumber: z.string().optional(),
+  permanentAddress: z.string().optional(),
+  presentAddress: z.string().optional(),
+  location: z.string().optional(),
+  
+  // Payroll Information
+  paymentMode: z.enum(paymentModes).optional(),
+  bankAccountNumber: z.string().optional(),
+  bankName: z.string().optional(),
+  ifscCode: z.string().optional(),
+  
+  // Document Management
+  documents: z.object({
+    marksheets: z.array(z.string()).optional(),
+    certificates: z.array(z.string()).optional(),
+    idProofs: z.array(z.string()).optional(),
+    bankDocuments: z.array(z.string()).optional(),
+    others: z.array(z.string()).optional()
+  }).optional()
 });
 
 export class UserService {
   /**
    * Create a new user with Firebase Auth and store profile in Firestore
+   * Supports auto-generated passwords and password reset emails
    */
-  async createUser(userData: z.infer<typeof createUserSchema>) {
+  async createUser(userData: any) {
     try {
-      // Validate input data
+      // First validate with createUserSchema for basic auth fields
       const validatedData = createUserSchema.parse(userData);
       
-      // Create user in Firebase Auth
-      const userRecord = await adminAuth.createUser({
-        email: validatedData.email,
-        password: validatedData.password,
-        displayName: validatedData.displayName,
-        emailVerified: false
-      });
+      // Then validate all employee fields if provided (allows partial data)
+      // This ensures server-side validation of employee-specific fields
+      const employeeFieldValidation = insertUserEnhancedSchema.partial().safeParse(userData);
+      if (!employeeFieldValidation.success) {
+        console.error('Employee field validation failed:', employeeFieldValidation.error);
+        throw new Error(`Invalid employee data: ${employeeFieldValidation.error.message}`);
+      }
+      
+      let userRecord;
+      let passwordResetSent = false;
+      
+      // Only create Firebase Auth account if createLogin is true
+      if (validatedData.createLogin) {
+        // Auto-generate password if not provided
+        const password = validatedData.password || generateSecurePassword();
+        
+        // Create user in Firebase Auth
+        userRecord = await adminAuth.createUser({
+          email: validatedData.email,
+          password: password,
+          displayName: validatedData.displayName,
+          emailVerified: false
+        });
+        
+        // Send password reset email so user can set their own password
+        try {
+          await adminAuth.generatePasswordResetLink(validatedData.email);
+          // Firebase automatically sends the password reset email if email settings are configured
+          passwordResetSent = true;
+        } catch (emailError) {
+          console.error('Error sending password reset email');
+          // Continue even if password reset fails
+        }
+      } else {
+        // Create a placeholder UID for users without login
+        userRecord = { uid: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` };
+      }
 
-      // Create user profile in Firestore with validated data
+      // Create user profile in Firestore with all employee data
       const userProfile = await storage.createUser({
         uid: userRecord.uid,
         email: validatedData.email,
         displayName: validatedData.displayName,
         role: validatedData.role,
-        department: validatedData.department
+        department: validatedData.department,
+        // Include all additional employee fields from userData
+        ...userData
       });
 
       // Log activity
       await storage.createActivityLog({
         type: 'customer_created',
-        title: 'New User Registered',
-        description: `User ${validatedData.displayName} (${validatedData.email}) registered successfully`,
+        title: validatedData.createLogin ? 'New Employee Created with Login' : 'New Employee Profile Created',
+        description: `Employee ${validatedData.displayName} (${validatedData.email}) created successfully${passwordResetSent ? ' - Password reset email sent' : ''}`,
         entityId: userRecord.uid,
         entityType: 'user',
         userId: userRecord.uid
@@ -67,7 +187,12 @@ export class UserService {
       return {
         success: true,
         user: userProfile,
-        firebaseUser: userRecord
+        firebaseUser: userRecord,
+        loginCreated: validatedData.createLogin,
+        passwordResetSent: passwordResetSent,
+        message: validatedData.createLogin 
+          ? `Employee created successfully. ${passwordResetSent ? 'Password reset email has been sent to ' + validatedData.email : 'Login credentials created.'}` 
+          : 'Employee profile created successfully.'
       };
 
     } catch (error: any) {

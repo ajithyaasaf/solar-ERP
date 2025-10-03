@@ -85,6 +85,24 @@ export const systemPermissions = [
   "site_visit.approve", "site_visit.reports"
 ] as const;
 
+// Marital status options
+export const maritalStatus = [
+  "single", "married", "divorced", "widowed", "separated"
+] as const;
+
+// Blood group options
+export const bloodGroups = [
+  "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "unknown"
+] as const;
+
+// Employee status types for comprehensive lifecycle management
+export const employeeStatus = [
+  "active", "inactive", "probation", "notice_period", "terminated", "on_leave"
+] as const;
+
+// Payment mode options
+export const paymentModes = ["cash", "bank", "cheque"] as const;
+
 export const insertUserEnhancedSchema = z.object({
   uid: z.string(),
   email: z.string().email(),
@@ -97,7 +115,52 @@ export const insertUserEnhancedSchema = z.object({
   payrollGrade: z.enum(payrollGrades).nullable().optional(),
   joinDate: z.date().optional(),
   isActive: z.boolean().default(true),
-  photoURL: z.string().nullable().optional()
+  photoURL: z.string().nullable().optional(),
+  
+  // Statutory Information
+  esiNumber: z.string().optional(),
+  epfNumber: z.string().optional(),
+  aadharNumber: z.string().length(12, "AADHAR must be 12 digits").optional().or(z.literal("")),
+  panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format").optional().or(z.literal("")),
+  
+  // Personal Details
+  fatherName: z.string().optional(),
+  spouseName: z.string().optional(),
+  dateOfBirth: z.date().optional(),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  maritalStatus: z.enum(maritalStatus).optional(),
+  bloodGroup: z.enum(bloodGroups).optional(),
+  
+  // Professional Information
+  educationalQualification: z.string().optional(),
+  experienceYears: z.number().min(0).optional(),
+  
+  // Employment Lifecycle
+  dateOfLeaving: z.date().optional(),
+  employeeStatus: z.enum(employeeStatus).default("active"),
+  
+  // Contact Information
+  contactNumber: z.string().optional(),
+  emergencyContactPerson: z.string().optional(),
+  emergencyContactNumber: z.string().optional(),
+  permanentAddress: z.string().optional(),
+  presentAddress: z.string().optional(),
+  location: z.string().optional(),
+  
+  // Payroll Information
+  paymentMode: z.enum(paymentModes).optional(),
+  bankAccountNumber: z.string().optional(),
+  bankName: z.string().optional(),
+  ifscCode: z.string().optional(),
+  
+  // Document Management
+  documents: z.object({
+    marksheets: z.array(z.string()).optional(),
+    certificates: z.array(z.string()).optional(),
+    idProofs: z.array(z.string()).optional(),
+    bankDocuments: z.array(z.string()).optional(),
+    others: z.array(z.string()).optional()
+  }).optional()
 });
 
 export const insertDesignationSchema = z.object({
@@ -117,11 +180,6 @@ export const insertPermissionGroupSchema = z.object({
 });
 
 // Enterprise HR Management Schemas
-
-// Employee status types for comprehensive lifecycle management
-export const employeeStatus = [
-  "active", "inactive", "probation", "notice_period", "terminated", "on_leave"
-] as const;
 
 // Employment types for contractual management
 export const employmentTypes = [
@@ -575,16 +633,6 @@ export interface QuickUpdateResponse {
   };
   message: string;
 }
-
-// Marital status options
-export const maritalStatus = [
-  "single", "married", "divorced", "widowed", "separated"
-] as const;
-
-// Blood group options
-export const bloodGroups = [
-  "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "unknown"
-] as const;
 
 // Document types for employee document management
 export const documentTypes = [

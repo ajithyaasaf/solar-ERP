@@ -449,14 +449,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Registration endpoint for new users (public - no auth required)
-  app.post("/api/auth/register", async (req, res) => {
+  // Registration endpoint - DISABLED for public use
+  // Employee accounts must be created by admins through /api/users
+  app.post("/api/auth/register", verifyAuth, async (req, res) => {
     try {
-      console.log("Registration request received:", req.body);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      // Only master_admin and admin can register new users
+      if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
+        return res.status(403).json({ 
+          message: "Public registration is disabled. Please contact your administrator to create an account." 
+        });
+      }
+      
+      console.log("Admin registration request received for:", req.body.email || "unknown");
       
       const result = await userService.createUser({
         ...req.body,
-        role: "employee" // Force employee role for public registration
+        role: req.body.role || "employee", // Allow role specification for admins
+        createLogin: true // Always create login for admin-registered users
       });
       
       if (!result.success) {
@@ -464,13 +474,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(201).json({ 
-        message: "User registered successfully",
+        message: result.message || "User registered successfully",
         user: {
           uid: result.user.uid,
           email: result.user.email,
           displayName: result.user.displayName,
           role: result.user.role
-        }
+        },
+        loginCreated: result.loginCreated,
+        passwordResetSent: result.passwordResetSent
       });
     } catch (error) {
       console.error("Error registering user:", error);
