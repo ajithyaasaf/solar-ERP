@@ -1284,8 +1284,8 @@ function UserViewDetails({ user }: { user: User }) {
               <h3 className="text-2xl font-bold">{user.displayName}</h3>
               <p className="text-muted-foreground">{user.employeeId || 'No Employee ID'}</p>
               <div className="flex gap-2 mt-2">
-                <Badge className={user.employeeStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                  {user.employeeStatus.replace('_', ' ')}
+                <Badge className={(user.employeeStatus || 'active') === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                  {(user.employeeStatus || 'active').replace('_', ' ')}
                 </Badge>
                 {user.department && (
                   <Badge variant="outline">
