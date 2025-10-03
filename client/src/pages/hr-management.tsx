@@ -550,8 +550,8 @@ function UserCard({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold" data-testid={`text-employee-name-${user.uid}`}>{user.displayName}</h3>
-            <Badge className={getStatusColor(user.employeeStatus)}>
-              {user.employeeStatus.replace('_', ' ')}
+            <Badge className={getStatusColor(user.employeeStatus || 'active')}>
+              {(user.employeeStatus || 'active').replace('_', ' ')}
             </Badge>
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
