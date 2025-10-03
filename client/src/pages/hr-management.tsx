@@ -91,11 +91,8 @@ export default function HRManagement() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: z.infer<typeof userFormSchema>) => {
-      const response = await apiRequest('/api/users', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-      return response;
+      const response = await apiRequest('/api/users', 'POST', data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
@@ -117,11 +114,8 @@ export default function HRManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ uid, data }: { uid: string; data: Partial<z.infer<typeof userFormSchema>> }) => {
-      const response = await apiRequest(`/api/users/${uid}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data)
-      });
-      return response;
+      const response = await apiRequest(`/api/users/${uid}`, 'PATCH', data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
@@ -143,9 +137,7 @@ export default function HRManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (uid: string) => {
-      await apiRequest(`/api/users/${uid}`, {
-        method: 'DELETE'
-      });
+      await apiRequest(`/api/users/${uid}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
