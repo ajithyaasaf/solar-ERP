@@ -6,7 +6,7 @@ export class EmailService {
   async sendPasswordResetEmail(email: string, resetLink: string, displayName: string) {
     try {
       const { data, error } = await resend.emails.send({
-        from: 'onboarding@resend.dev',
+        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
         to: email,
         subject: 'Set Your Password - Employee Portal',
         html: `
