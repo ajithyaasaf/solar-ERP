@@ -1,6 +1,7 @@
 import { auth as adminAuth } from '../firebase';
 import { storage } from '../storage';
 import { cacheService } from './cache-service';
+import { emailService } from './email-service';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -151,11 +152,19 @@ export class UserService {
         
         // Send password reset email so user can set their own password
         try {
-          await adminAuth.generatePasswordResetLink(validatedData.email);
-          // Firebase automatically sends the password reset email if email settings are configured
+          const resetLink = await adminAuth.generatePasswordResetLink(validatedData.email);
+          
+          // Send email using Resend
+          await emailService.sendPasswordResetEmail(
+            validatedData.email,
+            resetLink,
+            validatedData.displayName
+          );
+          
           passwordResetSent = true;
+          console.log(`Password reset email sent to ${validatedData.email}`);
         } catch (emailError) {
-          console.error('Error sending password reset email');
+          console.error('Error sending password reset email:', emailError);
           // Continue even if password reset fails
         }
       } else {
