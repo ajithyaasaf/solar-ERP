@@ -4111,7 +4111,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
       
+      console.log(`Fetching pending manager leaves for user ID: ${user.id}`);
       const leaves = await storage.listLeaveApplicationsByManager(user.id, "pending_manager");
+      console.log(`Found ${leaves.length} pending manager leaves`);
       res.json(leaves);
     } catch (error) {
       console.error("Error fetching pending manager leaves:", error);
