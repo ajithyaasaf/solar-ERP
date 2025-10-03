@@ -14,6 +14,7 @@ interface ProtectedRouteProps {
   fallbackUrl?: string;
   requiresApproval?: boolean;
   minApprovalAmount?: number;
+  allowMasterAdmin?: boolean;
 }
 
 export function ProtectedRoute({ 
@@ -23,7 +24,8 @@ export function ProtectedRoute({
   requiredDepartment,
   fallbackUrl = "/dashboard",
   requiresApproval = false,
-  minApprovalAmount
+  minApprovalAmount,
+  allowMasterAdmin = false
 }: ProtectedRouteProps) {
   const { user, loading, hasPermission, hasRole, isDepartmentMember, canApprove, maxApprovalAmount } = useAuthContext();
   const [, setLocation] = useLocation();
@@ -55,8 +57,11 @@ export function ProtectedRoute({
   }
 
   // Check department-based access if required
+  // Master admin can bypass department requirements if allowMasterAdmin is true
   if (requiredDepartment && !isDepartmentMember(requiredDepartment)) {
-    return renderAccessDenied(setLocation, fallbackUrl);
+    if (!(allowMasterAdmin && user?.role === "master_admin")) {
+      return renderAccessDenied(setLocation, fallbackUrl);
+    }
   }
 
   // Check enterprise permissions using the sophisticated permission system
