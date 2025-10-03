@@ -3111,6 +3111,9 @@ export class FirestoreStorage implements IStorage {
     const balance = await this.getCurrentLeaveBalance(leave.userId);
     if (!balance) throw new Error("Leave balance not found");
     
+    console.log(`[HR Approval] Leave type: ${leave.leaveType}, Days: ${leave.totalDays}, Hours: ${leave.permissionHours}`);
+    console.log(`[HR Approval] Before - Casual used: ${balance.casualLeaveUsed}, Permission used: ${balance.permissionHoursUsed}`);
+    
     // Update leave application
     await this.updateLeaveApplication(leaveId, {
       status: "approved",
@@ -3121,8 +3124,10 @@ export class FirestoreStorage implements IStorage {
     
     // Update leave balance based on leave type
     if (leave.leaveType === "casual_leave" && leave.totalDays) {
+      const newCasualUsed = balance.casualLeaveUsed + leave.totalDays;
+      console.log(`[HR Approval] Updating casual leave: ${balance.casualLeaveUsed} + ${leave.totalDays} = ${newCasualUsed}`);
       await this.updateLeaveBalance(balance.id, {
-        casualLeaveUsed: balance.casualLeaveUsed + leave.totalDays,
+        casualLeaveUsed: newCasualUsed,
         casualLeaveHistory: [
           ...balance.casualLeaveHistory,
           {
@@ -3133,8 +3138,10 @@ export class FirestoreStorage implements IStorage {
         ]
       });
     } else if (leave.leaveType === "permission" && leave.permissionHours) {
+      const newPermissionUsed = balance.permissionHoursUsed + leave.permissionHours;
+      console.log(`[HR Approval] Updating permission hours: ${balance.permissionHoursUsed} + ${leave.permissionHours} = ${newPermissionUsed}`);
       await this.updateLeaveBalance(balance.id, {
-        permissionHoursUsed: balance.permissionHoursUsed + leave.permissionHours,
+        permissionHoursUsed: newPermissionUsed,
         permissionHistory: [
           ...balance.permissionHistory,
           {
