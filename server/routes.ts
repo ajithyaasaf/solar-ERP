@@ -4128,7 +4128,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied - HR only" });
       }
       
+      console.log("Fetching pending HR leaves...");
       const leaves = await storage.listLeaveApplicationsByHR("pending_hr");
+      console.log(`Found ${leaves.length} pending HR leaves`);
+      if (leaves.length > 0) {
+        console.log("Pending HR leaves:", leaves.map(l => ({ id: l.id, status: l.status, userName: l.userName })));
+      }
       res.json(leaves);
     } catch (error) {
       console.error("Error fetching pending HR leaves:", error);
@@ -4212,6 +4217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { remarks } = approvalSchema.parse(req.body);
       const updatedLeave = await storage.approveLeaveByManager(req.params.id, user.id, remarks);
+      console.log(`Manager approved leave ${req.params.id}, new status: ${updatedLeave.status}`);
       
       res.json(updatedLeave);
     } catch (error) {
