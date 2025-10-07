@@ -78,9 +78,9 @@ export class PayrollCalculationService {
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
         
-        // Get the first and last day of the payroll month
+        // Get the first and last day of the payroll month (end of day for last day)
         const monthStart = new Date(year, month - 1, 1);
-        const monthEnd = new Date(year, month, 0); // Last day of month
+        const monthEnd = new Date(year, month, 0, 23, 59, 59, 999); // End of last day of month
         
         // Find overlap between leave period and payroll month
         const overlapStart = startDate > monthStart ? startDate : monthStart;
@@ -155,9 +155,9 @@ export class PayrollCalculationService {
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
         
-        // Get the first and last day of the payroll month
+        // Get the first and last day of the payroll month (end of day for last day)
         const monthStart = new Date(year, month - 1, 1);
-        const monthEnd = new Date(year, month, 0); // Last day of month
+        const monthEnd = new Date(year, month, 0, 23, 59, 59, 999); // End of last day of month
         
         // Find overlap between leave period and payroll month
         const overlapStart = startDate > monthStart ? startDate : monthStart;
