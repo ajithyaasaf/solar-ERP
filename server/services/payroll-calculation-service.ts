@@ -53,6 +53,8 @@ export class PayrollCalculationService {
 
   /**
    * Get approved paid leave days for a specific month/year
+   * Handles multi-day leaves that span months correctly
+   * Supports: casual_leave (paid), permission (paid partial day)
    */
   async getPaidLeaveDays(
     userId: string,
@@ -62,33 +64,57 @@ export class PayrollCalculationService {
     try {
       const leaves = await this.storage.listLeaveApplicationsByUser(userId);
 
-      // Filter for approved casual leaves in the specified month/year
+      // Filter for approved paid leave types (casual_leave, permission)
       const paidLeaves = leaves.filter(leave => {
         if (leave.status !== 'approved') return false;
-        if (leave.leaveType !== 'casual_leave') return false;
-        if (!leave.startDate) return false;
-
-        const leaveDate = new Date(leave.startDate);
-        const leaveMonth = leaveDate.getMonth() + 1;
-        const leaveYear = leaveDate.getFullYear();
-
-        return leaveMonth === month && leaveYear === year;
+        if (leave.leaveType !== 'casual_leave' && leave.leaveType !== 'permission') return false;
+        if (!leave.startDate || !leave.endDate) return false;
+        return true;
       });
 
-      const totalPaidLeaveDays = paidLeaves.reduce(
-        (sum, leave) => sum + (leave.totalDays || 0),
-        0
-      );
+      let totalPaidDays = 0;
 
-      console.log('PAYROLL_CALC: Paid leave calculation:', {
+      for (const leave of paidLeaves) {
+        const startDate = new Date(leave.startDate);
+        const endDate = new Date(leave.endDate);
+        
+        // Get the first and last day of the payroll month
+        const monthStart = new Date(year, month - 1, 1);
+        const monthEnd = new Date(year, month, 0); // Last day of month
+        
+        // Find overlap between leave period and payroll month
+        const overlapStart = startDate > monthStart ? startDate : monthStart;
+        const overlapEnd = endDate < monthEnd ? endDate : monthEnd;
+        
+        // Check if there's any overlap
+        if (overlapStart <= overlapEnd) {
+          // Calculate number of days in the overlap
+          const daysInMonth = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          
+          // For permission (partial day), convert hours to days
+          if (leave.leaveType === 'permission') {
+            const permissionHours = leave.totalHours || 0;
+            const workingHoursPerDay = 8; // Standard working hours
+            const partialDays = permissionHours / workingHoursPerDay;
+            totalPaidDays += partialDays;
+            console.log(`PAYROLL_CALC: Permission leave for ${userId}: ${permissionHours} hours = ${partialDays.toFixed(2)} days`);
+          } else {
+            // Casual leave - full days
+            totalPaidDays += daysInMonth;
+            console.log(`PAYROLL_CALC: Casual leave for ${userId}: ${daysInMonth} days in month ${month}/${year} (from ${startDate.toDateString()} to ${endDate.toDateString()})`);
+          }
+        }
+      }
+
+      console.log('PAYROLL_CALC: Total paid leave days:', {
         userId,
         month,
         year,
         approvedLeaves: paidLeaves.length,
-        totalPaidDays: totalPaidLeaveDays
+        totalPaidDays: totalPaidDays.toFixed(2)
       });
 
-      return totalPaidLeaveDays;
+      return totalPaidDays;
     } catch (error) {
       console.error('Error calculating paid leave days:', error);
       return 0;
@@ -97,6 +123,8 @@ export class PayrollCalculationService {
 
   /**
    * Calculate unpaid leave deductions for a specific month/year
+   * Handles multi-day leaves that span months correctly
+   * Applies to: unpaid_leave type and any leave with affectsPayroll=true
    */
   async calculateUnpaidLeaveDeduction(
     userId: string,
@@ -108,29 +136,48 @@ export class PayrollCalculationService {
     try {
       const leaves = await this.storage.listLeaveApplicationsByUser(userId);
 
-      // Filter for approved unpaid/affecting-payroll leaves in the specified month/year
+      // Filter for approved unpaid leaves
       const unpaidLeaves = leaves.filter(leave => {
         if (leave.status !== 'approved') return false;
-        if (!leave.affectsPayroll && leave.leaveType !== 'unpaid_leave') return false;
-        if (!leave.startDate) return false;
-
-        const leaveDate = new Date(leave.startDate);
-        const leaveMonth = leaveDate.getMonth() + 1;
-        const leaveYear = leaveDate.getFullYear();
-
-        return leaveMonth === month && leaveYear === year;
+        if (!leave.startDate || !leave.endDate) return false;
+        
+        // Include unpaid_leave type OR any leave that affects payroll (excluding paid types)
+        const isUnpaidType = leave.leaveType === 'unpaid_leave';
+        const isPaidType = leave.leaveType === 'casual_leave' || leave.leaveType === 'permission';
+        const affectsPayroll = leave.affectsPayroll === true;
+        
+        return isUnpaidType || (affectsPayroll && !isPaidType);
       });
 
-      const totalUnpaidDays = unpaidLeaves.reduce(
-        (sum, leave) => sum + (leave.totalDays || 0),
-        0
-      );
+      let totalUnpaidDays = 0;
+
+      for (const leave of unpaidLeaves) {
+        const startDate = new Date(leave.startDate);
+        const endDate = new Date(leave.endDate);
+        
+        // Get the first and last day of the payroll month
+        const monthStart = new Date(year, month - 1, 1);
+        const monthEnd = new Date(year, month, 0); // Last day of month
+        
+        // Find overlap between leave period and payroll month
+        const overlapStart = startDate > monthStart ? startDate : monthStart;
+        const overlapEnd = endDate < monthEnd ? endDate : monthEnd;
+        
+        // Check if there's any overlap
+        if (overlapStart <= overlapEnd) {
+          // Calculate number of days in the overlap
+          const daysInMonth = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          totalUnpaidDays += daysInMonth;
+          
+          console.log(`PAYROLL_CALC: Unpaid leave for ${userId}: ${daysInMonth} days in month ${month}/${year} (from ${startDate.toDateString()} to ${endDate.toDateString()})`);
+        }
+      }
 
       // Calculate per-day salary and deduction
       const perDaySalary = totalFixedSalary / monthDays;
       const unpaidDeduction = totalUnpaidDays * perDaySalary;
 
-      console.log('PAYROLL_CALC: Unpaid leave deduction:', {
+      console.log('PAYROLL_CALC: Total unpaid leave deduction:', {
         userId,
         month,
         year,
