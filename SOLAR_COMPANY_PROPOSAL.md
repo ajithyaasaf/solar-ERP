@@ -331,23 +331,52 @@ Your team works faster, customers get served better, and you make more money.
 
 ---
 
-## Why Choose Us Over Competitors
+## What Solar Companies Actually Use Today
 
-### 🏆 The Clear Winner
+### 📊 The Honest Comparison
 
-| Feature | Our Platform | Zoho People | Keka | GreytHR |
-|---------|-------------|-------------|------|---------|
-| **Price (30 employees)** | ₹2,999/mo | ₹8,000/mo | ₹12,000/mo | ₹6,995/mo |
-| **Site Visit Management** | ✅ Complete | ❌ No | ❌ No | ❌ No |
-| **GPS Tracking** | ✅ Yes | ⚠️ Limited | ⚠️ Add-on | ⚠️ Limited |
-| **Photo Documentation** | ✅ With overlay | ❌ No | ❌ No | ❌ No |
-| **Solar-Specific Features** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Quotation/Invoice** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
-| **Indian Server (Fast)** | ✅ Bangalore | ⚠️ Global | ⚠️ Global | ✅ India |
-| **Setup Time** | 1 hour | 2-3 days | 3-5 days | 1-2 days |
-| **Support** | ✅ Indian team | ⚠️ Mixed | ⚠️ Mixed | ✅ Indian |
+**Reality:** There is NO other affordable solar-specific field management software in India. Here's what solar companies currently use:
 
-**We're 50-75% cheaper and have features they don't!**
+| Solution Type | Monthly Cost | What You Get | What's Missing | Best For |
+|--------------|-------------|--------------|----------------|----------|
+| **Manual Methods (Excel/WhatsApp/Paper)** | ₹0 | Basic tracking | Everything automated, professional, GPS proof, photo documentation | Very small teams willing to spend hours on admin |
+| **Generic HR Software (Zoho/Keka/GreytHR)** | ₹8,000-12,000 | Attendance, payroll, basic HR | Site visit management, GPS tracking with photos, solar-specific features, quotations | Large companies with big budgets, not field-focused |
+| **Custom Development** | ₹5-10 lakhs one-time | Exactly what you want (if done right) | Huge upfront cost, 6-12 months wait, maintenance headaches | Enterprises with ₹50L+ annual revenue |
+| **Our Platform** | ₹2,999 | Complete field operations + business management | Nothing - it's all included | Solar companies of any size wanting professional solution now |
+
+### 🎯 Why We're Different
+
+**We're Not Competing With Zoho/Keka/GreytHR** - They're generic HR software for office workers. We're built specifically for solar field operations.
+
+**What Makes Us Unique:**
+
+1. **Solar-Specific Features:**
+   - Panel configurations (250W to 550W)
+   - Subsidy calculations (PM Surya Ghar)
+   - EB process tracking
+   - Bank documentation management
+   - Solar system quotations
+
+2. **Field Operations Focus:**
+   - GPS-tracked site visits (they have basic attendance only)
+   - Photo documentation with overlays (they don't have this)
+   - Multi-department workflows: Technical/Marketing/Admin (they're generic)
+   - Follow-up management for solar leads (they don't track this)
+
+3. **All-in-One Platform:**
+   - Attendance + Site Visits + Payroll + Quotations + Invoices
+   - Other companies need 3-4 different software for this
+   - You get everything for ₹2,999/month
+
+4. **Built for India:**
+   - Bangalore server (fast for Indian users)
+   - Indian support team
+   - Understands Indian solar industry workflow
+   - EPF/ESI/PT compliance built-in
+
+**The Truth:** If you use Zoho People (₹8,000/mo) + a CRM (₹5,000/mo) + accounting software (₹3,000/mo), you'll spend ₹16,000/month and STILL won't have proper site visit management with GPS photos.
+
+**We give you everything for ₹2,999/month.**
 
 ---
 
