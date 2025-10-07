@@ -90,20 +90,20 @@ export function LeaveHistoryTable({ onViewDetails }: LeaveHistoryTableProps) {
   }
 
   return (
-    <div className="space-y-4" data-testid="container-leave-history">
-      <div className="flex flex-col sm:flex-row gap-3">
+    <div className="space-y-3 sm:space-y-4" data-testid="container-leave-history">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search by reason or type..."
-            className="pl-10"
+            className="pl-10 text-sm sm:text-base"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             data-testid="input-search-history"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-status-filter">
+          <SelectTrigger className="w-full sm:w-[200px] text-sm sm:text-base" data-testid="select-status-filter">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -118,23 +118,23 @@ export function LeaveHistoryTable({ onViewDetails }: LeaveHistoryTableProps) {
         </Select>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto -mx-2 sm:mx-0">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Period/Date</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Applied On</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Type</TableHead>
+              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Period/Date</TableHead>
+              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Duration</TableHead>
+              <TableHead className="whitespace-nowrap text-xs sm:text-sm min-w-[120px]">Reason</TableHead>
+              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Status</TableHead>
+              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Applied On</TableHead>
+              <TableHead className="text-right whitespace-nowrap text-xs sm:text-sm">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLeaves?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-xs sm:text-sm text-gray-500">
                   {searchQuery || statusFilter !== "all"
                     ? "No leave records match your filters"
                     : "No leave records found"}
@@ -143,45 +143,45 @@ export function LeaveHistoryTable({ onViewDetails }: LeaveHistoryTableProps) {
             ) : (
               filteredLeaves?.map((leave: any) => (
                 <TableRow key={leave.id} data-testid={`row-leave-${leave.id}`}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex items-center gap-1 sm:gap-2">
                       {leave.leaveType === "permission" ? (
-                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                       ) : (
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                       )}
-                      <span className="font-medium">{getLeaveTypeLabel(leave.leaveType)}</span>
+                      <span className="font-medium text-xs sm:text-sm">{getLeaveTypeLabel(leave.leaveType)}</span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {leave.leaveType === "permission" ? (
-                      <div className="text-sm">
+                      <div className="text-xs sm:text-sm">
                         {formatDate(leave.permissionDate)}
                       </div>
                     ) : (
-                      <div className="text-sm">
+                      <div className="text-xs sm:text-sm">
                         {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap text-xs sm:text-sm">
                     {leave.leaveType === "permission" ? (
                       <span>{leave.permissionHours}h</span>
                     ) : (
                       <span>{leave.totalDays} day(s)</span>
                     )}
                   </TableCell>
-                  <TableCell className="max-w-xs">
-                    <div className="truncate" title={leave.reason}>
+                  <TableCell className="max-w-[120px] sm:max-w-xs">
+                    <div className="truncate text-xs sm:text-sm" title={leave.reason}>
                       {leave.reason}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge className={cn("font-medium", getStatusColor(leave.status))}>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge className={cn("font-medium text-xs", getStatusColor(leave.status))}>
                       {getStatusLabel(leave.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatDate(leave.applicationDate || leave.createdAt)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs sm:text-sm">{formatDate(leave.applicationDate || leave.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     {onViewDetails && (
                       <Button
@@ -189,8 +189,9 @@ export function LeaveHistoryTable({ onViewDetails }: LeaveHistoryTableProps) {
                         size="sm"
                         onClick={() => onViewDetails(leave.id)}
                         data-testid={`button-view-${leave.id}`}
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     )}
                   </TableCell>

@@ -144,28 +144,29 @@ export function HRApprovalList() {
 
   return (
     <>
-      <div className="space-y-4" data-testid="container-hr-approvals">
+      <div className="space-y-3 sm:space-y-4" data-testid="container-hr-approvals">
         {pendingLeaves.map((leave: any) => (
           <Card key={leave.id} data-testid={`card-leave-${leave.id}`}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    {leave.userName}
+            <CardHeader className="pb-3 px-4 sm:px-6 py-3 sm:py-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    <User className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                    <span className="truncate">{leave.userName}</span>
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm truncate">
                     {leave.userDepartment} - {leave.userDesignation}
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex-shrink-0 text-xs">
                   <Shield className="h-3 w-3 mr-1" />
-                  HR Review Required
+                  <span className="hidden sm:inline">HR Review Required</span>
+                  <span className="sm:hidden">HR Review</span>
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+            <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div>
                   <span className="text-muted-foreground">Leave Type:</span>
                   <p className="font-medium">{getLeaveTypeLabel(leave.leaveType)}</p>
@@ -195,9 +196,9 @@ export function HRApprovalList() {
                   </>
                 )}
                 {leave.leaveType === "permission" && (
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <span className="text-muted-foreground">Time:</span>
-                    <p className="font-medium">
+                    <p className="font-medium break-words">
                       {leave.permissionStartTime} - {leave.permissionEndTime} ({leave.permissionHours}h)
                     </p>
                   </div>
@@ -205,20 +206,20 @@ export function HRApprovalList() {
               </div>
 
               <div>
-                <span className="text-sm text-muted-foreground">Reason:</span>
-                <p className="text-sm mt-1 p-3 bg-muted rounded-md">{leave.reason}</p>
+                <span className="text-xs sm:text-sm text-muted-foreground">Reason:</span>
+                <p className="text-xs sm:text-sm mt-1 p-2 sm:p-3 bg-muted rounded-md break-words">{leave.reason}</p>
               </div>
 
               {leave.managerRemarks && (
                 <Alert>
                   <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
+                  <AlertDescription className="text-xs sm:text-sm">
                     <div className="font-medium">Manager Approval</div>
-                    <div className="text-sm text-muted-foreground mt-1">
+                    <div className="text-muted-foreground mt-1">
                       Approved by {leave.reportingManagerName || "Manager"} on {formatDate(leave.managerApprovedAt)}
                     </div>
                     {leave.managerRemarks && (
-                      <div className="text-sm mt-2">
+                      <div className="mt-2">
                         <span className="font-medium">Remarks:</span> {leave.managerRemarks}
                       </div>
                     )}
@@ -227,7 +228,7 @@ export function HRApprovalList() {
               )}
 
               {leave.balanceAtApplication && (
-                <div className="flex gap-4 text-sm p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-xs sm:text-sm p-2 sm:p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
                   <div>
                     <span className="text-muted-foreground">CL Available:</span>
                     <span className="ml-2 font-medium">
@@ -243,19 +244,20 @@ export function HRApprovalList() {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <Button
                   onClick={() => handleApprovalClick(leave, "approve")}
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm"
                   data-testid={`button-approve-${leave.id}`}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Final Approve
+                  <span className="hidden sm:inline">Final Approve</span>
+                  <span className="sm:hidden">Approve</span>
                 </Button>
                 <Button
                   onClick={() => handleApprovalClick(leave, "reject")}
                   variant="destructive"
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm"
                   data-testid={`button-reject-${leave.id}`}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
@@ -268,19 +270,19 @@ export function HRApprovalList() {
       </div>
 
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
-        <DialogContent data-testid="dialog-approval">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="w-[95vw] sm:max-w-[500px]" data-testid="dialog-approval">
+          <DialogHeader className="px-1 sm:px-0">
+            <DialogTitle className="text-base sm:text-lg">
               {approvalAction === "approve" ? "Final Approve Leave" : "Reject Leave Application"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               {approvalAction === "approve"
                 ? "This is the final approval. Leave balance will be updated upon confirmation."
                 : "Please provide a reason for rejecting this leave application."}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="remarks">
+          <div className="py-3 sm:py-4">
+            <Label htmlFor="remarks" className="text-sm">
               {approvalAction === "approve" ? "Remarks (Optional)" : "Rejection Reason (Required)"}
             </Label>
             <Textarea
@@ -292,11 +294,11 @@ export function HRApprovalList() {
                   ? "Add any final comments..."
                   : "Provide reason for rejection..."
               }
-              className="mt-2"
+              className="mt-2 text-sm sm:text-base"
               data-testid="textarea-remarks"
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -304,6 +306,7 @@ export function HRApprovalList() {
                 setRemarks("");
               }}
               data-testid="button-cancel-approval"
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               Cancel
             </Button>
@@ -312,6 +315,7 @@ export function HRApprovalList() {
               disabled={approveMutation.isPending || rejectMutation.isPending}
               variant={approvalAction === "approve" ? "default" : "destructive"}
               data-testid="button-confirm-approval"
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               {(approveMutation.isPending || rejectMutation.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -58,10 +58,10 @@ export function PermissionTimePicker({
   };
 
   return (
-    <div className="space-y-4" data-testid="container-permission-time-picker">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-3 sm:space-y-4" data-testid="container-permission-time-picker">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
-          <Label htmlFor="startTime">Start Time</Label>
+          <Label htmlFor="startTime" className="text-sm">Start Time</Label>
           <TimeInput
             value={startTime}
             onChange={onStartTimeChange}
@@ -69,7 +69,7 @@ export function PermissionTimePicker({
           />
         </div>
         <div>
-          <Label htmlFor="endTime">End Time</Label>
+          <Label htmlFor="endTime" className="text-sm">End Time</Label>
           <TimeInput
             value={endTime}
             onChange={onEndTimeChange}
@@ -80,13 +80,13 @@ export function PermissionTimePicker({
 
       {duration > 0 && (
         <Alert variant={isValid ? "default" : "destructive"}>
-          <Clock className="h-4 w-4" />
-          <AlertDescription>
-            <div className="flex items-center justify-between">
+          <Clock className="h-4 w-4 flex-shrink-0" />
+          <AlertDescription className="text-xs sm:text-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-2">
               <span data-testid="text-permission-duration">Duration: {formatDuration(duration)}</span>
               {!isValid && (
                 <div className="flex items-center gap-1 text-destructive">
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
                   <span className="text-xs">Exceeds {maxHours} hour limit</span>
                 </div>
               )}
@@ -95,7 +95,7 @@ export function PermissionTimePicker({
         </Alert>
       )}
 
-      <div className="text-xs text-muted-foreground">
+      <div className="text-xs text-muted-foreground space-y-1">
         <p>• Permission duration must not exceed {maxHours} hours</p>
         <p>• Select a time range within your working hours</p>
       </div>

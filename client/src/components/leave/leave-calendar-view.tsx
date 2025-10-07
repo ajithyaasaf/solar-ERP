@@ -58,34 +58,36 @@ export function LeaveCalendarView({ userId, year, month }: LeaveCalendarViewProp
   }
 
   return (
-    <div className="space-y-4" data-testid="container-leave-calendar">
-      <Calendar
-        mode="single"
-        selected={undefined}
-        className="rounded-md border"
-        modifiers={{
-          leave: (date) => {
-            const dateStr = formatDate(date);
-            return leaveDates.has(dateStr);
-          },
-        }}
-        modifiersStyles={{
-          leave: {
-            backgroundColor: "var(--primary)",
-            color: "white",
-            fontWeight: "bold",
-          },
-        }}
-      />
+    <div className="space-y-3 sm:space-y-4" data-testid="container-leave-calendar">
+      <div className="flex justify-center">
+        <Calendar
+          mode="single"
+          selected={undefined}
+          className="rounded-md border w-full sm:w-auto"
+          modifiers={{
+            leave: (date) => {
+              const dateStr = formatDate(date);
+              return leaveDates.has(dateStr);
+            },
+          }}
+          modifiersStyles={{
+            leave: {
+              backgroundColor: "var(--primary)",
+              color: "white",
+              fontWeight: "bold",
+            },
+          }}
+        />
+      </div>
       
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Legend</CardTitle>
+        <CardHeader className="px-4 sm:px-6 py-3 sm:py-4">
+          <CardTitle className="text-sm sm:text-base">Legend</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 rounded bg-primary"></div>
-            <span className="text-sm">Approved Leave Days</span>
+            <div className="h-4 w-4 rounded bg-primary flex-shrink-0"></div>
+            <span className="text-xs sm:text-sm">Approved Leave Days</span>
           </div>
           <div className="text-xs text-muted-foreground">
             Total approved leaves this month: {

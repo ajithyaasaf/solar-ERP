@@ -245,22 +245,22 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
     : 0;
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" data-testid="form-leave-application">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6" data-testid="form-leave-application">
       {!isProfileComplete && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
+          <AlertDescription className="text-xs sm:text-sm">
             Your profile is incomplete. Missing: <strong>{missingFields.join(", ")}</strong>. Please contact HR to update your profile before applying for leave.
           </AlertDescription>
         </Alert>
       )}
       
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4 sm:pt-6">
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <AlertCircle className="h-4 w-4" />
-              <span>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span className="break-words">
                 Available: {casualLeaveAvailable} casual leave day(s) | {permissionHoursAvailable} permission hour(s)
               </span>
             </div>
@@ -270,28 +270,28 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
 
       <div className="space-y-4">
         <div>
-          <Label htmlFor="leaveType">Leave Type</Label>
+          <Label htmlFor="leaveType" className="text-sm sm:text-base">Leave Type</Label>
           <RadioGroup
             value={form.watch("leaveType")}
             onValueChange={(value) => form.setValue("leaveType", value as any)}
             className="mt-2 space-y-2"
             data-testid="radio-group-leave-type"
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="casual_leave" id="casual_leave" data-testid="radio-casual-leave" />
-              <Label htmlFor="casual_leave" className="font-normal cursor-pointer">
+            <div className="flex items-start space-x-2">
+              <RadioGroupItem value="casual_leave" id="casual_leave" data-testid="radio-casual-leave" className="mt-0.5" />
+              <Label htmlFor="casual_leave" className="font-normal cursor-pointer text-xs sm:text-sm leading-relaxed">
                 Casual Leave (1 day/month) - {casualLeaveAvailable} available
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="permission" id="permission" data-testid="radio-permission" />
-              <Label htmlFor="permission" className="font-normal cursor-pointer">
+            <div className="flex items-start space-x-2">
+              <RadioGroupItem value="permission" id="permission" data-testid="radio-permission" className="mt-0.5" />
+              <Label htmlFor="permission" className="font-normal cursor-pointer text-xs sm:text-sm leading-relaxed">
                 Permission (2 hours/month) - {permissionHoursAvailable} hours available
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="unpaid_leave" id="unpaid_leave" data-testid="radio-unpaid-leave" />
-              <Label htmlFor="unpaid_leave" className="font-normal cursor-pointer">
+            <div className="flex items-start space-x-2">
+              <RadioGroupItem value="unpaid_leave" id="unpaid_leave" data-testid="radio-unpaid-leave" className="mt-0.5" />
+              <Label htmlFor="unpaid_leave" className="font-normal cursor-pointer text-xs sm:text-sm leading-relaxed">
                 Unpaid Leave (Will be deducted from salary)
               </Label>
             </div>
@@ -299,81 +299,81 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         </div>
 
         {(leaveType === "casual_leave" || leaveType === "unpaid_leave") && (
-          <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4 p-3 sm:p-4 border rounded-lg bg-muted/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="startDate">Start Date</Label>
+                <Label htmlFor="startDate" className="text-sm">Start Date</Label>
                 <DatePicker
                   date={form.watch("startDate")}
                   setDate={(date) => form.setValue("startDate", date)}
                   data-testid="date-picker-start"
                 />
                 {form.formState.errors.startDate && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.startDate.message}</p>
+                  <p className="text-xs sm:text-sm text-destructive mt-1">{form.formState.errors.startDate.message}</p>
                 )}
               </div>
               <div>
-                <Label htmlFor="endDate">End Date</Label>
+                <Label htmlFor="endDate" className="text-sm">End Date</Label>
                 <DatePicker
                   date={form.watch("endDate")}
                   setDate={(date) => form.setValue("endDate", date)}
                   data-testid="date-picker-end"
                 />
                 {form.formState.errors.endDate && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.endDate.message}</p>
+                  <p className="text-xs sm:text-sm text-destructive mt-1">{form.formState.errors.endDate.message}</p>
                 )}
               </div>
             </div>
             {totalDays > 0 && (
               <Alert>
                 <Calendar className="h-4 w-4" />
-                <AlertDescription>Total Days: {totalDays}</AlertDescription>
+                <AlertDescription className="text-xs sm:text-sm">Total Days: {totalDays}</AlertDescription>
               </Alert>
             )}
           </div>
         )}
 
         {leaveType === "permission" && (
-          <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+          <div className="space-y-4 p-3 sm:p-4 border rounded-lg bg-muted/50">
             <div>
-              <Label htmlFor="permissionDate">Permission Date</Label>
+              <Label htmlFor="permissionDate" className="text-sm">Permission Date</Label>
               <DatePicker
                 date={form.watch("permissionDate")}
                 setDate={(date) => form.setValue("permissionDate", date)}
                 data-testid="date-picker-permission"
               />
               {form.formState.errors.permissionDate && (
-                <p className="text-sm text-destructive mt-1">{form.formState.errors.permissionDate.message}</p>
+                <p className="text-xs sm:text-sm text-destructive mt-1">{form.formState.errors.permissionDate.message}</p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="permissionStartTime">Start Time</Label>
+                <Label htmlFor="permissionStartTime" className="text-sm">Start Time</Label>
                 <TimeInput
                   value={form.watch("permissionStartTime") || ""}
                   onChange={(value) => form.setValue("permissionStartTime", value)}
                   data-testid="input-start-time"
                 />
                 {form.formState.errors.permissionStartTime && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.permissionStartTime.message}</p>
+                  <p className="text-xs sm:text-sm text-destructive mt-1">{form.formState.errors.permissionStartTime.message}</p>
                 )}
               </div>
               <div>
-                <Label htmlFor="permissionEndTime">End Time</Label>
+                <Label htmlFor="permissionEndTime" className="text-sm">End Time</Label>
                 <TimeInput
                   value={form.watch("permissionEndTime") || ""}
                   onChange={(value) => form.setValue("permissionEndTime", value)}
                   data-testid="input-end-time"
                 />
                 {form.formState.errors.permissionEndTime && (
-                  <p className="text-sm text-destructive mt-1">{form.formState.errors.permissionEndTime.message}</p>
+                  <p className="text-xs sm:text-sm text-destructive mt-1">{form.formState.errors.permissionEndTime.message}</p>
                 )}
               </div>
             </div>
             {permissionHours > 0 && (
               <Alert>
                 <Clock className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription className="text-xs sm:text-sm">
                   Duration: {permissionHours.toFixed(1)} hour(s)
                   {permissionHours > 2 && (
                     <span className="text-destructive ml-2">(Maximum 2 hours allowed)</span>
@@ -385,26 +385,27 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         )}
 
         <div>
-          <Label htmlFor="reason">Reason</Label>
+          <Label htmlFor="reason" className="text-sm sm:text-base">Reason</Label>
           <Textarea
             id="reason"
             placeholder="Enter reason for leave (minimum 10 characters)"
-            className="mt-1"
+            className="mt-1 text-sm sm:text-base"
             {...form.register("reason")}
             data-testid="textarea-reason"
           />
           {form.formState.errors.reason && (
-            <p className="text-sm text-destructive mt-1">{form.formState.errors.reason.message}</p>
+            <p className="text-xs sm:text-sm text-destructive mt-1">{form.formState.errors.reason.message}</p>
           )}
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
         <Button
           type="button"
           variant="outline"
           onClick={() => form.reset()}
           data-testid="button-cancel"
+          className="w-full sm:w-auto order-2 sm:order-1"
         >
           Cancel
         </Button>
@@ -412,6 +413,7 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
           type="submit"
           disabled={applyLeaveMutation.isPending || !isProfileComplete}
           data-testid="button-submit"
+          className="w-full sm:w-auto order-1 sm:order-2"
         >
           {applyLeaveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Submit Application
