@@ -706,6 +706,7 @@ export interface EnhancedPayroll {
   tdsDeduction: number;
   fineDeduction: number; // FINE from manual system
   salaryAdvance: number; // SALARY ADVANCE from manual system
+  unpaidLeaveDeduction: number; // UNPAID LEAVE deduction
   creditAdjustment: number; // CREDIT from manual system
   esiEligible: boolean; // ESI eligibility status
   totalEarnings: number;

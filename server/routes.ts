@@ -5873,211 +5873,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { month, year, userIds } = req.body;
-      console.log("Bulk process request:", { month, year, userIds, type: typeof userIds });
+      console.log("PAYROLL_BULK: Starting bulk process:", { month, year, userIds: userIds?.length || 'all' });
       
       // If no userIds provided, get all users with salary structures
       let targetUserIds = userIds;
       if (!targetUserIds || !Array.isArray(targetUserIds)) {
         const allSalaryStructures = await storage.listEnhancedSalaryStructures();
         targetUserIds = allSalaryStructures.map(s => s.userId);
-        console.log("Using all users with salary structures:", targetUserIds);
+        console.log(`PAYROLL_BULK: Processing all users: ${targetUserIds.length}`);
       }
       
+      // Initialize PayrollCalculationService
+      const { PayrollCalculationService } = await import('./services/payroll-calculation-service');
+      const payrollCalcService = new PayrollCalculationService(storage);
+      
       const processedPayrolls = [];
-      const settings = await storage.getEnhancedPayrollSettings();
+      const skippedUsers = [];
       
       // Process payroll for each user
       for (const userId of targetUserIds) {
-        const existingPayroll = await storage.getEnhancedPayrollByUserAndMonth(userId, month, year);
-        if (existingPayroll) {
-          continue; // Skip if already processed
-        }
-        
-        const user = await storage.getUser(userId);
-        if (!user) continue;
-        
-        const salaryStructure = await storage.getEnhancedSalaryStructureByUser(userId);
-        if (!salaryStructure) {
-          console.log(`PAYROLL_PROCESSING: No salary structure found for user ${userId} (${user.displayName})`);
-          continue;
-        }
-        
-        console.log(`PAYROLL_PROCESSING: Salary structure found for ${user.displayName}:`, {
-          fixedBasic: salaryStructure.fixedBasic,
-          fixedHRA: salaryStructure.fixedHRA,
-          fixedConveyance: salaryStructure.fixedConveyance,
-          dynamicEarnings: salaryStructure.dynamicEarnings,
-          dynamicDeductions: salaryStructure.dynamicDeductions
-        });
-        
-        // Calculate payroll with real salary structure data
-        const fixedBasic = salaryStructure.fixedBasic || 0;
-        const fixedHRA = salaryStructure.fixedHRA || 0;
-        const fixedConveyance = salaryStructure.fixedConveyance || 0;
-        const totalFixedSalary = fixedBasic + fixedHRA + fixedConveyance;
-        
-        // FIXED: Enhanced attendance data retrieval with comprehensive debugging
-        console.log(`PAYROLL_PROCESSING: Processing payroll for user ${userId} (${user.displayName}) - Month: ${month}, Year: ${year}`);
-        
-        // Try multiple user identifier strategies
-        const allAttendanceRecords = await storage.listAttendanceByUser(userId);
-        let allAttendanceRecordsUID = [];
-        
-        // Also try with UID if userId didn't return results
-        if (allAttendanceRecords.length === 0 && user.uid !== userId) {
-          console.log(`PAYROLL_PROCESSING: No records found with userId ${userId}, trying with uid ${user.uid}`);
-          allAttendanceRecordsUID = await storage.listAttendanceByUser(user.uid);
-        }
-        
-        const combinedAttendanceRecords = [...allAttendanceRecords, ...allAttendanceRecordsUID];
-        
-        console.log(`PAYROLL_PROCESSING: Found ${combinedAttendanceRecords.length} total attendance records for user`);
-        
-        // FIXED: Proper date filtering with logging
-        const attendanceRecords = combinedAttendanceRecords.filter(record => {
-          const recordDate = new Date(record.date);
-          const recordMonth = recordDate.getMonth() + 1; // Convert to 1-12 range
-          const recordYear = recordDate.getFullYear();
-          const matches = recordMonth === month && recordYear === year;
-          
-          if (matches) {
-            console.log(`PAYROLL_PROCESSING: Found matching record - Date: ${recordDate.toISOString()}, Status: ${record.status}`);
+        try {
+          // Check if already processed
+          const existingPayroll = await storage.getEnhancedPayrollByUserAndMonth(userId, month, year);
+          if (existingPayroll) {
+            console.log(`PAYROLL_BULK: Skipping ${userId} - already processed`);
+            skippedUsers.push({ userId, reason: 'already_processed' });
+            continue;
           }
           
-          return matches;
-        });
-        
-        console.log(`PAYROLL_PROCESSING: Filtered to ${attendanceRecords.length} records for month ${month}/${year}`);
-        
-        // FIXED: Enhanced status classification - include all working statuses
-        const validWorkingStatuses = ['present', 'late', 'overtime', 'half_day', 'early_checkout'];
-        const presentDays = attendanceRecords.filter(record => {
-          const isValidStatus = validWorkingStatuses.includes(record.status);
-          if (isValidStatus) {
-            console.log(`PAYROLL_PROCESSING: Counting as present day - Date: ${new Date(record.date).toDateString()}, Status: ${record.status}`);
+          // Get user details
+          const employee = await storage.getUser(userId);
+          if (!employee) {
+            console.log(`PAYROLL_BULK: Skipping ${userId} - user not found`);
+            skippedUsers.push({ userId, reason: 'user_not_found' });
+            continue;
           }
-          return isValidStatus;
-        }).length;
-        
-        console.log(`PAYROLL_PROCESSING: Calculated ${presentDays} present days out of ${attendanceRecords.length} attendance records`);
-        
-        // Calculate month days and overtime from attendance
-        const monthDays = new Date(year, month, 0).getDate(); // Actual days in month
-        const totalOvertimeHours = attendanceRecords.reduce((sum, record) => 
-          sum + (record.overtimeHours || 0), 0
-        );
-        
-        const perDaySalary = totalFixedSalary / monthDays;
-        
-        // Calculate earned amounts based on attendance
-        const earnedBasic = (fixedBasic / monthDays) * presentDays;
-        const earnedHRA = (fixedHRA / monthDays) * presentDays;
-        const earnedConveyance = (fixedConveyance / monthDays) * presentDays;
-        
-        // FIXED: Calculate dynamic earnings from salary structure
-        const dynamicEarnings = salaryStructure.dynamicEarnings || {};
-        let totalDynamicEarnings = 0;
-        
-        Object.entries(dynamicEarnings).forEach(([key, value]) => {
-          if (typeof value === 'number' && value > 0) {
-            // Pro-rate dynamic earnings based on present days
-            const earnedAmount = (value / monthDays) * presentDays;
-            dynamicEarnings[key] = Math.round(earnedAmount);
-            totalDynamicEarnings += earnedAmount;
-            console.log(`PAYROLL_PROCESSING: Dynamic earning ${key}: ₹${value} -> ₹${Math.round(earnedAmount)} (pro-rated)`);
+          
+          // Get salary structure
+          const salaryStructure = await storage.getEnhancedSalaryStructureByUser(userId);
+          if (!salaryStructure) {
+            console.log(`PAYROLL_BULK: Skipping ${employee.displayName} - no salary structure`);
+            skippedUsers.push({ userId, reason: 'no_salary_structure', name: employee.displayName });
+            continue;
           }
-        });
-        
-        // Calculate gross salary including dynamic earnings
-        const grossSalaryAmount = earnedBasic + earnedHRA + earnedConveyance + totalDynamicEarnings;
-        
-        // Calculate statutory deductions
-        // FIXED: EPF should be pro-rated based on attendance, not full salary
-        const epfDeduction = salaryStructure.epfApplicable ? Math.min(earnedBasic * 0.12, 1800) : 0;
-        const esiDeduction = salaryStructure.esiApplicable && grossSalaryAmount <= 21000 ? grossSalaryAmount * 0.0075 : 0;
-        const vptDeduction = salaryStructure.vptAmount || 0;
-        
-        // FIXED: Calculate dynamic deductions from salary structure
-        const dynamicDeductions = salaryStructure.dynamicDeductions || {};
-        let totalDynamicDeductions = 0;
-        
-        Object.entries(dynamicDeductions).forEach(([key, value]) => {
-          if (typeof value === 'number' && value > 0) {
-            // Pro-rate dynamic deductions based on present days
-            const deductedAmount = (value / monthDays) * presentDays;
-            dynamicDeductions[key] = Math.round(deductedAmount);
-            totalDynamicDeductions += deductedAmount;
-            console.log(`PAYROLL_PROCESSING: Dynamic deduction ${key}: ₹${value} -> ₹${Math.round(deductedAmount)} (pro-rated)`);
+          
+          console.log(`PAYROLL_BULK: Processing ${employee.displayName} (${userId})`);
+          
+          // Get attendance records with fallback to UID
+          let attendanceRecords = await storage.listAttendanceByUser(userId);
+          
+          // Fallback: Try with UID if no records found with userId
+          if (attendanceRecords.length === 0 && employee.uid !== userId) {
+            console.log(`PAYROLL_BULK: Trying UID fallback for ${employee.displayName}`);
+            attendanceRecords = await storage.listAttendanceByUser(employee.uid);
           }
-        });
-        
-        const finalGrossAmount = grossSalaryAmount; // Initially same as gross, can be modified with BETTA
-        
-        // Calculate total deductions including dynamic deductions
-        const totalDeductions = epfDeduction + esiDeduction + vptDeduction + totalDynamicDeductions;
-        
-        // NET SALARY = FINAL GROSS + CREDIT - (EPF + VPF + ESI + TDS + FINE + SALARY ADVANCE)
-        // Using same formula as manual system
-        const netSalary = finalGrossAmount - totalDeductions;
-        
-        console.log(`PAYROLL_PROCESSING: Final calculation for ${user.displayName}:`, {
-          fixedBasic, fixedHRA, fixedConveyance,
-          earnedBasic: Math.round(earnedBasic), 
-          earnedHRA: Math.round(earnedHRA), 
-          earnedConveyance: Math.round(earnedConveyance),
-          totalDynamicEarnings: Math.round(totalDynamicEarnings),
-          grossSalary: Math.round(grossSalaryAmount),
-          totalDeductions: Math.round(totalDeductions),
-          presentDays, monthDays
-        });
-
-        const payrollData = {
-          userId,
-          employeeId: user.employeeId || user.uid,
-          month,
-          year,
-          monthDays,
-          presentDays,
-          paidLeaveDays: 0,
-          overtimeHours: totalOvertimeHours,
-          perDaySalary: Math.round(perDaySalary),
-          earnedBasic: Math.round(earnedBasic),
-          earnedHRA: Math.round(earnedHRA),
-          earnedConveyance: Math.round(earnedConveyance),
-          overtimePay: 0,
-          betta: 0, // BETTA allowance from manual system
-          dynamicEarnings: dynamicEarnings, // FIXED: Use calculated dynamic earnings
-          grossSalary: Math.round(grossSalaryAmount), // Gross including dynamic earnings
-          finalGross: Math.round(finalGrossAmount), // Final gross after BETTA (initially same as gross)
-          dynamicDeductions: dynamicDeductions, // FIXED: Use calculated dynamic deductions
-          epfDeduction: Math.round(epfDeduction),
-          esiDeduction: Math.round(esiDeduction),
-          vptDeduction: Math.round(vptDeduction),
-          tdsDeduction: 0,
-          fineDeduction: 0, // FINE from manual system
-          salaryAdvance: 0, // SALARY ADVANCE from manual system
-          creditAdjustment: 0, // CREDIT from manual system
-          esiEligible: grossSalaryAmount <= 21000, // ESI eligibility based on salary
-          totalEarnings: Math.round(grossSalaryAmount),
-          totalDeductions: Math.round(totalDeductions),
-          netSalary: Math.round(netSalary),
-          status: 'processed',
-          processedBy: user.uid,
-          processedAt: new Date()
-        };
-        
-        const newPayroll = await storage.createEnhancedPayroll(payrollData);
-        processedPayrolls.push(newPayroll);
+          
+          // Filter attendance records for the specified month/year
+          const monthAttendance = attendanceRecords.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate.getMonth() + 1 === month && recordDate.getFullYear() === year;
+          });
+          
+          console.log(`PAYROLL_BULK: ${employee.displayName} - ${monthAttendance.length} attendance records`);
+          
+          // Use PayrollCalculationService for comprehensive calculation
+          const calculation = await payrollCalcService.calculateComprehensivePayroll(
+            userId,
+            month,
+            year,
+            monthAttendance,
+            salaryStructure
+          );
+          
+          // Create payroll record with all calculated values
+          const payrollData = {
+            userId,
+            employeeId: employee.employeeId || employee.uid,
+            month,
+            year,
+            monthDays: calculation.monthDays,
+            presentDays: calculation.presentDays,
+            paidLeaveDays: calculation.paidLeaveDays,
+            overtimeHours: calculation.overtimeHours,
+            perDaySalary: calculation.perDaySalary,
+            earnedBasic: calculation.earnedBasic,
+            earnedHRA: calculation.earnedHRA,
+            earnedConveyance: calculation.earnedConveyance,
+            overtimePay: calculation.overtimePay,
+            betta: 0, // BETTA allowance - can be added later if needed
+            dynamicEarnings: calculation.dynamicEarnings,
+            grossSalary: calculation.grossSalary,
+            finalGross: calculation.grossSalary, // Same as gross unless BETTA is added
+            dynamicDeductions: calculation.dynamicDeductions,
+            epfDeduction: calculation.epfDeduction,
+            esiDeduction: calculation.esiDeduction,
+            vptDeduction: calculation.vptDeduction,
+            tdsDeduction: 0, // TDS - can be added later if needed
+            fineDeduction: 0, // Fine - can be added later if needed
+            salaryAdvance: calculation.salaryAdvanceDeduction,
+            unpaidLeaveDeduction: calculation.unpaidLeaveDeduction,
+            creditAdjustment: 0, // Credit - can be added later if needed
+            esiEligible: calculation.esiEligible,
+            totalEarnings: calculation.totalEarnings,
+            totalDeductions: calculation.totalDeductions,
+            netSalary: calculation.netSalary,
+            status: 'processed',
+            processedBy: user.uid,
+            processedAt: new Date()
+          };
+          
+          const newPayroll = await storage.createEnhancedPayroll(payrollData);
+          processedPayrolls.push(newPayroll);
+          
+          console.log(`PAYROLL_BULK: ✓ Successfully processed ${employee.displayName}`);
+        } catch (error) {
+          console.error(`PAYROLL_BULK: Error processing user ${userId}:`, error);
+          skippedUsers.push({ userId, reason: 'processing_error', error: error instanceof Error ? error.message : 'Unknown error' });
+        }
       }
       
+      console.log(`PAYROLL_BULK: Complete - Processed: ${processedPayrolls.length}, Skipped: ${skippedUsers.length}`);
+      
       res.json({
+        success: true,
         message: "Payroll processing completed",
         payrolls: processedPayrolls,
-        processedCount: processedPayrolls.length
+        processedCount: processedPayrolls.length,
+        skippedCount: skippedUsers.length,
+        skippedUsers: skippedUsers
       });
     } catch (error) {
-      console.error("Error processing payroll:", error);
-      res.status(500).json({ message: "Failed to process payroll" });
+      console.error("PAYROLL_BULK: Fatal error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to process payroll",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

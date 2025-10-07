@@ -1133,6 +1133,7 @@ export const insertEnhancedPayrollSchema = z.object({
   tdsDeduction: z.number().min(0).default(0),
   fineDeduction: z.number().min(0).default(0), // FINE from manual system
   salaryAdvance: z.number().min(0).default(0), // SALARY ADVANCE from manual system
+  unpaidLeaveDeduction: z.number().min(0).default(0), // UNPAID LEAVE deduction
   creditAdjustment: z.number().min(0).default(0), // CREDIT from manual system
   esiEligible: z.boolean().default(true), // ESI eligibility status
   totalEarnings: z.number().min(0),
