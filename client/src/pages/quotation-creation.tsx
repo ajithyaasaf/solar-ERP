@@ -2941,7 +2941,7 @@ export default function QuotationCreation() {
           )}
 
           {/* Navigation buttons */}
-          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sticky bottom-0 bg-background pt-4 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 border-t sm:border-0 sm:static sm:bg-transparent">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 pt-4 pb-2 border-t">
             <Button
               type="button"
               variant="outline"
