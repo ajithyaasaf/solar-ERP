@@ -2337,16 +2337,16 @@ export default function QuotationCreation() {
           </div>
 
           {/* Tablet Progress - Compact vertical */}
-          <div className="hidden md:grid lg:hidden grid-cols-4 gap-2">
+          <div className="hidden md:grid lg:hidden grid-cols-4 gap-1.5">
             {WIZARD_STEPS.map((step, index) => {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
               const IconComponent = step.icon;
               
               return (
-                <div key={step.id} className="flex flex-col items-center text-center">
+                <div key={step.id} className="flex flex-col items-center text-center min-w-0">
                   <div 
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 mb-2 ${
+                    className={`flex items-center justify-center w-9 h-9 rounded-full border-2 mb-1.5 shrink-0 ${
                       isCompleted 
                         ? "bg-primary border-primary text-primary-foreground" 
                         : isActive 
@@ -2356,12 +2356,12 @@ export default function QuotationCreation() {
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
-                      <Check className="h-5 w-5" />
+                      <Check className="h-4 w-4" />
                     ) : (
-                      <IconComponent className="h-5 w-5" />
+                      <IconComponent className="h-4 w-4" />
                     )}
                   </div>
-                  <p className={`text-xs font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                  <p className={`text-[10px] leading-tight font-medium truncate w-full px-1 ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                     {step.title}
                   </p>
                 </div>
