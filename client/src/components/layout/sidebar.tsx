@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/auth-context";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, Briefcase, Users, Shield, Settings as SettingsIcon } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import logoPath from "@assets/Logo_1756709823475.png";
 
@@ -88,6 +88,19 @@ export function Sidebar() {
         }
       }, 50);
     }
+  };
+
+  // Category icons mapping
+  const categoryIcons: Record<string, React.ReactNode> = {
+    "Business": <Briefcase className="h-3.5 w-3.5" />,
+    "Workforce": <Users className="h-3.5 w-3.5" />,
+    "Administration": <Shield className="h-3.5 w-3.5" />,
+    "System": <SettingsIcon className="h-3.5 w-3.5" />
+  };
+
+  // Check if category contains the active page
+  const isCategoryActive = (group: NavGroup) => {
+    return group.items.some(item => item.href === location);
   };
 
   // Define navigation items grouped by category with enterprise RBAC permissions
@@ -275,22 +288,43 @@ export function Sidebar() {
       
       <div ref={scrollContainerRef} className="overflow-y-auto flex-grow p-1 md:p-2">
         <nav className={cn("space-y-3 md:space-y-4", isCollapsed && "space-y-2")}>
-          {filteredNavGroups.map((group, groupIndex) => (
-            <div key={groupIndex}>
-              {!isCollapsed ? (
-                <button
-                  onClick={(e) => toggleGroup(group.category, e)}
-                  className="w-full flex items-center justify-between px-3 md:px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors group"
-                  data-testid={`toggle-${group.category.toLowerCase()}`}
-                >
-                  <span>{group.category}</span>
-                  <ChevronDown className={cn(
-                    "h-4 w-4 transition-transform duration-300 ease-in-out",
-                    expandedGroups[group.category] && "rotate-180"
-                  )} />
-                </button>
-              ) : null}
-              <div className={cn(
+          {filteredNavGroups.map((group, groupIndex) => {
+            const isActive = isCategoryActive(group);
+            
+            return (
+              <div key={groupIndex}>
+                {/* Visual separator between categories */}
+                {groupIndex > 0 && !isCollapsed && (
+                  <div className="h-px bg-gray-200 my-3 md:my-4" />
+                )}
+                
+                {!isCollapsed ? (
+                  <button
+                    onClick={(e) => toggleGroup(group.category, e)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 md:px-4 py-2 mb-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 rounded-md group",
+                      isActive 
+                        ? "text-primary bg-primary/5 hover:bg-primary/10" 
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    )}
+                    data-testid={`toggle-${group.category.toLowerCase()}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "transition-colors",
+                        isActive ? "text-primary" : "text-gray-400 group-hover:text-gray-600"
+                      )}>
+                        {categoryIcons[group.category]}
+                      </span>
+                      <span>{group.category}</span>
+                    </div>
+                    <ChevronDown className={cn(
+                      "h-4 w-4 transition-transform duration-300 ease-in-out",
+                      expandedGroups[group.category] && "rotate-180"
+                    )} />
+                  </button>
+                ) : null}
+                <div className={cn(
                 "overflow-hidden transition-all duration-300 ease-in-out",
                 isCollapsed && "flex flex-col items-center",
                 !isCollapsed && expandedGroups[group.category] ? "max-h-[2000px] opacity-100" : !isCollapsed ? "max-h-0 opacity-0" : ""
@@ -314,9 +348,10 @@ export function Sidebar() {
                     </Link>
                   ))}
                 </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
       </div>
       
