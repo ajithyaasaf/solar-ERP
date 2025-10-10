@@ -562,46 +562,110 @@ export class SiteVisitService {
       }));
 
       // Transform data for Excel export
-      const excelData = siteVisits.map((visit: any) => ({
-        'Visit ID': visit.id,
-        'Employee Name': visit.userId,
-        'Department': visit.department,
-        'Customer Name': (visit as any).customerDetails?.name || visit.customerName || 'N/A',
-        'Customer Phone': (visit as any).customerDetails?.mobile || visit.customerPhone || 'N/A',
-        'Customer Email': (visit as any).customerDetails?.email || visit.customerEmail || 'N/A',
-        'Visit Purpose': visit.visitPurpose,
-        'Status': visit.status,
-        'Check-in Time': visit.siteInTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        'Check-in Location': visit.siteInLocation || 'N/A',
-        'Check-out Time': visit.siteOutTime ? visit.siteOutTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Not checked out',
-        'Check-out Location': visit.siteOutLocation || 'N/A',
-        'Notes': visit.notes || 'N/A',
-        'Photos Count': visit.sitePhotos?.length || 0,
-        'Created At': visit.createdAt.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-      }));
+      const excelData = siteVisits.map((visit: any) => {
+        const baseData: any = {
+          'Visit ID': visit.id,
+          'Employee Name': visit.userId,
+          'Department': visit.department,
+          'Customer Name': (visit as any).customerDetails?.name || visit.customerName || 'N/A',
+          'Customer Phone': (visit as any).customerDetails?.mobile || visit.customerPhone || 'N/A',
+          'Customer Email': (visit as any).customerDetails?.email || visit.customerEmail || 'N/A',
+          'Customer Source': (visit as any).customerDetails?.source || 'N/A',
+          'Visit Purpose': visit.visitPurpose,
+          'Status': visit.status,
+          'Visit Outcome': visit.visitOutcome || 'N/A',
+          'Check-in Time': visit.siteInTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+          'Check-in Location': visit.siteInLocation || 'N/A',
+          'Check-out Time': visit.siteOutTime ? visit.siteOutTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Not checked out',
+          'Check-out Location': visit.siteOutLocation || 'N/A',
+          'Notes': visit.notes || 'N/A',
+          'Photos Count': visit.sitePhotos?.length || 0,
+          'Created At': visit.createdAt.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+        };
+
+        // Add marketing configuration data if available
+        if (visit.marketingData) {
+          const config = visit.marketingData.onGridConfig || visit.marketingData.offGridConfig || 
+                        visit.marketingData.hybridConfig || visit.marketingData.waterPumpConfig;
+          
+          if (config) {
+            baseData['Panel Watts'] = config.panelWatts || 'N/A';
+            baseData['Panel Type'] = config.panelType ? 
+              (config.panelType === 'bifacial' ? 'Bifacial' : 
+               config.panelType === 'topcon' ? 'Topcon' : 'Mono-PERC') : 'N/A';
+            baseData['DCR Panel Count'] = config.dcrPanelCount || 0;
+            baseData['NON DCR Panel Count'] = config.nonDcrPanelCount || 0;
+            baseData['Total Panel Count'] = config.panelCount || 'N/A';
+            baseData['Inverter KW'] = config.inverterKW || 'N/A';
+            baseData['Inverter Phase'] = config.inverterPhase || 'N/A';
+            baseData['Inverter Qty'] = config.inverterQty || 'N/A';
+            baseData['Electrical Accessories'] = config.electricalAccessories ? 'Yes' : 'No';
+            baseData['Electrical Count'] = config.electricalCount || 0;
+            baseData['Lightning Arrestor'] = config.lightningArrest ? 'Yes' : 'No';
+            baseData['Structure Type'] = config.structureType ? 
+              (config.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail') : 'N/A';
+            
+            if (config.gpStructure) {
+              baseData['Lower End Height'] = config.gpStructure.lowerEndHeight || 'N/A';
+              baseData['Higher End Height'] = config.gpStructure.higherEndHeight || 'N/A';
+            }
+            
+            if (config.monoRail) {
+              baseData['Mono Rail Type'] = config.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail';
+            }
+            
+            baseData['Project Value'] = config.projectValue || 'N/A';
+          }
+        }
+
+        return baseData;
+      });
 
       // Create workbook and worksheet
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-      // Auto-fit column widths
-      const columnWidths = [
-        { wch: 15 }, // Visit ID
-        { wch: 20 }, // Employee Name
-        { wch: 12 }, // Department
-        { wch: 25 }, // Customer Name
-        { wch: 15 }, // Customer Phone
-        { wch: 25 }, // Customer Email
-        { wch: 15 }, // Visit Purpose
-        { wch: 12 }, // Status
-        { wch: 20 }, // Check-in Time
-        { wch: 30 }, // Check-in Location
-        { wch: 20 }, // Check-out Time
-        { wch: 30 }, // Check-out Location
-        { wch: 40 }, // Notes
-        { wch: 12 }, // Photos Count
-        { wch: 20 }  // Created At
-      ];
+      // Auto-fit column widths (adjust based on actual columns present)
+      const firstRow = excelData[0] || {};
+      const columnWidths = Object.keys(firstRow).map(key => {
+        // Set specific widths for known columns
+        const widthMap: Record<string, number> = {
+          'Visit ID': 15,
+          'Employee Name': 20,
+          'Department': 12,
+          'Customer Name': 25,
+          'Customer Phone': 15,
+          'Customer Email': 25,
+          'Customer Source': 15,
+          'Visit Purpose': 15,
+          'Status': 12,
+          'Visit Outcome': 12,
+          'Check-in Time': 20,
+          'Check-in Location': 30,
+          'Check-out Time': 20,
+          'Check-out Location': 30,
+          'Notes': 40,
+          'Photos Count': 12,
+          'Created At': 20,
+          'Panel Watts': 12,
+          'Panel Type': 12,
+          'DCR Panel Count': 15,
+          'NON DCR Panel Count': 18,
+          'Total Panel Count': 15,
+          'Inverter KW': 12,
+          'Inverter Phase': 15,
+          'Inverter Qty': 12,
+          'Electrical Accessories': 20,
+          'Electrical Count': 15,
+          'Lightning Arrestor': 18,
+          'Structure Type': 15,
+          'Lower End Height': 15,
+          'Higher End Height': 15,
+          'Mono Rail Type': 15,
+          'Project Value': 15
+        };
+        return { wch: widthMap[key] || 15 };
+      });
       worksheet['!cols'] = columnWidths;
 
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Site Visits');
