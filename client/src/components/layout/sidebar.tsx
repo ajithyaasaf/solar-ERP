@@ -283,12 +283,7 @@ export function Sidebar() {
                   className="w-full flex items-center justify-between px-3 md:px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors group"
                   data-testid={`toggle-${group.category.toLowerCase()}`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span>{group.category}</span>
-                    <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-medium">
-                      {group.items.length}
-                    </span>
-                  </div>
+                  <span>{group.category}</span>
                   <ChevronDown className={cn(
                     "h-4 w-4 transition-transform duration-300 ease-in-out",
                     expandedGroups[group.category] && "rotate-180"
