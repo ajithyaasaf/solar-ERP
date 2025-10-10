@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/auth-context";
 import { ChevronDown, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import logoPath from "@assets/Logo_1756709823475.png";
 
 import type { SystemPermission } from "@shared/schema";
@@ -33,6 +33,9 @@ export function Sidebar() {
     "System": true
   });
   
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const groupRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  
   // Remove legacy permission hook - now using enterprise RBAC
 
   // Handle responsive window resizing
@@ -51,11 +54,40 @@ export function Sidebar() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const toggleGroup = (category: string) => {
+  const toggleGroup = (category: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    const isExpanding = !expandedGroups[category];
+    
     setExpandedGroups(prev => ({
       ...prev,
       [category]: !prev[category]
     }));
+
+    // Smart scroll: only when expanding and content might be off-screen
+    if (isExpanding && scrollContainerRef.current) {
+      const button = event.currentTarget;
+      const container = scrollContainerRef.current;
+      
+      // Wait for expansion animation to start
+      setTimeout(() => {
+        const buttonRect = button.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        
+        // Calculate if expanded content would be below viewport
+        const buttonBottom = buttonRect.bottom;
+        const containerBottom = containerRect.bottom;
+        const estimatedContentHeight = 200; // Approximate height of expanded group
+        
+        // If content would overflow, scroll to keep it visible
+        if (buttonBottom + estimatedContentHeight > containerBottom) {
+          const scrollAmount = (buttonBottom + estimatedContentHeight) - containerBottom + 20; // 20px padding
+          
+          container.scrollTo({
+            top: container.scrollTop + scrollAmount,
+            behavior: 'smooth'
+          });
+        }
+      }, 50);
+    }
   };
 
   // Define navigation items grouped by category with enterprise RBAC permissions
@@ -241,13 +273,13 @@ export function Sidebar() {
         )}
       </div>
       
-      <div className="overflow-y-auto flex-grow p-1 md:p-2">
+      <div ref={scrollContainerRef} className="overflow-y-auto flex-grow p-1 md:p-2">
         <nav className={cn("space-y-3 md:space-y-4", isCollapsed && "space-y-2")}>
           {filteredNavGroups.map((group, groupIndex) => (
             <div key={groupIndex}>
               {!isCollapsed ? (
                 <button
-                  onClick={() => toggleGroup(group.category)}
+                  onClick={(e) => toggleGroup(group.category, e)}
                   className="w-full flex items-center justify-between px-3 md:px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors group"
                   data-testid={`toggle-${group.category.toLowerCase()}`}
                 >
