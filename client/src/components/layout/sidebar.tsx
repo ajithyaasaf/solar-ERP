@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/auth-context";
-import { Leaf, LogOut } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import logoPath from "@assets/Logo_1756709823475.png";
 
@@ -252,34 +252,36 @@ export function Sidebar() {
                   data-testid={`toggle-${group.category.toLowerCase()}`}
                 >
                   <span>{group.category}</span>
-                  <i className={cn(
-                    "ri-arrow-down-s-line text-base transition-transform duration-200",
+                  <ChevronDown className={cn(
+                    "h-4 w-4 transition-transform duration-300 ease-in-out",
                     expandedGroups[group.category] && "rotate-180"
-                  )}></i>
+                  )} />
                 </button>
               ) : null}
               <div className={cn(
-                "space-y-0.5 md:space-y-1 transition-all duration-200",
+                "overflow-hidden transition-all duration-300 ease-in-out",
                 isCollapsed && "flex flex-col items-center",
-                !isCollapsed && !expandedGroups[group.category] && "hidden"
+                !isCollapsed && expandedGroups[group.category] ? "max-h-[2000px] opacity-100" : !isCollapsed ? "max-h-0 opacity-0" : ""
               )}>
-                {group.items.map((item, itemIndex) => (
-                  <Link 
-                    key={itemIndex} 
-                    href={item.href}
-                    className={cn(
-                      "sidebar-item flex items-center px-3 py-2.5 md:px-4 md:py-3 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200",
-                      isCollapsed && "justify-center px-2",
-                      location === item.href && "active bg-primary/10",
-                      !isCollapsed && location === item.href && "border-l-4 border-primary"
-                    )}
-                    title={isCollapsed ? item.label : undefined}
-                    data-testid={`nav-${item.href.substring(1)}`}
-                  >
-                    <div className={isCollapsed ? "mx-auto" : ""}>{item.icon}</div>
-                    {!isCollapsed && <span className="text-sm md:text-base truncate">{item.label}</span>}
-                  </Link>
-                ))}
+                <div className={cn("space-y-0.5 md:space-y-1", isCollapsed && "flex flex-col items-center")}>
+                  {group.items.map((item, itemIndex) => (
+                    <Link 
+                      key={itemIndex} 
+                      href={item.href}
+                      className={cn(
+                        "sidebar-item flex items-center px-3 py-2.5 md:px-4 md:py-3 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200",
+                        isCollapsed && "justify-center px-2",
+                        location === item.href && "active bg-primary/10",
+                        !isCollapsed && location === item.href && "border-l-4 border-primary"
+                      )}
+                      title={isCollapsed ? item.label : undefined}
+                      data-testid={`nav-${item.href.substring(1)}`}
+                    >
+                      <div className={isCollapsed ? "mx-auto" : ""}>{item.icon}</div>
+                      {!isCollapsed && <span className="text-sm md:text-base truncate">{item.label}</span>}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
