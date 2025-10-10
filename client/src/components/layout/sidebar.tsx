@@ -400,7 +400,7 @@ export function Sidebar() {
                   });
                 });
               }} 
-              className="ml-auto text-gray-500 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100"
+              className="ml-auto text-gray-500 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50/50"
               aria-label="Logout"
             >
               <LogOut className="h-4 w-4 md:h-5 md:w-5" />
@@ -415,7 +415,7 @@ export function Sidebar() {
                 });
               });
             }} 
-            className="text-gray-500 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-100"
+            className="text-gray-500 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50/50"
             aria-label="Logout"
           >
             <LogOut className="h-5 w-5" />
