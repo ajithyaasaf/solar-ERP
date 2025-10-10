@@ -26,6 +26,12 @@ export function Sidebar() {
   const { user, hasPermission, hasRole, canApprove } = useAuthContext();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMd, setIsMd] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    "Business": true,
+    "Workforce": true,
+    "Administration": true,
+    "System": true
+  });
   
   // Remove legacy permission hook - now using enterprise RBAC
 
@@ -44,6 +50,13 @@ export function Sidebar() {
     // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const toggleGroup = (category: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
 
   // Define navigation items grouped by category with enterprise RBAC permissions
   const navGroups: NavGroup[] = [
@@ -229,15 +242,27 @@ export function Sidebar() {
       </div>
       
       <div className="overflow-y-auto flex-grow p-1 md:p-2">
-        <nav className={cn("space-y-4 md:space-y-5", isCollapsed && "space-y-2")}>
+        <nav className={cn("space-y-3 md:space-y-4", isCollapsed && "space-y-2")}>
           {filteredNavGroups.map((group, groupIndex) => (
             <div key={groupIndex}>
-              {!isCollapsed && (
-                <h3 className="px-3 md:px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {group.category}
-                </h3>
-              )}
-              <div className={cn("space-y-0.5 md:space-y-1", isCollapsed && "flex flex-col items-center")}>
+              {!isCollapsed ? (
+                <button
+                  onClick={() => toggleGroup(group.category)}
+                  className="w-full flex items-center justify-between px-3 md:px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors group"
+                  data-testid={`toggle-${group.category.toLowerCase()}`}
+                >
+                  <span>{group.category}</span>
+                  <i className={cn(
+                    "ri-arrow-down-s-line text-base transition-transform duration-200",
+                    expandedGroups[group.category] && "rotate-180"
+                  )}></i>
+                </button>
+              ) : null}
+              <div className={cn(
+                "space-y-0.5 md:space-y-1 transition-all duration-200",
+                isCollapsed && "flex flex-col items-center",
+                !isCollapsed && !expandedGroups[group.category] && "hidden"
+              )}>
                 {group.items.map((item, itemIndex) => (
                   <Link 
                     key={itemIndex} 
@@ -249,6 +274,7 @@ export function Sidebar() {
                       !isCollapsed && location === item.href && "border-l-4 border-primary"
                     )}
                     title={isCollapsed ? item.label : undefined}
+                    data-testid={`nav-${item.href.substring(1)}`}
                   >
                     <div className={isCollapsed ? "mx-auto" : ""}>{item.icon}</div>
                     {!isCollapsed && <span className="text-sm md:text-base truncate">{item.label}</span>}
