@@ -33,6 +33,7 @@ import {
   inverterPhases,
   earthingTypes,
   panelWatts,
+  panelTypes,
   inverterWatts,
   batteryBrands,
   batteryTypes,
@@ -71,16 +72,19 @@ interface BaseConfig {
 interface OnGridConfig extends BaseConfig {
   solarPanelMake: string[];
   panelWatts: string;
+  panelType?: string;
   inverterMake: string[];
-  inverterWatts: string;
   inverterPhase: string;
   inverterKW?: number;
   inverterQty?: number;
   lightningArrest: boolean;
+  electricalAccessories?: boolean;
+  electricalCount?: number;
   earth: string;
   floor?: string;
+  dcrPanelCount: number;
+  nonDcrPanelCount: number;
   panelCount: number;
-  structureHeight: number;
   // New fields from client specification
   structureType?: string;
   gpStructure?: {
@@ -123,8 +127,11 @@ interface WaterPumpConfig extends BaseConfig {
   hp: string;
   drive: string;
   solarPanel?: string;
-  structureHeight: number;
   panelBrand: string[];
+  panelWatts?: string;
+  panelType?: string;
+  dcrPanelCount: number;
+  nonDcrPanelCount: number;
   panelCount: number;
   // New fields from client specification
   structureType?: string;
@@ -206,16 +213,19 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
       onGridConfig: projectType === 'on_grid' ? {
         solarPanelMake: ['premier'],
         panelWatts: '530',
+        panelType: 'bifacial',
         inverterMake: ['deye'],
-        inverterWatts: '5kw',
         inverterPhase: 'single_phase',
-        inverterKW: 0,
+        inverterKW: 5,
         inverterQty: 1,
         lightningArrest: false,
+        electricalAccessories: false,
+        electricalCount: 0,
         earth: 'ac',
         floor: '0',
+        dcrPanelCount: 1,
+        nonDcrPanelCount: 0,
         panelCount: 1,
-        structureHeight: 0,
         projectValue: 0,
         others: '',
         structureType: 'gp_structure',
@@ -232,16 +242,19 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
       offGridConfig: projectType === 'off_grid' ? {
         solarPanelMake: ['premier'],
         panelWatts: '530',
+        panelType: 'bifacial',
         inverterMake: ['deye'],
-        inverterWatts: '5kw',
         inverterPhase: 'single_phase',
-        inverterKW: 0,
+        inverterKW: 5,
         inverterQty: 1,
         lightningArrest: false,
+        electricalAccessories: false,
+        electricalCount: 0,
         earth: 'ac',
         floor: '0',
+        dcrPanelCount: 1,
+        nonDcrPanelCount: 0,
         panelCount: 1,
-        structureHeight: 0,
         batteryBrand: 'exide',
         batteryType: 'lead_acid',
         batteryAH: '100',
@@ -263,16 +276,19 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
       hybridConfig: projectType === 'hybrid' ? {
         solarPanelMake: ['premier'],
         panelWatts: '530',
+        panelType: 'bifacial',
         inverterMake: ['deye'],
-        inverterWatts: '5kw',
         inverterPhase: 'single_phase',
-        inverterKW: 0,
+        inverterKW: 5,
         inverterQty: 1,
         lightningArrest: false,
+        electricalAccessories: false,
+        electricalCount: 0,
         earth: 'ac',
         floor: '0',
+        dcrPanelCount: 1,
+        nonDcrPanelCount: 0,
         panelCount: 1,
-        structureHeight: 0,
         batteryBrand: 'exide',
         batteryType: 'lead_acid',
         batteryAH: '100',
@@ -307,8 +323,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         hp: '1',
         drive: 'AC',
         solarPanel: '',
-        structureHeight: 0,
         panelBrand: ['premier'],
+        panelWatts: '530',
+        panelType: 'bifacial',
+        dcrPanelCount: 1,
+        nonDcrPanelCount: 0,
         panelCount: 1,
         projectValue: 0,
         others: '',
@@ -489,17 +508,35 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Panel Watts</Label>
-                    <Select 
+                    <Input
+                      type="text"
+                      list="panel-watts-options"
                       value={formData.onGridConfig.panelWatts}
-                      onValueChange={(value) => updateConfig('onGridConfig', { panelWatts: value })}
+                      onChange={(e) => updateConfig('onGridConfig', { panelWatts: e.target.value })}
+                      placeholder="Type or select wattage"
+                    />
+                    <datalist id="panel-watts-options">
+                      {panelWatts.map((watts) => (
+                        <option key={watts} value={watts} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <Label>Panel Type</Label>
+                    <Select 
+                      value={formData.onGridConfig.panelType || 'bifacial'}
+                      onValueChange={(value) => updateConfig('onGridConfig', { panelType: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select panel type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {panelWatts.map((watts) => (
-                          <SelectItem key={watts} value={watts}>
-                            {watts}W
+                        {panelTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type === 'bifacial' ? 'Bifacial' : 
+                             type === 'topcon' ? 'Topcon' : 
+                             'Mono-PERC'}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -531,57 +568,48 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Inverter Watts</Label>
-                    <Select 
-                      value={formData.onGridConfig.inverterWatts}
-                      onValueChange={(value) => updateConfig('onGridConfig', { inverterWatts: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select inverter capacity" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inverterWatts.map((watts) => (
-                          <SelectItem key={watts} value={watts}>
-                            {watts}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Inverter KW</Label>
+                    <Input
+                      type="text"
+                      list="inverter-kw-options"
+                      value={formData.onGridConfig.inverterKW || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const numValue = parseFloat(value);
+                        if (value === '') {
+                          updateConfig('onGridConfig', { inverterKW: undefined, inverterPhase: 'single_phase' });
+                        } else if (!isNaN(numValue)) {
+                          const phase = numValue < 6 ? 'single_phase' : 'three_phase';
+                          updateConfig('onGridConfig', { inverterKW: numValue, inverterPhase: phase });
+                        }
+                      }}
+                      placeholder="Type or select KW (auto-selects phase)"
+                    />
+                    <datalist id="inverter-kw-options">
+                      <option value="3" />
+                      <option value="4" />
+                      <option value="5" />
+                      <option value="6" />
+                      <option value="10" />
+                      <option value="15" />
+                      <option value="30" />
+                    </datalist>
                   </div>
 
                   <div>
-                    <Label>Inverter Phase</Label>
+                    <Label>Inverter Phase (Auto-selected)</Label>
                     <Select 
                       value={formData.onGridConfig.inverterPhase}
                       onValueChange={(value) => updateConfig('onGridConfig', { inverterPhase: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select phase" />
+                        <SelectValue placeholder="Phase based on KW" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="single_phase">Single Phase</SelectItem>
-                        <SelectItem value="three_phase">Three Phase</SelectItem>
+                        <SelectItem value="single_phase">Single Phase (&lt; 6 KW)</SelectItem>
+                        <SelectItem value="three_phase">Three Phase (≥ 6 KW)</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div>
-                    <Label>Inverter KW</Label>
-                    <Input
-                      type="number"
-                      value={formData.onGridConfig.inverterKW || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('onGridConfig', { inverterKW: undefined });
-                        } else {
-                          updateConfig('onGridConfig', { inverterKW: parseFloat(value) || 0 });
-                        }
-                      }}
-                      min="0"
-                      step="0.1"
-                      placeholder="Enter inverter KW rating"
-                    />
                   </div>
 
                   <div>
@@ -591,11 +619,12 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       value={formData.onGridConfig.inverterQty || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('onGridConfig', { inverterQty: undefined });
-                        } else {
-                          updateConfig('onGridConfig', { inverterQty: parseInt(value) || 1 });
-                        }
+                        const qty = value === '' ? 1 : parseInt(value) || 1;
+                        const electricalCount = formData.onGridConfig?.electricalAccessories ? qty : 0;
+                        updateConfig('onGridConfig', { 
+                          inverterQty: qty,
+                          electricalCount
+                        });
                       }}
                       min="1"
                       placeholder="Enter inverter quantity"
@@ -622,48 +651,50 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Panel Count</Label>
+                    <Label>DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.onGridConfig.panelCount}
+                      value={formData.onGridConfig.dcrPanelCount}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('onGridConfig', { panelCount: '' as any });
-                        } else {
-                          updateConfig('onGridConfig', { panelCount: parseInt(value) || 1 });
-                        }
+                        const dcrCount = value === '' ? 0 : parseInt(value) || 0;
+                        const totalCount = dcrCount + (formData.onGridConfig?.nonDcrPanelCount || 0);
+                        updateConfig('onGridConfig', { 
+                          dcrPanelCount: dcrCount,
+                          panelCount: totalCount
+                        });
                       }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || value === '0') {
-                          updateConfig('onGridConfig', { panelCount: 1 });
-                        }
-                      }}
-                      min="1"
+                      min="0"
+                      placeholder="Enter DCR panel count"
                     />
                   </div>
 
                   <div>
-                    <Label>Structure Height (ft)</Label>
+                    <Label>NON DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.onGridConfig.structureHeight}
+                      value={formData.onGridConfig.nonDcrPanelCount}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('onGridConfig', { structureHeight: '' as any });
-                        } else {
-                          updateConfig('onGridConfig', { structureHeight: parseInt(value) || 0 });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('onGridConfig', { structureHeight: 0 });
-                        }
+                        const nonDcrCount = value === '' ? 0 : parseInt(value) || 0;
+                        const totalCount = (formData.onGridConfig?.dcrPanelCount || 0) + nonDcrCount;
+                        updateConfig('onGridConfig', { 
+                          nonDcrPanelCount: nonDcrCount,
+                          panelCount: totalCount
+                        });
                       }}
                       min="0"
+                      placeholder="Enter NON DCR panel count"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Total Panel Count (Auto-calculated)</Label>
+                    <Input
+                      type="number"
+                      value={formData.onGridConfig.panelCount}
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
                     />
                   </div>
 
@@ -865,6 +896,34 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   <Label htmlFor="lightningArrest">Lightning Arrestor Required</Label>
                 </div>
 
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="electricalAccessories"
+                      checked={formData.onGridConfig.electricalAccessories || false}
+                      onCheckedChange={(checked) => {
+                        updateConfig('onGridConfig', { 
+                          electricalAccessories: checked as boolean,
+                          electricalCount: checked ? (formData.onGridConfig?.inverterQty || 1) : 0
+                        });
+                      }}
+                    />
+                    <Label htmlFor="electricalAccessories">Electrical Accessories</Label>
+                  </div>
+
+                  {formData.onGridConfig.electricalAccessories && (
+                    <div>
+                      <Label>Electrical Count (Auto-filled from Inverter Count)</Label>
+                      <Input
+                        type="number"
+                        value={formData.onGridConfig.electricalCount || 0}
+                        disabled
+                        className="bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <Label>Additional Notes</Label>
                   <Textarea
@@ -913,22 +972,82 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Panel Watts</Label>
+                    <Label>Panel Type *</Label>
                     <Select 
-                      value={formData.offGridConfig.panelWatts}
-                      onValueChange={(value) => updateConfig('offGridConfig', { panelWatts: value })}
+                      value={formData.offGridConfig.panelType}
+                      onValueChange={(value) => updateConfig('offGridConfig', { panelType: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select panel type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {panelWatts.map((watts) => (
-                          <SelectItem key={watts} value={watts}>
-                            {watts}W
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="bifacial">Bifacial</SelectItem>
+                        <SelectItem value="topcon">Topcon</SelectItem>
+                        <SelectItem value="mono_perc">Mono-PERC</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <Label>Panel Watts</Label>
+                    <Input
+                      type="text"
+                      list="offgrid-panel-watts-list"
+                      value={formData.offGridConfig.panelWatts}
+                      onChange={(e) => updateConfig('offGridConfig', { panelWatts: e.target.value })}
+                      placeholder="Type or select"
+                    />
+                    <datalist id="offgrid-panel-watts-list">
+                      {panelWatts.map((watts) => (
+                        <option key={watts} value={watts} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <Label>DCR Panel Count</Label>
+                    <Input
+                      type="number"
+                      value={formData.offGridConfig.dcrPanelCount || 0}
+                      onChange={(e) => {
+                        const dcrCount = parseInt(e.target.value) || 0;
+                        const nonDcrCount = formData.offGridConfig?.nonDcrPanelCount || 0;
+                        updateConfig('offGridConfig', {
+                          dcrPanelCount: dcrCount,
+                          panelCount: dcrCount + nonDcrCount
+                        });
+                      }}
+                      min="0"
+                      placeholder="Enter DCR panel count"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>NON-DCR Panel Count</Label>
+                    <Input
+                      type="number"
+                      value={formData.offGridConfig.nonDcrPanelCount || 0}
+                      onChange={(e) => {
+                        const nonDcrCount = parseInt(e.target.value) || 0;
+                        const dcrCount = formData.offGridConfig?.dcrPanelCount || 0;
+                        updateConfig('offGridConfig', {
+                          nonDcrPanelCount: nonDcrCount,
+                          panelCount: dcrCount + nonDcrCount
+                        });
+                      }}
+                      min="0"
+                      placeholder="Enter NON-DCR panel count"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Total Panel Count (Auto-calculated)</Label>
+                    <Input
+                      type="number"
+                      value={formData.offGridConfig.panelCount || 0}
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
+                    />
                   </div>
 
                   <div>
@@ -958,19 +1077,34 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   <div>
                     <Label>Inverter KW</Label>
                     <Input
-                      type="number"
+                      type="text"
+                      list="offgrid-inverter-kw-list"
                       value={formData.offGridConfig.inverterKW || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('offGridConfig', { inverterKW: undefined });
-                        } else {
-                          updateConfig('offGridConfig', { inverterKW: parseFloat(value) || 0 });
-                        }
+                        const kw = parseFloat(value) || 0;
+                        const phase = kw < 6 ? 'single_phase' : 'three_phase';
+                        updateConfig('offGridConfig', { 
+                          inverterKW: kw,
+                          inverterPhase: phase
+                        });
                       }}
-                      min="0"
-                      step="0.1"
-                      placeholder="Enter inverter KW rating"
+                      placeholder="Type or select KW"
+                    />
+                    <datalist id="offgrid-inverter-kw-list">
+                      {inverterKW.map((kw) => (
+                        <option key={kw} value={kw} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <Label>Inverter Phase (Auto-selected)</Label>
+                    <Input
+                      type="text"
+                      value={formData.offGridConfig.inverterPhase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
                     />
                   </div>
 
@@ -981,11 +1115,12 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       value={formData.offGridConfig.inverterQty || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('offGridConfig', { inverterQty: undefined });
-                        } else {
-                          updateConfig('offGridConfig', { inverterQty: parseInt(value) || 1 });
-                        }
+                        const qty = value === '' ? 1 : parseInt(value) || 1;
+                        const electricalCount = formData.offGridConfig?.electricalAccessories ? qty : 0;
+                        updateConfig('offGridConfig', { 
+                          inverterQty: qty,
+                          electricalCount
+                        });
                       }}
                       min="1"
                       placeholder="Enter inverter quantity"
@@ -1006,8 +1141,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                           <SelectItem key={brand} value={brand}>
                             {brand === 'exide' ? 'Exide' : 
                              brand === 'utl' ? 'UTL' : 
-                             brand === 'exide_utl' ? 'EXIDE/UTL' : 
-                             brand.replace('_', ' ').toUpperCase()}
+                             'EXIDE/UTL'}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1050,29 +1184,6 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div>
-                    <Label>Panel Count *</Label>
-                    <Input
-                      type="number"
-                      value={formData.offGridConfig.panelCount}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('offGridConfig', { panelCount: '' as any });
-                        } else {
-                          updateConfig('offGridConfig', { panelCount: parseInt(value) || 1 });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || value === '0') {
-                          updateConfig('offGridConfig', { panelCount: 1 });
-                        }
-                      }}
-                      min="1"
-                    />
                   </div>
 
                   <div>
@@ -1291,6 +1402,43 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
                 </div>
 
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="offgrid-lightningArrest"
+                    checked={formData.offGridConfig.lightningArrest}
+                    onCheckedChange={(checked) => updateConfig('offGridConfig', { lightningArrest: checked })}
+                  />
+                  <Label htmlFor="offgrid-lightningArrest">Lightning Arrestor Required</Label>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="offgrid-electricalAccessories"
+                      checked={formData.offGridConfig.electricalAccessories || false}
+                      onCheckedChange={(checked) => {
+                        updateConfig('offGridConfig', { 
+                          electricalAccessories: checked as boolean,
+                          electricalCount: checked ? (formData.offGridConfig?.inverterQty || 1) : 0
+                        });
+                      }}
+                    />
+                    <Label htmlFor="offgrid-electricalAccessories">Electrical Accessories</Label>
+                  </div>
+
+                  {formData.offGridConfig.electricalAccessories && (
+                    <div>
+                      <Label>Electrical Count (Auto-filled from Inverter Count)</Label>
+                      <Input
+                        type="number"
+                        value={formData.offGridConfig.electricalCount || 0}
+                        disabled
+                        className="bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <Label>Additional Notes</Label>
                   <Textarea
@@ -1339,6 +1487,85 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Panel Type *</Label>
+                    <Select 
+                      value={formData.hybridConfig.panelType}
+                      onValueChange={(value) => updateConfig('hybridConfig', { panelType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select panel type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bifacial">Bifacial</SelectItem>
+                        <SelectItem value="topcon">Topcon</SelectItem>
+                        <SelectItem value="mono_perc">Mono-PERC</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Panel Watts</Label>
+                    <Input
+                      type="text"
+                      list="hybrid-panel-watts-list"
+                      value={formData.hybridConfig.panelWatts}
+                      onChange={(e) => updateConfig('hybridConfig', { panelWatts: e.target.value })}
+                      placeholder="Type or select"
+                    />
+                    <datalist id="hybrid-panel-watts-list">
+                      {panelWatts.map((watts) => (
+                        <option key={watts} value={watts} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <Label>DCR Panel Count</Label>
+                    <Input
+                      type="number"
+                      value={formData.hybridConfig.dcrPanelCount || 0}
+                      onChange={(e) => {
+                        const dcrCount = parseInt(e.target.value) || 0;
+                        const nonDcrCount = formData.hybridConfig?.nonDcrPanelCount || 0;
+                        updateConfig('hybridConfig', {
+                          dcrPanelCount: dcrCount,
+                          panelCount: dcrCount + nonDcrCount
+                        });
+                      }}
+                      min="0"
+                      placeholder="Enter DCR panel count"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>NON-DCR Panel Count</Label>
+                    <Input
+                      type="number"
+                      value={formData.hybridConfig.nonDcrPanelCount || 0}
+                      onChange={(e) => {
+                        const nonDcrCount = parseInt(e.target.value) || 0;
+                        const dcrCount = formData.hybridConfig?.dcrPanelCount || 0;
+                        updateConfig('hybridConfig', {
+                          nonDcrPanelCount: nonDcrCount,
+                          panelCount: dcrCount + nonDcrCount
+                        });
+                      }}
+                      min="0"
+                      placeholder="Enter NON-DCR panel count"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Total Panel Count (Auto-calculated)</Label>
+                    <Input
+                      type="number"
+                      value={formData.hybridConfig.panelCount || 0}
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div>
                     <Label>Inverter Make * (Multiple Selection)</Label>
                     <div className="space-y-2">
                       {inverterMakes.map((make) => (
@@ -1365,19 +1592,34 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   <div>
                     <Label>Inverter KW</Label>
                     <Input
-                      type="number"
+                      type="text"
+                      list="hybrid-inverter-kw-list"
                       value={formData.hybridConfig.inverterKW || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('hybridConfig', { inverterKW: undefined });
-                        } else {
-                          updateConfig('hybridConfig', { inverterKW: parseFloat(value) || 0 });
-                        }
+                        const kw = parseFloat(value) || 0;
+                        const phase = kw < 6 ? 'single_phase' : 'three_phase';
+                        updateConfig('hybridConfig', { 
+                          inverterKW: kw,
+                          inverterPhase: phase
+                        });
                       }}
-                      min="0"
-                      step="0.1"
-                      placeholder="Enter inverter KW rating"
+                      placeholder="Type or select KW"
+                    />
+                    <datalist id="hybrid-inverter-kw-list">
+                      {inverterWatts.map((kw) => (
+                        <option key={kw} value={kw} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <Label>Inverter Phase (Auto-selected)</Label>
+                    <Input
+                      type="text"
+                      value={formData.hybridConfig.inverterPhase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
                     />
                   </div>
 
@@ -1388,11 +1630,12 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       value={formData.hybridConfig.inverterQty || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('hybridConfig', { inverterQty: undefined });
-                        } else {
-                          updateConfig('hybridConfig', { inverterQty: parseInt(value) || 1 });
-                        }
+                        const qty = value === '' ? 1 : parseInt(value) || 1;
+                        const electricalCount = formData.hybridConfig?.electricalAccessories ? qty : 0;
+                        updateConfig('hybridConfig', { 
+                          inverterQty: qty,
+                          electricalCount
+                        });
                       }}
                       min="1"
                       placeholder="Enter inverter quantity"
@@ -1413,8 +1656,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                           <SelectItem key={brand} value={brand}>
                             {brand === 'exide' ? 'Exide' : 
                              brand === 'utl' ? 'UTL' : 
-                             brand === 'exide_utl' ? 'EXIDE/UTL' : 
-                             brand.replace('_', ' ').toUpperCase()}
+                             'EXIDE/UTL'}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1460,26 +1702,68 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Panel Count *</Label>
+                    <Label>Battery Count</Label>
                     <Input
                       type="number"
-                      value={formData.hybridConfig.panelCount}
+                      value={formData.hybridConfig.batteryCount}
                       onChange={(e) => {
                         const value = e.target.value;
                         if (value === '') {
-                          updateConfig('hybridConfig', { panelCount: '' as any });
+                          updateConfig('hybridConfig', { batteryCount: '' as any });
                         } else {
-                          updateConfig('hybridConfig', { panelCount: parseInt(value) || 1 });
+                          updateConfig('hybridConfig', { batteryCount: parseInt(value) || 1 });
                         }
                       }}
                       onBlur={(e) => {
                         const value = e.target.value;
                         if (value === '' || value === '0') {
-                          updateConfig('hybridConfig', { panelCount: 1 });
+                          updateConfig('hybridConfig', { batteryCount: 1 });
                         }
                       }}
                       min="1"
                     />
+                  </div>
+
+                  <div>
+                    <Label>Battery Voltage</Label>
+                    <Input
+                      type="number"
+                      value={formData.hybridConfig.voltage}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('hybridConfig', { voltage: '' as any });
+                        } else {
+                          updateConfig('hybridConfig', { voltage: parseInt(value) || 12 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('hybridConfig', { voltage: 12 });
+                        }
+                      }}
+                      placeholder="12V, 24V, 48V etc"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Earth Connection</Label>
+                    <Select 
+                      value={formData.hybridConfig.earth}
+                      onValueChange={(value) => updateConfig('hybridConfig', { earth: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select earth type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {earthingTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -1688,6 +1972,43 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       </Select>
                     </div>
                   </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="hybrid-lightningArrest"
+                    checked={formData.hybridConfig.lightningArrest}
+                    onCheckedChange={(checked) => updateConfig('hybridConfig', { lightningArrest: checked })}
+                  />
+                  <Label htmlFor="hybrid-lightningArrest">Lightning Arrestor Required</Label>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hybrid-electricalAccessories"
+                      checked={formData.hybridConfig.electricalAccessories || false}
+                      onCheckedChange={(checked) => {
+                        updateConfig('hybridConfig', { 
+                          electricalAccessories: checked as boolean,
+                          electricalCount: checked ? (formData.hybridConfig?.inverterQty || 1) : 0
+                        });
+                      }}
+                    />
+                    <Label htmlFor="hybrid-electricalAccessories">Electrical Accessories</Label>
+                  </div>
+
+                  {formData.hybridConfig.electricalAccessories && (
+                    <div>
+                      <Label>Electrical Count (Auto-filled from Inverter Count)</Label>
+                      <Input
+                        type="number"
+                        value={formData.hybridConfig.electricalCount || 0}
+                        disabled
+                        className="bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1938,48 +2259,81 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Panel Count *</Label>
+                    <Label>Panel Type *</Label>
+                    <Select 
+                      value={formData.waterPumpConfig.panelType}
+                      onValueChange={(value) => updateConfig('waterPumpConfig', { panelType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select panel type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bifacial">Bifacial</SelectItem>
+                        <SelectItem value="topcon">Topcon</SelectItem>
+                        <SelectItem value="mono_perc">Mono-PERC</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Panel Watts</Label>
+                    <Input
+                      type="text"
+                      list="waterpump-panel-watts-list"
+                      value={formData.waterPumpConfig.panelWatts || ''}
+                      onChange={(e) => updateConfig('waterPumpConfig', { panelWatts: e.target.value })}
+                      placeholder="Type or select"
+                    />
+                    <datalist id="waterpump-panel-watts-list">
+                      {panelWatts.map((watts) => (
+                        <option key={watts} value={watts} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <Label>DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.waterPumpConfig.panelCount}
+                      value={formData.waterPumpConfig.dcrPanelCount || 0}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('waterPumpConfig', { panelCount: '' as any });
-                        } else {
-                          updateConfig('waterPumpConfig', { panelCount: parseInt(value) || 1 });
-                        }
+                        const dcrCount = parseInt(e.target.value) || 0;
+                        const nonDcrCount = formData.waterPumpConfig?.nonDcrPanelCount || 0;
+                        updateConfig('waterPumpConfig', {
+                          dcrPanelCount: dcrCount,
+                          panelCount: dcrCount + nonDcrCount
+                        });
                       }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || value === '0') {
-                          updateConfig('waterPumpConfig', { panelCount: 1 });
-                        }
-                      }}
-                      min="1"
+                      min="0"
+                      placeholder="Enter DCR panel count"
                     />
                   </div>
 
                   <div>
-                    <Label>Structure Height (ft)</Label>
+                    <Label>NON-DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.waterPumpConfig.structureHeight}
+                      value={formData.waterPumpConfig.nonDcrPanelCount || 0}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('waterPumpConfig', { structureHeight: '' as any });
-                        } else {
-                          updateConfig('waterPumpConfig', { structureHeight: parseInt(value) || 0 });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('waterPumpConfig', { structureHeight: 0 });
-                        }
+                        const nonDcrCount = parseInt(e.target.value) || 0;
+                        const dcrCount = formData.waterPumpConfig?.dcrPanelCount || 0;
+                        updateConfig('waterPumpConfig', {
+                          nonDcrPanelCount: nonDcrCount,
+                          panelCount: dcrCount + nonDcrCount
+                        });
                       }}
                       min="0"
+                      placeholder="Enter NON-DCR panel count"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Total Panel Count (Auto-calculated)</Label>
+                    <Input
+                      type="number"
+                      value={formData.waterPumpConfig.panelCount || 0}
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed"
                     />
                   </div>
 

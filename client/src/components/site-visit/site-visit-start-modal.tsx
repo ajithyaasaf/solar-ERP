@@ -105,6 +105,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
       address: string;
       ebServiceNumber: string;
       propertyType: string;
+      source?: string;
     };
     notes: string;
     technicalData: any;
@@ -118,6 +119,7 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
       address: '',
       ebServiceNumber: '',
       propertyType: '',
+      source: '',
     },
     notes: '',
     technicalData: null,
@@ -1012,6 +1014,20 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                         />
                       </div>
                     )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="source" className="text-sm">Source *</Label>
+                    <Input
+                      id="source"
+                      value={formData.customer.source || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        customer: { ...prev.customer, source: e.target.value }
+                      }))}
+                      placeholder="Enter source (e.g., referral, advertisement, etc.)"
+                      className="text-sm"
+                    />
                   </div>
 
                   <div>

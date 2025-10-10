@@ -243,6 +243,11 @@ export const panelWatts = [
   "530", "535", "550", "590", "610"
 ] as const;
 
+// Panel types for solar installations
+export const panelTypes = [
+  "bifacial", "topcon", "mono_perc"
+] as const;
+
 export const inverterWatts = [
   "3kw", "4kw", "5kw", "10kw", "15kw", "30kw"
 ] as const;
@@ -322,7 +327,8 @@ export const customerDetailsSchema = z.object({
   address: z.string().min(3, "Address is required"),
   ebServiceNumber: z.string().optional(),
   propertyType: z.enum(propertyTypes),
-  location: z.string().optional()
+  location: z.string().optional(),
+  source: z.string().min(1, "Source is required")
 });
 
 // Technical site visit schema
@@ -338,17 +344,20 @@ export const technicalSiteVisitSchema = z.object({
 // Solar system configuration schemas
 export const onGridConfigSchema = z.object({
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
-  panelWatts: z.enum(panelWatts),
+  panelWatts: z.string(), // Changed to string to allow custom values
+  panelType: z.enum(panelTypes).optional(),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
-  inverterWatts: z.enum(inverterWatts),
   inverterPhase: z.enum(inverterPhases),
   inverterKW: z.number().min(0).optional(),
   inverterQty: z.number().min(1).optional(),
   lightningArrest: z.boolean().default(false),
+  electricalAccessories: z.boolean().default(false),
+  electricalCount: z.number().min(0).optional(),
   earth: z.enum(earthingTypes),
   floor: z.enum(floorLevels).optional(),
+  dcrPanelCount: z.number().min(0).default(0),
+  nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
-  structureHeight: z.number().min(0),
   projectValue: z.number().min(0),
   others: z.string().optional(),
   // New fields from client specification
@@ -394,8 +403,11 @@ export const waterPumpConfigSchema = z.object({
   hp: z.string(),
   drive: z.string(),
   solarPanel: z.string().optional(),
-  structureHeight: z.number().min(0),
   panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
+  panelWatts: z.string().optional(),
+  panelType: z.enum(panelTypes).optional(),
+  dcrPanelCount: z.number().min(0).default(0),
+  nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
   projectValue: z.number().min(0),
   others: z.string().optional(),
@@ -577,6 +589,7 @@ export type InverterMake = typeof inverterMakes[number];
 export type InverterPhase = typeof inverterPhases[number];
 export type EarthingType = typeof earthingTypes[number];
 export type PanelWatt = typeof panelWatts[number];
+export type PanelType = typeof panelTypes[number];
 export type InverterWatt = typeof inverterWatts[number];
 export type BatteryBrand = typeof batteryBrands[number];
 export type BatteryType = typeof batteryTypes[number];
