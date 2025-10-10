@@ -1092,9 +1092,13 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       placeholder="Type or select KW"
                     />
                     <datalist id="offgrid-inverter-kw-list">
-                      {inverterKW.map((kw) => (
-                        <option key={kw} value={kw} />
-                      ))}
+                      <option value="3" />
+                      <option value="4" />
+                      <option value="5" />
+                      <option value="6" />
+                      <option value="10" />
+                      <option value="15" />
+                      <option value="30" />
                     </datalist>
                   </div>
 
@@ -1607,9 +1611,13 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       placeholder="Type or select KW"
                     />
                     <datalist id="hybrid-inverter-kw-list">
-                      {inverterWatts.map((kw) => (
-                        <option key={kw} value={kw} />
-                      ))}
+                      <option value="3" />
+                      <option value="4" />
+                      <option value="5" />
+                      <option value="6" />
+                      <option value="10" />
+                      <option value="15" />
+                      <option value="30" />
                     </datalist>
                   </div>
 

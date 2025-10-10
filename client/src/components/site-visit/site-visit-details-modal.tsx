@@ -68,6 +68,7 @@ interface SiteVisit {
     propertyType?: string;
     ebServiceNumber?: string;
     location?: string; // Additional customer location field
+    source?: string; // Source of the customer lead
   };
   // Follow-up system fields
   isFollowUp?: boolean;
@@ -527,6 +528,16 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     </div>
                   </div>
                 )}
+
+                {siteVisit.customer.source && (
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Source</p>
+                      <p className="font-medium break-all">{siteVisit.customer.source}</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -703,17 +714,18 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Panel Watts</p>
                         <p className="font-medium">{siteVisit.marketingData.onGridConfig.panelWatts}W</p>
                       </div>
+                      {siteVisit.marketingData.onGridConfig.panelType && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Panel Type</p>
+                          <p className="font-medium capitalize">
+                            {siteVisit.marketingData.onGridConfig.panelType === 'bifacial' ? 'Bifacial' : 
+                             siteVisit.marketingData.onGridConfig.panelType === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
                         <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.onGridConfig.inverterMake)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Inverter Capacity</p>
-                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.inverterWatts}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Inverter Phase</p>
-                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.inverterPhase?.replace('_', ' ')}</p>
                       </div>
                       {siteVisit.marketingData.onGridConfig.inverterKW && (
                         <div>
@@ -721,6 +733,10 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           <p className="font-medium">{siteVisit.marketingData.onGridConfig.inverterKW} KW</p>
                         </div>
                       )}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Inverter Phase</p>
+                        <p className="font-medium capitalize">{siteVisit.marketingData.onGridConfig.inverterPhase?.replace('_', ' ')}</p>
+                      </div>
                       {siteVisit.marketingData.onGridConfig.inverterQty && (
                         <div>
                           <p className="text-sm text-muted-foreground">Inverter Qty</p>
@@ -731,18 +747,33 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Earth Connection</p>
                         <p className="font-medium">{siteVisit.marketingData.onGridConfig.earth?.replace('ac_dc', 'AC/DC')?.toUpperCase()}</p>
                       </div>
+                      {(siteVisit.marketingData.onGridConfig.dcrPanelCount > 0 || siteVisit.marketingData.onGridConfig.nonDcrPanelCount > 0) && (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.onGridConfig.dcrPanelCount || 0} panels</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">NON DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.onGridConfig.nonDcrPanelCount || 0} panels</p>
+                          </div>
+                        </>
+                      )}
                       <div>
-                        <p className="text-sm text-muted-foreground">Panel Count</p>
+                        <p className="text-sm text-muted-foreground">Total Panel Count</p>
                         <p className="font-medium">{siteVisit.marketingData.onGridConfig.panelCount} panels</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Structure Height</p>
-                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.structureHeight} ft</p>
                       </div>
                       {siteVisit.marketingData.onGridConfig.floor && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Floor Details</p>
-                          <p className="font-medium">{siteVisit.marketingData.onGridConfig.floor}</p>
+                          <p className="text-sm text-muted-foreground">Floor Level</p>
+                          <p className="font-medium">
+                            {siteVisit.marketingData.onGridConfig.floor === '0' ? 'Ground Floor' : 
+                             `${siteVisit.marketingData.onGridConfig.floor}${
+                               siteVisit.marketingData.onGridConfig.floor === '1' ? 'st' : 
+                               siteVisit.marketingData.onGridConfig.floor === '2' ? 'nd' : 
+                               siteVisit.marketingData.onGridConfig.floor === '3' ? 'rd' : 'th'
+                             } Floor`}
+                          </p>
                         </div>
                       )}
                       <div>
@@ -751,6 +782,17 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           {siteVisit.marketingData.onGridConfig.lightningArrest ? "Yes" : "No"}
                         </Badge>
                       </div>
+                      {siteVisit.marketingData.onGridConfig.electricalAccessories !== undefined && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Electrical Accessories</p>
+                          <Badge variant={siteVisit.marketingData.onGridConfig.electricalAccessories ? "default" : "secondary"}>
+                            {siteVisit.marketingData.onGridConfig.electricalAccessories ? "Yes" : "No"}
+                          </Badge>
+                          {siteVisit.marketingData.onGridConfig.electricalAccessories && siteVisit.marketingData.onGridConfig.electricalCount && (
+                            <p className="text-sm mt-1">Count: {siteVisit.marketingData.onGridConfig.electricalCount}</p>
+                          )}
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.onGridConfig.projectValue?.toLocaleString() || 'TBD'}</p>
@@ -864,13 +906,18 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Panel Watts</p>
                         <p className="font-medium">{siteVisit.marketingData.offGridConfig.panelWatts}W</p>
                       </div>
+                      {siteVisit.marketingData.offGridConfig.panelType && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Panel Type</p>
+                          <p className="font-medium capitalize">
+                            {siteVisit.marketingData.offGridConfig.panelType === 'bifacial' ? 'Bifacial' : 
+                             siteVisit.marketingData.offGridConfig.panelType === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
                         <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.offGridConfig.inverterMake)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Inverter Capacity</p>
-                        <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterWatts}</p>
                       </div>
                       {siteVisit.marketingData.offGridConfig.inverterKW && (
                         <div>
@@ -917,18 +964,43 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Battery Count</p>
                         <p className="font-medium">{siteVisit.marketingData.offGridConfig.batteryCount} batteries</p>
                       </div>
+                      {(siteVisit.marketingData.offGridConfig.dcrPanelCount > 0 || siteVisit.marketingData.offGridConfig.nonDcrPanelCount > 0) && (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.offGridConfig.dcrPanelCount || 0} panels</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">NON DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.offGridConfig.nonDcrPanelCount || 0} panels</p>
+                          </div>
+                        </>
+                      )}
                       <div>
-                        <p className="text-sm text-muted-foreground">Panel Count</p>
+                        <p className="text-sm text-muted-foreground">Total Panel Count</p>
                         <p className="font-medium">{siteVisit.marketingData.offGridConfig.panelCount} panels</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Structure Height</p>
-                        <p className="font-medium">{siteVisit.marketingData.offGridConfig.structureHeight} ft</p>
                       </div>
                       {siteVisit.marketingData.offGridConfig.batteryStands && (
                         <div>
                           <p className="text-sm text-muted-foreground">Battery Stands</p>
                           <p className="font-medium">{siteVisit.marketingData.offGridConfig.batteryStands}</p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm text-muted-foreground">Lightning Arrestor</p>
+                        <Badge variant={siteVisit.marketingData.offGridConfig.lightningArrest ? "default" : "secondary"}>
+                          {siteVisit.marketingData.offGridConfig.lightningArrest ? "Yes" : "No"}
+                        </Badge>
+                      </div>
+                      {siteVisit.marketingData.offGridConfig.electricalAccessories !== undefined && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Electrical Accessories</p>
+                          <Badge variant={siteVisit.marketingData.offGridConfig.electricalAccessories ? "default" : "secondary"}>
+                            {siteVisit.marketingData.offGridConfig.electricalAccessories ? "Yes" : "No"}
+                          </Badge>
+                          {siteVisit.marketingData.offGridConfig.electricalAccessories && siteVisit.marketingData.offGridConfig.electricalCount && (
+                            <p className="text-sm mt-1">Count: {siteVisit.marketingData.offGridConfig.electricalCount}</p>
+                          )}
                         </div>
                       )}
                       <div>
@@ -1016,13 +1088,18 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Panel Watts</p>
                         <p className="font-medium">{siteVisit.marketingData.hybridConfig.panelWatts}W</p>
                       </div>
+                      {siteVisit.marketingData.hybridConfig.panelType && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Panel Type</p>
+                          <p className="font-medium capitalize">
+                            {siteVisit.marketingData.hybridConfig.panelType === 'bifacial' ? 'Bifacial' : 
+                             siteVisit.marketingData.hybridConfig.panelType === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
                         <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.hybridConfig.inverterMake)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Inverter Capacity</p>
-                        <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterWatts}</p>
                       </div>
                       {siteVisit.marketingData.hybridConfig.inverterKW && (
                         <div>
@@ -1065,10 +1142,39 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Battery Configuration</p>
                         <p className="font-medium">{siteVisit.marketingData.hybridConfig.batteryCount} × {siteVisit.marketingData.hybridConfig.voltage}V</p>
                       </div>
+                      {(siteVisit.marketingData.hybridConfig.dcrPanelCount > 0 || siteVisit.marketingData.hybridConfig.nonDcrPanelCount > 0) && (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.hybridConfig.dcrPanelCount || 0} panels</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">NON DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.hybridConfig.nonDcrPanelCount || 0} panels</p>
+                          </div>
+                        </>
+                      )}
                       <div>
-                        <p className="text-sm text-muted-foreground">Panel Count</p>
+                        <p className="text-sm text-muted-foreground">Total Panel Count</p>
                         <p className="font-medium">{siteVisit.marketingData.hybridConfig.panelCount} panels</p>
                       </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Lightning Arrestor</p>
+                        <Badge variant={siteVisit.marketingData.hybridConfig.lightningArrest ? "default" : "secondary"}>
+                          {siteVisit.marketingData.hybridConfig.lightningArrest ? "Yes" : "No"}
+                        </Badge>
+                      </div>
+                      {siteVisit.marketingData.hybridConfig.electricalAccessories !== undefined && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Electrical Accessories</p>
+                          <Badge variant={siteVisit.marketingData.hybridConfig.electricalAccessories ? "default" : "secondary"}>
+                            {siteVisit.marketingData.hybridConfig.electricalAccessories ? "Yes" : "No"}
+                          </Badge>
+                          {siteVisit.marketingData.hybridConfig.electricalAccessories && siteVisit.marketingData.hybridConfig.electricalCount && (
+                            <p className="text-sm mt-1">Count: {siteVisit.marketingData.hybridConfig.electricalCount}</p>
+                          )}
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.hybridConfig.projectValue?.toLocaleString() || 'TBD'}</p>
@@ -1157,14 +1263,6 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Additional Features */}
-                    {siteVisit.marketingData.hybridConfig.lightningArrest && (
-                      <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <Zap className="h-4 w-4 text-yellow-600" />
-                        <span className="text-sm font-medium text-yellow-700">Lightning Arrestor Required</span>
                       </div>
                     )}
 
@@ -1267,13 +1365,36 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Panel Brand</p>
                         <p className="font-medium">{formatStringOrArray(siteVisit.marketingData.waterPumpConfig.panelBrand)}</p>
                       </div>
+                      {siteVisit.marketingData.waterPumpConfig.panelWatts && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Panel Watts</p>
+                          <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.panelWatts}W</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.waterPumpConfig.panelType && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Panel Type</p>
+                          <p className="font-medium capitalize">
+                            {siteVisit.marketingData.waterPumpConfig.panelType === 'bifacial' ? 'Bifacial' : 
+                             siteVisit.marketingData.waterPumpConfig.panelType === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                          </p>
+                        </div>
+                      )}
+                      {(siteVisit.marketingData.waterPumpConfig.dcrPanelCount > 0 || siteVisit.marketingData.waterPumpConfig.nonDcrPanelCount > 0) && (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.dcrPanelCount || 0} panels</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">NON DCR Panel Count</p>
+                            <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.nonDcrPanelCount || 0} panels</p>
+                          </div>
+                        </>
+                      )}
                       <div>
-                        <p className="text-sm text-muted-foreground">Panel Count</p>
+                        <p className="text-sm text-muted-foreground">Total Panel Count</p>
                         <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.panelCount} panels</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Structure Height</p>
-                        <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.structureHeight} ft</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Project Value</p>
