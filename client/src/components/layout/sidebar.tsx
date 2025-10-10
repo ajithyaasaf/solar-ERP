@@ -16,6 +16,11 @@ interface NavItem {
   requiresApproval?: boolean;
 }
 
+interface NavGroup {
+  category: string;
+  items: NavItem[];
+}
+
 export function Sidebar() {
   const [location] = useLocation();
   const { user, hasPermission, hasRole, canApprove } = useAuthContext();
@@ -40,112 +45,132 @@ export function Sidebar() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Define navigation items with enterprise RBAC permissions
-  const navItems: NavItem[] = [
-    { 
-      href: "/dashboard", 
-      label: "Dashboard", 
-      icon: <i className="ri-dashboard-line mr-3 text-xl"></i>,
-      requiredPermissions: "dashboard.view"
+  // Define navigation items grouped by category with enterprise RBAC permissions
+  const navGroups: NavGroup[] = [
+    {
+      category: "Business",
+      items: [
+        { 
+          href: "/dashboard", 
+          label: "Dashboard", 
+          icon: <i className="ri-dashboard-line mr-3 text-xl"></i>,
+          requiredPermissions: "dashboard.view"
+        },
+        { 
+          href: "/customers", 
+          label: "Customers", 
+          icon: <i className="ri-user-3-line mr-3 text-xl"></i>,
+          requiredPermissions: ["customers.view", "customers.create"]
+        },
+        { 
+          href: "/products", 
+          label: "Products", 
+          icon: <i className="ri-store-2-line mr-3 text-xl"></i>,
+          requiredPermissions: ["products.view", "products.create"]
+        },
+        { 
+          href: "/quotations", 
+          label: "Quotations", 
+          icon: <i className="ri-file-list-3-line mr-3 text-xl"></i>,
+          requiredPermissions: ["quotations.view", "quotations.create"]
+        },
+        { 
+          href: "/invoices", 
+          label: "Invoices", 
+          icon: <i className="ri-bill-line mr-3 text-xl"></i>,
+          requiredPermissions: ["invoices.view", "invoices.create"]
+        },
+      ]
     },
-    { 
-      href: "/customers", 
-      label: "Customers", 
-      icon: <i className="ri-user-3-line mr-3 text-xl"></i>,
-      requiredPermissions: ["customers.view", "customers.create"]
+    {
+      category: "Workforce",
+      items: [
+        { 
+          href: "/attendance", 
+          label: "Attendance", 
+          icon: <i className="ri-time-line mr-3 text-xl"></i>,
+          requiredPermissions: ["attendance.view_own", "attendance.view_team", "attendance.view_all"]
+        },
+        { 
+          href: "/leave", 
+          label: "Leave Management", 
+          icon: <i className="ri-calendar-check-line mr-3 text-xl"></i>,
+          requiredPermissions: ["leave.view_own", "leave.view_team", "leave.view_all"]
+        },
+        { 
+          href: "/site-visit", 
+          label: "Site Visit", 
+          icon: <i className="ri-map-pin-line mr-3 text-xl"></i>,
+          requiredPermissions: ["site_visit.view", "site_visit.create"]
+        },
+        { 
+          href: "/site-visit-monitoring", 
+          label: "Site Visit Monitoring", 
+          icon: <i className="ri-dashboard-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"],
+          requiredPermissions: ["site_visit.view_all", "site_visit.reports"]
+        },
+      ]
     },
-    { 
-      href: "/products", 
-      label: "Products", 
-      icon: <i className="ri-store-2-line mr-3 text-xl"></i>,
-      requiredPermissions: ["products.view", "products.create"]
+    {
+      category: "Administration",
+      items: [
+        { 
+          href: "/user-management", 
+          label: "User Management", 
+          icon: <i className="ri-user-settings-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"],
+          requiredPermissions: ["users.view", "users.create"]
+        },
+        { 
+          href: "/hr-management", 
+          label: "Employee Management", 
+          icon: <i className="ri-team-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"],
+          requiredPermissions: ["users.view"]
+        },
+        { 
+          href: "/departments", 
+          label: "Departments", 
+          icon: <i className="ri-building-line mr-3 text-xl"></i>,
+          roles: ["master_admin"],
+          requiredPermissions: ["departments.view", "departments.create"]
+        },
+        { 
+          href: "/attendance-management", 
+          label: "Attendance Management", 
+          icon: <i className="ri-shield-user-line mr-3 text-xl"></i>,
+          roles: ["master_admin"]
+        },
+        { 
+          href: "/payroll-management", 
+          label: "Payroll Management", 
+          icon: <i className="ri-money-dollar-circle-line mr-3 text-xl"></i>,
+          roles: ["master_admin"]
+        },
+      ]
     },
-    { 
-      href: "/quotations", 
-      label: "Quotations", 
-      icon: <i className="ri-file-list-3-line mr-3 text-xl"></i>,
-      requiredPermissions: ["quotations.view", "quotations.create"]
-    },
-    { 
-      href: "/invoices", 
-      label: "Invoices", 
-      icon: <i className="ri-bill-line mr-3 text-xl"></i>,
-      requiredPermissions: ["invoices.view", "invoices.create"]
-    },
-    { 
-      href: "/attendance", 
-      label: "Attendance", 
-      icon: <i className="ri-time-line mr-3 text-xl"></i>,
-      requiredPermissions: ["attendance.view_own", "attendance.view_team", "attendance.view_all"]
-    },
-    { 
-      href: "/leave", 
-      label: "Leave Management", 
-      icon: <i className="ri-calendar-check-line mr-3 text-xl"></i>,
-      requiredPermissions: ["leave.view_own", "leave.view_team", "leave.view_all"]
-    },
-    { 
-      href: "/site-visit", 
-      label: "Site Visit", 
-      icon: <i className="ri-map-pin-line mr-3 text-xl"></i>,
-      requiredPermissions: ["site_visit.view", "site_visit.create"]
-    },
-    { 
-      href: "/site-visit-monitoring", 
-      label: "Site Visit Monitoring", 
-      icon: <i className="ri-dashboard-line mr-3 text-xl"></i>,
-      roles: ["master_admin", "admin"],
-      requiredPermissions: ["site_visit.view_all", "site_visit.reports"]
-    },
-    { 
-      href: "/user-management", 
-      label: "User Management", 
-      icon: <i className="ri-user-settings-line mr-3 text-xl"></i>,
-      roles: ["master_admin", "admin"],
-      requiredPermissions: ["users.view", "users.create"]
-    },
-    { 
-      href: "/hr-management", 
-      label: "Employee Management", 
-      icon: <i className="ri-team-line mr-3 text-xl"></i>,
-      roles: ["master_admin", "admin"],
-      requiredPermissions: ["users.view"]
-    },
-    { 
-      href: "/departments", 
-      label: "Departments", 
-      icon: <i className="ri-building-line mr-3 text-xl"></i>,
-      roles: ["master_admin"],
-      requiredPermissions: ["departments.view", "departments.create"]
-    },
-    { 
-      href: "/attendance-management", 
-      label: "Attendance Management", 
-      icon: <i className="ri-shield-user-line mr-3 text-xl"></i>,
-      roles: ["master_admin"]
-    },
-    { 
-      href: "/payroll-management", 
-      label: "Payroll Management", 
-      icon: <i className="ri-money-dollar-circle-line mr-3 text-xl"></i>,
-      roles: ["master_admin"]
-    },
-    { 
-      href: "/office-locations", 
-      label: "Office Locations", 
-      icon: <i className="ri-map-pin-line mr-3 text-xl"></i>,
-      roles: ["master_admin"],
-      requiredPermissions: "system.settings"
-    },
-    { 
-      href: "/settings", 
-      label: "Settings", 
-      icon: <i className="ri-settings-4-line mr-3 text-xl"></i>
-    },
+    {
+      category: "System",
+      items: [
+        { 
+          href: "/office-locations", 
+          label: "Office Locations", 
+          icon: <i className="ri-map-pin-line mr-3 text-xl"></i>,
+          roles: ["master_admin"],
+          requiredPermissions: "system.settings"
+        },
+        { 
+          href: "/settings", 
+          label: "Settings", 
+          icon: <i className="ri-settings-4-line mr-3 text-xl"></i>
+        },
+      ]
+    }
   ];
 
-  // Filter items based on enterprise RBAC permissions
-  const filteredNavItems = navItems.filter(item => {
+  // Filter items and groups based on enterprise RBAC permissions
+  const filterItem = (item: NavItem) => {
     // Always show items with no restrictions
     if (!item.roles && !item.requiredPermissions && !item.requiresApproval) return true;
     
@@ -162,7 +187,14 @@ export function Sidebar() {
     if (item.requiresApproval && !canApprove) return false;
     
     return true;
-  });
+  };
+
+  const filteredNavGroups = navGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(filterItem)
+    }))
+    .filter(group => group.items.length > 0);
 
   return (
     <aside 
@@ -197,22 +229,33 @@ export function Sidebar() {
       </div>
       
       <div className="overflow-y-auto flex-grow p-1 md:p-2">
-        <nav className={cn("space-y-0.5 md:space-y-1", isCollapsed && "flex flex-col items-center")}>
-          {filteredNavItems.map((item, index) => (
-            <Link 
-              key={index} 
-              href={item.href}
-              className={cn(
-                "sidebar-item flex items-center px-3 py-2.5 md:px-4 md:py-3 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200",
-                isCollapsed && "justify-center px-2",
-                location === item.href && "active bg-primary/10",
-                !isCollapsed && location === item.href && "border-l-4 border-primary"
+        <nav className={cn("space-y-4 md:space-y-5", isCollapsed && "space-y-2")}>
+          {filteredNavGroups.map((group, groupIndex) => (
+            <div key={groupIndex}>
+              {!isCollapsed && (
+                <h3 className="px-3 md:px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {group.category}
+                </h3>
               )}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <div className={isCollapsed ? "mx-auto" : ""}>{item.icon}</div>
-              {!isCollapsed && <span className="text-sm md:text-base truncate">{item.label}</span>}
-            </Link>
+              <div className={cn("space-y-0.5 md:space-y-1", isCollapsed && "flex flex-col items-center")}>
+                {group.items.map((item, itemIndex) => (
+                  <Link 
+                    key={itemIndex} 
+                    href={item.href}
+                    className={cn(
+                      "sidebar-item flex items-center px-3 py-2.5 md:px-4 md:py-3 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200",
+                      isCollapsed && "justify-center px-2",
+                      location === item.href && "active bg-primary/10",
+                      !isCollapsed && location === item.href && "border-l-4 border-primary"
+                    )}
+                    title={isCollapsed ? item.label : undefined}
+                  >
+                    <div className={isCollapsed ? "mx-auto" : ""}>{item.icon}</div>
+                    {!isCollapsed && <span className="text-sm md:text-base truncate">{item.label}</span>}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </div>
