@@ -2294,16 +2294,16 @@ export default function QuotationCreation() {
           </div>
 
           {/* Desktop Progress - Full stepper */}
-          <div className="hidden md:flex items-center gap-1 lg:gap-4 overflow-x-auto">
+          <div className="hidden lg:flex items-center gap-4">
             {WIZARD_STEPS.map((step, index) => {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
               const IconComponent = step.icon;
               
               return (
-                <div key={step.id} className="flex items-center shrink-0">
+                <div key={step.id} className="flex items-center">
                   <div 
-                    className={`flex items-center justify-center w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 shrink-0 ${
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${
                       isCompleted 
                         ? "bg-primary border-primary text-primary-foreground" 
                         : isActive 
@@ -2313,24 +2313,57 @@ export default function QuotationCreation() {
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
-                      <Check className="h-4 w-4 lg:h-5 lg:w-5" />
+                      <Check className="h-5 w-5" />
                     ) : (
-                      <IconComponent className="h-4 w-4 lg:h-5 lg:w-5" />
+                      <IconComponent className="h-5 w-5" />
                     )}
                   </div>
                   
-                  <div className="ml-1.5 lg:ml-3 min-w-0 max-w-[100px] lg:max-w-none lg:flex-1">
-                    <p className={`text-[10px] lg:text-sm font-medium truncate ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                  <div className="ml-3 min-w-0 flex-1">
+                    <p className={`text-sm font-medium truncate ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                       {step.title}
                     </p>
-                    <p className="hidden lg:block text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate">
                       {step.description}
                     </p>
                   </div>
                   
                   {index < WIZARD_STEPS.length - 1 && (
-                    <div className={`mx-1 lg:mx-4 h-px bg-border w-3 lg:w-8 xl:flex-1`} />
+                    <div className={`mx-4 h-px bg-border flex-1`} />
                   )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Tablet Progress - Compact vertical */}
+          <div className="hidden md:grid lg:hidden grid-cols-4 gap-2">
+            {WIZARD_STEPS.map((step, index) => {
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              const IconComponent = step.icon;
+              
+              return (
+                <div key={step.id} className="flex flex-col items-center text-center">
+                  <div 
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 mb-2 ${
+                      isCompleted 
+                        ? "bg-primary border-primary text-primary-foreground" 
+                        : isActive 
+                          ? "border-primary text-primary" 
+                          : "border-muted-foreground text-muted-foreground"
+                    }`}
+                    data-testid={`step-indicator-${step.id}`}
+                  >
+                    {isCompleted ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <IconComponent className="h-5 w-5" />
+                    )}
+                  </div>
+                  <p className={`text-xs font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                    {step.title}
+                  </p>
                 </div>
               );
             })}
