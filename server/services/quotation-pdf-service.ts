@@ -32,6 +32,44 @@ export class QuotationPDFService {
   };
 
   /**
+   * Convert number to words (Indian numbering system)
+   */
+  private static numberToWords(num: number): string {
+    if (num === 0) return 'Zero';
+    
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    
+    const convertTwoDigit = (n: number): string => {
+      if (n < 10) return ones[n];
+      if (n >= 10 && n < 20) return teens[n - 10];
+      return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+    };
+    
+    const convertThreeDigit = (n: number): string => {
+      if (n === 0) return '';
+      if (n < 100) return convertTwoDigit(n);
+      return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertTwoDigit(n % 100) : '');
+    };
+    
+    // Indian numbering: ones, thousands, lakhs, crores
+    let crore = Math.floor(num / 10000000);
+    let lakh = Math.floor((num % 10000000) / 100000);
+    let thousand = Math.floor((num % 100000) / 1000);
+    let remainder = num % 1000;
+    
+    let result = '';
+    
+    if (crore > 0) result += convertThreeDigit(crore) + ' Crore ';
+    if (lakh > 0) result += convertTwoDigit(lakh) + ' Lacs ';
+    if (thousand > 0) result += convertTwoDigit(thousand) + ' Thousand ';
+    if (remainder > 0) result += convertThreeDigit(remainder);
+    
+    return 'Rupees ' + result.trim() + ' Only';
+  }
+
+  /**
    * Resolve user name from user ID or return the input if it's already a name
    */
   private static async resolveUserName(preparedBy: string): Promise<string> {
@@ -394,17 +432,17 @@ export class QuotationPDFService {
       <div class="total-calculation">
         <strong>Total Cost: ₹${template.pricingBreakdown.totalCost.toLocaleString()}</strong><br>
         <strong>Total GST Exc: ₹${Math.round(template.pricingBreakdown.totalCost / 1.18).toLocaleString()}</strong><br>
-        <strong>Rupees Two Lacs Fifteen Thousand Only</strong>
+        <strong>${this.numberToWords(template.pricingBreakdown.totalCost)}</strong>
       </div>
 
       
       <div style="text-align: center; margin: 20px 0; font-weight: bold; font-size: 16px;">
-        <strong>Total Amount 2,15,000 - Subsidy Amount 78,000 = 1,37,000</strong>
+        <strong>Total Amount ${template.pricingBreakdown.totalCost.toLocaleString()} - Subsidy Amount ${template.pricingBreakdown.subsidyAmount.toLocaleString()} = ${template.pricingBreakdown.customerPayment.toLocaleString()}</strong>
       </div>
       
       ${template.pricingBreakdown.subsidyAmount > 0 ? `
       <div class="subsidy-note">
-        <strong>3 kw Subsidy 78,000 Will be Credited to The Customer's Account</strong>
+        <strong>${template.pricingBreakdown.kw} kw Subsidy ${template.pricingBreakdown.subsidyAmount.toLocaleString()} Will be Credited to The Customer's Account</strong>
       </div>` : ''}
       
       <!-- Bill of Materials -->
