@@ -80,7 +80,7 @@ export class QuotationPDFService {
         const allUsersResult = await userService.getAllUsers();
         
         // Handle both array and object response formats
-        let users = [];
+        let users: any[] = [];
         if (Array.isArray(allUsersResult)) {
           users = allUsersResult;
         } else if (allUsersResult && allUsersResult.success && Array.isArray(allUsersResult.users)) {
@@ -88,7 +88,7 @@ export class QuotationPDFService {
         }
         
         if (users.length > 0) {
-          const user = users.find(u => u.uid === preparedBy);
+          const user = users.find((u: any) => u.uid === preparedBy);
           return user ? (user.displayName || user.email || preparedBy) : preparedBy;
         } else {
           console.warn('No users found in getAllUsers result');
@@ -343,7 +343,7 @@ export class QuotationPDFService {
             <tr><td>Quotation Date:</td><td>${template.quotationDate}</td></tr>
             <tr><td>Quote Revision:</td><td>${template.quoteRevision}</td></tr>
             <tr><td>Quote Validity:</td><td>${template.quoteValidity}</td></tr>
-            <tr><td>Prepared For:</td><td>${template.preparedBy}</td></tr>
+            <tr><td>Prepared For:</td><td>${template.customer.name}</td></tr>
           </table>
         </div>
       </div>
