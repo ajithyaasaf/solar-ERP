@@ -2294,14 +2294,14 @@ export default function QuotationCreation() {
           </div>
 
           {/* Desktop Progress - Full stepper */}
-          <div className="hidden lg:flex items-center gap-4 overflow-x-auto">
+          <div className="hidden lg:flex items-center gap-2">
             {WIZARD_STEPS.map((step, index) => {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
               const IconComponent = step.icon;
               
               return (
-                <div key={step.id} className="flex items-center">
+                <div key={step.id} className="flex items-center flex-1 min-w-0">
                   <div 
                     className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${
                       isCompleted 
@@ -2319,7 +2319,7 @@ export default function QuotationCreation() {
                     )}
                   </div>
                   
-                  <div className="ml-3 min-w-0 flex-1">
+                  <div className="ml-2 min-w-0 flex-1">
                     <p className={`text-sm font-medium truncate ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                       {step.title}
                     </p>
@@ -2329,7 +2329,7 @@ export default function QuotationCreation() {
                   </div>
                   
                   {index < WIZARD_STEPS.length - 1 && (
-                    <div className={`mx-4 h-px bg-border flex-1`} />
+                    <div className={`mx-2 h-px bg-border w-8 shrink-0`} />
                   )}
                 </div>
               );
