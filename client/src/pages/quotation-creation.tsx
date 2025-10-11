@@ -2233,29 +2233,40 @@ export default function QuotationCreation() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-6 overflow-x-hidden" data-testid="quotation-creation-page">
-      <div className="mb-4 md:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 md:mb-6">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" data-testid="quotation-creation-page">
+      {/* Header Section */}
+      <div className="bg-background border-b">
+        <div className="container mx-auto px-4 py-6 md:py-8">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLocation("/quotations")}
             data-testid="button-back"
-            className="self-start"
+            className="mb-4 -ml-2 hover:bg-muted"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Quotations
           </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">Create New Quotation</h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">
-              Generate professional quotations for solar energy systems
-            </p>
+          
+          <div className="flex items-start gap-4">
+            <div className="hidden sm:flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 shrink-0">
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" data-testid="text-page-title">
+                Create New Quotation
+              </h1>
+              <p className="text-base text-muted-foreground">
+                Generate professional quotations for solar energy systems with our streamlined process
+              </p>
+            </div>
           </div>
         </div>
+      </div>
 
+      <div className="container mx-auto px-4 py-6 md:py-8 overflow-x-hidden">
         {/* Progress indicator - Mobile: Simplified, Desktop: Full */}
-        <div className="mb-4 md:mb-6">
+        <div className="mb-6 md:mb-8">
           {/* Mobile Progress - Compact horizontal dots */}
           <div className="flex md:hidden items-center justify-between gap-2 mb-3">
             {WIZARD_STEPS.map((step, index) => {
@@ -2369,10 +2380,9 @@ export default function QuotationCreation() {
             })}
           </div>
         </div>
-      </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Step 0: Source Selection */}
           {currentStep === 0 && (
             <Card data-testid="card-source-selection">
@@ -2976,8 +2986,9 @@ export default function QuotationCreation() {
               </Button>
             )}
           </div>
-        </form>
-      </Form>
+          </form>
+        </Form>
+      </div>
     </div>
   );
 }
