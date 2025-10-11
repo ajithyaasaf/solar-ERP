@@ -84,13 +84,13 @@ export interface QuotationTemplate {
 
 export class QuotationTemplateService {
   private static readonly COMPANY_DETAILS: CompanyDetails = {
-    name: "Prakash Greens Energy",
+    name: "Prakash Green Energy",
     logo: "/assets/company-logo.png",
     contact: {
-      phone: ["6379049160", "9843577336", "8903465511"],
+      phone: ["6374501500", "9585557516", "8925465011"],
       email: "support@prakashgreenenergy.com",
       website: "www.prakashgreenenergy.com",
-      address: "338 OPP SARVESH, Pankaj Complex, Besant Avenue Road, Adyar, Chennai - 600036, Madurai, Tamil Nadu, India - 625 011."
+      address: "338ECOP5D95228, Madurai, Tamilnadu, India - 625 011"
     }
   };
 
@@ -118,7 +118,7 @@ export class QuotationTemplateService {
     
     // Inverter warranty
     if (warranty?.inverter) {
-      details.push("2. Solar On grid Inverter (15Years)");
+      details.push("2. Solar On grid Inverter (15 Years)");
       details.push(`   • ${warranty.inverter.replacementWarranty}`);
       details.push(`   • ${warranty.inverter.serviceWarranty}`);
     }
@@ -139,32 +139,31 @@ export class QuotationTemplateService {
     
     return {
       name: account.accountHolderName || "Prakash Green Energy",
-      bank: account.bankName || "State Bank of India",
-      branch: account.branch || "Madurai Main Branch",
-      accountNo: account.accountNumber || "31746205818",
-      ifscCode: account.ifscCode || "SBIN0001766"
+      bank: account.bankName || "ICICI",
+      branch: account.branch || "Sobramaniyapuram Madurai",
+      accountNo: account.accountNumber || "067005013400",
+      ifscCode: account.ifscCode || "ICIC0000670"
     };
   }
 
   private static readonly SCOPE_OF_WORK = {
     structure: [
       "1) Structure:",
-      "   • Foot For Solar South Pole 3 char consisting of lower and big Shift 4 feet",
-      "   • & 3 feet of Higher over (1') Floor"
+      "   • For this On-targ, South facing slant mounting of lower end height in 7 feet",
+      "   • and higher end in 7 Feet)"
     ],
     netBiDirectionalMeter: [
       "2) Net (Bi-directional) Meter:",
-      "   • We will take the responsibility of applying to EB as customer's expenses."
+      "   • We will take the responsibility of applying to EB at Customer's Expense."
     ],
     customerScope: {
       civilWork: [
         "1) Civil work:",
-        "   • Earth pit digging",
-        "   • 1 Feet Chamber with concretes (For Structure)"
+        "   • Earth pit Construction as perspec (for Structure)"
       ],
       netBiDirectionalMeter: [
         "2) Net (Bi-directional) Meter:",
-        "   • Application and Installation charges for net meter to be paid by Customer."
+        "   • Any registration and modification charges for not meter to be paid by Customer."
       ]
     }
   };
@@ -175,7 +174,7 @@ export class QuotationTemplateService {
     
     return {
       list: docs.subsidyDocuments?.map((doc: string, index: number) => `${index + 1}) ${doc}`) || [],
-      note: docs.note || "All Required Documents should be in the same name as mentioned in the EB Service Number."
+      note: docs.note || "*All Required Documents should be in the same name as mention EB Service Number"
     };
   }
 
@@ -869,19 +868,19 @@ export class QuotationTemplateService {
       termsAndConditions: {
         warrantyDetails: warrantyDetails,
         solarInverterWarranty: [
-          "Solar On-Grid Inverter - 10 Years Manufacturing Warranty",
-          "Replacement Warranty for first 3 years", 
-          "Service Warranty for next 7 years"
+          "2. Solar On grid Inverter (15 Years)",
+          "   • Replacement Warranty for 10 Years", 
+          "   • Service Warranty for 5 Years"
         ],
         paymentDetails: {
           advancePercentage: quotation.advancePaymentPercentage || 90,
           balancePercentage: 100 - (quotation.advancePaymentPercentage || 90),
           bankDetails: accountDetails || {
             name: "Prakash Green Energy",
-            bank: "State Bank of India",
-            branch: "Madurai Main Branch",
-            accountNo: "31746205818",
-            ifscCode: "SBIN0001766"
+            bank: "ICICI",
+            branch: "Sobramaniyapuram Madurai",
+            accountNo: "067005013400",
+            ifscCode: "ICIC0000670"
           }
         },
         deliveryPeriod: this.getDeliveryTimeframeText(quotation.deliveryTimeframe)
@@ -889,17 +888,17 @@ export class QuotationTemplateService {
       scopeOfWork: this.SCOPE_OF_WORK,
       documentsRequiredForSubsidy: documentRequirements || {
         list: [
-          "1) Aadhar Card",
-          "2) EB Bill (Last 3 Months)",
-          "3) House Tax Receipt",
-          "4) Land Patta",
-          "5) Building Plan Approval",
-          "6) Fire NOC (for Commercial)",
-          "7) Pollution NOC (for Commercial)", 
-          "8) Bank Passbook",
+          "1) EB Number",
+          "2) EB Register Mobile Number",
+          "3) Aadhaar Card",
+          "4) Aadhar Card",
+          "5) Pan Card",
+          "6) Passport Size Photo -1",
+          "7) Photo of EB Tax Copy",
+          "8) Passport",
           "9) Cancelled Cheque"
         ],
-        note: "All Required Documents should be in the same name as mentioned in the EB Service Number."
+        note: "*All Required Documents should be in the same name as mention EB Service Number"
       }
     };
   }
