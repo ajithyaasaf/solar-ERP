@@ -2375,207 +2375,154 @@ export default function QuotationCreation() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Step 0: Source Selection */}
           {currentStep === 0 && (
-            <div className="space-y-8" data-testid="card-source-selection">
-              {/* Header Section */}
-              <div className="text-center max-w-2xl mx-auto">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-                  <Search className="h-8 w-8 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold mb-2">Choose Quotation Source</h2>
-                <p className="text-muted-foreground">
+            <Card data-testid="card-source-selection">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5" />
+                  Choose Quotation Source
+                </CardTitle>
+                <CardDescription>
                   Select how you want to create this quotation
-                </p>
-              </div>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Manual Creation Option */}
+                  <Card 
+                    className={`cursor-pointer border-2 transition-colors ${
+                      quotationSource === "manual" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => {
+                      setQuotationSource("manual");
+                      form.setValue("source", "manual");
+                    }}
+                    data-testid="card-manual-creation"
+                  >
+                    <CardHeader className="p-4 sm:p-6">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600 shrink-0">
+                          <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg">Manual Creation</CardTitle>
+                          <CardDescription className="text-sm mt-1">
+                            Create quotation from scratch with custom inputs
+                          </CardDescription>
+                        </div>
+                        <div className="shrink-0">
+                          <div className={`w-4 h-4 rounded-full border-2 ${
+                            quotationSource === "manual" ? "border-primary bg-primary" : "border-muted-foreground"
+                          }`} />
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
 
-              {/* Source Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                {/* Manual Creation Option */}
-                <div
-                  className={`group relative cursor-pointer rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
-                    quotationSource === "manual" 
-                      ? "border-primary shadow-lg shadow-primary/20" 
-                      : "border-border hover:border-primary/50 hover:shadow-md"
-                  }`}
-                  onClick={() => {
-                    setQuotationSource("manual");
-                    form.setValue("source", "manual");
-                  }}
-                  data-testid="card-manual-creation"
-                >
-                  {/* Selection Indicator */}
-                  {quotationSource === "manual" && (
-                    <div className="absolute top-4 right-4 z-10">
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground">
-                        <Check className="h-4 w-4" />
+                  {/* Site Visit Integration Option */}
+                  <Card 
+                    className={`cursor-pointer border-2 transition-colors ${
+                      quotationSource === "site_visit" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => {
+                      setQuotationSource("site_visit");
+                      form.setValue("source", "site_visit");
+                    }}
+                    data-testid="card-site-visit-integration"
+                  >
+                    <CardHeader className="p-4 sm:p-6">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="p-2 rounded-lg bg-green-100 text-green-600 shrink-0">
+                          <Zap className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg">From Site Visit</CardTitle>
+                          <CardDescription className="text-sm mt-1">
+                            Auto-populate from existing site visit data
+                          </CardDescription>
+                        </div>
+                        <div className="shrink-0">
+                          <div className={`w-4 h-4 rounded-full border-2 ${
+                            quotationSource === "site_visit" ? "border-primary bg-primary" : "border-muted-foreground"
+                          }`} />
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* Background Gradient */}
-                  <div className={`absolute inset-0 transition-opacity duration-300 ${
-                    quotationSource === "manual" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                  }`}>
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="relative p-6 sm:p-8">
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/30 shrink-0">
-                        <FileText className="h-7 w-7" />
-                      </div>
-                      <div className="flex-1 min-w-0 pt-1">
-                        <h3 className="text-xl font-bold mb-1">Manual Creation</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Create quotation from scratch with custom inputs
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 pl-[72px]">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span>Full control over all specifications</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span>Perfect for unique requirements</span>
-                      </div>
-                    </div>
-                  </div>
+                    </CardHeader>
+                  </Card>
                 </div>
 
-                {/* Site Visit Integration Option */}
-                <div
-                  className={`group relative cursor-pointer rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
-                    quotationSource === "site_visit" 
-                      ? "border-primary shadow-lg shadow-primary/20" 
-                      : "border-border hover:border-primary/50 hover:shadow-md"
-                  }`}
-                  onClick={() => {
-                    setQuotationSource("site_visit");
-                    form.setValue("source", "site_visit");
-                  }}
-                  data-testid="card-site-visit-integration"
-                >
-                  {/* Selection Indicator */}
-                  {quotationSource === "site_visit" && (
-                    <div className="absolute top-4 right-4 z-10">
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground">
-                        <Check className="h-4 w-4" />
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Background Gradient */}
-                  <div className={`absolute inset-0 transition-opacity duration-300 ${
-                    quotationSource === "site_visit" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                  }`}>
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="relative p-6 sm:p-8">
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-green-500 text-white shadow-lg shadow-green-500/30 shrink-0">
-                        <Zap className="h-7 w-7" />
-                      </div>
-                      <div className="flex-1 min-w-0 pt-1">
-                        <h3 className="text-xl font-bold mb-1">From Site Visit</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Auto-populate from existing site visit data
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 pl-[72px]">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        <span>Faster quotation creation</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        <span>Pre-filled customer & project data</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Site Visit Selection */}
-              {quotationSource === "site_visit" && (
-                <div className="space-y-6 max-w-4xl mx-auto">
-                  <Separator />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Select Site Visit</h3>
-                    {isLoadingSiteVisits ? (
-                      <div className="flex items-center justify-center p-12">
-                        <div className="animate-spin h-8 w-8 border-3 border-primary border-t-transparent rounded-full" />
-                      </div>
-                    ) : (siteVisits as any)?.data?.length > 0 ? (
-                      <div className="grid gap-4">
-                        {((siteVisits as any)?.data || []).map((visit: SiteVisitMapping) => (
-                          <Card 
-                            key={visit.id}
-                            className={`cursor-pointer border-2 transition-all duration-300 ${
-                              selectedSiteVisit === visit.id 
-                                ? "border-primary bg-primary/5 shadow-lg shadow-primary/10" 
-                                : "border-border hover:border-primary/50 hover:shadow-md"
-                            }`}
-                            onClick={() => setSelectedSiteVisit(visit.id)}
-                            data-testid={`card-site-visit-${visit.id}`}
-                          >
-                            <CardContent className="p-4 sm:p-6">
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center flex-wrap gap-2 mb-2">
-                                    <h5 className="font-semibold text-base sm:text-lg">{visit.customer.name}</h5>
-                                    <Badge 
-                                      variant={visit.completenessAnalysis.qualityGrade === 'A' ? 'default' : 
-                                              visit.completenessAnalysis.qualityGrade === 'B' ? 'secondary' : 'destructive'}
-                                      className="text-xs"
-                                    >
-                                      Grade {visit.completenessAnalysis.qualityGrade}
-                                    </Badge>
+                {/* Site Visit Selection */}
+                {quotationSource === "site_visit" && (
+                  <div className="space-y-4">
+                    <Separator />
+                    <div>
+                      <h4 className="font-medium mb-3">Select Site Visit</h4>
+                      {isLoadingSiteVisits ? (
+                        <div className="flex items-center justify-center p-8">
+                          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                        </div>
+                      ) : (siteVisits as any)?.data?.length > 0 ? (
+                        <div className="grid gap-3">
+                          {((siteVisits as any)?.data || []).map((visit: SiteVisitMapping) => (
+                            <Card 
+                              key={visit.id}
+                              className={`cursor-pointer border transition-colors ${
+                                selectedSiteVisit === visit.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                              }`}
+                              onClick={() => setSelectedSiteVisit(visit.id)}
+                              data-testid={`card-site-visit-${visit.id}`}
+                            >
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center flex-wrap gap-2 mb-1">
+                                      <h5 className="font-medium text-sm sm:text-base">{visit.customer.name}</h5>
+                                      <Badge 
+                                        variant={visit.completenessAnalysis.qualityGrade === 'A' ? 'default' : 
+                                                visit.completenessAnalysis.qualityGrade === 'B' ? 'secondary' : 'destructive'}
+                                        className="text-xs"
+                                      >
+                                        Grade {visit.completenessAnalysis.qualityGrade}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">{visit.customer.mobile}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{visit.customer.address}</p>
                                   </div>
-                                  <p className="text-sm text-muted-foreground mb-1">{visit.customer.mobile}</p>
-                                  <p className="text-xs text-muted-foreground line-clamp-2">{visit.customer.address}</p>
-                                </div>
-                                <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-2">
-                                  <div className="text-sm font-semibold">
-                                    {visit.completenessAnalysis.completenessScore}% Complete
+                                  <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1">
+                                    <div className="text-xs sm:text-sm font-medium">
+                                      {visit.completenessAnalysis.completenessScore}% Complete
+                                    </div>
+                                    <Progress 
+                                      value={visit.completenessAnalysis.completenessScore} 
+                                      className="w-16 sm:w-20 h-2"
+                                    />
                                   </div>
-                                  <Progress 
-                                    value={visit.completenessAnalysis.completenessScore} 
-                                    className="w-20 sm:w-24 h-2.5"
-                                  />
                                 </div>
-                              </div>
 
-                              {visit.completenessAnalysis.missingCriticalFields.length > 0 && (
-                                <Alert className="mt-4">
-                                  <AlertTriangle className="h-4 w-4" />
-                                  <AlertDescription className="text-xs">
-                                    Missing critical fields: {visit.completenessAnalysis.missingCriticalFields.join(", ")}
-                                  </AlertDescription>
-                                </Alert>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <Alert className="border-2">
-                        <AlertTriangle className="h-5 w-5" />
-                        <AlertDescription className="text-sm">
-                          No site visits available for quotation mapping. Please complete site visits first.
-                        </AlertDescription>
-                      </Alert>
-                    )}
+                                {visit.completenessAnalysis.missingCriticalFields.length > 0 && (
+                                  <Alert className="mt-3">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertDescription className="text-xs">
+                                      Missing critical fields: {visit.completenessAnalysis.missingCriticalFields.join(", ")}
+                                    </AlertDescription>
+                                  </Alert>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <Alert>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            No site visits available for quotation mapping. Please complete site visits first.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {/* Step 1: Customer Details */}
