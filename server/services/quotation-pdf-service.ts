@@ -290,7 +290,7 @@ export class QuotationPDFService {
             <div class="company-name">${template.header.name}</div>
           </div>
           <div class="tagline">PROVIDING PERFECT SOLAR SOLUTIONS</div>
-          <div class="tagline">GET AUTHORIZED PRODUCT VERSIONS</div>
+          <div class="tagline">GOVT. AUTHORIZED VENDOR</div>
           <div class="contact-details">
             📞 ${template.header.contact.phone.join(', ')}<br>
             📧 ${template.header.contact.email}<br>
@@ -301,11 +301,11 @@ export class QuotationPDFService {
         
         <div class="quotation-meta">
           <table>
-            <tr><td>Quotation No:</td><td>${template.quotationNumber}</td></tr>
+            <tr><td>Quotation No-</td><td>${template.quotationNumber}</td></tr>
             <tr><td>Quotation Date:</td><td>${template.quotationDate}</td></tr>
             <tr><td>Quote Revision:</td><td>${template.quoteRevision}</td></tr>
             <tr><td>Quote Validity:</td><td>${template.quoteValidity}</td></tr>
-            <tr><td>Prepared by:</td><td>${template.preparedBy}</td></tr>
+            <tr><td>Prepared For:</td><td>${template.preparedBy}</td></tr>
           </table>
         </div>
       </div>
@@ -313,16 +313,16 @@ export class QuotationPDFService {
       <!-- Customer Details -->
       <div class="customer-section">
         <div class="customer-details">
-          <div class="section-title">Customer Details</div>
-          <strong>${template.customer.name}</strong><br>
+          <div class="section-title">Quotation Prepared for</div>
+          <strong>Contact Person: Mr. ${template.customer.name}</strong><br>
           ${template.customer.address}<br>
           Contact Number: ${template.customer.contactNumber}
         </div>
         
         <div class="contact-info">
           <div class="section-title">Contact us at</div>
-          Contact Person: ${template.preparedBy === 'SM' ? 'Mr. Sabu Kumar' : template.preparedBy}<br>
-          Contact Number: +91 ${template.header.contact.phone[0]}
+          Contact Person: Mr. Saba Kumar<br>
+          Contact Number: +91 - ${template.header.contact.phone[0]}
         </div>
       </div>
       
@@ -330,38 +330,45 @@ export class QuotationPDFService {
       <div class="reference">
         <strong>Dear Sir,</strong><br>
         <strong>Sub: Requirement of ${template.reference}</strong><br>
-        <strong>Ref: Discussion with Mr. Sabu Kumar, President</strong><br>
+        <strong>Ref: Discussion with Mr. Saba Kumar, President</strong><br>
         <strong>Prakash Green Energy.</strong>
       </div>
       
       <!-- Description -->
       <div style="margin: 20px 0;">
-        We are delighted to introduce ourselves as the complete Solar Solutions provide to 
-        domestic sector and corporate sector in the field of renewable energies. Latest and design 
-        technique of solar installation has been constantly reviewed by the installation to ensure 
-        that our systems are implemented as designed. We provide list following procedures. 
+        We are delighted to introduce ourselves as the complete Solar Solutions provider to 
+        and requirement. We are an expert in the field of solar energy systems, suggest and design 
+        technique as solar solutions package to suit requirement. We are providing Solar On-Grid 
+        system, solar water pump, solar water heater, solar charger and solar LED products like solar DC 
+        lamps, DC Fan, BLDC Fan, solar street light, solar flood light and led decorative lights to 
+        manage the customer's requirement.
         <br><br>
-        We are providing Solar On-Grid System, Solar Off-Grid system, Solar Hybrid 
-        System, Solar Water Pump, solar water heater, solar charges and solar gadgets like solar DC 
-        Bulbs, DC Fan, solar smart light, solar flood light and led decorative lights.
+        We are promising Solar On-Grid System, Solar Off grid system, Solar Hybrid 
+        systems, solar water pump, solar water heater, solar comers and solar gadgets like solar DC 
+        bulbs, DC Fan, BLDC Fan, solar street light, solar flood light and led decorative lights.
         <br><br>
         We assure you of our best services always.
         <br><br>
         Thank you,<br>
-        <strong>Mr. M Sabu Prakash,</strong><br>
+        <strong>M. Salva Prakash,</strong><br>
         Managing Director<br>
-        Prakash Green Energy.
+        <strong>Prakash Green Energy.</strong>
+      </div>
+      
+      <!-- Yellow Highlighted Quotation Title -->
+      <div style="background: #ffff99; padding: 10px; margin: 20px 0; text-align: center; font-weight: bold; border: 1px solid #e6e600;">
+        Quotation for ${template.reference}
       </div>
       
       <!-- Pricing Table -->
       <table class="pricing-table">
         <thead>
           <tr>
-            <th>Sl</th>
+            <th>Sl NO</th>
             <th>Description</th>
             <th>kw</th>
-            <th>Rate Per kw</th>
-            <th>GST per kw</th>
+            <th>Rate Per kw Rs</th>
+            <th>GST per kw Rs</th>
             <th>GST %</th>
             <th>Value + GST</th>
           </tr>
@@ -369,30 +376,40 @@ export class QuotationPDFService {
         <tbody>
           <tr>
             <td>1</td>
-            <td style="text-align: left; padding-left: 10px;">${template.pricingBreakdown.description}</td>
+            <td style="text-align: left; padding-left: 10px;">Supply and install ${template.pricingBreakdown.kw} kW Inverter 3 Phase DC-GBD Solar Energy: Madurai</td>
             <td>${template.pricingBreakdown.kw}</td>
-            <td>₹ ${template.pricingBreakdown.ratePerKw.toLocaleString()}</td>
-            <td>₹ ${template.pricingBreakdown.gstPerKw.toLocaleString()}</td>
-            <td>${template.pricingBreakdown.gstPercentage}%</td>
-            <td>₹ ${template.pricingBreakdown.valueWithGST.toLocaleString()}</td>
+            <td>₹${template.pricingBreakdown.ratePerKw.toLocaleString()}</td>
+            <td>₹${template.pricingBreakdown.gstPerKw.toLocaleString()}</td>
+            <td>${template.pricingBreakdown.gstPercentage}</td>
+            <td>₹ ${template.pricingBreakdown.valueWithGST.toLocaleString()}.00</td>
+          </tr>
+          <tr>
+            <td colspan="6" style="text-align: right; font-weight: bold;">Roundoff:</td>
+            <td>₹0.00</td>
           </tr>
         </tbody>
       </table>
       
       <!-- Total Calculation -->
       <div class="total-calculation">
-        <strong>Total Cost: ₹ ${template.pricingBreakdown.totalCost.toLocaleString()}</strong><br>
-        <strong>Total Amount ${template.pricingBreakdown.totalCost.toLocaleString()} - Subsidy Amount ${template.pricingBreakdown.subsidyAmount.toLocaleString()} = ${template.pricingBreakdown.customerPayment.toLocaleString()}</strong>
+        <strong>Total Cost: ₹${template.pricingBreakdown.totalCost.toLocaleString()}</strong><br>
+        <strong>Total GST Exc: ₹${Math.round(template.pricingBreakdown.totalCost / 1.18).toLocaleString()}</strong><br>
+        <strong>Rupees Two Lacs Fifteen Thousand Only</strong>
+      </div>
+
+      
+      <div style="text-align: center; margin: 20px 0; font-weight: bold; font-size: 16px;">
+        <strong>Total Amount 2,15,000 - Subsidy Amount 78,000 = 1,37,000</strong>
       </div>
       
       ${template.pricingBreakdown.subsidyAmount > 0 ? `
       <div class="subsidy-note">
-        <strong>${template.pricingBreakdown.kw}kw Subsidy ₹${template.pricingBreakdown.subsidyAmount.toLocaleString()} Will be Credited to The Customer's Account</strong>
+        <strong>3 kw Subsidy 78,000 Will be Credited to The Customer's Account</strong>
       </div>` : ''}
       
       <!-- Bill of Materials -->
       <div class="page-break">
-        <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${template.reference.split(' - ')[0]} System</h3>
+        <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${template.pricingBreakdown.kw} kw On-grid Solar NPG System</h3>
         
         <table class="bom-table">
           <thead>
@@ -487,7 +504,7 @@ export class QuotationPDFService {
       
       <!-- Documents Required -->
       <div class="documents-section">
-        <h3 style="color: #228B22; margin-top: 0;">Documents Required for Subsidy</h3>
+        <h3 style="color: #228B22; margin-top: 0;">Documents Required for PM Surya Ghar</h3>
         ${(template.documentsRequiredForSubsidy.list || []).map(item => `<div>${item}</div>`).join('')}
         <br>
         <div class="highlight">${template.documentsRequiredForSubsidy.note}</div>
