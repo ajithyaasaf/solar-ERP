@@ -2233,7 +2233,7 @@ export default function QuotationCreation() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-6" data-testid="quotation-creation-page">
+    <div className="container mx-auto px-4 py-4 md:py-6 overflow-x-hidden" data-testid="quotation-creation-page">
       <div className="mb-4 md:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 md:mb-6">
           <Button
@@ -2294,7 +2294,7 @@ export default function QuotationCreation() {
           </div>
 
           {/* Desktop Progress - Full stepper */}
-          <div className="hidden lg:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-4 overflow-x-auto">
             {WIZARD_STEPS.map((step, index) => {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
@@ -2337,7 +2337,7 @@ export default function QuotationCreation() {
           </div>
 
           {/* Tablet Progress - Compact vertical */}
-          <div className="hidden md:grid lg:hidden grid-cols-4 gap-1.5">
+          <div className="hidden md:grid lg:hidden grid-cols-5 gap-1.5">
             {WIZARD_STEPS.map((step, index) => {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
