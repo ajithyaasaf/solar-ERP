@@ -684,25 +684,33 @@ function ManualProjectConfiguration({ form }: { form: any }) {
         project.gstPercentage = BUSINESS_RULES.gst.percentage;
       }
       
-      // Check if projectValue or gstPercentage was manually changed
+      // Calculate base price and GST from project value (which is total including GST)
+      const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+      const gstAmount = project.projectValue - basePrice;
+      
+      project.basePrice = basePrice;
+      project.gstAmount = gstAmount;
+      
+      // If projectValue or gstPercentage was manually changed, derive pricePerKW from the base price
+      // This ensures the rate stays consistent with the user's intended total
       if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
-        // User changed the total value or GST percentage - recalculate base and GST
-        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
-        const gstAmount = project.projectValue - basePrice;
-        
-        project.basePrice = basePrice;
-        project.gstAmount = gstAmount;
-      } else {
-        // Other fields changed - recalculate everything from systemKW and pricePerKW
+        // User manually entered project value or changed GST - derive rate per kW from base price
+        if (project.systemKW && project.systemKW > 0) {
+          project.pricePerKW = Math.round(basePrice / project.systemKW);
+        }
+      } else if (updatedData.hasOwnProperty('systemKW') || updatedData.hasOwnProperty('pricePerKW')) {
+        // User changed systemKW or pricePerKW - recalculate project value
         const totalWithGST = project.systemKW * project.pricePerKW * (1 + project.gstPercentage / 100);
         project.projectValue = Math.round(totalWithGST);
         
-        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
-        const gstAmount = project.projectValue - basePrice;
+        // Recalculate base and GST with new project value
+        const newBasePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+        const newGstAmount = project.projectValue - newBasePrice;
         
-        project.basePrice = basePrice;
-        project.gstAmount = gstAmount;
+        project.basePrice = newBasePrice;
+        project.gstAmount = newGstAmount;
       }
+      // If GST percentage changed, we already recalculated base and GST above
       
       // Calculate system kW from panel data for subsidy (keep decimals for accurate subsidy calculation)
       const calculatedKW = (parseInt(project.panelWatts) * project.panelCount) / 1000;
