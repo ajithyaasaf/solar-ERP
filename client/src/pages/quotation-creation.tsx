@@ -146,9 +146,6 @@ const BUSINESS_RULES = {
     waterHeaterPerLitre: 350 // Water heater pricing per litre
   },
   subsidy: {
-    onGridPerKW: 26000,
-    hybridPerKW: 15000,   // Reduced subsidy for hybrid systems
-    offGridPerKW: 0,
     waterHeater: 0.3,     // 30% subsidy up to max ₹20,000
     waterPump: 0.4        // 40% subsidy for agricultural use
   },
@@ -158,6 +155,36 @@ const BUSINESS_RULES = {
   },
   gst: {
     percentage: 18        // 18% GST as per backend implementation
+  }
+};
+
+// Subsidy calculation based on kW ranges (only for residential properties)
+// For on_grid and hybrid projects:
+// Up to 1 kW: ₹30,000
+// 1-2 kW: ₹60,000
+// 2-10 kW: ₹78,000
+// Above 10 kW: No subsidy
+const calculateSubsidy = (kw: number, propertyType: string, projectType: string): number => {
+  // Subsidy only applies to residential properties for on_grid and hybrid
+  if (propertyType !== 'residential') {
+    return 0;
+  }
+
+  // Only on_grid and hybrid projects get subsidy
+  if (!['on_grid', 'hybrid'].includes(projectType)) {
+    return 0;
+  }
+
+  // Range-based subsidy with proper range comparisons
+  if (kw <= 1) {
+    return 30000;
+  } else if (kw > 1 && kw <= 2) {
+    return 60000;
+  } else if (kw > 2 && kw <= 10) {
+    return 78000;
+  } else {
+    // Above 10 kW: No subsidy
+    return 0;
   }
 };
 
@@ -563,54 +590,66 @@ function ManualProjectConfiguration({ form }: { form: any }) {
         break;
     }
 
-    // Define subsidy mapping for safe lookups
-    const subsidyMapping = {
-      "on_grid": "onGridPerKW",
-      "off_grid": "offGridPerKW", 
-      "hybrid": "hybridPerKW",
-      "water_heater": null, // No subsidy
-      "water_pump": null    // No subsidy
-    } as const;
-
     // Calculate initial pricing for all project types
     if (["on_grid", "off_grid", "hybrid"].includes(projectType)) {
-      const baseValue = newProject.systemKW * newProject.pricePerKW;
-      const gstAmount = baseValue * (BUSINESS_RULES.gst.percentage / 100);
-      newProject.projectValue = baseValue;
+      // Calculate total value including GST (this is what user enters as projectValue)
+      const totalWithGST = newProject.systemKW * newProject.pricePerKW * (1 + BUSINESS_RULES.gst.percentage / 100);
+      newProject.projectValue = Math.round(totalWithGST);
+      newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
+      
+      // Calculate base price and GST from total
+      const basePrice = Math.round(newProject.projectValue / (1 + newProject.gstPercentage / 100));
+      const gstAmount = newProject.projectValue - basePrice;
+      
+      newProject.basePrice = basePrice;
       newProject.gstAmount = gstAmount;
-      newProject.totalWithGST = baseValue + gstAmount;
       
-      // Get subsidy key safely with validation
-      const subsidyKey = subsidyMapping[projectType as keyof typeof subsidyMapping];
-      if (subsidyKey && BUSINESS_RULES.subsidy[subsidyKey] !== undefined) {
-        newProject.subsidyAmount = newProject.systemKW * BUSINESS_RULES.subsidy[subsidyKey];
-      } else {
-        newProject.subsidyAmount = 0;
-      }
+      // Calculate system kW from panel data for subsidy (keep decimals for accurate subsidy calculation)
+      const calculatedKW = (parseInt(newProject.panelWatts) * newProject.panelCount) / 1000;
       
-      newProject.customerPayment = newProject.totalWithGST - newProject.subsidyAmount;
+      // Get propertyType from form (for manual entry: from customer, for site visit: from customerData)
+      const formValues = form.getValues();
+      const propertyType = formValues.customerData?.propertyType || formValues.selectedCustomer?.propertyType || '';
+      
+      // Use the new calculateSubsidy function
+      newProject.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, projectType);
+      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else if (projectType === "water_heater") {
-      // Set default pricing for water heater based on capacity
+      // Set default pricing for water heater based on capacity (total including GST)
       const baseValue = newProject.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
-      const gstAmount = baseValue * (BUSINESS_RULES.gst.percentage / 100);
-      newProject.projectValue = baseValue;
+      const totalWithGST = baseValue * (1 + BUSINESS_RULES.gst.percentage / 100);
+      newProject.projectValue = Math.round(totalWithGST);
+      newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
+      
+      // Calculate base price and GST from total
+      const basePrice = Math.round(newProject.projectValue / (1 + newProject.gstPercentage / 100));
+      const gstAmount = newProject.projectValue - basePrice;
+      
+      newProject.basePrice = basePrice;
       newProject.gstAmount = gstAmount;
-      newProject.totalWithGST = baseValue + gstAmount;
-      // Calculate subsidy: 30% up to max ₹20,000
-      const maxSubsidy = Math.min(newProject.projectValue * BUSINESS_RULES.subsidy.waterHeater, 20000);
+      
+      // Calculate subsidy: 30% up to max ₹20,000 (applied on base price)
+      const maxSubsidy = Math.min(basePrice * BUSINESS_RULES.subsidy.waterHeater, 20000);
       newProject.subsidyAmount = maxSubsidy;
-      newProject.customerPayment = newProject.totalWithGST - newProject.subsidyAmount;
+      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else if (projectType === "water_pump") {
-      // Set default pricing for water pump based on HP
+      // Set default pricing for water pump based on HP (total including GST)
       const hpValue = parseFloat(newProject.hp) || 1;
       const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
-      const gstAmount = baseValue * (BUSINESS_RULES.gst.percentage / 100);
-      newProject.projectValue = baseValue;
+      const totalWithGST = baseValue * (1 + BUSINESS_RULES.gst.percentage / 100);
+      newProject.projectValue = Math.round(totalWithGST);
+      newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
+      
+      // Calculate base price and GST from total
+      const basePrice = Math.round(newProject.projectValue / (1 + newProject.gstPercentage / 100));
+      const gstAmount = newProject.projectValue - basePrice;
+      
+      newProject.basePrice = basePrice;
       newProject.gstAmount = gstAmount;
-      newProject.totalWithGST = baseValue + gstAmount;
-      // Calculate subsidy: 40% for agricultural use
-      newProject.subsidyAmount = newProject.projectValue * BUSINESS_RULES.subsidy.waterPump;
-      newProject.customerPayment = newProject.totalWithGST - newProject.subsidyAmount;
+      
+      // Calculate subsidy: 40% for agricultural use (applied on base price)
+      newProject.subsidyAmount = Math.round(basePrice * BUSINESS_RULES.subsidy.waterPump);
+      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else {
       // Fallback for unknown project types
       console.error(`Unknown project type: ${projectType}`);
@@ -636,74 +675,111 @@ function ManualProjectConfiguration({ form }: { form: any }) {
     const updatedProjects = [...currentProjects];
     updatedProjects[index] = { ...updatedProjects[index], ...updatedData };
 
-    // Define subsidy mapping for safe lookups (same as in addProject)
-    const subsidyMapping = {
-      "on_grid": "onGridPerKW",
-      "off_grid": "offGridPerKW", 
-      "hybrid": "hybridPerKW",
-      "water_heater": null, // No subsidy
-      "water_pump": null    // No subsidy
-    } as const;
-
     // Recalculate pricing for all project types
     const project = updatedProjects[index];
     
     if (["on_grid", "off_grid", "hybrid"].includes(project.projectType)) {
-      const baseValue = project.systemKW * project.pricePerKW;
-      const gstAmount = baseValue * (BUSINESS_RULES.gst.percentage / 100);
-      project.projectValue = baseValue;
-      project.gstAmount = gstAmount;
-      project.totalWithGST = baseValue + gstAmount;
-      
-      // Get subsidy key safely with validation
-      const subsidyKey = subsidyMapping[project.projectType as keyof typeof subsidyMapping];
-      if (subsidyKey && BUSINESS_RULES.subsidy[subsidyKey] !== undefined) {
-        project.subsidyAmount = project.systemKW * BUSINESS_RULES.subsidy[subsidyKey];
-      } else {
-        project.subsidyAmount = 0;
+      // Ensure gstPercentage is set
+      if (!project.gstPercentage) {
+        project.gstPercentage = BUSINESS_RULES.gst.percentage;
       }
       
-      project.customerPayment = project.totalWithGST - project.subsidyAmount;
-    } else if (project.projectType === "water_heater") {
-      // Recalculate pricing for water heater
-      if (updatedData.hasOwnProperty('projectValue')) {
-        // If project value is directly updated, recalculate GST, subsidy and payment
-        const gstAmount = project.projectValue * (BUSINESS_RULES.gst.percentage / 100);
+      // Check if projectValue or gstPercentage was manually changed
+      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
+        // User changed the total value or GST percentage - recalculate base and GST
+        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+        const gstAmount = project.projectValue - basePrice;
+        
+        project.basePrice = basePrice;
         project.gstAmount = gstAmount;
-        project.totalWithGST = project.projectValue + gstAmount;
-        const maxSubsidy = Math.min(project.projectValue * BUSINESS_RULES.subsidy.waterHeater, 20000);
+      } else {
+        // Other fields changed - recalculate everything from systemKW and pricePerKW
+        const totalWithGST = project.systemKW * project.pricePerKW * (1 + project.gstPercentage / 100);
+        project.projectValue = Math.round(totalWithGST);
+        
+        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+        const gstAmount = project.projectValue - basePrice;
+        
+        project.basePrice = basePrice;
+        project.gstAmount = gstAmount;
+      }
+      
+      // Calculate system kW from panel data for subsidy (keep decimals for accurate subsidy calculation)
+      const calculatedKW = (parseInt(project.panelWatts) * project.panelCount) / 1000;
+      
+      // Get propertyType from form (for manual entry: from customer, for site visit: from customerData)
+      const formValues = form.getValues();
+      const propertyType = formValues.customerData?.propertyType || formValues.selectedCustomer?.propertyType || '';
+      
+      // Use the new calculateSubsidy function
+      project.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, project.projectType);
+      project.customerPayment = project.projectValue - project.subsidyAmount;
+    } else if (project.projectType === "water_heater") {
+      // Ensure gstPercentage is set
+      if (!project.gstPercentage) {
+        project.gstPercentage = BUSINESS_RULES.gst.percentage;
+      }
+      
+      // Recalculate pricing for water heater
+      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
+        // If project value or GST percentage is directly updated, recalculate base, GST, subsidy and payment
+        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+        const gstAmount = project.projectValue - basePrice;
+        
+        project.basePrice = basePrice;
+        project.gstAmount = gstAmount;
+        
+        const maxSubsidy = Math.min(basePrice * BUSINESS_RULES.subsidy.waterHeater, 20000);
         project.subsidyAmount = maxSubsidy;
-        project.customerPayment = project.totalWithGST - project.subsidyAmount;
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       } else if (updatedData.hasOwnProperty('litre')) {
         // If litre is updated, recalculate based on capacity
         const baseValue = project.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
-        const gstAmount = baseValue * (BUSINESS_RULES.gst.percentage / 100);
-        project.projectValue = baseValue;
+        const totalWithGST = baseValue * (1 + project.gstPercentage / 100);
+        project.projectValue = Math.round(totalWithGST);
+        
+        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+        const gstAmount = project.projectValue - basePrice;
+        
+        project.basePrice = basePrice;
         project.gstAmount = gstAmount;
-        project.totalWithGST = baseValue + gstAmount;
-        const maxSubsidy = Math.min(project.projectValue * BUSINESS_RULES.subsidy.waterHeater, 20000);
+        
+        const maxSubsidy = Math.min(basePrice * BUSINESS_RULES.subsidy.waterHeater, 20000);
         project.subsidyAmount = maxSubsidy;
-        project.customerPayment = project.totalWithGST - project.subsidyAmount;
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       }
     } else if (project.projectType === "water_pump") {
+      // Ensure gstPercentage is set
+      if (!project.gstPercentage) {
+        project.gstPercentage = BUSINESS_RULES.gst.percentage;
+      }
+      
       // Recalculate pricing for water pump
-      if (updatedData.hasOwnProperty('projectValue')) {
-        // If project value is directly updated, recalculate GST, subsidy and payment
-        const gstAmount = project.projectValue * (BUSINESS_RULES.gst.percentage / 100);
+      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
+        // If project value or GST percentage is directly updated, recalculate base, GST, subsidy and payment
+        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+        const gstAmount = project.projectValue - basePrice;
+        
+        project.basePrice = basePrice;
         project.gstAmount = gstAmount;
-        project.totalWithGST = project.projectValue + gstAmount;
-        project.subsidyAmount = project.projectValue * BUSINESS_RULES.subsidy.waterPump;
-        project.customerPayment = project.totalWithGST - project.subsidyAmount;
+        
+        project.subsidyAmount = Math.round(basePrice * BUSINESS_RULES.subsidy.waterPump);
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       } else if (updatedData.hasOwnProperty('hp')) {
         // If HP is updated, recalculate based on HP
         const hpValue = parseFloat(project.hp) || 1;
         const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
-        const gstAmount = baseValue * (BUSINESS_RULES.gst.percentage / 100);
-        project.projectValue = baseValue;
+        const totalWithGST = baseValue * (1 + project.gstPercentage / 100);
+        project.projectValue = Math.round(totalWithGST);
+        
+        const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
+        const gstAmount = project.projectValue - basePrice;
+        
+        project.basePrice = basePrice;
         project.gstAmount = gstAmount;
-        project.totalWithGST = baseValue + gstAmount;
-        project.subsidyAmount = project.projectValue * BUSINESS_RULES.subsidy.waterPump;
-        project.customerPayment = project.totalWithGST - project.subsidyAmount;
+        
+        project.subsidyAmount = Math.round(basePrice * BUSINESS_RULES.subsidy.waterPump);
+        project.customerPayment = project.projectValue - project.subsidyAmount;
       }
     } else {
       // Fallback for unknown project types
@@ -1088,13 +1164,26 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Project Value (₹)</label>
+          <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Total incl. GST)</span></label>
           <Input
             type="number"
             value={project.projectValue || 0}
             onChange={(e) => handleFieldChange('projectValue', parseInt(e.target.value) || 0)}
             min="0"
             data-testid={`input-project-value-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">GST Percentage (%)</label>
+          <Input
+            type="number"
+            value={project.gstPercentage || 18}
+            onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || 18)}
+            min="0"
+            max="100"
+            step="0.1"
+            data-testid={`input-gst-percentage-${projectIndex}`}
           />
         </div>
       </div>
@@ -1475,13 +1564,26 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Project Value (₹)</label>
+            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Total incl. GST)</span></label>
             <Input
               type="number"
               min="0"
               value={project.projectValue || 0}
               onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
               data-testid={`input-project-value-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">GST Percentage (%)</label>
+            <Input
+              type="number"
+              value={project.gstPercentage || 18}
+              onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || 18)}
+              min="0"
+              max="100"
+              step="0.1"
+              data-testid={`input-gst-percentage-${projectIndex}`}
             />
           </div>
         </div>
@@ -1621,13 +1723,26 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Project Value (₹)</label>
+            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Total incl. GST)</span></label>
             <Input
               type="number"
               min="0"
               value={project.projectValue || 0}
               onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
               data-testid={`input-pump-project-value-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">GST Percentage (%)</label>
+            <Input
+              type="number"
+              value={project.gstPercentage || 18}
+              onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || 18)}
+              min="0"
+              max="100"
+              step="0.1"
+              data-testid={`input-pump-gst-percentage-${projectIndex}`}
             />
           </div>
         </div>
@@ -2176,9 +2291,10 @@ export default function QuotationCreation() {
       const values = form.getValues();
       const projects = values.projects || [];
       
-      const totalSystemCost = projects.reduce((sum: number, project: any) => sum + (project.projectValue || 0), 0);
+      // totalSystemCost is now the sum of base prices (before GST)
+      const totalSystemCost = projects.reduce((sum: number, project: any) => sum + (project.basePrice || 0), 0);
       const totalGSTAmount = projects.reduce((sum: number, project: any) => sum + (project.gstAmount || 0), 0);
-      const totalWithGST = totalSystemCost + totalGSTAmount;
+      const totalWithGST = projects.reduce((sum: number, project: any) => sum + (project.projectValue || 0), 0);
       const totalSubsidyAmount = projects.reduce((sum: number, project: any) => sum + (project.subsidyAmount || 0), 0);
       const totalCustomerPayment = totalWithGST - totalSubsidyAmount;
       const advanceAmount = Math.round(totalCustomerPayment * 0.9);
@@ -2200,9 +2316,9 @@ export default function QuotationCreation() {
 
   const onSubmit = (data: QuotationFormData) => {
     // Validate business rules before submission
-    const totalSystemCost = data.projects.reduce((sum, p) => sum + p.projectValue, 0);
+    const totalSystemCost = data.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
     const totalGSTAmount = data.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
-    const totalWithGST = totalSystemCost + totalGSTAmount;
+    const totalWithGST = data.projects.reduce((sum, p) => sum + p.projectValue, 0);
     const totalSubsidyAmount = data.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
     const calculatedCustomerPayment = totalWithGST - totalSubsidyAmount;
     
@@ -2719,7 +2835,7 @@ export default function QuotationCreation() {
                         <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("totalSystemCost")?.toLocaleString() || 0}</span>
                       </div>
                       <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">GST (18%):</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground">GST:</span>
                         <span className="font-medium text-sm sm:text-base text-blue-600 text-right">₹{form.watch("totalGSTAmount")?.toLocaleString() || 0}</span>
                       </div>
                       <div className="flex justify-between items-start gap-2">

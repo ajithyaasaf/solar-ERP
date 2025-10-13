@@ -50,3 +50,46 @@ Overtime calculation: Simple rule - any work beyond department checkout time is 
 - **TanStack Query**: Server state management and caching.
 - **Radix UI**: Accessible component primitives.
 - **Google Maps API**: For reverse geocoding in enhanced location capture.
+
+## Recent Changes
+
+### Quotation System - Critical Pricing Calculation Fixes (October 2025)
+
+**Problem Resolved**: Fixed critical subsidy calculation errors that were causing incorrect pricing and customer payments in the solar quotation system.
+
+**Root Causes Identified**:
+1. **Math.floor() precision loss**: kW calculations were truncating decimal values (e.g., 5.9 kW → 5 kW), causing incorrect subsidy ranges
+2. **Wrong subsidy logic**: System was using per-kW multiplication instead of range-based tiers
+3. **Missing property type check**: Off-grid residential systems were incorrectly receiving subsidies
+4. **Range gaps**: Exact equality checks (kw === 2) caused values like 1.2 kW or 2.1 kW to receive ₹0 subsidy
+
+**Fixes Implemented**:
+
+1. **Precise kW Calculation**:
+   - Changed from `Math.floor()` to `Math.round(kw * 100) / 100` for 2 decimal precision
+   - Frontend: `(panelWatts × panelCount) / 1000` with full precision
+   - Backend: `QuotationTemplateService.calculateSystemKW()` updated to match
+
+2. **Correct Subsidy Range Logic**:
+   - **Up to 1 kW**: ₹30,000
+   - **1-2 kW** (kw > 1 && kw <= 2): ₹60,000
+   - **2-10 kW** (kw > 2 && kw <= 10): ₹78,000
+   - **Above 10 kW**: ₹0 (no subsidy)
+
+3. **Eligibility Enforcement**:
+   - Subsidy applies ONLY to **residential** properties
+   - Subsidy applies ONLY to **on_grid** and **hybrid** projects (NOT off_grid)
+   - Both frontend and backend enforce these checks
+
+4. **Implementation Locations**:
+   - Frontend: `client/src/pages/quotation-creation.tsx` - calculateSubsidy function
+   - Backend: `server/services/quotation-template-service.ts` - calculateSubsidy and calculateSystemKW methods
+
+**Technical Details**:
+- projectValue is treated as total including GST
+- basePrice = projectValue / (1 + GST%)
+- GST amount = projectValue - basePrice
+- Subsidy calculation uses precise kW value with range-based lookup
+- Customer payment = projectValue - subsidy
+
+**Impact**: All quotations now calculate subsidies correctly based on precise kW ranges, ensuring accurate pricing for residential on_grid/hybrid solar installations.

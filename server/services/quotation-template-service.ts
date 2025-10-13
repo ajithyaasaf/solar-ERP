@@ -191,36 +191,42 @@ export class QuotationTemplateService {
   /**
    * Calculate actual kW from panel watts and panel count
    * Formula: (Panel Watts × Panel Count) / 1000
-   * Returns the first digit as kW value (e.g., 3240W = 3kW)
-   * Minimum 1kW to prevent pricing errors
+   * Returns precise kW value rounded to 2 decimal places (e.g., 3240W = 3.24kW)
+   * This ensures accurate subsidy calculation based on kW ranges
    */
   static calculateSystemKW(panelWatts: string | number, panelCount: number): number {
     const watts = typeof panelWatts === 'string' ? parseInt(panelWatts) : panelWatts;
     const totalWatts = watts * panelCount;
     const kw = totalWatts / 1000;
-    // Round down to first digit (e.g., 3.24 -> 3), minimum 1kW
-    return Math.max(1, Math.floor(kw));
+    // Round to 2 decimal places for precision
+    return Math.round(kw * 100) / 100;
   }
 
   /**
-   * Calculate subsidy based on kW and property type
-   * Subsidy applies ONLY if project type is residential
-   * For 1 kW: ₹30,000
-   * For 2 kW: ₹60,000
-   * For 3–10 kW: ₹78,000
+   * Calculate subsidy based on kW, property type, and project type
+   * Subsidy applies ONLY for residential properties with on_grid or hybrid projects
+   * Up to 1 kW: ₹30,000
+   * 1-2 kW: ₹60,000
+   * 2-10 kW: ₹78,000
    * Above 10 kW: No subsidy
    */
-  static calculateSubsidy(kw: number, propertyType: string): number {
+  static calculateSubsidy(kw: number, propertyType: string, projectType: string): number {
     // Subsidy only applies to residential properties
     if (propertyType !== 'residential') {
       return 0;
     }
 
+    // Only on_grid and hybrid projects get subsidy
+    if (!['on_grid', 'hybrid'].includes(projectType)) {
+      return 0;
+    }
+
+    // Range-based subsidy with proper range comparisons
     if (kw <= 1) {
       return 30000;
-    } else if (kw === 2) {
+    } else if (kw > 1 && kw <= 2) {
       return 60000;
-    } else if (kw >= 3 && kw <= 10) {
+    } else if (kw > 2 && kw <= 10) {
       return 78000;
     } else {
       // Above 10 kW: No subsidy
@@ -911,51 +917,117 @@ export class QuotationTemplateService {
 
   /**
    * Calculate pricing breakdown with proper GST and subsidy
-   * Formula: Base Price = Rate per kW × kW
-   *          GST = Base Price × GST%
-   *          Total = Base Price + GST
+   * NEW FORMULA (projectValue is total including GST):
+   *          Total with GST = projectValue (user input)
+   *          Base Price = projectValue / (1 + GST%)
+   *          GST = projectValue - Base Price
    *          Subsidy = Based on kW and property type (residential only)
    *          Customer Payment = Total - Subsidy
    */
-  static calculatePricingBreakdown(project: QuotationProject, propertyType?: string, gstPercentage: number = 18): any {
+  static calculatePricingBreakdown(project: QuotationProject, propertyType?: string, gstPercentage?: number): any {
     let description = "";
     let kw = 1;
     let ratePerKw = 0;
     let basePrice = 0;
+    let totalWithGST = 0;
+    let gstAmount = 0;
+
+    // Use project's GST percentage if available, otherwise use parameter or default
+    const actualGstPercentage = (project as any).gstPercentage || gstPercentage || 18;
 
     switch (project.projectType) {
       case 'on_grid':
         // Calculate actual kW from panel data
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         ratePerKw = project.pricePerKW || 68000;
-        basePrice = ratePerKw * kw;
+        
+        // Use project values if available (from frontend calculation)
+        if ((project as any).basePrice && (project as any).gstAmount) {
+          basePrice = (project as any).basePrice;
+          gstAmount = (project as any).gstAmount;
+          totalWithGST = project.projectValue;
+        } else {
+          // Fallback: calculate from scratch (projectValue is total including GST)
+          totalWithGST = project.projectValue || (ratePerKw * kw * (1 + actualGstPercentage / 100));
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          gstAmount = totalWithGST - basePrice;
+        }
+        
         description = `Supply and Installation of ${kw}kw Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
         break;
 
       case 'off_grid':
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         ratePerKw = project.pricePerKW || 85000;
-        basePrice = ratePerKw * kw;
+        
+        // Use project values if available (from frontend calculation)
+        if ((project as any).basePrice && (project as any).gstAmount) {
+          basePrice = (project as any).basePrice;
+          gstAmount = (project as any).gstAmount;
+          totalWithGST = project.projectValue;
+        } else {
+          // Fallback: calculate from scratch (projectValue is total including GST)
+          totalWithGST = project.projectValue || (ratePerKw * kw * (1 + actualGstPercentage / 100));
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          gstAmount = totalWithGST - basePrice;
+        }
+        
         description = `Supply and Installation of ${kw}kw Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'hybrid':
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         ratePerKw = project.pricePerKW || 95000;
-        basePrice = ratePerKw * kw;
+        
+        // Use project values if available (from frontend calculation)
+        if ((project as any).basePrice && (project as any).gstAmount) {
+          basePrice = (project as any).basePrice;
+          gstAmount = (project as any).gstAmount;
+          totalWithGST = project.projectValue;
+        } else {
+          // Fallback: calculate from scratch (projectValue is total including GST)
+          totalWithGST = project.projectValue || (ratePerKw * kw * (1 + actualGstPercentage / 100));
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          gstAmount = totalWithGST - basePrice;
+        }
+        
         description = `Supply and Installation of ${kw}kw Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'water_heater':
         const litres = project.litre || 100;
-        basePrice = project.projectValue || (litres * 350);
+        
+        // Use project values if available (from frontend calculation)
+        if ((project as any).basePrice && (project as any).gstAmount) {
+          basePrice = (project as any).basePrice;
+          gstAmount = (project as any).gstAmount;
+          totalWithGST = project.projectValue;
+        } else {
+          // Fallback: projectValue is total including GST
+          totalWithGST = project.projectValue || (litres * 350 * (1 + actualGstPercentage / 100));
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          gstAmount = totalWithGST - basePrice;
+        }
+        
         ratePerKw = basePrice;
         description = `Supply and Installation of ${litres}L Solar Water Heater - ${project.brand || 'Standard'} Brand`;
         break;
 
       case 'water_pump':
         const hp = project.hp || '1';
-        basePrice = project.projectValue || (parseInt(hp) * 45000);
+        
+        // Use project values if available (from frontend calculation)
+        if ((project as any).basePrice && (project as any).gstAmount) {
+          basePrice = (project as any).basePrice;
+          gstAmount = (project as any).gstAmount;
+          totalWithGST = project.projectValue;
+        } else {
+          // Fallback: projectValue is total including GST
+          totalWithGST = project.projectValue || (parseInt(hp) * 45000 * (1 + actualGstPercentage / 100));
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          gstAmount = totalWithGST - basePrice;
+        }
+        
         ratePerKw = basePrice;
         description = `Supply and Installation of ${hp}HP Solar Water Pump with ${project.panelCount || 4} Solar Panels`;
         break;
@@ -963,26 +1035,24 @@ export class QuotationTemplateService {
       default:
         return null;
     }
-
-    // Calculate GST
-    const gstAmount = basePrice * (gstPercentage / 100);
-    const totalWithGST = basePrice + gstAmount;
     
-    // Calculate subsidy (only for residential properties)
-    const subsidyAmount = this.calculateSubsidy(kw, propertyType || '');
+    // Calculate subsidy (only for residential properties with on_grid or hybrid projects)
+    const subsidyAmount = this.calculateSubsidy(kw, propertyType || '', project.projectType);
     
     // Calculate customer payment
     const customerPayment = totalWithGST - subsidyAmount;
 
     // Calculate GST per kW
-    const gstPerKw = Math.round(gstAmount / kw);
+    const gstPerKw = kw > 0 ? Math.round(gstAmount / kw) : 0;
 
     return {
       description,
       kw,
       ratePerKw: Math.round(ratePerKw),
       gstPerKw,
-      gstPercentage,
+      gstPercentage: actualGstPercentage,
+      basePrice: Math.round(basePrice),
+      gstAmount: Math.round(gstAmount),
       valueWithGST: Math.round(totalWithGST),
       totalCost: Math.round(totalWithGST),
       subsidyAmount: Math.round(subsidyAmount),
