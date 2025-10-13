@@ -1168,7 +1168,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <Input
             type="number"
             value={project.projectValue || 0}
-            onChange={(e) => handleFieldChange('projectValue', parseInt(e.target.value) || 0)}
+            onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
             min="0"
             data-testid={`input-project-value-${projectIndex}`}
           />
@@ -1902,11 +1902,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       {/* Pricing Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
         <div>
-          <span className="text-sm text-muted-foreground">Base Value:</span>
-          <div className="font-medium">₹{project.projectValue?.toLocaleString() || 0}</div>
+          <span className="text-sm text-muted-foreground">Base Price:</span>
+          <div className="font-medium">₹{project.basePrice?.toLocaleString() || 0}</div>
         </div>
         <div>
-          <span className="text-sm text-muted-foreground">GST (18%):</span>
+          <span className="text-sm text-muted-foreground">GST ({project.gstPercentage || 18}%):</span>
           <div className="font-medium text-blue-600">₹{project.gstAmount?.toLocaleString() || 0}</div>
         </div>
         <div>
