@@ -947,19 +947,27 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     onUpdate({ [field]: value });
   };
 
-  // Auto-calculate system kW from panel data
-  const calculatedSystemKW = project.panelWatts && project.panelCount 
-    ? ((parseInt(project.panelWatts) * project.panelCount) / 1000).toFixed(2)
-    : '0.00';
-
-  // Calculate rate per kW from base price
-  const calculatedRatePerKW = project.basePrice && parseFloat(calculatedSystemKW) > 0
-    ? Math.round(project.basePrice / parseFloat(calculatedSystemKW))
+  // Auto-calculate system kW from panel data (actual decimal value)
+  const actualSystemKW = project.panelWatts && project.panelCount 
+    ? (parseInt(project.panelWatts) * project.panelCount) / 1000
     : 0;
 
-  // Calculate GST per kW
-  const calculatedGSTPerKW = project.gstAmount && parseFloat(calculatedSystemKW) > 0
-    ? Math.round(project.gstAmount / parseFloat(calculatedSystemKW))
+  // Round system kW: ≤3.5 → 3, >3.5 → 4
+  const roundedSystemKW = actualSystemKW > 0 
+    ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.ceil(actualSystemKW))
+    : 0;
+
+  // Display actual kW with 2 decimals
+  const calculatedSystemKW = actualSystemKW.toFixed(2);
+
+  // Calculate rate per kW from base price using ROUNDED kW
+  const calculatedRatePerKW = project.basePrice && roundedSystemKW > 0
+    ? Math.round(project.basePrice / roundedSystemKW)
+    : 0;
+
+  // Calculate GST per kW using ROUNDED kW
+  const calculatedGSTPerKW = project.gstAmount && roundedSystemKW > 0
+    ? Math.round(project.gstAmount / roundedSystemKW)
     : 0;
 
   const renderSolarSystemFields = () => (
@@ -969,7 +977,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <label className="text-sm font-medium">System Capacity (kW) <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
           <Input
             type="text"
-            value={calculatedSystemKW}
+            value={`${calculatedSystemKW} (Rounded: ${roundedSystemKW} kW)`}
             disabled
             className="bg-muted cursor-not-allowed"
             data-testid={`input-system-kw-${projectIndex}`}
@@ -1152,8 +1160,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <label className="text-sm font-medium">Structure Height (ft)</label>
           <Input
             type="number"
-            value={project.structureHeight || 0}
-            onChange={(e) => handleFieldChange('structureHeight', parseInt(e.target.value) || 0)}
+            value={project.structureHeight ?? ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              handleFieldChange('structureHeight', val === '' ? 0 : parseInt(val) || 0);
+            }}
             min="0"
             data-testid={`input-structure-height-${projectIndex}`}
           />
@@ -1190,8 +1201,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <label className="text-sm font-medium">GST Percentage (%)</label>
           <Input
             type="number"
-            value={project.gstPercentage || 18}
-            onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || 18)}
+            value={project.gstPercentage ?? 18}
+            onChange={(e) => {
+              const val = e.target.value;
+              handleFieldChange('gstPercentage', val === '' ? 0 : parseFloat(val) || 0);
+            }}
             min="0"
             max="100"
             step="0.1"
