@@ -293,7 +293,7 @@ export class QuotationTemplateService {
       rating: `${inverterKW}`,
       make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "Growatt/Eastman/polycab",
       qty: project.inverterQty || 1,
-      unit: "KW"
+      unit: "Nos"
     });
 
     // 3. Panel Mounting Structure - Type from structureType field
@@ -313,7 +313,7 @@ export class QuotationTemplateService {
       rating: `${inverterKW}`,
       make: "Reputed",
       qty: project.inverterQty || 1,
-      unit: "KW"
+      unit: "Set"
     });
 
     // 4. ACDB with MCB - Voltage based on inverter
@@ -325,7 +325,7 @@ export class QuotationTemplateService {
       rating: `${inverterKW}`,
       make: "Reputed",
       qty: project.inverterQty || 1,
-      unit: "KW"
+      unit: "Set"
     });
 
     // 5. DCDB with MCB - Always 600V
@@ -337,7 +337,7 @@ export class QuotationTemplateService {
       rating: `${inverterKW}`,
       make: "Reputed",
       qty: 1,
-      unit: "KW"
+      unit: "Set"
     });
 
     // 6. DC Cable - Qty: 20m (40m if inverter >10 kW)

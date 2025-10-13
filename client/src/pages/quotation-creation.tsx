@@ -592,20 +592,25 @@ function ManualProjectConfiguration({ form }: { form: any }) {
 
     // Calculate initial pricing for all project types
     if (["on_grid", "off_grid", "hybrid"].includes(projectType)) {
-      // Calculate total value including GST (this is what user enters as projectValue)
-      const totalWithGST = newProject.systemKW * newProject.pricePerKW * (1 + BUSINESS_RULES.gst.percentage / 100);
-      newProject.projectValue = Math.round(totalWithGST);
       newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
       
-      // Calculate base price and GST from total
-      const basePrice = Math.round(newProject.projectValue / (1 + newProject.gstPercentage / 100));
-      const gstAmount = newProject.projectValue - basePrice;
-      
-      newProject.basePrice = basePrice;
-      newProject.gstAmount = gstAmount;
-      
-      // Calculate system kW from panel data for subsidy (keep decimals for accurate subsidy calculation)
+      // Calculate system kW from panel data (this is the source of truth)
       const calculatedKW = (parseInt(newProject.panelWatts) * newProject.panelCount) / 1000;
+      newProject.systemKW = calculatedKW;
+      
+      // Calculate default project value based on systemKW and default rate
+      const defaultRatePerKW = projectType === 'on_grid' ? BUSINESS_RULES.pricing.onGridPerKW : 
+                               projectType === 'off_grid' ? BUSINESS_RULES.pricing.offGridPerKW : 
+                               BUSINESS_RULES.pricing.hybridPerKW;
+      
+      // Calculate total value including GST
+      const basePrice = Math.round(calculatedKW * defaultRatePerKW);
+      const totalWithGST = Math.round(basePrice * (1 + newProject.gstPercentage / 100));
+      
+      newProject.projectValue = totalWithGST;
+      newProject.basePrice = basePrice;
+      newProject.gstAmount = totalWithGST - basePrice;
+      newProject.pricePerKW = defaultRatePerKW;
       
       // Get propertyType from form (for manual entry: from customer, for site visit: from customerData)
       const formValues = form.getValues();
@@ -684,6 +689,12 @@ function ManualProjectConfiguration({ form }: { form: any }) {
         project.gstPercentage = BUSINESS_RULES.gst.percentage;
       }
       
+      // Calculate system kW from panel data (this is the source of truth)
+      const calculatedKW = (parseInt(project.panelWatts) * project.panelCount) / 1000;
+      
+      // Store systemKW for backend compatibility
+      project.systemKW = calculatedKW;
+      
       // Calculate base price and GST from project value (which is total including GST)
       const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
       const gstAmount = project.projectValue - basePrice;
@@ -691,29 +702,8 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       project.basePrice = basePrice;
       project.gstAmount = gstAmount;
       
-      // If projectValue or gstPercentage was manually changed, derive pricePerKW from the base price
-      // This ensures the rate stays consistent with the user's intended total
-      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
-        // User manually entered project value or changed GST - derive rate per kW from base price
-        if (project.systemKW && project.systemKW > 0) {
-          project.pricePerKW = Math.round(basePrice / project.systemKW);
-        }
-      } else if (updatedData.hasOwnProperty('systemKW') || updatedData.hasOwnProperty('pricePerKW')) {
-        // User changed systemKW or pricePerKW - recalculate project value
-        const totalWithGST = project.systemKW * project.pricePerKW * (1 + project.gstPercentage / 100);
-        project.projectValue = Math.round(totalWithGST);
-        
-        // Recalculate base and GST with new project value
-        const newBasePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
-        const newGstAmount = project.projectValue - newBasePrice;
-        
-        project.basePrice = newBasePrice;
-        project.gstAmount = newGstAmount;
-      }
-      // If GST percentage changed, we already recalculated base and GST above
-      
-      // Calculate system kW from panel data for subsidy (keep decimals for accurate subsidy calculation)
-      const calculatedKW = (parseInt(project.panelWatts) * project.panelCount) / 1000;
+      // Calculate and store rate per kW (derived value for backend)
+      project.pricePerKW = calculatedKW > 0 ? Math.round(basePrice / calculatedKW) : 0;
       
       // Get propertyType from form (for manual entry: from customer, for site visit: from customerData)
       const formValues = form.getValues();
@@ -957,27 +947,41 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     onUpdate({ [field]: value });
   };
 
+  // Auto-calculate system kW from panel data
+  const calculatedSystemKW = project.panelWatts && project.panelCount 
+    ? ((parseInt(project.panelWatts) * project.panelCount) / 1000).toFixed(2)
+    : '0.00';
+
+  // Calculate rate per kW from base price
+  const calculatedRatePerKW = project.basePrice && parseFloat(calculatedSystemKW) > 0
+    ? Math.round(project.basePrice / parseFloat(calculatedSystemKW))
+    : 0;
+
+  // Calculate GST per kW
+  const calculatedGSTPerKW = project.gstAmount && parseFloat(calculatedSystemKW) > 0
+    ? Math.round(project.gstAmount / parseFloat(calculatedSystemKW))
+    : 0;
+
   const renderSolarSystemFields = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">System Capacity (kW)</label>
+          <label className="text-sm font-medium">System Capacity (kW) <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
           <Input
-            type="number"
-            step="0.1"
-            min="0.1"
-            value={project.systemKW || 1}
-            onChange={(e) => handleFieldChange('systemKW', parseFloat(e.target.value) || 1)}
+            type="text"
+            value={calculatedSystemKW}
+            disabled
+            className="bg-muted cursor-not-allowed"
             data-testid={`input-system-kw-${projectIndex}`}
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium">Price per kW (₹)</label>
+          <label className="text-sm font-medium">Rate per kW (₹) <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
           <Input
-            type="number"
-            min="0"
-            value={project.pricePerKW || 0}
-            onChange={(e) => handleFieldChange('pricePerKW', parseFloat(e.target.value) || 0)}
+            type="text"
+            value={calculatedRatePerKW.toLocaleString()}
+            disabled
+            className="bg-muted cursor-not-allowed"
             data-testid={`input-price-per-kw-${projectIndex}`}
           />
         </div>
@@ -1908,24 +1912,33 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       <Separator />
       
       {/* Pricing Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
         <div>
-          <span className="text-sm text-muted-foreground">Base Price:</span>
-          <div className="font-medium">₹{project.basePrice?.toLocaleString() || 0}</div>
+          <span className="text-sm text-muted-foreground">Base Price (Total Cost):</span>
+          <div className="font-medium text-lg">₹{project.basePrice?.toLocaleString() || 0}</div>
         </div>
         <div>
-          <span className="text-sm text-muted-foreground">GST ({project.gstPercentage || 18}%):</span>
+          <span className="text-sm text-muted-foreground">GST {project.gstPercentage || 18}% (₹{calculatedGSTPerKW?.toLocaleString()}/kW):</span>
           <div className="font-medium text-blue-600">₹{project.gstAmount?.toLocaleString() || 0}</div>
         </div>
         <div>
-          <span className="text-sm text-muted-foreground">Govt. Subsidy:</span>
-          <div className="font-medium text-green-600">-₹{project.subsidyAmount?.toLocaleString() || 0}</div>
-        </div>
-        <div>
-          <span className="text-sm text-muted-foreground">Customer Payment:</span>
-          <div className="font-medium text-lg">₹{project.customerPayment?.toLocaleString() || 0}</div>
+          <span className="text-sm text-muted-foreground">Total Amount (Value + GST):</span>
+          <div className="font-medium text-lg text-green-600">₹{project.projectValue?.toLocaleString() || 0}</div>
         </div>
       </div>
+
+      {/* Subsidy Information (if applicable) */}
+      {project.subsidyAmount > 0 && (
+        <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-green-800 dark:text-green-200">Government Subsidy (Residential Only):</span>
+              <div className="text-xs text-green-600 dark:text-green-400 mt-1">This will be deducted in BOM section</div>
+            </div>
+            <div className="font-bold text-xl text-green-700 dark:text-green-300">₹{project.subsidyAmount?.toLocaleString() || 0}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
