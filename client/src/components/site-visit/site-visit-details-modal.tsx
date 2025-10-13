@@ -154,6 +154,15 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
     return value.toUpperCase();
   };
 
+  const formatEarthConnection = (value: string | string[] | undefined): string => {
+    if (!value) return 'Not specified';
+    if (Array.isArray(value)) {
+      if (value.length === 0) return 'Not specified';
+      return value.map(v => v === 'ac_dc' ? 'AC/DC' : v.toUpperCase()).join(', ');
+    }
+    return value === 'ac_dc' ? 'AC/DC' : value.toUpperCase();
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'in_progress': return 'bg-orange-100 text-orange-800';
@@ -745,7 +754,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       )}
                       <div>
                         <p className="text-sm text-muted-foreground">Earth Connection</p>
-                        <p className="font-medium">{siteVisit.marketingData.onGridConfig.earth?.replace('ac_dc', 'AC/DC')?.toUpperCase()}</p>
+                        <p className="font-medium">{formatEarthConnection(siteVisit.marketingData.onGridConfig.earth)}</p>
                       </div>
                       {(siteVisit.marketingData.onGridConfig.dcrPanelCount > 0 || siteVisit.marketingData.onGridConfig.nonDcrPanelCount > 0) && (
                         <>
@@ -933,7 +942,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       )}
                       <div>
                         <p className="text-sm text-muted-foreground">Earth Connection</p>
-                        <p className="font-medium">{siteVisit.marketingData.offGridConfig.earth?.replace('ac_dc', 'AC/DC')?.toUpperCase()}</p>
+                        <p className="font-medium">{formatEarthConnection(siteVisit.marketingData.offGridConfig.earth)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Brand</p>
@@ -1115,7 +1124,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       )}
                       <div>
                         <p className="text-sm text-muted-foreground">Earth Connection</p>
-                        <p className="font-medium">{siteVisit.marketingData.hybridConfig.earth?.replace('ac_dc', 'AC/DC')?.toUpperCase()}</p>
+                        <p className="font-medium">{formatEarthConnection(siteVisit.marketingData.hybridConfig.earth)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Battery Brand</p>
