@@ -239,8 +239,10 @@ export const earthingTypes = [
   "dc", "ac", "ac_dc"
 ] as const;
 
+export const earthingTypesMulti = ["dc", "ac", "ac_dc"] as const;
+
 export const panelWatts = [
-  "530", "535", "550", "590", "610"
+  "210", "335", "410", "530", "535", "540", "550", "590", "610", "615"
 ] as const;
 
 // Panel types for solar installations
@@ -277,7 +279,7 @@ export const floorLevels = [
 
 // Structure types
 export const structureTypes = [
-  "gp_structure", "mono_rail"
+  "gp_structure", "mono_rail", "gi_round_pipe", "ms_square_pipe"
 ] as const;
 
 // Mono rail options
@@ -353,7 +355,7 @@ export const onGridConfigSchema = z.object({
   lightningArrest: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
   electricalCount: z.number().min(0).optional(),
-  earth: z.enum(earthingTypes),
+  earth: z.array(z.enum(earthingTypes)).default([]),
   floor: z.enum(floorLevels).optional(),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),

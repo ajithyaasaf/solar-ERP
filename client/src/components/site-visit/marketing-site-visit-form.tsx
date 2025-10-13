@@ -80,7 +80,7 @@ interface OnGridConfig extends BaseConfig {
   lightningArrest: boolean;
   electricalAccessories?: boolean;
   electricalCount?: number;
-  earth: string;
+  earth: string[];
   floor?: string;
   dcrPanelCount: number;
   nonDcrPanelCount: number;
@@ -221,7 +221,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         lightningArrest: false,
         electricalAccessories: false,
         electricalCount: 0,
-        earth: 'ac',
+        earth: ['ac'],
         floor: '0',
         dcrPanelCount: 1,
         nonDcrPanelCount: 0,
@@ -250,7 +250,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         lightningArrest: false,
         electricalAccessories: false,
         electricalCount: 0,
-        earth: 'ac',
+        earth: ['ac'],
         floor: '0',
         dcrPanelCount: 1,
         nonDcrPanelCount: 0,
@@ -284,7 +284,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         lightningArrest: false,
         electricalAccessories: false,
         electricalCount: 0,
-        earth: 'ac',
+        earth: ['ac'],
         floor: '0',
         dcrPanelCount: 1,
         nonDcrPanelCount: 0,
@@ -577,10 +577,19 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         const value = e.target.value;
                         const numValue = parseFloat(value);
                         if (value === '') {
-                          updateConfig('onGridConfig', { inverterKW: undefined, inverterPhase: 'single_phase' });
+                          updateConfig('onGridConfig', { 
+                            inverterKW: undefined, 
+                            inverterPhase: 'single_phase',
+                            electricalCount: 0
+                          });
                         } else if (!isNaN(numValue)) {
                           const phase = numValue < 6 ? 'single_phase' : 'three_phase';
-                          updateConfig('onGridConfig', { inverterKW: numValue, inverterPhase: phase });
+                          const electricalCount = formData.onGridConfig?.electricalAccessories ? numValue : 0;
+                          updateConfig('onGridConfig', { 
+                            inverterKW: numValue, 
+                            inverterPhase: phase,
+                            electricalCount
+                          });
                         }
                       }}
                       placeholder="Type or select KW (auto-selects phase)"
@@ -620,10 +629,8 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => {
                         const value = e.target.value;
                         const qty = value === '' ? 1 : parseInt(value) || 1;
-                        const electricalCount = formData.onGridConfig?.electricalAccessories ? qty : 0;
                         updateConfig('onGridConfig', { 
-                          inverterQty: qty,
-                          electricalCount
+                          inverterQty: qty
                         });
                       }}
                       min="1"
@@ -632,22 +639,27 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Earth Connection</Label>
-                    <Select 
-                      value={formData.onGridConfig.earth}
-                      onValueChange={(value) => updateConfig('onGridConfig', { earth: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select earth type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {earthingTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
+                    <Label>Earth Connection * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {earthingTypes.map((type) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`on-grid-earth-${type}`}
+                            checked={formData.onGridConfig?.earth?.includes(type) || false}
+                            onCheckedChange={(checked) => {
+                              const currentEarth = formData.onGridConfig?.earth || [];
+                              const newEarth = checked 
+                                ? [...currentEarth, type]
+                                : currentEarth.filter(e => e !== type);
+                              updateConfig('onGridConfig', { earth: newEarth });
+                            }}
+                          />
+                          <Label htmlFor={`on-grid-earth-${type}`} className="text-sm">
                             {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
@@ -757,14 +769,19 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <SelectContent>
                           {structureTypes.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              {type === 'gp_structure' ? 'GP Structure' : 
+                               type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_round_pipe' ? 'GI Round Pipe' :
+                               'MS Square Pipe'}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {formData.onGridConfig.structureType === 'gp_structure' && (
+                    {(formData.onGridConfig.structureType === 'gp_structure' || 
+                      formData.onGridConfig.structureType === 'gi_round_pipe' ||
+                      formData.onGridConfig.structureType === 'ms_square_pipe') && (
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
@@ -904,7 +921,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onCheckedChange={(checked) => {
                         updateConfig('onGridConfig', { 
                           electricalAccessories: checked as boolean,
-                          electricalCount: checked ? (formData.onGridConfig?.inverterQty || 1) : 0
+                          electricalCount: checked ? (formData.onGridConfig?.inverterKW || 0) : 0
                         });
                       }}
                     />
@@ -913,7 +930,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   {formData.onGridConfig.electricalAccessories && (
                     <div>
-                      <Label>Electrical Count (Auto-filled from Inverter Count)</Label>
+                      <Label>Electrical Count (Auto-filled from Inverter KW)</Label>
                       <Input
                         type="number"
                         value={formData.onGridConfig.electricalCount || 0}
@@ -1084,9 +1101,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         const value = e.target.value;
                         const kw = parseFloat(value) || 0;
                         const phase = kw < 6 ? 'single_phase' : 'three_phase';
+                        const electricalCount = formData.offGridConfig?.electricalAccessories ? kw : 0;
                         updateConfig('offGridConfig', { 
                           inverterKW: kw,
-                          inverterPhase: phase
+                          inverterPhase: phase,
+                          electricalCount
                         });
                       }}
                       placeholder="Type or select KW"
@@ -1120,10 +1139,8 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => {
                         const value = e.target.value;
                         const qty = value === '' ? 1 : parseInt(value) || 1;
-                        const electricalCount = formData.offGridConfig?.electricalAccessories ? qty : 0;
                         updateConfig('offGridConfig', { 
-                          inverterQty: qty,
-                          electricalCount
+                          inverterQty: qty
                         });
                       }}
                       min="1"
@@ -1237,6 +1254,30 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Earth Connection * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {earthingTypes.map((type) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`off-grid-earth-${type}`}
+                            checked={formData.offGridConfig?.earth?.includes(type) || false}
+                            onCheckedChange={(checked) => {
+                              const currentEarth = formData.offGridConfig?.earth || [];
+                              const newEarth = checked 
+                                ? [...currentEarth, type]
+                                : currentEarth.filter(e => e !== type);
+                              updateConfig('offGridConfig', { earth: newEarth });
+                            }}
+                          />
+                          <Label htmlFor={`off-grid-earth-${type}`} className="text-sm">
+                            {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
                     <Label>Floor Level *</Label>
                     <Select 
                       value={formData.offGridConfig.floor || '0'}
@@ -1295,7 +1336,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <SelectContent>
                           {structureTypes.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              {type === 'gp_structure' ? 'GP Structure' : 
+                               type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_round_pipe' ? 'GI Round Pipe' :
+                               'MS Square Pipe'}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1423,7 +1467,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onCheckedChange={(checked) => {
                         updateConfig('offGridConfig', { 
                           electricalAccessories: checked as boolean,
-                          electricalCount: checked ? (formData.offGridConfig?.inverterQty || 1) : 0
+                          electricalCount: checked ? (formData.offGridConfig?.inverterKW || 0) : 0
                         });
                       }}
                     />
@@ -1432,7 +1476,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   {formData.offGridConfig.electricalAccessories && (
                     <div>
-                      <Label>Electrical Count (Auto-filled from Inverter Count)</Label>
+                      <Label>Electrical Count (Auto-filled from Inverter KW)</Label>
                       <Input
                         type="number"
                         value={formData.offGridConfig.electricalCount || 0}
@@ -1603,9 +1647,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         const value = e.target.value;
                         const kw = parseFloat(value) || 0;
                         const phase = kw < 6 ? 'single_phase' : 'three_phase';
+                        const electricalCount = formData.hybridConfig?.electricalAccessories ? kw : 0;
                         updateConfig('hybridConfig', { 
                           inverterKW: kw,
-                          inverterPhase: phase
+                          inverterPhase: phase,
+                          electricalCount
                         });
                       }}
                       placeholder="Type or select KW"
@@ -1639,10 +1685,8 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onChange={(e) => {
                         const value = e.target.value;
                         const qty = value === '' ? 1 : parseInt(value) || 1;
-                        const electricalCount = formData.hybridConfig?.electricalAccessories ? qty : 0;
                         updateConfig('hybridConfig', { 
-                          inverterQty: qty,
-                          electricalCount
+                          inverterQty: qty
                         });
                       }}
                       min="1"
@@ -1756,22 +1800,27 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
-                    <Label>Earth Connection</Label>
-                    <Select 
-                      value={formData.hybridConfig.earth}
-                      onValueChange={(value) => updateConfig('hybridConfig', { earth: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select earth type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {earthingTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
+                    <Label>Earth Connection * (Multiple Selection)</Label>
+                    <div className="space-y-2">
+                      {earthingTypes.map((type) => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`hybrid-earth-${type}`}
+                            checked={formData.hybridConfig?.earth?.includes(type) || false}
+                            onCheckedChange={(checked) => {
+                              const currentEarth = formData.hybridConfig?.earth || [];
+                              const newEarth = checked 
+                                ? [...currentEarth, type]
+                                : currentEarth.filter(e => e !== type);
+                              updateConfig('hybridConfig', { earth: newEarth });
+                            }}
+                          />
+                          <Label htmlFor={`hybrid-earth-${type}`} className="text-sm">
                             {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
@@ -1833,7 +1882,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <SelectContent>
                           {structureTypes.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              {type === 'gp_structure' ? 'GP Structure' : 
+                               type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_round_pipe' ? 'GI Round Pipe' :
+                               'MS Square Pipe'}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1999,7 +2051,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       onCheckedChange={(checked) => {
                         updateConfig('hybridConfig', { 
                           electricalAccessories: checked as boolean,
-                          electricalCount: checked ? (formData.hybridConfig?.inverterQty || 1) : 0
+                          electricalCount: checked ? (formData.hybridConfig?.inverterKW || 0) : 0
                         });
                       }}
                     />
@@ -2008,7 +2060,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   {formData.hybridConfig.electricalAccessories && (
                     <div>
-                      <Label>Electrical Count (Auto-filled from Inverter Count)</Label>
+                      <Label>Electrical Count (Auto-filled from Inverter KW)</Label>
                       <Input
                         type="number"
                         value={formData.hybridConfig.electricalCount || 0}
@@ -2385,7 +2437,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <SelectContent>
                           {structureTypes.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              {type === 'gp_structure' ? 'GP Structure' : 
+                               type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_round_pipe' ? 'GI Round Pipe' :
+                               'MS Square Pipe'}
                             </SelectItem>
                           ))}
                         </SelectContent>
