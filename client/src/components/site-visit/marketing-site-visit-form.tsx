@@ -506,20 +506,60 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     </div>
                   </div>
 
-                  <div>
+                  <div className="relative">
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="panel-watts-options"
-                      value={formData.onGridConfig.panelWatts}
-                      onChange={(e) => updateConfig('onGridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
-                    />
-                    <datalist id="panel-watts-options">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.onGridConfig.panelWatts}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateConfig('onGridConfig', { panelWatts: value });
+                        }}
+                        onFocus={(e) => {
+                          const input = e.target;
+                          setTimeout(() => {
+                            const dropdown = input.nextElementSibling;
+                            if (dropdown) dropdown.classList.remove('hidden');
+                          }, 100);
+                        }}
+                        onBlur={(e) => {
+                          setTimeout(() => {
+                            const dropdown = e.target.nextElementSibling;
+                            if (dropdown) dropdown.classList.add('hidden');
+                          }, 200);
+                        }}
+                        placeholder="Type or select wattage (e.g., 530)"
+                        className="pr-8"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                        W
+                      </div>
+                      {formData.onGridConfig.panelWatts && (
+                        <div className="hidden absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                          {panelWatts
+                            .filter(watts => watts.toLowerCase().includes(formData.onGridConfig.panelWatts.toLowerCase()))
+                            .map((watts) => (
+                              <div
+                                key={watts}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  updateConfig('onGridConfig', { panelWatts: watts });
+                                }}
+                              >
+                                <span className="font-medium">{watts}</span>
+                                <span className="ml-1 text-muted-foreground">Watts</span>
+                              </div>
+                            ))}
+                          {!panelWatts.some(watts => watts.toLowerCase().includes(formData.onGridConfig.panelWatts.toLowerCase())) && (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Custom value: {formData.onGridConfig.panelWatts}W
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -1005,20 +1045,60 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     </Select>
                   </div>
 
-                  <div>
+                  <div className="relative">
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="offgrid-panel-watts-list"
-                      value={formData.offGridConfig.panelWatts}
-                      onChange={(e) => updateConfig('offGridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
-                    />
-                    <datalist id="offgrid-panel-watts-list">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.offGridConfig.panelWatts}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateConfig('offGridConfig', { panelWatts: value });
+                        }}
+                        onFocus={(e) => {
+                          const input = e.target;
+                          setTimeout(() => {
+                            const dropdown = input.nextElementSibling;
+                            if (dropdown) dropdown.classList.remove('hidden');
+                          }, 100);
+                        }}
+                        onBlur={(e) => {
+                          setTimeout(() => {
+                            const dropdown = e.target.nextElementSibling;
+                            if (dropdown) dropdown.classList.add('hidden');
+                          }, 200);
+                        }}
+                        placeholder="Type or select wattage (e.g., 530)"
+                        className="pr-8"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                        W
+                      </div>
+                      {formData.offGridConfig.panelWatts && (
+                        <div className="hidden absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                          {panelWatts
+                            .filter(watts => watts.toLowerCase().includes(formData.offGridConfig.panelWatts.toLowerCase()))
+                            .map((watts) => (
+                              <div
+                                key={watts}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  updateConfig('offGridConfig', { panelWatts: watts });
+                                }}
+                              >
+                                <span className="font-medium">{watts}</span>
+                                <span className="ml-1 text-muted-foreground">Watts</span>
+                              </div>
+                            ))}
+                          {!panelWatts.some(watts => watts.toLowerCase().includes(formData.offGridConfig.panelWatts.toLowerCase())) && (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Custom value: {formData.offGridConfig.panelWatts}W
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -1565,20 +1645,60 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     </Select>
                   </div>
 
-                  <div>
+                  <div className="relative">
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="hybrid-panel-watts-list"
-                      value={formData.hybridConfig.panelWatts}
-                      onChange={(e) => updateConfig('hybridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
-                    />
-                    <datalist id="hybrid-panel-watts-list">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.hybridConfig.panelWatts}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateConfig('hybridConfig', { panelWatts: value });
+                        }}
+                        onFocus={(e) => {
+                          const input = e.target;
+                          setTimeout(() => {
+                            const dropdown = input.nextElementSibling;
+                            if (dropdown) dropdown.classList.remove('hidden');
+                          }, 100);
+                        }}
+                        onBlur={(e) => {
+                          setTimeout(() => {
+                            const dropdown = e.target.nextElementSibling;
+                            if (dropdown) dropdown.classList.add('hidden');
+                          }, 200);
+                        }}
+                        placeholder="Type or select wattage (e.g., 530)"
+                        className="pr-8"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                        W
+                      </div>
+                      {formData.hybridConfig.panelWatts && (
+                        <div className="hidden absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                          {panelWatts
+                            .filter(watts => watts.toLowerCase().includes(formData.hybridConfig.panelWatts.toLowerCase()))
+                            .map((watts) => (
+                              <div
+                                key={watts}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  updateConfig('hybridConfig', { panelWatts: watts });
+                                }}
+                              >
+                                <span className="font-medium">{watts}</span>
+                                <span className="ml-1 text-muted-foreground">Watts</span>
+                              </div>
+                            ))}
+                          {!panelWatts.some(watts => watts.toLowerCase().includes(formData.hybridConfig.panelWatts.toLowerCase())) && (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Custom value: {formData.hybridConfig.panelWatts}W
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -2363,20 +2483,60 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     </Select>
                   </div>
 
-                  <div>
+                  <div className="relative">
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="waterpump-panel-watts-list"
-                      value={formData.waterPumpConfig.panelWatts || ''}
-                      onChange={(e) => updateConfig('waterPumpConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
-                    />
-                    <datalist id="waterpump-panel-watts-list">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.waterPumpConfig.panelWatts || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateConfig('waterPumpConfig', { panelWatts: value });
+                        }}
+                        onFocus={(e) => {
+                          const input = e.target;
+                          setTimeout(() => {
+                            const dropdown = input.nextElementSibling;
+                            if (dropdown) dropdown.classList.remove('hidden');
+                          }, 100);
+                        }}
+                        onBlur={(e) => {
+                          setTimeout(() => {
+                            const dropdown = e.target.nextElementSibling;
+                            if (dropdown) dropdown.classList.add('hidden');
+                          }, 200);
+                        }}
+                        placeholder="Type or select wattage (e.g., 530)"
+                        className="pr-8"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                        W
+                      </div>
+                      {formData.waterPumpConfig.panelWatts && (
+                        <div className="hidden absolute z-50 w-full mt-1 max-h-60 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+                          {panelWatts
+                            .filter(watts => watts.toLowerCase().includes((formData.waterPumpConfig.panelWatts || '').toLowerCase()))
+                            .map((watts) => (
+                              <div
+                                key={watts}
+                                className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  updateConfig('waterPumpConfig', { panelWatts: watts });
+                                }}
+                              >
+                                <span className="font-medium">{watts}</span>
+                                <span className="ml-1 text-muted-foreground">Watts</span>
+                              </div>
+                            ))}
+                          {!panelWatts.some(watts => watts.toLowerCase().includes((formData.waterPumpConfig.panelWatts || '').toLowerCase())) && (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Custom value: {formData.waterPumpConfig.panelWatts}W
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div>
