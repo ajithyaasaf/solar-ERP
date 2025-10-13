@@ -1,6 +1,6 @@
 /**
  * Quotation Template Service
- * Generates professional quotations matching the exact reference format
+ * Generates professional quotations with accurate BOM calculations
  */
 
 import { Quotation, QuotationProject } from "@shared/schema";
@@ -189,15 +189,55 @@ export class QuotationTemplateService {
   }
 
   /**
+   * Calculate actual kW from panel watts and panel count
+   * Formula: (Panel Watts × Panel Count) / 1000
+   * Returns the first digit as kW value (e.g., 3240W = 3kW)
+   * Minimum 1kW to prevent pricing errors
+   */
+  static calculateSystemKW(panelWatts: string | number, panelCount: number): number {
+    const watts = typeof panelWatts === 'string' ? parseInt(panelWatts) : panelWatts;
+    const totalWatts = watts * panelCount;
+    const kw = totalWatts / 1000;
+    // Round down to first digit (e.g., 3.24 -> 3), minimum 1kW
+    return Math.max(1, Math.floor(kw));
+  }
+
+  /**
+   * Calculate subsidy based on kW and property type
+   * Subsidy applies ONLY if project type is residential
+   * For 1 kW: ₹30,000
+   * For 2 kW: ₹60,000
+   * For 3–10 kW: ₹78,000
+   * Above 10 kW: No subsidy
+   */
+  static calculateSubsidy(kw: number, propertyType: string): number {
+    // Subsidy only applies to residential properties
+    if (propertyType !== 'residential') {
+      return 0;
+    }
+
+    if (kw <= 1) {
+      return 30000;
+    } else if (kw === 2) {
+      return 60000;
+    } else if (kw >= 3 && kw <= 10) {
+      return 78000;
+    } else {
+      // Above 10 kW: No subsidy
+      return 0;
+    }
+  }
+
+  /**
    * Generate bill of materials based on project configuration using real site visit data
    */
-  static generateBillOfMaterials(project: QuotationProject): BillOfMaterialsItem[] {
+  static generateBillOfMaterials(project: QuotationProject, propertyType?: string): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
     let slNo = 1;
 
     switch (project.projectType) {
       case 'on_grid':
-        return this.generateOnGridBOM(project, slNo);
+        return this.generateOnGridBOM(project, slNo, propertyType);
       case 'off_grid':
         return this.generateOffGridBOM(project, slNo);
       case 'hybrid':
@@ -212,220 +252,185 @@ export class QuotationTemplateService {
   }
 
   /**
-   * Generate BOM for On-Grid solar systems
+   * Generate BOM for On-Grid solar systems with accurate calculations
    */
-  private static generateOnGridBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
+  private static generateOnGridBOM(project: any, startSlNo: number, propertyType?: string): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
-    // Solar Panel - using real data
+    // Calculate actual kW from panel data
+    const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+    const inverterKW = project.inverterKW || calculatedKW;
+
+    // 1. Solar Panel - Use panel type from form (default to Bifacial)
+    const panelType = project.panelType === 'topcon' ? 'Topcon' : 
+                      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    
     items.push({
       slNo: slNo++,
-      description: "Solar Panel",
-      type: "Bifacial",
-      volt: "24V",
+      description: "Solar Panel (D)",
+      type: panelType,
+      volt: "NA",
       rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Topsun / Rayzon",
-      qty: project.panelCount || Math.ceil((project.systemKW || 3) * 1000 / parseInt(project.panelWatts || '530')),
+      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
+      qty: project.panelCount || 1,
       unit: "Nos"
     });
 
-    // Structure - based on real structure type and height
-    const structureType = project.structureType === 'gp_structure' ? 'GP Structure' : 
-                         project.structureType === 'mono_rail' ? 'Mono Rail' : 'Module Mounting Structure';
+    // 2. Solar Ongrid Inverter - MPPT type, voltage based on phase
+    const inverterVoltage = project.inverterPhase === 'three_phase' ? '415' : '230';
     items.push({
       slNo: slNo++,
-      description: `Structure Aluminium - ${structureType}`,
-      type: "Module Mounting Structure",
-      volt: "NA",
-      rating: project.structureHeight ? `${project.structureHeight}ft Height` : "Standard Height",
-      make: "Standard",
-      qty: 1,
-      unit: "Set"
+      description: "Solar Ongrid Inverter",
+      type: "MPPT",
+      volt: inverterVoltage,
+      rating: `${inverterKW}`,
+      make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "Growatt/Eastman/polycab",
+      qty: project.inverterQty || 1,
+      unit: "KW"
     });
 
-    // DC Cable - calculated based on system size
-    const dcCableLength = this.calculateCableLength(project.systemKW || 3, 'DC');
+    // 3. Panel Mounting Structure - Type from structureType field
+    const structureTypeMap: Record<string, string> = {
+      'gp_structure': 'GI',
+      'mono_rail': 'Aluminium',
+      'gi_round_pipe': 'GI',
+      'ms_square_pipe': 'MS'
+    };
+    const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'GI';
+    
+    items.push({
+      slNo: slNo++,
+      description: "Panel Mounting Structure",
+      type: structureType,
+      volt: "NA",
+      rating: `${inverterKW}`,
+      make: "Reputed",
+      qty: project.inverterQty || 1,
+      unit: "KW"
+    });
+
+    // 4. ACDB with MCB - Voltage based on inverter
+    items.push({
+      slNo: slNo++,
+      description: "ACDB with MCB",
+      type: "AC",
+      volt: inverterVoltage,
+      rating: `${inverterKW}`,
+      make: "Reputed",
+      qty: project.inverterQty || 1,
+      unit: "KW"
+    });
+
+    // 5. DCDB with MCB - Always 600V
+    items.push({
+      slNo: slNo++,
+      description: "DCDB with MCB",
+      type: "DC",
+      volt: "600",
+      rating: `${inverterKW}`,
+      make: "Reputed",
+      qty: 1,
+      unit: "KW"
+    });
+
+    // 6. DC Cable - Qty: 20m (40m if inverter >10 kW)
+    const dcCableQty = inverterKW > 10 ? 40 : 20;
     items.push({
       slNo: slNo++,
       description: "DC CABLE",
       type: "DC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: dcCableLength,
-      unit: "MTR"
+      volt: "NA",
+      rating: "4 SQ.MM",
+      make: "Mardia/Polycab",
+      qty: dcCableQty,
+      unit: "Mtr"
     });
 
-    // AC Cable - calculated based on system size
-    const acCableLength = this.calculateCableLength(project.systemKW || 3, 'AC');
+    // 7. AC Cable - Qty: 15m (30m if inverter >10 kW)
+    const acCableQty = inverterKW > 10 ? 30 : 15;
     items.push({
       slNo: slNo++,
-      description: "AC CABLE", 
+      description: "AC CABLE",
       type: "AC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: acCableLength,
-      unit: "MTR"
+      volt: "NA",
+      rating: "4 SQ.MM",
+      make: "Mardia/Polycab",
+      qty: acCableQty,
+      unit: "Mtr"
     });
 
-    // Inverter - using real inverter data
-    const inverterVoltage = project.inverterPhase === 'three_phase' ? '415V' : '230V';
-    items.push({
-      slNo: slNo++,
-      description: "Grid Tie Inverter",
-      type: "Grid Connected",
-      volt: inverterVoltage,
-      rating: `${project.inverterKW || project.systemKW || 3}KW`,
-      make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "As per MNRE LIST",
-      qty: project.inverterQty || 1,
-      unit: "Nos"
-    });
-
-    // Lightning Arrestor - only if specified
-    if (project.lightningArrest) {
+    // 8. Earthing - Add if earthing is selected
+    if (project.earth && project.earth.length > 0) {
+      const earthType = structureType; // Use same type as structure
+      // Qty: 1 if only AC or DC selected, otherwise 2
+      const earthQty = (project.earth.includes('ac') && project.earth.includes('dc')) ? 2 : 1;
+      
       items.push({
         slNo: slNo++,
-        description: "Lightning Arrestor",
-        type: "LA",
-        volt: "1000V",
-        rating: "40KA",
-        make: "As per MNRE LIST",
-        qty: 1,
-        unit: "Set"
+        description: "Earthing",
+        type: earthType,
+        volt: "NA",
+        rating: "3",
+        make: "As per MNRE App",
+        qty: earthQty,
+        unit: "Feet"
       });
     }
 
-    // Earthing - using real earthing type
-    const earthingType = project.earth === 'dc' ? 'DC Earthing' : 
-                        project.earth === 'ac' ? 'AC Earthing' : 'Complete Earthing';
+    // 9. Lightning Arrestor - Add only if selected in form
+    if (project.lightningArrest) {
+      items.push({
+        slNo: slNo++,
+        description: "Lighting Arrestor",
+        type: structureType,
+        volt: "NA",
+        rating: "3",
+        make: "As per MNRE App",
+        qty: 1,
+        unit: "Feet"
+      });
+    }
+
+    // 10. Electrical Accessories - Add only if selected in form
+    if (project.electricalAccessories) {
+      items.push({
+        slNo: slNo++,
+        description: "Electrical Accessories",
+        type: "NA",
+        volt: "NA",
+        rating: "3",
+        make: "As per MNRE App",
+        qty: 1,
+        unit: "KW"
+      });
+    }
+
+    // 11. BOS (PVC pipe/Hose/etc) - Always included
     items.push({
       slNo: slNo++,
-      description: `Earthing - ${earthingType}`,
-      type: "Complete",
+      description: "BOS (PVC pipe/Hose/etc)",
+      type: "As Site Requirement",
       volt: "NA",
-      rating: "1 Set",
-      make: "As per MNRE LIST",
+      rating: "NA",
+      make: "As per MNRE App",
       qty: 1,
       unit: "Set"
     });
 
-    // Generation Meter
-    items.push({
-      slNo: slNo++,
-      description: "Generation Meter",
-      type: "WHI WH_SPEM-Static Electronic",
-      volt: project.inverterPhase === 'three_phase' ? 'Three Phase' : 'Single Phase',
-      rating: "As per MNRE LIST",
-      make: "As per MNRE LIST",
-      qty: 1,
-      unit: "Nos"
-    });
-
-    // Installation & Commissioning
+    // 12. Installation & Commissioning - Always included
     items.push({
       slNo: slNo++,
       description: "Installation & Commissioning",
-      type: "MNRE Hand Manual and Specification",
-      volt: "Service",
-      rating: `${project.systemKW || 3}KW System`,
-      make: "As per MNRE LIST",
+      type: "With Well trained and Experienced Persons",
+      volt: "NA",
+      rating: "NA",
+      make: "As per MNRE App",
       qty: 1,
       unit: "Nos"
     });
 
     return items;
-  }
-
-  /**
-   * Generate common components shared across project types
-   */
-  private static generateCommonComponents(project: any, slNo: number): { items: BillOfMaterialsItem[], nextSlNo: number } {
-    const items: BillOfMaterialsItem[] = [];
-    let currentSlNo = slNo;
-
-    // Solar Panel - using real data
-    items.push({
-      slNo: currentSlNo++,
-      description: "Solar Panel",
-      type: "Bifacial",
-      volt: "24V",
-      rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Topsun / Rayzon",
-      qty: project.panelCount || Math.ceil((project.systemKW || 3) * 1000 / parseInt(project.panelWatts || '530')),
-      unit: "Nos"
-    });
-
-    // Structure - based on real structure type and height
-    const structureType = project.structureType === 'gp_structure' ? 'GP Structure' : 
-                         project.structureType === 'mono_rail' ? 'Mono Rail' : 'Module Mounting Structure';
-    items.push({
-      slNo: currentSlNo++,
-      description: `Structure Aluminium - ${structureType}`,
-      type: "Module Mounting Structure",
-      volt: "NA",
-      rating: project.structureHeight ? `${project.structureHeight}ft Height` : "Standard Height",
-      make: "Standard",
-      qty: 1,
-      unit: "Set"
-    });
-
-    // DC Cable - calculated based on system size
-    const dcCableLength = this.calculateCableLength(project.systemKW || 3, 'DC');
-    items.push({
-      slNo: currentSlNo++,
-      description: "DC CABLE",
-      type: "DC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: dcCableLength,
-      unit: "MTR"
-    });
-
-    // AC Cable - calculated based on system size
-    const acCableLength = this.calculateCableLength(project.systemKW || 3, 'AC');
-    items.push({
-      slNo: currentSlNo++,
-      description: "AC CABLE", 
-      type: "AC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: acCableLength,
-      unit: "MTR"
-    });
-
-    // Lightning Arrestor - only if specified
-    if (project.lightningArrest) {
-      items.push({
-        slNo: currentSlNo++,
-        description: "Lightning Arrestor",
-        type: "LA",
-        volt: "1000V",
-        rating: "40KA",
-        make: "As per MNRE LIST",
-        qty: 1,
-        unit: "Set"
-      });
-    }
-
-    // Earthing - using real earthing type
-    const earthingType = project.earth === 'dc' ? 'DC Earthing' : 
-                        project.earth === 'ac' ? 'AC Earthing' : 'Complete Earthing';
-    items.push({
-      slNo: currentSlNo++,
-      description: `Earthing - ${earthingType}`,
-      type: "Complete",
-      volt: "NA",
-      rating: "1 Set",
-      make: "As per MNRE LIST",
-      qty: 1,
-      unit: "Set"
-    });
-
-    return { items, nextSlNo: currentSlNo };
   }
 
   /**
@@ -435,25 +440,83 @@ export class QuotationTemplateService {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
-    // Add common components (panels, structure, cables, earthing)
-    const commonResult = this.generateCommonComponents(project, slNo);
-    items.push(...commonResult.items);
-    slNo = commonResult.nextSlNo;
+    const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+    const inverterKW = project.inverterKW || calculatedKW;
 
-    // Off-Grid Inverter - using real inverter data
+    // Solar Panel
+    const panelType = project.panelType === 'topcon' ? 'Topcon' : 
+                      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    items.push({
+      slNo: slNo++,
+      description: "Solar Panel",
+      type: panelType,
+      volt: "24V",
+      rating: `${project.panelWatts || '530'} WATTS`,
+      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Topsun / Rayzon",
+      qty: project.panelCount || 1,
+      unit: "Nos"
+    });
+
+    // Structure
+    const structureTypeMap: Record<string, string> = {
+      'gp_structure': 'GP Structure',
+      'mono_rail': 'Mono Rail',
+      'gi_round_pipe': 'GI Round Pipe',
+      'ms_square_pipe': 'MS Square Pipe'
+    };
+    const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'Module Mounting Structure';
+    
+    items.push({
+      slNo: slNo++,
+      description: `Structure Aluminium - ${structureType}`,
+      type: "Module Mounting Structure",
+      volt: "NA",
+      rating: project.structureHeight ? `${project.structureHeight}ft Height` : "Standard Height",
+      make: "Standard",
+      qty: 1,
+      unit: "Set"
+    });
+
+    // DC Cable
+    const dcCableQty = inverterKW > 10 ? 40 : 20;
+    items.push({
+      slNo: slNo++,
+      description: "DC CABLE",
+      type: "DC",
+      volt: "1000V",
+      rating: "4SQMM",
+      make: "Polycab",
+      qty: dcCableQty,
+      unit: "MTR"
+    });
+
+    // AC Cable
+    const acCableQty = inverterKW > 10 ? 30 : 15;
+    items.push({
+      slNo: slNo++,
+      description: "AC CABLE", 
+      type: "AC",
+      volt: "1000V",
+      rating: "4SQMM",
+      make: "Polycab",
+      qty: acCableQty,
+      unit: "MTR"
+    });
+
+    // Off-Grid Inverter
     const inverterVoltage = project.inverterPhase === 'three_phase' ? '415V' : '230V';
     items.push({
       slNo: slNo++,
       description: "Off-Grid Inverter (PCU)",
       type: "Pure Sine Wave",
       volt: inverterVoltage,
-      rating: `${project.inverterKW || project.systemKW || 3}KW`,
+      rating: `${inverterKW}KW`,
       make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "As per MNRE LIST",
       qty: project.inverterQty || 1,
       unit: "Nos"
     });
 
-    // Battery components - using real battery data
+    // Battery
     items.push({
       slNo: slNo++,
       description: `${project.batteryBrand || 'Exide'} Battery`,
@@ -465,7 +528,7 @@ export class QuotationTemplateService {
       unit: "Nos"
     });
 
-    // Battery Stand - if specified
+    // Battery Stand
     if (project.batteryStands) {
       const standQty = typeof project.batteryStands === 'string' ? parseInt(project.batteryStands) : project.batteryStands;
       items.push({
@@ -480,13 +543,43 @@ export class QuotationTemplateService {
       });
     }
 
+    // Lightning Arrestor
+    if (project.lightningArrest) {
+      items.push({
+        slNo: slNo++,
+        description: "Lightning Arrestor",
+        type: "LA",
+        volt: "1000V",
+        rating: "40KA",
+        make: "As per MNRE LIST",
+        qty: 1,
+        unit: "Set"
+      });
+    }
+
+    // Earthing
+    if (project.earth && project.earth.length > 0) {
+      const earthingType = project.earth === 'dc' ? 'DC Earthing' : 
+                          project.earth === 'ac' ? 'AC Earthing' : 'Complete Earthing';
+      items.push({
+        slNo: slNo++,
+        description: `Earthing - ${earthingType}`,
+        type: "Complete",
+        volt: "NA",
+        rating: "1 Set",
+        make: "As per MNRE LIST",
+        qty: 1,
+        unit: "Set"
+      });
+    }
+
     // Charge Controller
     items.push({
       slNo: slNo++,
       description: "Charge Controller",
       type: "MPPT",
       volt: `${project.voltage || 12}V`,
-      rating: `${Math.ceil((project.systemKW || 3) * 1000 / (project.voltage || 12))}A`,
+      rating: `${Math.ceil(calculatedKW * 1000 / (project.voltage || 12))}A`,
       make: "As per MNRE LIST",
       qty: 1,
       unit: "Nos"
@@ -498,7 +591,7 @@ export class QuotationTemplateService {
       description: "Installation & Commissioning",
       type: "MNRE Hand Manual and Specification",
       volt: "Service",
-      rating: `${project.systemKW || 3}KW Off-Grid System`,
+      rating: `${calculatedKW}KW Off-Grid System`,
       make: "As per MNRE LIST",
       qty: 1,
       unit: "Nos"
@@ -514,25 +607,83 @@ export class QuotationTemplateService {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
-    // Add common components (panels, structure, cables, earthing)
-    const commonResult = this.generateCommonComponents(project, slNo);
-    items.push(...commonResult.items);
-    slNo = commonResult.nextSlNo;
+    const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+    const inverterKW = project.inverterKW || calculatedKW;
 
-    // Hybrid Inverter - using real inverter data
+    // Solar Panel
+    const panelType = project.panelType === 'topcon' ? 'Topcon' : 
+                      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    items.push({
+      slNo: slNo++,
+      description: "Solar Panel",
+      type: panelType,
+      volt: "24V",
+      rating: `${project.panelWatts || '530'} WATTS`,
+      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Topsun / Rayzon",
+      qty: project.panelCount || 1,
+      unit: "Nos"
+    });
+
+    // Structure
+    const structureTypeMap: Record<string, string> = {
+      'gp_structure': 'GP Structure',
+      'mono_rail': 'Mono Rail',
+      'gi_round_pipe': 'GI Round Pipe',
+      'ms_square_pipe': 'MS Square Pipe'
+    };
+    const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'Module Mounting Structure';
+    
+    items.push({
+      slNo: slNo++,
+      description: `Structure Aluminium - ${structureType}`,
+      type: "Module Mounting Structure",
+      volt: "NA",
+      rating: project.structureHeight ? `${project.structureHeight}ft Height` : "Standard Height",
+      make: "Standard",
+      qty: 1,
+      unit: "Set"
+    });
+
+    // DC Cable
+    const dcCableQty = inverterKW > 10 ? 40 : 20;
+    items.push({
+      slNo: slNo++,
+      description: "DC CABLE",
+      type: "DC",
+      volt: "1000V",
+      rating: "4SQMM",
+      make: "Polycab",
+      qty: dcCableQty,
+      unit: "MTR"
+    });
+
+    // AC Cable
+    const acCableQty = inverterKW > 10 ? 30 : 15;
+    items.push({
+      slNo: slNo++,
+      description: "AC CABLE", 
+      type: "AC",
+      volt: "1000V",
+      rating: "4SQMM",
+      make: "Polycab",
+      qty: acCableQty,
+      unit: "MTR"
+    });
+
+    // Hybrid Inverter
     const inverterVoltage = project.inverterPhase === 'three_phase' ? '415V' : '230V';
     items.push({
       slNo: slNo++,
       description: "Hybrid Inverter",
       type: "Grid-Interactive with Battery Backup",
       volt: inverterVoltage,
-      rating: `${project.inverterKW || project.systemKW || 3}KW`,
+      rating: `${inverterKW}KW`,
       make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "As per MNRE LIST",
       qty: project.inverterQty || 1,
       unit: "Nos"
     });
 
-    // Battery components - using real battery data
+    // Battery
     items.push({
       slNo: slNo++,
       description: `${project.batteryBrand || 'Exide'} Battery`,
@@ -544,7 +695,7 @@ export class QuotationTemplateService {
       unit: "Nos"
     });
 
-    // Battery Stand - if specified
+    // Battery Stand
     if (project.batteryStands) {
       const standQty = typeof project.batteryStands === 'string' ? parseInt(project.batteryStands) : project.batteryStands;
       items.push({
@@ -559,7 +710,37 @@ export class QuotationTemplateService {
       });
     }
 
-    // Net Meter for grid interaction
+    // Lightning Arrestor
+    if (project.lightningArrest) {
+      items.push({
+        slNo: slNo++,
+        description: "Lightning Arrestor",
+        type: "LA",
+        volt: "1000V",
+        rating: "40KA",
+        make: "As per MNRE LIST",
+        qty: 1,
+        unit: "Set"
+      });
+    }
+
+    // Earthing
+    if (project.earth && project.earth.length > 0) {
+      const earthingType = project.earth === 'dc' ? 'DC Earthing' : 
+                          project.earth === 'ac' ? 'AC Earthing' : 'Complete Earthing';
+      items.push({
+        slNo: slNo++,
+        description: `Earthing - ${earthingType}`,
+        type: "Complete",
+        volt: "NA",
+        rating: "1 Set",
+        make: "As per MNRE LIST",
+        qty: 1,
+        unit: "Set"
+      });
+    }
+
+    // Net Meter
     items.push({
       slNo: slNo++,
       description: "Net Meter",
@@ -577,7 +758,7 @@ export class QuotationTemplateService {
       description: "Installation & Commissioning",
       type: "MNRE Hand Manual and Specification",
       volt: "Service",
-      rating: `${project.systemKW || 3}KW Hybrid System`,
+      rating: `${calculatedKW}KW Hybrid System`,
       make: "As per MNRE LIST",
       qty: 1,
       unit: "Nos"
@@ -593,7 +774,7 @@ export class QuotationTemplateService {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
-    // Water Heater - using real specifications
+    // Water Heater
     items.push({
       slNo: slNo++,
       description: `Solar Water Heater`,
@@ -605,7 +786,7 @@ export class QuotationTemplateService {
       unit: "Nos"
     });
 
-    // Heating Coil - if specified
+    // Heating Coil
     if (project.heatingCoil) {
       items.push({
         slNo: slNo++,
@@ -619,7 +800,7 @@ export class QuotationTemplateService {
       });
     }
 
-    // Installation components
+    // Plumbing Materials
     items.push({
       slNo: slNo++,
       description: "Plumbing Materials",
@@ -631,6 +812,7 @@ export class QuotationTemplateService {
       unit: "Set"
     });
 
+    // Installation
     items.push({
       slNo: slNo++,
       description: "Installation & Commissioning",
@@ -652,7 +834,7 @@ export class QuotationTemplateService {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
-    // Solar Water Pump - using real specifications
+    // Solar Water Pump
     items.push({
       slNo: slNo++,
       description: `Solar Water Pump`,
@@ -664,7 +846,7 @@ export class QuotationTemplateService {
       unit: "Nos"
     });
 
-    // Solar Panels for pump - using real panel data
+    // Solar Panels for pump
     if (project.panelCount && project.panelCount > 0) {
       items.push({
         slNo: slNo++,
@@ -692,8 +874,14 @@ export class QuotationTemplateService {
 
     // Structure for panels
     if (project.panelCount && project.panelCount > 0) {
-      const structureType = project.structureType === 'gp_structure' ? 'GP Structure' : 
-                           project.structureType === 'mono_rail' ? 'Mono Rail' : 'Module Mounting Structure';
+      const structureTypeMap: Record<string, string> = {
+        'gp_structure': 'GP Structure',
+        'mono_rail': 'Mono Rail',
+        'gi_round_pipe': 'GI Round Pipe',
+        'ms_square_pipe': 'MS Square Pipe'
+      };
+      const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'Module Mounting Structure';
+      
       items.push({
         slNo: slNo++,
         description: `Structure for Panels - ${structureType}`,
@@ -722,80 +910,53 @@ export class QuotationTemplateService {
   }
 
   /**
-   * Calculate cable length based on system size and type
+   * Calculate pricing breakdown with proper GST and subsidy
+   * Formula: Base Price = Rate per kW × kW
+   *          GST = Base Price × GST%
+   *          Total = Base Price + GST
+   *          Subsidy = Based on kW and property type (residential only)
+   *          Customer Payment = Total - Subsidy
    */
-  private static calculateCableLength(systemKW: number, cableType: 'DC' | 'AC'): number {
-    if (cableType === 'DC') {
-      // DC cable length increases with system size and panel distribution
-      return Math.max(30, systemKW * 15); // Minimum 30m, 15m per kW
-    } else {
-      // AC cable length is typically shorter
-      return Math.max(20, systemKW * 8); // Minimum 20m, 8m per kW
-    }
-  }
-
-  /**
-   * Calculate pricing breakdown with GST and subsidy for all project types using real data
-   */
-  static calculatePricingBreakdown(project: QuotationProject): any {
-    const gstPercentage = 18;
+  static calculatePricingBreakdown(project: QuotationProject, propertyType?: string, gstPercentage: number = 18): any {
     let description = "";
-    let totalCostBeforeGST = 0;
-    let subsidyAmount = 0;
+    let kw = 1;
+    let ratePerKw = 0;
+    let basePrice = 0;
 
     switch (project.projectType) {
       case 'on_grid':
-        const kw = project.systemKW || project.inverterKW || 3;
-        const ratePerKw = project.pricePerKW || 68000; // Use real price per kW
-        totalCostBeforeGST = kw * ratePerKw;
-        
-        // Subsidy calculation - use actual subsidy amount if available
-        subsidyAmount = project.subsidyAmount || (kw * 26000); // ₹26,000 per kW default
-        
+        // Calculate actual kW from panel data
+        kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+        ratePerKw = project.pricePerKW || 68000;
+        basePrice = ratePerKw * kw;
         description = `Supply and Installation of ${kw}kw Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
         break;
 
       case 'off_grid':
-        const offGridKw = project.systemKW || project.inverterKW || 3;
-        const offGridRatePerKw = project.pricePerKW || 85000; // Off-grid typically costs more
-        totalCostBeforeGST = offGridKw * offGridRatePerKw;
-        
-        // Off-grid usually has no government subsidy
-        subsidyAmount = project.subsidyAmount || 0;
-        
-        description = `Supply and Installation of ${offGridKw}kw Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
+        kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+        ratePerKw = project.pricePerKW || 85000;
+        basePrice = ratePerKw * kw;
+        description = `Supply and Installation of ${kw}kw Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'hybrid':
-        const hybridKw = project.systemKW || project.inverterKW || 3;
-        const hybridRatePerKw = project.pricePerKW || 95000; // Hybrid costs more than on-grid
-        totalCostBeforeGST = hybridKw * hybridRatePerKw;
-        
-        // Hybrid may have partial subsidy
-        subsidyAmount = project.subsidyAmount || (hybridKw * 15000); // Reduced subsidy for hybrid
-        
-        description = `Supply and Installation of ${hybridKw}kw Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
+        kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+        ratePerKw = project.pricePerKW || 95000;
+        basePrice = ratePerKw * kw;
+        description = `Supply and Installation of ${kw}kw Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'water_heater':
         const litres = project.litre || 100;
-        const heaterRate = project.projectValue || (litres * 350); // ₹350 per litre
-        totalCostBeforeGST = heaterRate;
-        
-        // Water heaters may have subsidy
-        subsidyAmount = project.subsidyAmount || Math.min(heaterRate * 0.3, 20000); // 30% or max ₹20,000
-        
+        basePrice = project.projectValue || (litres * 350);
+        ratePerKw = basePrice;
         description = `Supply and Installation of ${litres}L Solar Water Heater - ${project.brand || 'Standard'} Brand`;
         break;
 
       case 'water_pump':
         const hp = project.hp || '1';
-        const pumpRate = project.projectValue || (parseInt(hp) * 45000); // ₹45,000 per HP
-        totalCostBeforeGST = pumpRate;
-        
-        // Water pumps may have agricultural subsidy
-        subsidyAmount = project.subsidyAmount || (pumpRate * 0.4); // 40% subsidy for agriculture
-        
+        basePrice = project.projectValue || (parseInt(hp) * 45000);
+        ratePerKw = basePrice;
         description = `Supply and Installation of ${hp}HP Solar Water Pump with ${project.panelCount || 4} Solar Panels`;
         break;
 
@@ -803,24 +964,27 @@ export class QuotationTemplateService {
         return null;
     }
 
-    const gstAmount = totalCostBeforeGST * (gstPercentage / 100);
-    const totalCostWithGST = totalCostBeforeGST + gstAmount;
-    const customerPayment = totalCostWithGST - subsidyAmount;
+    // Calculate GST
+    const gstAmount = basePrice * (gstPercentage / 100);
+    const totalWithGST = basePrice + gstAmount;
+    
+    // Calculate subsidy (only for residential properties)
+    const subsidyAmount = this.calculateSubsidy(kw, propertyType || '');
+    
+    // Calculate customer payment
+    const customerPayment = totalWithGST - subsidyAmount;
 
-    // For projects with systemKW, calculate per kW rates - handle different project types
-    let systemKW = 1;
-    if (project.projectType === 'on_grid' || project.projectType === 'off_grid' || project.projectType === 'hybrid') {
-      systemKW = project.systemKW || project.inverterKW || 1;
-    }
+    // Calculate GST per kW
+    const gstPerKw = Math.round(gstAmount / kw);
 
     return {
       description,
-      kw: project.projectType.includes('grid') || project.projectType === 'hybrid' ? systemKW : 1,
-      ratePerKw: Math.round(totalCostBeforeGST / systemKW),
-      gstPerKw: Math.round(gstAmount / systemKW),
+      kw,
+      ratePerKw: Math.round(ratePerKw),
+      gstPerKw,
       gstPercentage,
-      valueWithGST: Math.round(totalCostWithGST),
-      totalCost: Math.round(totalCostWithGST),
+      valueWithGST: Math.round(totalWithGST),
+      totalCost: Math.round(totalWithGST),
       subsidyAmount: Math.round(subsidyAmount),
       customerPayment: Math.round(customerPayment)
     };
@@ -835,8 +999,8 @@ export class QuotationTemplateService {
     customer: any,
     preparedByName?: string
   ): QuotationTemplate {
-    const pricingBreakdown = this.calculatePricingBreakdown(project);
-    const billOfMaterials = this.generateBillOfMaterials(project);
+    const pricingBreakdown = this.calculatePricingBreakdown(project, customer.propertyType);
+    const billOfMaterials = this.generateBillOfMaterials(project, customer.propertyType);
     
     // Generate dynamic quote validity based on quotation settings
     const validityDays = quotation.validUntil ? 
