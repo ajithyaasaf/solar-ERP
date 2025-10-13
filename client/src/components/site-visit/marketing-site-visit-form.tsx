@@ -511,7 +511,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>Panel Watts</Label>
                     <Combobox
                       value={formData.onGridConfig.panelWatts}
-                      onChange={(value) => updateConfig('onGridConfig', { panelWatts: value })}
+                      onChange={(value) => {
+                        const numericValue = value.replace(/W$/i, '').trim();
+                        updateConfig('onGridConfig', { panelWatts: numericValue });
+                      }}
                       options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
                       placeholder="Select or type wattage"
                       searchPlaceholder="Search wattage..."
@@ -571,8 +574,9 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Combobox
                       value={formData.onGridConfig.inverterKW?.toString() || ''}
                       onChange={(value) => {
-                        const numValue = parseFloat(value);
-                        if (value === '') {
+                        const numericValue = value.replace(/KW$/i, '').trim();
+                        const numValue = parseFloat(numericValue);
+                        if (numericValue === '') {
                           updateConfig('onGridConfig', { 
                             inverterKW: undefined, 
                             inverterPhase: 'single_phase',
@@ -1009,7 +1013,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>Panel Watts</Label>
                     <Combobox
                       value={formData.offGridConfig.panelWatts}
-                      onChange={(value) => updateConfig('offGridConfig', { panelWatts: value })}
+                      onChange={(value) => {
+                        const numericValue = value.replace(/W$/i, '').trim();
+                        updateConfig('offGridConfig', { panelWatts: numericValue });
+                      }}
                       options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
                       placeholder="Select or type wattage"
                       searchPlaceholder="Search wattage..."
@@ -1094,8 +1101,9 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Combobox
                       value={formData.offGridConfig.inverterKW?.toString() || ''}
                       onChange={(value) => {
-                        const numValue = parseFloat(value);
-                        if (value === '') {
+                        const numericValue = value.replace(/KW$/i, '').trim();
+                        const numValue = parseFloat(numericValue);
+                        if (numericValue === '') {
                           updateConfig('offGridConfig', { 
                             inverterKW: undefined, 
                             inverterPhase: 'single_phase',
@@ -1568,7 +1576,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>Panel Watts</Label>
                     <Combobox
                       value={formData.hybridConfig.panelWatts}
-                      onChange={(value) => updateConfig('hybridConfig', { panelWatts: value })}
+                      onChange={(value) => {
+                        const numericValue = value.replace(/W$/i, '').trim();
+                        updateConfig('hybridConfig', { panelWatts: numericValue });
+                      }}
                       options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
                       placeholder="Select or type wattage"
                       searchPlaceholder="Search wattage..."
@@ -1653,8 +1664,9 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Combobox
                       value={formData.hybridConfig.inverterKW?.toString() || ''}
                       onChange={(value) => {
-                        const numValue = parseFloat(value);
-                        if (value === '') {
+                        const numericValue = value.replace(/KW$/i, '').trim();
+                        const numValue = parseFloat(numericValue);
+                        if (numericValue === '') {
                           updateConfig('hybridConfig', { 
                             inverterKW: undefined, 
                             inverterPhase: 'single_phase',
@@ -2365,7 +2377,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>Panel Watts</Label>
                     <Combobox
                       value={formData.waterPumpConfig.panelWatts || ''}
-                      onChange={(value) => updateConfig('waterPumpConfig', { panelWatts: value })}
+                      onChange={(value) => {
+                        const numericValue = value.replace(/W$/i, '').trim();
+                        updateConfig('waterPumpConfig', { panelWatts: numericValue });
+                      }}
                       options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
                       placeholder="Select or type wattage"
                       searchPlaceholder="Search wattage..."
