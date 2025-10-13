@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Combobox } from "@/components/ui/combobox";
 import { 
   TrendingUp, 
   Zap, 
@@ -508,18 +509,15 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="panel-watts-options"
+                    <Combobox
                       value={formData.onGridConfig.panelWatts}
-                      onChange={(e) => updateConfig('onGridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
+                      onChange={(value) => updateConfig('onGridConfig', { panelWatts: value })}
+                      options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
+                      placeholder="Select or type wattage"
+                      searchPlaceholder="Search wattage..."
+                      emptyMessage="No wattage found."
+                      allowCustom={true}
                     />
-                    <datalist id="panel-watts-options">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
                   </div>
 
                   <div>
@@ -569,12 +567,9 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Inverter KW</Label>
-                    <Input
-                      type="text"
-                      list="inverter-kw-options"
-                      value={formData.onGridConfig.inverterKW || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
+                    <Combobox
+                      value={formData.onGridConfig.inverterKW?.toString() || ''}
+                      onChange={(value) => {
                         const numValue = parseFloat(value);
                         if (value === '') {
                           updateConfig('onGridConfig', { 
@@ -592,17 +587,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                           });
                         }
                       }}
-                      placeholder="Type or select KW (auto-selects phase)"
+                      options={[
+                        { value: '3', label: '3 KW' },
+                        { value: '4', label: '4 KW' },
+                        { value: '5', label: '5 KW' },
+                        { value: '6', label: '6 KW' },
+                        { value: '10', label: '10 KW' },
+                        { value: '15', label: '15 KW' },
+                        { value: '30', label: '30 KW' },
+                      ]}
+                      placeholder="Select or type KW (auto-selects phase)"
+                      searchPlaceholder="Search KW..."
+                      emptyMessage="No KW option found."
+                      allowCustom={true}
                     />
-                    <datalist id="inverter-kw-options">
-                      <option value="3" />
-                      <option value="4" />
-                      <option value="5" />
-                      <option value="6" />
-                      <option value="10" />
-                      <option value="15" />
-                      <option value="30" />
-                    </datalist>
                   </div>
 
                   <div>
@@ -1007,18 +1005,15 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="offgrid-panel-watts-list"
+                    <Combobox
                       value={formData.offGridConfig.panelWatts}
-                      onChange={(e) => updateConfig('offGridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
+                      onChange={(value) => updateConfig('offGridConfig', { panelWatts: value })}
+                      options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
+                      placeholder="Select or type wattage"
+                      searchPlaceholder="Search wattage..."
+                      emptyMessage="No wattage found."
+                      allowCustom={true}
                     />
-                    <datalist id="offgrid-panel-watts-list">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
                   </div>
 
                   <div>
@@ -1093,12 +1088,9 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Inverter KW</Label>
-                    <Input
-                      type="text"
-                      list="offgrid-inverter-kw-list"
-                      value={formData.offGridConfig.inverterKW || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
+                    <Combobox
+                      value={formData.offGridConfig.inverterKW?.toString() || ''}
+                      onChange={(value) => {
                         const numValue = parseFloat(value);
                         if (value === '') {
                           updateConfig('offGridConfig', { 
@@ -1116,17 +1108,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                           });
                         }
                       }}
-                      placeholder="Type or select KW (auto-selects phase)"
+                      options={[
+                        { value: '3', label: '3 KW' },
+                        { value: '4', label: '4 KW' },
+                        { value: '5', label: '5 KW' },
+                        { value: '6', label: '6 KW' },
+                        { value: '10', label: '10 KW' },
+                        { value: '15', label: '15 KW' },
+                        { value: '30', label: '30 KW' },
+                      ]}
+                      placeholder="Select or type KW (auto-selects phase)"
+                      searchPlaceholder="Search KW..."
+                      emptyMessage="No KW option found."
+                      allowCustom={true}
                     />
-                    <datalist id="offgrid-inverter-kw-list">
-                      <option value="3" />
-                      <option value="4" />
-                      <option value="5" />
-                      <option value="6" />
-                      <option value="10" />
-                      <option value="15" />
-                      <option value="30" />
-                    </datalist>
                   </div>
 
                   <div>
@@ -1567,18 +1562,15 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="hybrid-panel-watts-list"
+                    <Combobox
                       value={formData.hybridConfig.panelWatts}
-                      onChange={(e) => updateConfig('hybridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
+                      onChange={(value) => updateConfig('hybridConfig', { panelWatts: value })}
+                      options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
+                      placeholder="Select or type wattage"
+                      searchPlaceholder="Search wattage..."
+                      emptyMessage="No wattage found."
+                      allowCustom={true}
                     />
-                    <datalist id="hybrid-panel-watts-list">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
                   </div>
 
                   <div>
@@ -1653,12 +1645,9 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Inverter KW</Label>
-                    <Input
-                      type="text"
-                      list="hybrid-inverter-kw-list"
-                      value={formData.hybridConfig.inverterKW || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
+                    <Combobox
+                      value={formData.hybridConfig.inverterKW?.toString() || ''}
+                      onChange={(value) => {
                         const numValue = parseFloat(value);
                         if (value === '') {
                           updateConfig('hybridConfig', { 
@@ -1676,17 +1665,20 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                           });
                         }
                       }}
-                      placeholder="Type or select KW (auto-selects phase)"
+                      options={[
+                        { value: '3', label: '3 KW' },
+                        { value: '4', label: '4 KW' },
+                        { value: '5', label: '5 KW' },
+                        { value: '6', label: '6 KW' },
+                        { value: '10', label: '10 KW' },
+                        { value: '15', label: '15 KW' },
+                        { value: '30', label: '30 KW' },
+                      ]}
+                      placeholder="Select or type KW (auto-selects phase)"
+                      searchPlaceholder="Search KW..."
+                      emptyMessage="No KW option found."
+                      allowCustom={true}
                     />
-                    <datalist id="hybrid-inverter-kw-list">
-                      <option value="3" />
-                      <option value="4" />
-                      <option value="5" />
-                      <option value="6" />
-                      <option value="10" />
-                      <option value="15" />
-                      <option value="30" />
-                    </datalist>
                   </div>
 
                   <div>
@@ -2365,18 +2357,15 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Panel Watts</Label>
-                    <Input
-                      type="text"
-                      list="waterpump-panel-watts-list"
+                    <Combobox
                       value={formData.waterPumpConfig.panelWatts || ''}
-                      onChange={(e) => updateConfig('waterPumpConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select wattage"
+                      onChange={(value) => updateConfig('waterPumpConfig', { panelWatts: value })}
+                      options={panelWatts.map((watts) => ({ value: watts, label: `${watts}W` }))}
+                      placeholder="Select or type wattage"
+                      searchPlaceholder="Search wattage..."
+                      emptyMessage="No wattage found."
+                      allowCustom={true}
                     />
-                    <datalist id="waterpump-panel-watts-list">
-                      {panelWatts.map((watts) => (
-                        <option key={watts} value={watts}>{watts}W</option>
-                      ))}
-                    </datalist>
                   </div>
 
                   <div>

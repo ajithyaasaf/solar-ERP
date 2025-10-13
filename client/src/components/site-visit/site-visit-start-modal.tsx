@@ -940,11 +940,16 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
                     <Label htmlFor="customerMobile" className="text-sm">Mobile Number *</Label>
                     <Input
                       id="customerMobile"
+                      type="tel"
                       value={formData.customer.mobile}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        customer: { ...prev.customer, mobile: e.target.value }
-                      }))}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        setFormData(prev => ({
+                          ...prev,
+                          customer: { ...prev.customer, mobile: value }
+                        }));
+                      }}
+                      maxLength={15}
                       placeholder="Enter 10-digit mobile number"
                       className={`text-sm ${!mobileValidation.isValid && formData.customer.mobile ? 'border-red-500 focus:border-red-500' : ''}`}
                     />
