@@ -655,13 +655,16 @@ export class SiteVisitDataMapper {
     const subsidyAmount = systemKW * subsidyPerKW;
     const customerPayment = projectValue - subsidyAmount;
 
+    const panelWatts = config.panelWatts || "530";
+    const panelWattsNum = parseFloat(panelWatts) || 530;
+    
     return {
       projectType: 'on_grid',
       systemKW,
       pricePerKW,
       solarPanelMake: config.solarPanelMake || [],
-      panelWatts: config.panelWatts || "530",
-      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / 530), // Calculate panels based on system size
+      panelWatts: panelWatts,
+      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum), // Use actual panel watts
       inverterMake: config.inverterMake || [],
       inverterWatts: config.inverterWatts || `${systemKW}kw`,
       inverterKW: systemKW,
@@ -699,13 +702,16 @@ export class SiteVisitDataMapper {
     const subsidyAmount = 0; // Off-grid doesn't get subsidy
     const customerPayment = projectValue;
 
+    const panelWatts = config.panelWatts || "530";
+    const panelWattsNum = parseFloat(panelWatts) || 530;
+    
     return {
       projectType: 'off_grid',
       systemKW,
       pricePerKW,
       solarPanelMake: config.solarPanelMake || [],
-      panelWatts: config.panelWatts || "530",
-      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / 530),
+      panelWatts: panelWatts,
+      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum), // Use actual panel watts
       inverterMake: config.inverterMake || [],
       inverterWatts: config.inverterWatts || `${systemKW}kw`,
       inverterKW: systemKW,
@@ -750,13 +756,16 @@ export class SiteVisitDataMapper {
     const subsidyAmount = systemKW * subsidyPerKW;
     const customerPayment = projectValue - subsidyAmount;
 
+    const panelWatts = config.panelWatts || "530";
+    const panelWattsNum = parseFloat(panelWatts) || 530;
+    
     return {
       projectType: 'hybrid',
       systemKW,
       pricePerKW,
       solarPanelMake: config.solarPanelMake || [],
-      panelWatts: config.panelWatts || "530",
-      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / 530),
+      panelWatts: panelWatts,
+      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum), // Use actual panel watts
       inverterMake: config.inverterMake || [],
       inverterWatts: config.inverterWatts || `${systemKW}kw`,
       inverterKW: systemKW,

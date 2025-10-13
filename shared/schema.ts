@@ -1447,7 +1447,7 @@ export const quotationOnGridProjectSchema = z.object({
   systemKW: z.number().min(0.1),
   pricePerKW: z.number().min(0),
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
-  panelWatts: z.enum(panelWatts),
+  panelWatts: z.string(), // Changed to string to allow custom values
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterWatts: z.enum(inverterWatts),
@@ -1484,7 +1484,7 @@ export const quotationOffGridProjectSchema = z.object({
   systemKW: z.number().min(0.1),
   pricePerKW: z.number().min(0),
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
-  panelWatts: z.enum(panelWatts),
+  panelWatts: z.string(), // Changed to string to allow custom values
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterWatts: z.enum(inverterWatts),
@@ -1527,7 +1527,7 @@ export const quotationHybridProjectSchema = z.object({
   systemKW: z.number().min(0.1),
   pricePerKW: z.number().min(0),
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
-  panelWatts: z.enum(panelWatts),
+  panelWatts: z.string(), // Changed to string to allow custom values
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterWatts: z.enum(inverterWatts),
