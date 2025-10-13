@@ -25,6 +25,7 @@ interface ComboboxProps {
   emptyMessage?: string
   className?: string
   allowCustom?: boolean
+  formatCustomValue?: (value: string) => string
 }
 
 export function Combobox({
@@ -36,6 +37,7 @@ export function Combobox({
   emptyMessage = "No option found.",
   className,
   allowCustom = true,
+  formatCustomValue,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState(value)
@@ -46,8 +48,14 @@ export function Combobox({
 
   const displayValue = React.useMemo(() => {
     const option = options.find((option) => option.value === value)
-    return option ? option.label : value || placeholder
-  }, [value, options, placeholder])
+    if (option) {
+      return option.label
+    }
+    if (value && formatCustomValue) {
+      return formatCustomValue(value)
+    }
+    return value || placeholder
+  }, [value, options, placeholder, formatCustomValue])
 
   const handleSelect = (currentValue: string) => {
     onChange(currentValue === value ? "" : currentValue)

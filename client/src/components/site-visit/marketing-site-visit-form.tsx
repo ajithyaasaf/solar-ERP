@@ -517,6 +517,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       searchPlaceholder="Search wattage..."
                       emptyMessage="No wattage found."
                       allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val}W` : val}
                     />
                   </div>
 
@@ -600,6 +601,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       searchPlaceholder="Search KW..."
                       emptyMessage="No KW option found."
                       allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val} KW` : val}
                     />
                   </div>
 
@@ -1013,6 +1015,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       searchPlaceholder="Search wattage..."
                       emptyMessage="No wattage found."
                       allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val}W` : val}
                     />
                   </div>
 
@@ -1121,6 +1124,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       searchPlaceholder="Search KW..."
                       emptyMessage="No KW option found."
                       allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val} KW` : val}
                     />
                   </div>
 
@@ -1570,6 +1574,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       searchPlaceholder="Search wattage..."
                       emptyMessage="No wattage found."
                       allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val}W` : val}
                     />
                   </div>
 
@@ -1678,6 +1683,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       searchPlaceholder="Search KW..."
                       emptyMessage="No KW option found."
                       allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val} KW` : val}
                     />
                   </div>
 
@@ -2365,6 +2371,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       searchPlaceholder="Search wattage..."
                       emptyMessage="No wattage found."
                       allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val}W` : val}
                     />
                   </div>
 
