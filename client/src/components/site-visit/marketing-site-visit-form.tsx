@@ -1099,16 +1099,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       value={formData.offGridConfig.inverterKW || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const kw = parseFloat(value) || 0;
-                        const phase = kw < 6 ? 'single_phase' : 'three_phase';
-                        const electricalCount = formData.offGridConfig?.electricalAccessories ? kw : 0;
-                        updateConfig('offGridConfig', { 
-                          inverterKW: kw,
-                          inverterPhase: phase,
-                          electricalCount
-                        });
+                        const numValue = parseFloat(value);
+                        if (value === '') {
+                          updateConfig('offGridConfig', { 
+                            inverterKW: undefined, 
+                            inverterPhase: 'single_phase',
+                            electricalCount: 0
+                          });
+                        } else if (!isNaN(numValue)) {
+                          const phase = numValue < 6 ? 'single_phase' : 'three_phase';
+                          const electricalCount = formData.offGridConfig?.electricalAccessories ? numValue : 0;
+                          updateConfig('offGridConfig', { 
+                            inverterKW: numValue, 
+                            inverterPhase: phase,
+                            electricalCount
+                          });
+                        }
                       }}
-                      placeholder="Type or select KW"
+                      placeholder="Type or select KW (auto-selects phase)"
                     />
                     <datalist id="offgrid-inverter-kw-list">
                       <option value="3" />
@@ -1645,16 +1653,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       value={formData.hybridConfig.inverterKW || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const kw = parseFloat(value) || 0;
-                        const phase = kw < 6 ? 'single_phase' : 'three_phase';
-                        const electricalCount = formData.hybridConfig?.electricalAccessories ? kw : 0;
-                        updateConfig('hybridConfig', { 
-                          inverterKW: kw,
-                          inverterPhase: phase,
-                          electricalCount
-                        });
+                        const numValue = parseFloat(value);
+                        if (value === '') {
+                          updateConfig('hybridConfig', { 
+                            inverterKW: undefined, 
+                            inverterPhase: 'single_phase',
+                            electricalCount: 0
+                          });
+                        } else if (!isNaN(numValue)) {
+                          const phase = numValue < 6 ? 'single_phase' : 'three_phase';
+                          const electricalCount = formData.hybridConfig?.electricalAccessories ? numValue : 0;
+                          updateConfig('hybridConfig', { 
+                            inverterKW: numValue, 
+                            inverterPhase: phase,
+                            electricalCount
+                          });
+                        }
                       }}
-                      placeholder="Type or select KW"
+                      placeholder="Type or select KW (auto-selects phase)"
                     />
                     <datalist id="hybrid-inverter-kw-list">
                       <option value="3" />
