@@ -517,7 +517,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     />
                     <datalist id="panel-watts-options">
                       {panelWatts.map((watts) => (
-                        <option key={watts} value={watts} />
+                        <option key={watts} value={watts}>{watts}W</option>
                       ))}
                     </datalist>
                   </div>
@@ -1012,11 +1012,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       list="offgrid-panel-watts-list"
                       value={formData.offGridConfig.panelWatts}
                       onChange={(e) => updateConfig('offGridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select"
+                      placeholder="Type or select wattage"
                     />
                     <datalist id="offgrid-panel-watts-list">
                       {panelWatts.map((watts) => (
-                        <option key={watts} value={watts} />
+                        <option key={watts} value={watts}>{watts}W</option>
                       ))}
                     </datalist>
                   </div>
@@ -1131,12 +1131,18 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Inverter Phase (Auto-selected)</Label>
-                    <Input
-                      type="text"
-                      value={formData.offGridConfig.inverterPhase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
-                      disabled
-                      className="bg-gray-100 cursor-not-allowed"
-                    />
+                    <Select 
+                      value={formData.offGridConfig.inverterPhase}
+                      onValueChange={(value) => updateConfig('offGridConfig', { inverterPhase: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Phase based on KW" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single_phase">Single Phase (&lt; 6 KW)</SelectItem>
+                        <SelectItem value="three_phase">Three Phase (≥ 6 KW)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -1566,11 +1572,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       list="hybrid-panel-watts-list"
                       value={formData.hybridConfig.panelWatts}
                       onChange={(e) => updateConfig('hybridConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select"
+                      placeholder="Type or select wattage"
                     />
                     <datalist id="hybrid-panel-watts-list">
                       {panelWatts.map((watts) => (
-                        <option key={watts} value={watts} />
+                        <option key={watts} value={watts}>{watts}W</option>
                       ))}
                     </datalist>
                   </div>
@@ -1685,12 +1691,18 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
 
                   <div>
                     <Label>Inverter Phase (Auto-selected)</Label>
-                    <Input
-                      type="text"
-                      value={formData.hybridConfig.inverterPhase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
-                      disabled
-                      className="bg-gray-100 cursor-not-allowed"
-                    />
+                    <Select 
+                      value={formData.hybridConfig.inverterPhase}
+                      onValueChange={(value) => updateConfig('hybridConfig', { inverterPhase: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Phase based on KW" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single_phase">Single Phase (&lt; 6 KW)</SelectItem>
+                        <SelectItem value="three_phase">Three Phase (≥ 6 KW)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -2358,11 +2370,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       list="waterpump-panel-watts-list"
                       value={formData.waterPumpConfig.panelWatts || ''}
                       onChange={(e) => updateConfig('waterPumpConfig', { panelWatts: e.target.value })}
-                      placeholder="Type or select"
+                      placeholder="Type or select wattage"
                     />
                     <datalist id="waterpump-panel-watts-list">
                       {panelWatts.map((watts) => (
-                        <option key={watts} value={watts} />
+                        <option key={watts} value={watts}>{watts}W</option>
                       ))}
                     </datalist>
                   </div>
