@@ -3162,11 +3162,24 @@ export default function QuotationCreation() {
                       <tbody>
                         {form.watch("projects").map((project: any, index: number) => {
                           const systemKW = project.systemKW || 0;
-                          const pricePerKW = project.pricePerKW || 0;
                           const basePrice = project.basePrice || 0;
                           const gstAmount = project.gstAmount || 0;
                           const gstPercentage = project.gstPercentage || 18;
                           const projectValue = project.projectValue || 0;
+                          
+                          // Use same rounding logic as Project Configuration step
+                          const roundedSystemKW = systemKW > 0 
+                            ? (systemKW <= 3.5 ? Math.floor(systemKW) : Math.ceil(systemKW))
+                            : 0;
+                          
+                          // Calculate Rate/kW and GST/kW using ROUNDED systemKW
+                          const calculatedRatePerKW = basePrice && roundedSystemKW > 0
+                            ? Math.round(basePrice / roundedSystemKW)
+                            : 0;
+                          
+                          const calculatedGSTPerKW = gstAmount && roundedSystemKW > 0
+                            ? Math.round(gstAmount / roundedSystemKW)
+                            : 0;
                           
                           return (
                             <tr key={index} className="border-t">
@@ -3180,7 +3193,10 @@ export default function QuotationCreation() {
                                   value={systemKW} 
                                   onChange={(e) => {
                                     const newKW = parseFloat(e.target.value) || 0;
-                                    const newBasePrice = Math.round(newKW * pricePerKW);
+                                    const newRoundedKW = newKW > 0 
+                                      ? (newKW <= 3.5 ? Math.floor(newKW) : Math.ceil(newKW))
+                                      : 0;
+                                    const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
                                     
@@ -3203,10 +3219,10 @@ export default function QuotationCreation() {
                               <td className="p-3 text-right">
                                 <Input 
                                   type="number" 
-                                  value={pricePerKW} 
+                                  value={calculatedRatePerKW} 
                                   onChange={(e) => {
                                     const newPricePerKW = parseFloat(e.target.value) || 0;
-                                    const newBasePrice = Math.round(systemKW * newPricePerKW);
+                                    const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
                                     
@@ -3230,7 +3246,7 @@ export default function QuotationCreation() {
                                 ₹{basePrice.toLocaleString()}
                               </td>
                               <td className="p-3 text-right">
-                                <span className="text-sm">{systemKW > 0 ? Math.round(gstAmount / systemKW).toLocaleString() : '0'}</span>
+                                <span className="text-sm">{calculatedGSTPerKW.toLocaleString()}</span>
                               </td>
                               <td className="p-3 text-right">
                                 <Input 
