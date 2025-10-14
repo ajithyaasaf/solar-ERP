@@ -2945,108 +2945,321 @@ export default function QuotationCreation() {
                   Pricing & Payment Terms
                 </CardTitle>
                 <CardDescription>
-                  Review pricing calculations and payment terms
+                  Review and edit pricing calculations and payment terms
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  {/* Pricing Summary */}
-                  <div className="space-y-3 sm:space-y-4">
-                    <h4 className="font-medium text-sm sm:text-base">Pricing Summary</h4>
-                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-muted/50 rounded-lg">
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Base System Cost:</span>
-                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("totalSystemCost")?.toLocaleString() || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">GST:</span>
-                        <span className="font-medium text-sm sm:text-base text-blue-600 text-right">₹{form.watch("totalGSTAmount")?.toLocaleString() || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Total with GST:</span>
-                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("totalWithGST")?.toLocaleString() || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Government Subsidy:</span>
-                        <span className="font-medium text-sm sm:text-base text-green-600 text-right">-₹{form.watch("totalSubsidyAmount")?.toLocaleString() || 0}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="font-medium text-sm sm:text-base">Customer Payment:</span>
-                        <span className="font-bold text-lg">₹{form.watch("totalCustomerPayment")?.toLocaleString() || 0}</span>
-                      </div>
+                {/* Editable Pricing Table */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-base">Quotation Pricing Details</h4>
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-3 text-sm font-medium">Description</th>
+                          <th className="text-center p-3 text-sm font-medium w-24">kW</th>
+                          <th className="text-right p-3 text-sm font-medium w-32">Rate/kW (₹)</th>
+                          <th className="text-right p-3 text-sm font-medium w-32">GST/kW (₹)</th>
+                          <th className="text-right p-3 text-sm font-medium w-24">GST %</th>
+                          <th className="text-right p-3 text-sm font-medium w-40">Value + GST (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {form.watch("projects").map((project: any, index: number) => {
+                          const systemKW = project.systemKW || 0;
+                          const pricePerKW = project.pricePerKW || 0;
+                          const basePrice = project.basePrice || 0;
+                          const gstAmount = project.gstAmount || 0;
+                          const gstPercentage = project.gstPercentage || 18;
+                          const projectValue = project.projectValue || 0;
+                          
+                          return (
+                            <tr key={index} className="border-t">
+                              <td className="p-3 text-sm">
+                                Supply and Installation of {systemKW}kw {project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System
+                              </td>
+                              <td className="p-3 text-center">
+                                <Input 
+                                  type="number" 
+                                  step="0.01"
+                                  value={systemKW} 
+                                  onChange={(e) => {
+                                    const newKW = parseFloat(e.target.value) || 0;
+                                    const newBasePrice = Math.round(newKW * pricePerKW);
+                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                    const newProjectValue = newBasePrice + newGSTAmount;
+                                    
+                                    form.setValue(`projects.${index}.systemKW`, newKW);
+                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                  }}
+                                  className="w-20 text-center"
+                                  data-testid={`input-systemkw-${index}`}
+                                />
+                              </td>
+                              <td className="p-3 text-right">
+                                <Input 
+                                  type="number" 
+                                  value={pricePerKW} 
+                                  onChange={(e) => {
+                                    const newPricePerKW = parseFloat(e.target.value) || 0;
+                                    const newBasePrice = Math.round(systemKW * newPricePerKW);
+                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                    const newProjectValue = newBasePrice + newGSTAmount;
+                                    
+                                    form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
+                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                  }}
+                                  className="w-28 text-right"
+                                  data-testid={`input-priceperkw-${index}`}
+                                />
+                              </td>
+                              <td className="p-3 text-right">
+                                <span className="text-sm">{Math.round(gstAmount / systemKW).toLocaleString()}</span>
+                              </td>
+                              <td className="p-3 text-right">
+                                <Input 
+                                  type="number" 
+                                  value={gstPercentage} 
+                                  onChange={(e) => {
+                                    const newGSTPercentage = parseFloat(e.target.value) || 0;
+                                    const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
+                                    const newProjectValue = basePrice + newGSTAmount;
+                                    
+                                    form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
+                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                  }}
+                                  className="w-20 text-right"
+                                  data-testid={`input-gstpercentage-${index}`}
+                                />
+                              </td>
+                              <td className="p-3 text-right font-medium">
+                                ₹{projectValue.toLocaleString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="border-t-2 bg-muted/30">
+                          <td colSpan={2} className="p-3 text-sm font-medium">Total Cost:</td>
+                          <td className="p-3 text-right font-medium">₹{form.watch("totalSystemCost")?.toLocaleString()}</td>
+                          <td colSpan={2} className="p-3 text-sm text-right">Total Amount in Rs:</td>
+                          <td className="p-3 text-right font-bold text-lg">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="text-sm text-muted-foreground italic">
+                    Amount in words: <span className="font-medium">Rupees {(() => {
+                      const amount = form.watch("totalWithGST") || 0;
+                      const words = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+                      const lakhs = Math.floor(amount / 100000);
+                      const thousands = Math.floor((amount % 100000) / 1000);
+                      const hundreds = Math.floor((amount % 1000) / 100);
+                      let result = "";
+                      if (lakhs > 0) result += `${words[lakhs]} Lac${lakhs > 1 ? 's' : ''} `;
+                      if (thousands > 0) result += `${words[thousands]} Thousand `;
+                      if (hundreds > 0) result += `${words[hundreds]} Hundred `;
+                      return result + "Only";
+                    })()}</span>
+                  </div>
+                </div>
+
+                {/* Warranty Details */}
+                <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <h4 className="font-medium text-base flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    Warranty Details
+                  </h4>
+                  <div className="text-sm space-y-2">
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
+                    <div className="space-y-1">
+                      <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
+                      <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                        <li>15 Years Manufacturing defect Warranty</li>
+                        <li>15 Years Service Warranty</li>
+                        <li>90% Performance Warranty till the end of 15 years</li>
+                        <li>80% Performance Warranty till the end of 15 years</li>
+                      </ul>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold">2. Solar On grid Inverter (15 Years)</p>
+                      <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                        <li>Replacement Warranty for 10 Years</li>
+                        <li>Service Warranty for 5 Years</li>
+                      </ul>
                     </div>
                   </div>
+                </div>
 
+                {/* Payment Details */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Payment Terms */}
-                  <div className="space-y-3 sm:space-y-4">
-                    <h4 className="font-medium text-sm sm:text-base">Payment Terms</h4>
-                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-muted/50 rounded-lg">
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Advance (90%):</span>
-                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("advanceAmount")?.toLocaleString() || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Balance (10%):</span>
-                        <span className="font-medium text-sm sm:text-base text-right">₹{form.watch("balanceAmount")?.toLocaleString() || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="text-xs sm:text-sm text-muted-foreground">Delivery Timeline:</span>
-                        <span className="font-medium text-sm sm:text-base text-right">{form.watch("deliveryTimeframe")?.replace('_', '-') || '2-3 weeks'}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Terms Configuration */}
-                    <div className="space-y-3 sm:space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="deliveryTimeframe"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Delivery Timeframe</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-base">Payment Details</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <FormField
+                          control={form.control}
+                          name="advancePaymentPercentage"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel>Advance Percentage</FormLabel>
                               <FormControl>
-                                <SelectTrigger data-testid="select-delivery-timeframe">
-                                  <SelectValue placeholder="Select delivery timeframe" />
-                                </SelectTrigger>
+                                <div className="flex items-center gap-2">
+                                  <Input 
+                                    type="number" 
+                                    min="0"
+                                    max="100"
+                                    {...field}
+                                    onChange={(e) => {
+                                      const percentage = parseFloat(e.target.value) || 0;
+                                      field.onChange(percentage);
+                                      const totalCustomerPayment = form.watch("totalCustomerPayment") || 0;
+                                      const advanceAmount = Math.round(totalCustomerPayment * (percentage / 100));
+                                      const balanceAmount = totalCustomerPayment - advanceAmount;
+                                      form.setValue("advanceAmount", advanceAmount);
+                                      form.setValue("balanceAmount", balanceAmount);
+                                    }}
+                                    className="w-24"
+                                    data-testid="input-advance-percentage"
+                                  />
+                                  <span className="text-sm">%</span>
+                                  <span className="text-sm text-muted-foreground flex-1 text-right">₹{form.watch("advanceAmount")?.toLocaleString() || 0}</span>
+                                </div>
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="1_2_weeks">1-2 weeks</SelectItem>
-                                <SelectItem value="2_3_weeks">2-3 weeks</SelectItem>
-                                <SelectItem value="3_4_weeks">3-4 weeks</SelectItem>
-                                <SelectItem value="1_month">1 month</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="communicationPreference"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Communication Preference</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-communication-preference">
-                                  <SelectValue placeholder="How to send quotation" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                                <SelectItem value="email">Email</SelectItem>
-                                <SelectItem value="sms">SMS</SelectItem>
-                                <SelectItem value="print">Print Copy</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {form.watch("advancePaymentPercentage")}% Advance along with Purchase Order
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium mb-2">Balance Percentage</p>
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              type="number" 
+                              value={100 - (form.watch("advancePaymentPercentage") || 0)}
+                              disabled
+                              className="w-24"
+                              data-testid="input-balance-percentage"
+                            />
+                            <span className="text-sm">%</span>
+                            <span className="text-sm text-muted-foreground flex-1 text-right">₹{form.watch("balanceAmount")?.toLocaleString() || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {100 - (form.watch("advancePaymentPercentage") || 0)}% Immediately after completion of work
+                      </div>
                     </div>
                   </div>
+
+                  {/* Bank Details */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-base">Payment Account Details</h4>
+                    <div className="space-y-3">
+                      <FormField
+                        control={form.control}
+                        name="accountDetails.bankName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Select Bank</FormLabel>
+                            <Select 
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                if (value === "ICICI") {
+                                  form.setValue("accountDetails.branch", "Subramaniapuram,Madurai");
+                                  form.setValue("accountDetails.accountNumber", "60130521400");
+                                  form.setValue("accountDetails.ifscCode", "ICIC0006013");
+                                } else if (value === "State Bank of India") {
+                                  form.setValue("accountDetails.branch", "Madurai Main Branch");
+                                  form.setValue("accountDetails.accountNumber", "31746205818");
+                                  form.setValue("accountDetails.ifscCode", "SBIN0001766");
+                                }
+                              }} 
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-bank">
+                                  <SelectValue placeholder="Select bank" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="ICICI">ICICI</SelectItem>
+                                <SelectItem value="State Bank of India">SBI</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="border rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                          <tbody>
+                            <tr className="border-b">
+                              <td className="p-2 font-medium bg-muted">Name</td>
+                              <td className="p-2">Prakash Green Energy</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-2 font-medium bg-muted">Bank</td>
+                              <td className="p-2">{form.watch("accountDetails.bankName") || "ICICI"}</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-2 font-medium bg-muted">Branch</td>
+                              <td className="p-2">{form.watch("accountDetails.branch") || "Subramaniapuram,Madurai"}</td>
+                            </tr>
+                            <tr className="border-b">
+                              <td className="p-2 font-medium bg-muted">Acct No</td>
+                              <td className="p-2">{form.watch("accountDetails.accountNumber") || "60130521400"}</td>
+                            </tr>
+                            <tr>
+                              <td className="p-2 font-medium bg-muted">IFS Code</td>
+                              <td className="p-2">{form.watch("accountDetails.ifscCode") || "ICIC0006013"}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delivery Period */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-base">Delivery Period</h4>
+                  <FormField
+                    control={form.control}
+                    name="deliveryTimeframe"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Delivery Timeframe</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-delivery-timeframe" className="max-w-xs">
+                              <SelectValue placeholder="Select delivery timeframe" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="1_2_weeks">1-2 weeks from confirmation</SelectItem>
+                            <SelectItem value="2_3_weeks">2-3 weeks from confirmation</SelectItem>
+                            <SelectItem value="3_4_weeks">3-4 weeks from confirmation</SelectItem>
+                            <SelectItem value="1_month">1 month from confirmation</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    • {form.watch("deliveryTimeframe")?.replace(/_/g, '-') || '2-3 weeks'} from the date of confirmation of order
+                  </p>
                 </div>
 
                 {/* Additional Notes */}
@@ -3159,6 +3372,96 @@ export default function QuotationCreation() {
                     
                     <div className="text-xs text-muted-foreground">
                       All required fields have been validated and pricing calculations are complete.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scope of Work */}
+                <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <h4 className="font-medium text-base">Scope of Work</h4>
+                  {form.watch("projects").map((project: any, index: number) => {
+                    const structureTypeMap: Record<string, string> = {
+                      'gp_structure': 'GI Pole',
+                      'mono_rail': 'Mono Rail',
+                      'gi_round_pipe': 'GI Round Pipe',
+                      'ms_square_pipe': 'MS Square Pipe'
+                    };
+                    
+                    const structureType = structureTypeMap[project.structureType] || 'GI Pole';
+                    const floorLevel = project.floorLevel || 'ground';
+                    const lowerHeight = project.lowerEndHeight || '7';
+                    const higherHeight = project.higherEndHeight || '8';
+                    
+                    return (
+                      <div key={index} className="space-y-3">
+                        {index > 0 && <Separator className="my-3" />}
+                        
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <span className="font-semibold">1) Structure</span>
+                            <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                              <li>
+                                For {project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType}, 
+                                South facing slant mounting of lower end height is {lowerHeight} feet & {higherHeight} feet at higher end. 
+                                ({floorLevel === 'ground' ? 'Ground Floor' : floorLevel === '1st_floor' ? '1st Floor' : floorLevel === '2nd_floor' ? '2nd Floor' : floorLevel === '3rd_floor' ? '3rd Floor' : 'Ground Floor'})
+                              </li>
+                            </ul>
+                          </div>
+                          
+                          <div>
+                            <span className="font-semibold">2) Net (Bi-directional) Meter</span>
+                            <ul className="list-disc list-inside ml-4 mt-1">
+                              <li>We will take the responsibility of applying to EB at Customer's Expense.</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Customer's Scope of Work */}
+                <div className="space-y-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <h4 className="font-medium text-base">Customer's Scope of Work</h4>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <span className="font-semibold">1) Civil work</span>
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                        <li>Earth pit digging</li>
+                        {form.watch("projects").some((p: any) => p.structureType === 'gp_structure' || p.structureType === 'ms_square_pipe') && (
+                          <li>1 feet chamber and concrete (for Structure)</li>
+                        )}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <span className="font-semibold">2) Net (Bi-directional) Meter</span>
+                      <ul className="list-disc list-inside ml-4 mt-1">
+                        <li>Application and Installation charges for net meter to be paid by Customer.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents Required */}
+                <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                  <h4 className="font-medium text-base">Documents Required for PM Surya Ghar</h4>
+                  <div className="space-y-2 text-sm">
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>EB Number</li>
+                      <li>EB Register Mobile Number</li>
+                      <li>Email ID</li>
+                      <li>Aadhar Card</li>
+                      <li>PAN Card</li>
+                      <li>Passport Size Photo -1</li>
+                      <li>Property Tax Copy</li>
+                      <li>Bank Passbook</li>
+                      <li>Cancelled Cheque</li>
+                    </ol>
+                    <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded">
+                      <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
+                        *All Required Documents should be in the same name as mention EB Service Number
+                      </p>
                     </div>
                   </div>
                 </div>
