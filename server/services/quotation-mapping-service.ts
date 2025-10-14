@@ -658,28 +658,42 @@ export class SiteVisitDataMapper {
     const panelWatts = config.panelWatts || "530";
     const panelWattsNum = parseFloat(panelWatts) || 530;
     
+    // Auto-select inverter phase based on KW
+    const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
+    
+    // Calculate GST fields
+    const gstPercentage = 18; // Default GST percentage
+    const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
+    const gstAmount = projectValue - basePrice;
+    
     return {
       projectType: 'on_grid',
       systemKW,
       pricePerKW,
       solarPanelMake: config.solarPanelMake || [],
       panelWatts: panelWatts,
-      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum), // Use actual panel watts
+      panelType: config.panelType || "bifacial",
+      dcrPanelCount: config.dcrPanelCount || 0,
+      nonDcrPanelCount: config.nonDcrPanelCount || 0,
+      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum),
       inverterMake: config.inverterMake || [],
-      inverterWatts: config.inverterWatts || `${systemKW}kw`,
       inverterKW: systemKW,
       inverterQty: config.inverterQty || 1,
-      inverterPhase: config.inverterPhase || "single_phase",
+      inverterPhase: config.inverterPhase || autoPhase,
       lightningArrest: config.lightningArrest || false,
+      electricalAccessories: config.electricalAccessories || false,
+      electricalCount: config.electricalCount,
       earth: config.earth || "ac_dc",
       floor: config.floor,
-      structureHeight: config.structureHeight || 0,
       structureType: config.structureType,
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
       civilWorkScope: config.civilWorkScope,
       netMeterScope: config.netMeterScope,
       projectValue,
+      gstPercentage,
+      gstAmount,
+      basePrice,
       subsidyAmount,
       customerPayment,
       installationNotes: config.others,
@@ -705,18 +719,28 @@ export class SiteVisitDataMapper {
     const panelWatts = config.panelWatts || "530";
     const panelWattsNum = parseFloat(panelWatts) || 530;
     
+    // Auto-select inverter phase based on KW
+    const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
+    
+    // Calculate GST fields
+    const gstPercentage = 18; // Default GST percentage
+    const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
+    const gstAmount = projectValue - basePrice;
+    
     return {
       projectType: 'off_grid',
       systemKW,
       pricePerKW,
       solarPanelMake: config.solarPanelMake || [],
       panelWatts: panelWatts,
-      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum), // Use actual panel watts
+      panelType: config.panelType || "bifacial",
+      dcrPanelCount: config.dcrPanelCount || 0,
+      nonDcrPanelCount: config.nonDcrPanelCount || 0,
+      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum),
       inverterMake: config.inverterMake || [],
-      inverterWatts: config.inverterWatts || `${systemKW}kw`,
       inverterKW: systemKW,
       inverterQty: config.inverterQty || 1,
-      inverterPhase: config.inverterPhase || "single_phase",
+      inverterPhase: config.inverterPhase || autoPhase,
       batteryBrand: config.batteryBrand || "exide",
       batteryType: config.batteryType || "lead_acid",
       batteryAH: config.batteryAH || "150",
@@ -724,14 +748,18 @@ export class SiteVisitDataMapper {
       batteryCount: config.batteryCount || 4,
       batteryStands: config.batteryStands,
       lightningArrest: config.lightningArrest || false,
+      electricalAccessories: config.electricalAccessories || false,
+      electricalCount: config.electricalCount,
       earth: config.earth || "ac_dc",
       floor: config.floor,
-      structureHeight: config.structureHeight || 0,
       structureType: config.structureType,
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
       civilWorkScope: config.civilWorkScope,
       projectValue,
+      gstPercentage,
+      gstAmount,
+      basePrice,
       subsidyAmount,
       customerPayment,
       installationNotes: config.others,
@@ -759,18 +787,28 @@ export class SiteVisitDataMapper {
     const panelWatts = config.panelWatts || "530";
     const panelWattsNum = parseFloat(panelWatts) || 530;
     
+    // Auto-select inverter phase based on KW
+    const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
+    
+    // Calculate GST fields
+    const gstPercentage = 18; // Default GST percentage
+    const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
+    const gstAmount = projectValue - basePrice;
+    
     return {
       projectType: 'hybrid',
       systemKW,
       pricePerKW,
       solarPanelMake: config.solarPanelMake || [],
       panelWatts: panelWatts,
-      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum), // Use actual panel watts
+      panelType: config.panelType || "bifacial",
+      dcrPanelCount: config.dcrPanelCount || 0,
+      nonDcrPanelCount: config.nonDcrPanelCount || 0,
+      panelCount: config.panelCount || Math.ceil(systemKW * 1000 / panelWattsNum),
       inverterMake: config.inverterMake || [],
-      inverterWatts: config.inverterWatts || `${systemKW}kw`,
       inverterKW: systemKW,
       inverterQty: config.inverterQty || 1,
-      inverterPhase: config.inverterPhase || "single_phase",
+      inverterPhase: config.inverterPhase || autoPhase,
       batteryBrand: config.batteryBrand || "exide",
       batteryType: config.batteryType || "lead_acid",
       batteryAH: config.batteryAH || "150",
@@ -778,9 +816,10 @@ export class SiteVisitDataMapper {
       batteryCount: config.batteryCount || 4,
       batteryStands: config.batteryStands,
       lightningArrest: config.lightningArrest || false,
+      electricalAccessories: config.electricalAccessories || false,
+      electricalCount: config.electricalCount,
       earth: config.earth || "ac_dc",
       floor: config.floor,
-      structureHeight: config.structureHeight || 0,
       structureType: config.structureType,
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
@@ -788,6 +827,9 @@ export class SiteVisitDataMapper {
       electricalWorkScope: config.electricalWorkScope,
       netMeterScope: config.netMeterScope,
       projectValue,
+      gstPercentage,
+      gstAmount,
+      basePrice,
       subsidyAmount,
       customerPayment,
       installationNotes: config.others,
@@ -804,9 +846,12 @@ export class SiteVisitDataMapper {
    * Map water heater project
    */
   private static mapWaterHeaterProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
-    const projectValue = config.projectValue || 15000;
+    const totalValue = config.projectValue || 15000;
+    const gstPercentage = 18; // Default GST percentage
+    const basePrice = Math.round(totalValue / (1 + gstPercentage / 100));
+    const gstAmount = totalValue - basePrice;
     const subsidyAmount = 0; // Water heater doesn't get subsidy
-    const customerPayment = projectValue;
+    const customerPayment = totalValue;
 
     return {
       projectType: 'water_heater',
@@ -816,7 +861,10 @@ export class SiteVisitDataMapper {
       floor: config.floor,
       plumbingWorkScope: config.plumbingWorkScope,
       civilWorkScope: config.civilWorkScope,
-      projectValue,
+      projectValue: totalValue,
+      gstPercentage,
+      gstAmount,
+      basePrice,
       subsidyAmount,
       customerPayment,
       installationNotes: config.others,
@@ -831,24 +879,33 @@ export class SiteVisitDataMapper {
    * Map water pump project
    */
   private static mapWaterPumpProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
-    const projectValue = config.projectValue || 50000;
+    const totalValue = config.projectValue || 50000;
+    const gstPercentage = 18; // Default GST percentage
+    const basePrice = Math.round(totalValue / (1 + gstPercentage / 100));
+    const gstAmount = totalValue - basePrice;
     const subsidyAmount = 0; // Water pump doesn't get subsidy
-    const customerPayment = projectValue;
+    const customerPayment = totalValue;
 
     return {
       projectType: 'water_pump',
       hp: config.hp || "1HP",
       drive: config.drive || "AC Drive",
       solarPanel: config.solarPanel,
-      structureHeight: config.structureHeight || 0,
+      panelWatts: config.panelWatts,
+      panelType: config.panelType,
       panelBrand: config.panelBrand || [],
+      dcrPanelCount: config.dcrPanelCount || 0,
+      nonDcrPanelCount: config.nonDcrPanelCount || 0,
       panelCount: config.panelCount || 4,
       structureType: config.structureType,
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
       plumbingWorkScope: config.plumbingWorkScope,
       civilWorkScope: config.civilWorkScope,
-      projectValue,
+      projectValue: totalValue,
+      gstPercentage,
+      gstAmount,
+      basePrice,
       subsidyAmount,
       customerPayment,
       installationNotes: config.others,

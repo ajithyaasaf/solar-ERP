@@ -475,16 +475,18 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           pricePerKW: BUSINESS_RULES.pricing.onGridPerKW,
           solarPanelMake: [],
           panelWatts: "530",
-          panelCount: 1,
+          panelType: "bifacial",
+          dcrPanelCount: 0,
+          nonDcrPanelCount: 0,
+          panelCount: 0,
           inverterMake: [],
-          inverterWatts: "3kw",
           inverterKW: 3,
           inverterQty: 1,
           inverterPhase: "single_phase",
           lightningArrest: false,
+          electricalAccessories: false,
           earth: "dc",
           floor: "0",
-          structureHeight: 0,
           structureType: "gp_structure",
           gpStructure: {
             lowerEndHeight: "0",
@@ -505,16 +507,18 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           pricePerKW: BUSINESS_RULES.pricing.offGridPerKW,
           solarPanelMake: [],
           panelWatts: "530",
-          panelCount: 1,
+          panelType: "bifacial",
+          dcrPanelCount: 0,
+          nonDcrPanelCount: 0,
+          panelCount: 0,
           inverterMake: [],
-          inverterWatts: "3kw",
           inverterKW: 3,
           inverterQty: 1,
           inverterPhase: "single_phase",
           lightningArrest: false,
+          electricalAccessories: false,
           earth: "dc",
           floor: "0",
-          structureHeight: 0,
           structureType: "gp_structure",
           batteryBrand: "exide",
           batteryType: "lead_acid",
@@ -534,16 +538,18 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           pricePerKW: BUSINESS_RULES.pricing.hybridPerKW,
           solarPanelMake: [],
           panelWatts: "530",
-          panelCount: 1,
+          panelType: "bifacial",
+          dcrPanelCount: 0,
+          nonDcrPanelCount: 0,
+          panelCount: 0,
           inverterMake: [],
-          inverterWatts: "3kw",
           inverterKW: 3,
           inverterQty: 1,
           inverterPhase: "single_phase",
           lightningArrest: false,
+          electricalAccessories: false,
           earth: "dc",
           floor: "0",
-          structureHeight: 0,
           structureType: "gp_structure",
           batteryBrand: "exide",
           batteryType: "lead_acid",
@@ -573,10 +579,13 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           ...newProject,
           hp: "1",
           drive: "vfd",
-          structureHeight: 0,
+          panelWatts: "530",
+          panelType: "bifacial",
           structureType: "gp_structure",
           panelBrand: [],
-          panelCount: 1,
+          dcrPanelCount: 0,
+          nonDcrPanelCount: 0,
+          panelCount: 0,
           gpStructure: {
             lowerEndHeight: "0",
             higherEndHeight: "0"
@@ -1076,32 +1085,18 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Inverter Watts</label>
-          <Select value={project.inverterWatts || "3kw"} onValueChange={(value) => handleFieldChange('inverterWatts', value)}>
-            <SelectTrigger data-testid={`select-inverter-watts-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {inverterWatts.map((watts) => (
-                <SelectItem key={watts} value={watts}>
-                  {watts}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Inverter KW</label>
+          <label className="text-sm font-medium">Inverter KW *</label>
           <Input
             type="number"
             value={project.inverterKW || ''}
             onChange={(e) => {
               const value = e.target.value;
-              if (value === '') {
-                handleFieldChange('inverterKW', undefined);
-              } else {
-                handleFieldChange('inverterKW', parseFloat(value) || 0);
+              const kw = parseFloat(value) || 0;
+              handleFieldChange('inverterKW', value === '' ? undefined : kw);
+              
+              if (kw > 0) {
+                const autoPhase = kw < 6 ? 'single_phase' : 'three_phase';
+                handleFieldChange('inverterPhase', autoPhase);
               }
             }}
             min="0"
@@ -1118,10 +1113,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={project.inverterQty || ''}
             onChange={(e) => {
               const value = e.target.value;
-              if (value === '') {
-                handleFieldChange('inverterQty', undefined);
-              } else {
-                handleFieldChange('inverterQty', parseInt(value) || 1);
+              const qty = parseInt(value) || 1;
+              handleFieldChange('inverterQty', value === '' ? undefined : qty);
+              
+              if (project.electricalAccessories && qty > 0) {
+                handleFieldChange('electricalCount', qty);
               }
             }}
             min="1"
@@ -1131,8 +1127,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Inverter Phase</label>
-          <Select value={project.inverterPhase || "single_phase"} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
+          <label className="text-sm font-medium">Inverter Phase <span className="text-xs text-muted-foreground">(Auto-selected based on KW)</span></label>
+          <Select 
+            value={project.inverterPhase || "single_phase"} 
+            onValueChange={(value) => handleFieldChange('inverterPhase', value)}
+          >
             <SelectTrigger data-testid={`select-inverter-phase-${projectIndex}`}>
               <SelectValue />
             </SelectTrigger>
@@ -1144,6 +1143,51 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Checkbox
+              id={`lightning-arrest-${projectIndex}`}
+              checked={project.lightningArrest || false}
+              onCheckedChange={(checked) => handleFieldChange('lightningArrest', checked)}
+              data-testid={`checkbox-lightning-arrest-${projectIndex}`}
+            />
+            <span>Lightning Arrestor</span>
+          </label>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Checkbox
+              id={`electrical-accessories-${projectIndex}`}
+              checked={project.electricalAccessories || false}
+              onCheckedChange={(checked) => {
+                handleFieldChange('electricalAccessories', checked);
+                if (checked && project.inverterQty) {
+                  handleFieldChange('electricalCount', project.inverterQty);
+                } else if (!checked) {
+                  handleFieldChange('electricalCount', undefined);
+                }
+              }}
+              data-testid={`checkbox-electrical-accessories-${projectIndex}`}
+            />
+            <span>Electrical Accessories</span>
+          </label>
+          {project.electricalAccessories && (
+            <Input
+              type="number"
+              value={project.electricalCount || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('electricalCount', value === '' ? undefined : parseInt(value) || 0);
+              }}
+              min="0"
+              placeholder="Electrical count (auto-filled from Inverter Qty)"
+              data-testid={`input-electrical-count-${projectIndex}`}
+              className="mt-2"
+            />
+          )}
         </div>
 
         <div className="space-y-2">
@@ -1172,27 +1216,46 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Panel Count</label>
+          <label className="text-sm font-medium">DCR Panel Count</label>
           <Input
             type="number"
-            min="1"
-            value={project.panelCount || 1}
-            onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
-            data-testid={`input-panel-count-${projectIndex}`}
+            min="0"
+            value={project.dcrPanelCount || 0}
+            onChange={(e) => {
+              const dcrCount = parseInt(e.target.value) || 0;
+              handleFieldChange('dcrPanelCount', dcrCount);
+              const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+              handleFieldChange('panelCount', totalCount);
+            }}
+            data-testid={`input-dcr-panel-count-${projectIndex}`}
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Structure Height (ft)</label>
+          <label className="text-sm font-medium">NON-DCR Panel Count</label>
           <Input
             type="number"
-            value={project.structureHeight ?? ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              handleFieldChange('structureHeight', val === '' ? 0 : parseInt(val) || 0);
-            }}
             min="0"
-            data-testid={`input-structure-height-${projectIndex}`}
+            value={project.nonDcrPanelCount || 0}
+            onChange={(e) => {
+              const nonDcrCount = parseInt(e.target.value) || 0;
+              handleFieldChange('nonDcrPanelCount', nonDcrCount);
+              const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+              handleFieldChange('panelCount', totalCount);
+            }}
+            data-testid={`input-non-dcr-panel-count-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Total Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
+          <Input
+            type="number"
+            min="1"
+            value={project.panelCount || 0}
+            disabled
+            className="bg-muted cursor-not-allowed"
+            data-testid={`input-panel-count-${projectIndex}`}
           />
         </div>
 

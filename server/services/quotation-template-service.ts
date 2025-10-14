@@ -505,7 +505,7 @@ export class QuotationTemplateService {
       description: `Structure Aluminium - ${structureType}`,
       type: "Module Mounting Structure",
       volt: "NA",
-      rating: project.structureHeight ? `${project.structureHeight}ft Height` : "Standard Height",
+      rating: "Standard Height",
       make: "Standard",
       qty: 1,
       unit: "Set"
@@ -697,7 +697,7 @@ export class QuotationTemplateService {
       description: `Structure Aluminium - ${structureType}`,
       type: "Module Mounting Structure",
       volt: "NA",
-      rating: project.structureHeight ? `${project.structureHeight}ft Height` : "Standard Height",
+      rating: "Standard Height",
       make: "Standard",
       qty: 1,
       unit: "Set"
@@ -971,7 +971,7 @@ export class QuotationTemplateService {
         description: `Structure for Panels - ${structureType}`,
         type: "Panel Mounting Structure",
         volt: "NA",
-        rating: project.structureHeight ? `${project.structureHeight}ft Height` : "Standard Height",
+        rating: "Standard Height",
         make: "Standard",
         qty: 1,
         unit: "Set"
