@@ -637,18 +637,18 @@ export class SiteVisitDataMapper {
       });
     }
 
-    const pricePerKW = BUSINESS_RULES.pricing.onGridPerKW;
+    const defaultPricePerKW = BUSINESS_RULES.pricing.onGridPerKW;
     const subsidyPerKW = BUSINESS_RULES.subsidy.onGridPerKW;
 
     // Calculate project value - use provided value or calculate from system size
     let projectValue = config.projectValue;
     if (!projectValue || projectValue === 0) {
-      projectValue = systemKW * pricePerKW;
+      projectValue = systemKW * defaultPricePerKW;
       transformations.push({
         field: 'onGridConfig.projectValue',
         originalValue: config.projectValue,
         transformedValue: projectValue,
-        reason: `Calculated project value: ${systemKW}kW × ₹${pricePerKW}/kW = ₹${projectValue}`
+        reason: `Calculated project value: ${systemKW}kW × ₹${defaultPricePerKW}/kW = ₹${projectValue}`
       });
     }
     
@@ -665,6 +665,9 @@ export class SiteVisitDataMapper {
     const gstPercentage = 18; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
+    
+    // Calculate actual pricePerKW from basePrice (this reflects the actual rate, not the business rule)
+    const pricePerKW = systemKW > 0 ? Math.round(basePrice / systemKW) : defaultPricePerKW;
     
     return {
       projectType: 'on_grid',
@@ -710,9 +713,9 @@ export class SiteVisitDataMapper {
    */
   private static mapOffGridProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
     const systemKW = config.inverterKW || 3;
-    const pricePerKW = BUSINESS_RULES.pricing.offGridPerKW;
+    const defaultPricePerKW = BUSINESS_RULES.pricing.offGridPerKW;
 
-    const projectValue = config.projectValue || (systemKW * pricePerKW);
+    const projectValue = config.projectValue || (systemKW * defaultPricePerKW);
     const subsidyAmount = 0; // Off-grid doesn't get subsidy
     const customerPayment = projectValue;
 
@@ -726,6 +729,9 @@ export class SiteVisitDataMapper {
     const gstPercentage = 18; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
+    
+    // Calculate actual pricePerKW from basePrice (this reflects the actual rate, not the business rule)
+    const pricePerKW = systemKW > 0 ? Math.round(basePrice / systemKW) : defaultPricePerKW;
     
     return {
       projectType: 'off_grid',
@@ -777,10 +783,10 @@ export class SiteVisitDataMapper {
    */
   private static mapHybridProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
     const systemKW = config.inverterKW || 3;
-    const pricePerKW = BUSINESS_RULES.pricing.hybridPerKW;
+    const defaultPricePerKW = BUSINESS_RULES.pricing.hybridPerKW;
     const subsidyPerKW = BUSINESS_RULES.subsidy.hybridPerKW;
 
-    const projectValue = config.projectValue || (systemKW * pricePerKW);
+    const projectValue = config.projectValue || (systemKW * defaultPricePerKW);
     const subsidyAmount = systemKW * subsidyPerKW;
     const customerPayment = projectValue - subsidyAmount;
 
@@ -794,6 +800,9 @@ export class SiteVisitDataMapper {
     const gstPercentage = 18; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
+    
+    // Calculate actual pricePerKW from basePrice (this reflects the actual rate, not the business rule)
+    const pricePerKW = systemKW > 0 ? Math.round(basePrice / systemKW) : defaultPricePerKW;
     
     return {
       projectType: 'hybrid',

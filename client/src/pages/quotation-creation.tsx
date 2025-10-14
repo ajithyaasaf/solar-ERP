@@ -3225,7 +3225,7 @@ export default function QuotationCreation() {
                                 />
                               </td>
                               <td className="p-3 text-right">
-                                <span className="text-sm">{systemKW > 0 ? Math.round(pricePerKW * (gstPercentage / 100)).toLocaleString() : '0'}</span>
+                                <span className="text-sm">{systemKW > 0 ? Math.round(gstAmount / systemKW).toLocaleString() : '0'}</span>
                               </td>
                               <td className="p-3 text-right">
                                 <Input 
