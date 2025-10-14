@@ -65,6 +65,7 @@ import {
   solarPanelBrands,
   inverterMakes,
   panelWatts,
+  panelTypes,
   inverterWatts,
   inverterPhases,
   earthingTypes,
@@ -1019,6 +1020,22 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm font-medium">Panel Type *</label>
+          <Select value={project.panelType || "bifacial"} onValueChange={(value) => handleFieldChange('panelType', value)}>
+            <SelectTrigger data-testid={`select-panel-type-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {panelTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type === 'bifacial' ? 'Bifacial' : type === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm font-medium">Panel Watts</label>
           <Select value={project.panelWatts || "530"} onValueChange={(value) => handleFieldChange('panelWatts', value)}>
             <SelectTrigger data-testid={`select-panel-watts-${projectIndex}`}>
@@ -1130,19 +1147,28 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Earth Connection</label>
-          <Select value={project.earth || "dc"} onValueChange={(value) => handleFieldChange('earth', value)}>
-            <SelectTrigger data-testid={`select-earth-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {earthingTypes.map((type) => (
-                <SelectItem key={type} value={type}>
+          <label className="text-sm font-medium">Earth Connection (Multiple Selection)</label>
+          <div className="space-y-2 border rounded p-2">
+            {earthingTypes.map((type) => (
+              <div key={type} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`earth-${type}-${projectIndex}`}
+                  checked={Array.isArray(project.earth) ? project.earth.includes(type) : project.earth === type}
+                  onCheckedChange={(checked) => {
+                    const currentEarth = Array.isArray(project.earth) ? project.earth : (project.earth ? [project.earth] : []);
+                    const newEarth = checked 
+                      ? [...currentEarth, type]
+                      : currentEarth.filter((e: string) => e !== type);
+                    handleFieldChange('earth', newEarth);
+                  }}
+                  data-testid={`checkbox-earth-${type}-${projectIndex}`}
+                />
+                <label htmlFor={`earth-${type}-${projectIndex}`} className="text-sm cursor-pointer">
                   {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </label>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="space-y-2">

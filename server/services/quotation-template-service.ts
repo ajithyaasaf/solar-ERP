@@ -268,6 +268,21 @@ export class QuotationTemplateService {
     const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
     const inverterKW = project.inverterKW || calculatedKW;
 
+    // Add summary row at the top: Phase | Inverter-KW | Panel Watts
+    const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
+    const totalPanelWatts = (parseInt(project.panelWatts || '530') * (project.panelCount || 1)).toString();
+    
+    items.push({
+      slNo: slNo++,
+      description: "System Configuration",
+      type: `Phase: ${phase} | Inverter: ${inverterKW} kW | Total Panel Watts: ${totalPanelWatts}W`,
+      volt: "Summary",
+      rating: "-",
+      make: "-",
+      qty: 1,
+      unit: "Set"
+    });
+
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
                       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
@@ -367,10 +382,23 @@ export class QuotationTemplateService {
     });
 
     // 8. Earthing - Add if earthing is selected
-    if (project.earth && project.earth.length > 0) {
+    if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
       const earthType = structureType; // Use same type as structure
-      // Qty: 1 if only AC or DC selected, otherwise 2
-      const earthQty = (project.earth.includes('ac') && project.earth.includes('dc')) ? 2 : 1;
+      
+      // Determine earthing quantity based on AC/DC cable selection
+      // Qty: 2 if both AC and DC are covered (either as 'ac_dc' or separate 'ac'+'dc')
+      // Qty: 1 if only one type is selected
+      let earthQty = 1;
+      if (Array.isArray(project.earth)) {
+        // Array format: check if 'ac_dc' is present OR both 'ac' and 'dc' are present
+        if (project.earth.includes('ac_dc') || 
+            (project.earth.includes('ac') && project.earth.includes('dc'))) {
+          earthQty = 2;
+        }
+      } else if (typeof project.earth === 'string') {
+        // Single string format (legacy): 'ac_dc' means both
+        earthQty = project.earth === 'ac_dc' ? 2 : 1;
+      }
       
       items.push({
         slNo: slNo++,
@@ -564,9 +592,34 @@ export class QuotationTemplateService {
     }
 
     // Earthing
-    if (project.earth && project.earth.length > 0) {
-      const earthingType = project.earth === 'dc' ? 'DC Earthing' : 
-                          project.earth === 'ac' ? 'AC Earthing' : 'Complete Earthing';
+    if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
+      // Determine earthing type and quantity
+      let earthingType = 'Complete Earthing';
+      let earthQty = 1;
+      
+      if (Array.isArray(project.earth)) {
+        // Array format: check if 'ac_dc' is present OR both 'ac' and 'dc' are present
+        if (project.earth.includes('ac_dc') || 
+            (project.earth.includes('ac') && project.earth.includes('dc'))) {
+          earthingType = 'Complete Earthing (AC/DC)';
+          earthQty = 2;
+        } else if (project.earth.includes('dc')) {
+          earthingType = 'DC Earthing';
+        } else if (project.earth.includes('ac')) {
+          earthingType = 'AC Earthing';
+        }
+      } else if (typeof project.earth === 'string') {
+        // Legacy string format
+        if (project.earth === 'ac_dc') {
+          earthingType = 'Complete Earthing (AC/DC)';
+          earthQty = 2;
+        } else if (project.earth === 'dc') {
+          earthingType = 'DC Earthing';
+        } else if (project.earth === 'ac') {
+          earthingType = 'AC Earthing';
+        }
+      }
+      
       items.push({
         slNo: slNo++,
         description: `Earthing - ${earthingType}`,
@@ -574,7 +627,7 @@ export class QuotationTemplateService {
         volt: "NA",
         rating: "1 Set",
         make: "As per MNRE LIST",
-        qty: 1,
+        qty: earthQty,
         unit: "Set"
       });
     }
@@ -731,9 +784,34 @@ export class QuotationTemplateService {
     }
 
     // Earthing
-    if (project.earth && project.earth.length > 0) {
-      const earthingType = project.earth === 'dc' ? 'DC Earthing' : 
-                          project.earth === 'ac' ? 'AC Earthing' : 'Complete Earthing';
+    if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
+      // Determine earthing type and quantity
+      let earthingType = 'Complete Earthing';
+      let earthQty = 1;
+      
+      if (Array.isArray(project.earth)) {
+        // Array format: check if 'ac_dc' is present OR both 'ac' and 'dc' are present
+        if (project.earth.includes('ac_dc') || 
+            (project.earth.includes('ac') && project.earth.includes('dc'))) {
+          earthingType = 'Complete Earthing (AC/DC)';
+          earthQty = 2;
+        } else if (project.earth.includes('dc')) {
+          earthingType = 'DC Earthing';
+        } else if (project.earth.includes('ac')) {
+          earthingType = 'AC Earthing';
+        }
+      } else if (typeof project.earth === 'string') {
+        // Legacy string format
+        if (project.earth === 'ac_dc') {
+          earthingType = 'Complete Earthing (AC/DC)';
+          earthQty = 2;
+        } else if (project.earth === 'dc') {
+          earthingType = 'DC Earthing';
+        } else if (project.earth === 'ac') {
+          earthingType = 'AC Earthing';
+        }
+      }
+      
       items.push({
         slNo: slNo++,
         description: `Earthing - ${earthingType}`,
@@ -741,7 +819,7 @@ export class QuotationTemplateService {
         volt: "NA",
         rating: "1 Set",
         make: "As per MNRE LIST",
-        qty: 1,
+        qty: earthQty,
         unit: "Set"
       });
     }
@@ -953,7 +1031,7 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
-        description = `Supply and Installation of ${kw}kw Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
+        description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
         break;
 
       case 'off_grid':
@@ -972,7 +1050,7 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
-        description = `Supply and Installation of ${kw}kw Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
+        description = `Supply and Installation of ${Math.floor(kw)} kW Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'hybrid':
@@ -991,7 +1069,7 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
-        description = `Supply and Installation of ${kw}kw Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
+        description = `Supply and Installation of ${Math.floor(kw)} kW Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'water_heater':
@@ -1096,7 +1174,7 @@ export class QuotationTemplateService {
         address: customer.address,
         contactNumber: customer.mobile
       },
-      reference: `${pricingBreakdown?.kw}kw ${projectTypeName} Solar Power Generation System`,
+      reference: `${Math.floor(pricingBreakdown?.kw || 0)} kW ${projectTypeName} Solar Power Generation System`,
       pricingBreakdown,
       billOfMaterials,
       termsAndConditions: {
