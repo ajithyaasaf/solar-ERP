@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
 import { 
   insertQuotationSchema, 
   type InsertQuotation, 
@@ -446,6 +447,218 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
           Please complete any missing required fields marked in orange to proceed.
         </AlertDescription>
       </Alert>
+    </div>
+  );
+}
+
+// Manual Customer Details Form Component
+function ManualCustomerDetailsForm({ form }: { form: any }) {
+  const [customerState, setCustomerState] = useState<any>({
+    name: "",
+    mobile: "",
+    address: "",
+    email: "",
+    propertyType: "",
+    ebServiceNumber: "",
+    location: ""
+  });
+  const [isAutoFilled, setIsAutoFilled] = useState(false);
+
+  const handleCustomerChange = (customerData: any) => {
+    // Update local state
+    setCustomerState(customerData);
+    
+    // Update form's customerData field
+    form.setValue("customerData", {
+      name: customerData.name || "",
+      mobile: customerData.mobile || "",
+      address: customerData.address || "",
+      email: customerData.email || "",
+      propertyType: customerData.propertyType || "",
+      ebServiceNumber: customerData.ebServiceNumber || "",
+      location: customerData.location || ""
+    });
+    
+    // If customer has an ID, set it and mark as auto-filled
+    if (customerData.id) {
+      form.setValue("customerId", customerData.id);
+      setIsAutoFilled(true);
+    } else {
+      form.setValue("customerId", "");
+      setIsAutoFilled(false);
+    }
+  };
+
+  const updateCustomerField = (field: string, value: any) => {
+    const updatedCustomerData = { ...customerState, [field]: value };
+    setCustomerState(updatedCustomerData);
+    form.setValue("customerData", updatedCustomerData);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Customer Search/Autocomplete */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Search Customer</label>
+        <CustomerAutocomplete
+          value={customerState}
+          onChange={handleCustomerChange}
+          onCustomerSelected={(customerId) => {
+            form.setValue("customerId", customerId);
+          }}
+          placeholder="Start typing customer name or mobile number..."
+        />
+        <p className="text-xs text-muted-foreground">
+          Search for existing customer or enter new customer details below
+        </p>
+      </div>
+
+      {/* Customer Details Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Name */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Customer Name *</label>
+            {isAutoFilled && customerState.name && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Input
+            value={customerState.name || ""}
+            onChange={(e) => updateCustomerField("name", e.target.value)}
+            placeholder="Enter customer name"
+            className={isAutoFilled && customerState.name ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-customer-name"
+          />
+        </div>
+
+        {/* Mobile */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Mobile Number *</label>
+            {isAutoFilled && customerState.mobile && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Input
+            value={customerState.mobile || ""}
+            onChange={(e) => updateCustomerField("mobile", e.target.value)}
+            placeholder="Enter mobile number"
+            className={isAutoFilled && customerState.mobile ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-customer-mobile"
+          />
+        </div>
+
+        {/* Address */}
+        <div className="space-y-2 md:col-span-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Address *</label>
+            {isAutoFilled && customerState.address && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Textarea
+            value={customerState.address || ""}
+            onChange={(e) => updateCustomerField("address", e.target.value)}
+            placeholder="Enter full address"
+            className={isAutoFilled && customerState.address ? "bg-green-50 border-green-200" : ""}
+            data-testid="textarea-customer-address"
+          />
+        </div>
+
+        {/* Property Type */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Property Type *</label>
+            {isAutoFilled && customerState.propertyType && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Select 
+            value={customerState.propertyType || undefined} 
+            onValueChange={(value) => updateCustomerField("propertyType", value)}
+          >
+            <SelectTrigger 
+              className={isAutoFilled && customerState.propertyType ? "bg-green-50 border-green-200" : ""}
+              data-testid="select-property-type"
+            >
+              <SelectValue placeholder="Select property type" />
+            </SelectTrigger>
+            <SelectContent>
+              {propertyTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!customerState.propertyType && (
+            <p className="text-xs text-red-600">Property type is required for subsidy calculation</p>
+          )}
+        </div>
+
+        {/* EB Service Number */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">EB Service Number</label>
+            {isAutoFilled && customerState.ebServiceNumber && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Input
+            value={customerState.ebServiceNumber || ""}
+            onChange={(e) => updateCustomerField("ebServiceNumber", e.target.value)}
+            placeholder="Enter EB service number (optional)"
+            className={isAutoFilled && customerState.ebServiceNumber ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-eb-service-number"
+          />
+        </div>
+
+        {/* Location */}
+        <div className="space-y-2 md:col-span-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Customer Location</label>
+            {isAutoFilled && customerState.location && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Input
+            value={customerState.location || ""}
+            onChange={(e) => updateCustomerField("location", e.target.value)}
+            placeholder="Enter specific location details (optional)"
+            className={isAutoFilled && customerState.location ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-customer-location"
+          />
+        </div>
+      </div>
+
+      {/* Help Text */}
+      {isAutoFilled && (
+        <Alert>
+          <Check className="h-4 w-4" />
+          <AlertDescription>
+            Customer details have been auto-filled from the database. You can modify any field as needed.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }
@@ -2808,43 +3021,7 @@ export default function QuotationCreation() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {quotationSource === "manual" ? (
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="customerId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Select Customer</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-customer">
-                                <SelectValue placeholder="Select a customer" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {isLoadingCustomers ? (
-                                <div className="p-4 text-center">Loading customers...</div>
-                              ) : (
-                                ((customers as any)?.data || []).map((customer: any) => (
-                                  <SelectItem key={customer.id} value={customer.id}>
-                                    {customer.name} - {customer.mobile}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Alert>
-                      <User className="h-4 w-4" />
-                      <AlertDescription>
-                        If the customer is not in the list, please create them in the Customers section first.
-                      </AlertDescription>
-                    </Alert>
-                  </div>
+                  <ManualCustomerDetailsForm form={form} />
                 ) : (
                   <SiteVisitCustomerDetailsForm 
                     form={form}
