@@ -12,6 +12,9 @@ interface Customer {
   mobile: string;
   email?: string;
   address: string;
+  propertyType?: string;
+  ebServiceNumber?: string;
+  location?: string;
   displayText: string;
 }
 
@@ -21,14 +24,22 @@ interface CustomerAutocompleteProps {
     mobile?: string;
     address?: string;
     email?: string;
+    propertyType?: string;
+    ebServiceNumber?: string;
+    location?: string;
   };
   onChange: (customer: {
+    id?: string;
     name: string;
     mobile: string;
     address: string;
     email?: string;
+    propertyType?: string;
+    ebServiceNumber?: string;
+    location?: string;
   }) => void;
   onDuplicateDetected?: (existingCustomer: Customer | null) => void;
+  onCustomerSelected?: (customerId: string) => void;
   placeholder?: string;
   className?: string;
 }
@@ -37,6 +48,7 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
   value,
   onChange,
   onDuplicateDetected,
+  onCustomerSelected,
   placeholder = "Start typing customer name...",
   className
 }) => {
@@ -211,12 +223,15 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     setShowSuggestions(true);
     setSelectedCustomer(null);
     
-    // Update form data with manual input
+    // Update form data with manual input (preserve existing fields)
     onChange({
       name: newValue,
       mobile: value.mobile || '',
       address: value.address || '',
-      email: value.email || ''
+      email: value.email || '',
+      propertyType: value.propertyType || '',
+      ebServiceNumber: value.ebServiceNumber || '',
+      location: value.location || ''
     });
   };
 
@@ -226,13 +241,22 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
     setSelectedCustomer(customer);
     setShowSuggestions(false);
     
-    // Auto-fill all customer details
+    // Auto-fill all customer details including ID and additional fields
     onChange({
+      id: customer.id,
       name: customer.name,
       mobile: customer.mobile || '',
       address: customer.address || '',
-      email: customer.email || ''
+      email: customer.email || '',
+      propertyType: customer.propertyType || '',
+      ebServiceNumber: customer.ebServiceNumber || '',
+      location: customer.location || ''
     });
+    
+    // Notify parent component about customer selection
+    if (onCustomerSelected) {
+      onCustomerSelected(customer.id);
+    }
   };
 
   // Clear selection
@@ -245,7 +269,10 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       name: '',
       mobile: '',
       address: '',
-      email: ''
+      email: '',
+      propertyType: '',
+      ebServiceNumber: '',
+      location: ''
     });
   };
 
