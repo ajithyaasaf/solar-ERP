@@ -3225,7 +3225,7 @@ export default function QuotationCreation() {
                                 />
                               </td>
                               <td className="p-3 text-right">
-                                <span className="text-sm">{Math.round(gstAmount / systemKW).toLocaleString()}</span>
+                                <span className="text-sm">{systemKW > 0 ? Math.round(pricePerKW * (gstPercentage / 100)).toLocaleString() : '0'}</span>
                               </td>
                               <td className="p-3 text-right">
                                 <Input 
@@ -3258,10 +3258,14 @@ export default function QuotationCreation() {
                           );
                         })}
                         <tr className="border-t-2 bg-muted/30">
-                          <td colSpan={2} className="p-3 text-sm font-medium">Total Cost:</td>
+                          <td colSpan={3} className="p-3 text-sm font-medium">Total Base Cost (Before GST):</td>
                           <td className="p-3 text-right font-medium">₹{form.watch("totalSystemCost")?.toLocaleString()}</td>
-                          <td colSpan={2} className="p-3 text-sm text-right">Total Amount in Rs:</td>
-                          <td className="p-3 text-right font-bold text-lg">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
+                          <td className="p-3 text-sm font-medium text-right">Total GST:</td>
+                          <td className="p-3 text-right font-medium">₹{form.watch("totalGSTAmount")?.toLocaleString()}</td>
+                        </tr>
+                        <tr className="border-t bg-primary/10">
+                          <td colSpan={5} className="p-3 text-sm font-bold">Total Amount (Including GST):</td>
+                          <td className="p-3 text-right font-bold text-lg text-primary">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
                         </tr>
                       </tbody>
                     </table>
