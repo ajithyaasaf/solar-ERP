@@ -3152,9 +3152,11 @@ export default function QuotationCreation() {
                           <th className="text-left p-3 text-sm font-medium">Description</th>
                           <th className="text-center p-3 text-sm font-medium w-24">kW</th>
                           <th className="text-right p-3 text-sm font-medium w-32">Rate/kW (₹)</th>
+                          <th className="text-right p-3 text-sm font-medium w-36">Base Value (₹)</th>
                           <th className="text-right p-3 text-sm font-medium w-32">GST/kW (₹)</th>
                           <th className="text-right p-3 text-sm font-medium w-24">GST %</th>
-                          <th className="text-right p-3 text-sm font-medium w-40">Value + GST (₹)</th>
+                          <th className="text-right p-3 text-sm font-medium w-36">GST Amount (₹)</th>
+                          <th className="text-right p-3 text-sm font-medium w-40">Total Value (₹)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3224,6 +3226,9 @@ export default function QuotationCreation() {
                                   data-testid={`input-priceperkw-${index}`}
                                 />
                               </td>
+                              <td className="p-3 text-right font-medium">
+                                ₹{basePrice.toLocaleString()}
+                              </td>
                               <td className="p-3 text-right">
                                 <span className="text-sm">{systemKW > 0 ? Math.round(gstAmount / systemKW).toLocaleString() : '0'}</span>
                               </td>
@@ -3252,19 +3257,23 @@ export default function QuotationCreation() {
                                 />
                               </td>
                               <td className="p-3 text-right font-medium">
+                                ₹{gstAmount.toLocaleString()}
+                              </td>
+                              <td className="p-3 text-right font-medium">
                                 ₹{projectValue.toLocaleString()}
                               </td>
                             </tr>
                           );
                         })}
                         <tr className="border-t-2 bg-muted/30">
-                          <td colSpan={3} className="p-3 text-sm font-medium">Total Base Cost (Before GST):</td>
+                          <td colSpan={3} className="p-3 text-sm font-medium">Totals:</td>
                           <td className="p-3 text-right font-medium">₹{form.watch("totalSystemCost")?.toLocaleString()}</td>
-                          <td className="p-3 text-sm font-medium text-right">Total GST:</td>
+                          <td colSpan={2} className="p-3 text-sm font-medium text-right">Total GST:</td>
                           <td className="p-3 text-right font-medium">₹{form.watch("totalGSTAmount")?.toLocaleString()}</td>
+                          <td className="p-3 text-right font-medium">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
                         </tr>
                         <tr className="border-t bg-primary/10">
-                          <td colSpan={5} className="p-3 text-sm font-bold">Total Amount (Including GST):</td>
+                          <td colSpan={7} className="p-3 text-sm font-bold">Grand Total (Including GST):</td>
                           <td className="p-3 text-right font-bold text-lg text-primary">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
                         </tr>
                       </tbody>
