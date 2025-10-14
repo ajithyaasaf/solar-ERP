@@ -2139,6 +2139,21 @@ export default function QuotationCreation() {
     enabled: quotationSource === "manual"
   });
 
+  // Helper function to get property type for subsidy calculations
+  const getPropertyType = (): string => {
+    const formValues = form.getValues();
+    
+    if (quotationSource === "site_visit") {
+      return formValues.customerData?.propertyType || 'residential';
+    } else {
+      // For manual quotations, find the selected customer from the customers list
+      const selectedCustomer = (customers as any)?.data?.find(
+        (c: any) => c.id === formValues.customerId
+      );
+      return selectedCustomer?.propertyType || 'residential';
+    }
+  };
+
   // Fetch complete site visit mapping data when selected - pulls ALL data without leaving anything
   const { data: mappingData, isLoading: isLoadingMapping, error: mappingError } = useQuery({
     queryKey: [`/api/quotations/site-visits/${selectedSiteVisit}/mapping-data`],
@@ -2410,6 +2425,7 @@ export default function QuotationCreation() {
 
   // Calculate project totals when projects change
   const watchedProjects = form.watch("projects");
+  const watchedAdvancePercentage = form.watch("advancePaymentPercentage");
   useEffect(() => {
     const calculateTotals = () => {
       const values = form.getValues();
@@ -2421,7 +2437,8 @@ export default function QuotationCreation() {
       const totalWithGST = projects.reduce((sum: number, project: any) => sum + (project.projectValue || 0), 0);
       const totalSubsidyAmount = projects.reduce((sum: number, project: any) => sum + (project.subsidyAmount || 0), 0);
       const totalCustomerPayment = totalWithGST - totalSubsidyAmount;
-      const advanceAmount = Math.round(totalCustomerPayment * 0.9);
+      const advancePercentage = values.advancePaymentPercentage || 90;
+      const advanceAmount = Math.round(totalCustomerPayment * (advancePercentage / 100));
       const balanceAmount = totalCustomerPayment - advanceAmount;
 
       form.setValue("totalSystemCost", totalSystemCost);
@@ -2433,10 +2450,9 @@ export default function QuotationCreation() {
       form.setValue("balanceAmount", balanceAmount);
     };
 
-    if (quotationSource === "manual") {
-      calculateTotals();
-    }
-  }, [watchedProjects, form, quotationSource]);
+    // Recalculate totals for both manual and site_visit sources
+    calculateTotals();
+  }, [watchedProjects, watchedAdvancePercentage, form]);
 
   const onSubmit = (data: QuotationFormData) => {
     // Validate business rules before submission
@@ -2989,10 +3005,17 @@ export default function QuotationCreation() {
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
                                     
+                                    // Recalculate subsidy based on new kW
+                                    const propertyType = getPropertyType();
+                                    const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
+                                    const newCustomerPayment = newProjectValue - newSubsidy;
+                                    
                                     form.setValue(`projects.${index}.systemKW`, newKW);
                                     form.setValue(`projects.${index}.basePrice`, newBasePrice);
                                     form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
                                     form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
                                   }}
                                   className="w-20 text-center"
                                   data-testid={`input-systemkw-${index}`}
@@ -3008,10 +3031,17 @@ export default function QuotationCreation() {
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
                                     
+                                    // Recalculate subsidy (subsidy doesn't change with price, only with kW)
+                                    const propertyType = getPropertyType();
+                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                    const newCustomerPayment = newProjectValue - newSubsidy;
+                                    
                                     form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
                                     form.setValue(`projects.${index}.basePrice`, newBasePrice);
                                     form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
                                     form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
                                   }}
                                   className="w-28 text-right"
                                   data-testid={`input-priceperkw-${index}`}
@@ -3029,9 +3059,16 @@ export default function QuotationCreation() {
                                     const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
                                     const newProjectValue = basePrice + newGSTAmount;
                                     
+                                    // Recalculate subsidy (subsidy doesn't change with GST)
+                                    const propertyType = getPropertyType();
+                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                    const newCustomerPayment = newProjectValue - newSubsidy;
+                                    
                                     form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
                                     form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
                                     form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
                                   }}
                                   className="w-20 text-right"
                                   data-testid={`input-gstpercentage-${index}`}
