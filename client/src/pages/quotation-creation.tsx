@@ -3006,7 +3006,7 @@ export default function QuotationCreation() {
                           <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
                         </div>
                       ) : (siteVisits as any)?.data?.length > 0 ? (
-                        <div className="grid gap-3">
+                        <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3">
                           {((siteVisits as any)?.data || []).map((visit: SiteVisitMapping) => (
                             <Card 
                               key={visit.id}
@@ -3021,25 +3021,14 @@ export default function QuotationCreation() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center flex-wrap gap-2 mb-1">
                                       <h5 className="font-medium text-sm sm:text-base">{visit.customer.name}</h5>
-                                      <Badge 
-                                        variant={visit.completenessAnalysis.qualityGrade === 'A' ? 'default' : 
-                                                visit.completenessAnalysis.qualityGrade === 'B' ? 'secondary' : 'destructive'}
-                                        className="text-xs"
-                                      >
-                                        Grade {visit.completenessAnalysis.qualityGrade}
-                                      </Badge>
                                     </div>
                                     <p className="text-xs sm:text-sm text-muted-foreground">{visit.customer.mobile}</p>
                                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{visit.customer.address}</p>
                                   </div>
-                                  <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1">
-                                    <div className="text-xs sm:text-sm font-medium">
-                                      {visit.completenessAnalysis.completenessScore}% Complete
-                                    </div>
-                                    <Progress 
-                                      value={visit.completenessAnalysis.completenessScore} 
-                                      className="w-16 sm:w-20 h-2"
-                                    />
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-primary">
+                                      {visit.completenessAnalysis.completenessScore}%
+                                    </span>
                                   </div>
                                 </div>
 
