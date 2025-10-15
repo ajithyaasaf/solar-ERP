@@ -463,6 +463,33 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
     location: ""
   });
   const [isAutoFilled, setIsAutoFilled] = useState(false);
+  
+  // Watch form's customerData to keep local state in sync
+  const formCustomerData = form.watch("customerData");
+  const formCustomerId = form.watch("customerId");
+  
+  // Sync local state with form data when it changes
+  useEffect(() => {
+    if (formCustomerData && Object.keys(formCustomerData).length > 0) {
+      setCustomerState(formCustomerData);
+      // If there's a customerId, mark as auto-filled
+      if (formCustomerId) {
+        setIsAutoFilled(true);
+      }
+    } else {
+      // Reset to empty state if no customer data
+      setCustomerState({
+        name: "",
+        mobile: "",
+        address: "",
+        email: "",
+        propertyType: "",
+        ebServiceNumber: "",
+        location: ""
+      });
+      setIsAutoFilled(false);
+    }
+  }, [formCustomerData, formCustomerId]);
 
   const handleCustomerChange = (customerData: any) => {
     // Update local state
