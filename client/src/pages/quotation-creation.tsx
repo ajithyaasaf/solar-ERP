@@ -401,50 +401,12 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
         </div>
       </div>
 
-      {/* Missing Fields Summary */}
-      {siteVisitMapping?.completenessAnalysis && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Info className="h-4 w-4 text-blue-600" />
-              Site Visit Data Completeness
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Completeness Score</span>
-              <Badge variant="outline">
-                {siteVisitMapping.completenessAnalysis.completenessScore}% Complete
-              </Badge>
-            </div>
-            
-            {siteVisitMapping.completenessAnalysis.missingCriticalFields?.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded p-2">
-                <p className="text-sm font-medium text-red-800 mb-1">Missing Critical Fields:</p>
-                <p className="text-xs text-red-600">
-                  {siteVisitMapping.completenessAnalysis.missingCriticalFields.join(", ")}
-                </p>
-              </div>
-            )}
-            
-            {siteVisitMapping.completenessAnalysis.missingImportantFields?.length > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
-                <p className="text-sm font-medium text-yellow-800 mb-1">Missing Important Fields:</p>
-                <p className="text-xs text-yellow-600">
-                  {siteVisitMapping.completenessAnalysis.missingImportantFields.join(", ")}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Help Text */}
       <Alert>
         <User className="h-4 w-4" />
         <AlertDescription>
-          Fields marked with a green background were captured during the site visit. 
-          Please complete any missing required fields marked in orange to proceed.
+          Fields with a green background were captured during the site visit. 
+          Please complete any missing required information to proceed.
         </AlertDescription>
       </Alert>
     </div>
@@ -3330,78 +3292,14 @@ export default function QuotationCreation() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Show completeness analysis for site visit projects */}
+                {/* Show helpful message for site visit projects */}
                 {quotationSource === "site_visit" && siteVisitMapping && (
-                  <div className="space-y-4">
-                    <Alert>
-                      <Check className="h-4 w-4" />
-                      <AlertDescription>
-                        Site visit data has been mapped and is now editable. You can modify any configuration details, add missing information, or adjust specifications as needed.
-                      </AlertDescription>
-                    </Alert>
-                    
-                    {/* Data Completeness Analysis */}
-                    {(siteVisitMapping as any)?.completenessAnalysis && (
-                      <Card className="bg-blue-50 border-blue-200">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="flex items-center gap-2 text-sm">
-                            <Info className="h-4 w-4 text-blue-600" />
-                            Site Visit Data Completeness
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Overall Quality Grade</span>
-                            <Badge variant="outline" className={
-                              (siteVisitMapping as any).completenessAnalysis.qualityGrade === "A" ? "bg-green-100 text-green-800" :
-                              (siteVisitMapping as any).completenessAnalysis.qualityGrade === "B" ? "bg-blue-100 text-blue-800" :
-                              (siteVisitMapping as any).completenessAnalysis.qualityGrade === "C" ? "bg-yellow-100 text-yellow-800" :
-                              "bg-red-100 text-red-800"
-                            }>
-                              Grade {(siteVisitMapping as any).completenessAnalysis.qualityGrade}
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Data Completeness</span>
-                            <Badge variant="outline">
-                              {(siteVisitMapping as any).completenessAnalysis.completenessScore}% Complete
-                            </Badge>
-                          </div>
-                          
-                          {(siteVisitMapping as any).completenessAnalysis.missingCriticalFields?.length > 0 && (
-                            <div className="bg-red-50 border border-red-200 rounded p-2">
-                              <p className="text-sm font-medium text-red-800 mb-1">Missing Critical Fields:</p>
-                              <p className="text-xs text-red-600">
-                                {(siteVisitMapping as any).completenessAnalysis.missingCriticalFields.join(", ")}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {(siteVisitMapping as any).completenessAnalysis.missingImportantFields?.length > 0 && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
-                              <p className="text-sm font-medium text-yellow-800 mb-1">Missing Important Fields:</p>
-                              <p className="text-xs text-yellow-600">
-                                {(siteVisitMapping as any).completenessAnalysis.missingImportantFields.join(", ")}
-                              </p>
-                            </div>
-                          )}
-                          
-                          <div className="text-xs text-gray-500">
-                            <p className="font-medium mb-1">You can now edit all project details below:</p>
-                            <ul className="list-disc list-inside space-y-0.5">
-                              <li>Solar panel makes and specifications</li>
-                              <li>Inverter makes, capacity and phase details</li>
-                              <li>Structure types and installation heights</li>
-                              <li>Work scopes for civil and electrical work</li>
-                              <li>Battery configurations and earthing details</li>
-                              <li>Project pricing and payment calculations</li>
-                            </ul>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
+                  <Alert>
+                    <Check className="h-4 w-4" />
+                    <AlertDescription>
+                      Site visit data has been loaded. Review the details below and add any missing information to complete the quotation.
+                    </AlertDescription>
+                  </Alert>
                 )}
                 
                 {/* Always show the full editable configuration for both manual and site visit projects */}
