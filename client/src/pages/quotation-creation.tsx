@@ -912,6 +912,11 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       // Store systemKW for backend compatibility
       project.systemKW = calculatedKW;
       
+      // Calculate rounded kW for rate calculation (matching UI display logic)
+      const roundedKW = calculatedKW > 0 
+        ? (calculatedKW <= 3.5 ? Math.floor(calculatedKW) : Math.ceil(calculatedKW))
+        : 0;
+      
       // Calculate base price and GST from project value (which is total including GST)
       const basePrice = Math.round(project.projectValue / (1 + project.gstPercentage / 100));
       const gstAmount = project.projectValue - basePrice;
@@ -919,8 +924,8 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       project.basePrice = basePrice;
       project.gstAmount = gstAmount;
       
-      // Calculate and store rate per kW (derived value for backend)
-      project.pricePerKW = calculatedKW > 0 ? Math.round(basePrice / calculatedKW) : 0;
+      // Calculate and store rate per kW using ROUNDED kW (matching UI display)
+      project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
       
       // Get propertyType from form (for manual entry: from customer, for site visit: from customerData)
       const formValues = form.getValues();

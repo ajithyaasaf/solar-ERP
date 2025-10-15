@@ -1021,19 +1021,6 @@ export class QuotationTemplateService {
     let totalWithGST = 0;
     let gstAmount = 0;
 
-    // DEBUG: Log incoming project data
-    console.log('=== PRICING BREAKDOWN DEBUG ===');
-    console.log('Project Type:', project.projectType);
-    console.log('Panel Watts:', project.panelWatts);
-    console.log('Panel Count:', project.panelCount);
-    console.log('Project Value:', project.projectValue);
-    console.log('Has basePrice?', !!(project as any).basePrice);
-    console.log('Has gstAmount?', !!(project as any).gstAmount);
-    console.log('Has pricePerKW?', !!(project as any).pricePerKW);
-    console.log('basePrice value:', (project as any).basePrice);
-    console.log('gstAmount value:', (project as any).gstAmount);
-    console.log('pricePerKW value:', (project as any).pricePerKW);
-
     // Use project's GST percentage if available, otherwise use parameter or default
     const actualGstPercentage = (project as any).gstPercentage || gstPercentage || 18;
 
