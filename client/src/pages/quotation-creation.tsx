@@ -230,7 +230,8 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
       address: siteVisitCustomerData.address || "",
       ebServiceNumber: siteVisitCustomerData.ebServiceNumber || "",
       propertyType: siteVisitCustomerData.propertyType || "",
-      location: siteVisitCustomerData.location || ""
+      location: siteVisitCustomerData.location || "",
+      source: "site_visit"
     };
     
     setCustomerState(initialCustomerData);
@@ -465,7 +466,8 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
       email: customerData.email || "",
       propertyType: customerData.propertyType || "",
       ebServiceNumber: customerData.ebServiceNumber || "",
-      location: customerData.location || ""
+      location: customerData.location || "",
+      source: "manual"
     });
     
     // If customer has an ID, set it and mark as auto-filled
@@ -690,7 +692,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           inverterPhase: "single_phase",
           lightningArrest: false,
           electricalAccessories: false,
-          earth: "dc",
+          earth: ["dc"],
           floor: "0",
           structureType: "gp_structure",
           gpStructure: {
@@ -722,7 +724,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           inverterPhase: "single_phase",
           lightningArrest: false,
           electricalAccessories: false,
-          earth: "dc",
+          earth: ["dc"],
           floor: "0",
           structureType: "gp_structure",
           batteryBrand: "exide",
@@ -753,7 +755,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           inverterPhase: "single_phase",
           lightningArrest: false,
           electricalAccessories: false,
-          earth: "dc",
+          earth: ["dc"],
           floor: "0",
           structureType: "gp_structure",
           batteryBrand: "exide",
@@ -2680,6 +2682,12 @@ export default function QuotationCreation() {
       console.log("Customer ID:", values.customerId);
     }
     
+    if (currentStep === 4) {
+      console.log("🔍 FINAL STEP VALIDATION CHECK");
+      console.log("Can proceed?", true);
+      console.log("Form errors:", form.formState.errors);
+    }
+    
     switch (currentStep) {
       case 0: // Source selection
         return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
@@ -2759,6 +2767,9 @@ export default function QuotationCreation() {
   }, [watchedProjects, watchedAdvancePercentage, form]);
 
   const onSubmit = (data: QuotationFormData) => {
+    console.log("🚀 SUBMIT CLICKED - onSubmit triggered");
+    console.log("Form data:", data);
+    
     // Validate business rules before submission
     const totalSystemCost = data.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
     const totalGSTAmount = data.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
@@ -2766,8 +2777,15 @@ export default function QuotationCreation() {
     const totalSubsidyAmount = data.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
     const calculatedCustomerPayment = totalWithGST - totalSubsidyAmount;
     
+    console.log("💰 Pricing validation:", {
+      totalCustomerPayment: data.totalCustomerPayment,
+      calculatedCustomerPayment,
+      difference: Math.abs(data.totalCustomerPayment - calculatedCustomerPayment)
+    });
+    
     // Ensure all pricing is consistent with business rules
     if (Math.abs(data.totalCustomerPayment - calculatedCustomerPayment) > 1) {
+      console.log("❌ Pricing validation failed - aborting submission");
       toast({
         title: "Pricing Error",
         description: "Pricing calculations don't match business rules. Please refresh the data.",
