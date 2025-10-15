@@ -2613,6 +2613,13 @@ export default function QuotationCreation() {
   const canProceed = () => {
     const values = form.getValues();
     
+    if (currentStep === 1) {
+      console.log("🔍 CUSTOMER VALIDATION CHECK");
+      console.log("Quotation Source:", quotationSource);
+      console.log("Customer Data:", values.customerData);
+      console.log("Customer ID:", values.customerId);
+    }
+    
     switch (currentStep) {
       case 0: // Source selection
         return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
@@ -2623,6 +2630,7 @@ export default function QuotationCreation() {
           const customerData = values.customerData;
           
           if (!customerData) {
+            console.log("❌ No customer data - button DISABLED");
             return false;
           }
           
@@ -2631,7 +2639,11 @@ export default function QuotationCreation() {
           const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
           const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
           
-          return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
+          console.log("Validation:", { isNameValid, isMobileValid, isAddressValid, isPropertyTypeValid });
+          const result = isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
+          console.log(result ? "✅ All valid - button ENABLED" : "❌ Some invalid - button DISABLED");
+          
+          return result;
         } else {
           // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
