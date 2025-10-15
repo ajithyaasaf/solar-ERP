@@ -2363,6 +2363,12 @@ export default function QuotationCreation() {
     return matchesSearch && matchesDate && matchesDepartment;
   }, [siteVisitSearchQuery, dateFilter, customDateFrom, customDateTo, departmentFilter]);
 
+  // Fetch mappable site visits for selection
+  const { data: siteVisits, isLoading: isLoadingSiteVisits } = useQuery({
+    queryKey: ["/api/quotations/site-visits/mappable"],
+    enabled: quotationSource === "site_visit"
+  });
+
   // Memoized filtered site visits
   const filteredSiteVisits = useMemo(() => {
     return ((siteVisits as any)?.data || []).filter(filterSiteVisit);
@@ -2439,12 +2445,6 @@ export default function QuotationCreation() {
       customerNotes: "",
       attachments: []
     }
-  });
-
-  // Fetch mappable site visits for selection
-  const { data: siteVisits, isLoading: isLoadingSiteVisits } = useQuery({
-    queryKey: ["/api/quotations/site-visits/mappable"],
-    enabled: quotationSource === "site_visit"
   });
 
   // Fetch customers for manual entry
