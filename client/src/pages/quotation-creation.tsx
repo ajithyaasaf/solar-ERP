@@ -2457,12 +2457,16 @@ export default function QuotationCreation() {
       return response.json();
     },
     onSuccess: (data: any) => {
+      console.log("✅ Quotation created successfully:", data);
+      console.log("📄 Quotation Number:", data.quotation?.quotationNumber);
+      console.log("🆔 Quotation ID:", data.quotation?.id);
       toast({
         title: "Quotation Created",
         description: `Quotation ${data.quotation?.quotationNumber || 'new'} has been created successfully.`
       });
       // Invalidate all quotation-related queries (including filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/quotations"], exact: false });
+      console.log("🔄 Invalidated queries, redirecting to /quotations");
       setLocation("/quotations");
     },
     onError: (error: any) => {
@@ -2775,6 +2779,8 @@ export default function QuotationCreation() {
 
   const onSubmit = (data: QuotationFormData) => {
     console.log("🚀 SUBMIT CLICKED - onSubmit triggered");
+    console.log("⏰ Timestamp:", new Date().toISOString());
+    console.log("📋 Current Step:", currentStep);
     console.log("Form data:", data);
     
     // Validate business rules before submission
@@ -2967,7 +2973,17 @@ export default function QuotationCreation() {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)} 
+            onKeyDown={(e) => {
+              // Prevent Enter key from submitting form except on the submit button
+              if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'BUTTON') {
+                e.preventDefault();
+                console.log("⚠️ Enter key pressed - prevented automatic form submission");
+              }
+            }}
+            className="space-y-6"
+          >
           {/* Step 0: Source Selection */}
           {currentStep === 0 && (
             <Card data-testid="card-source-selection">
