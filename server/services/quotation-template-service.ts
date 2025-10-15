@@ -1017,7 +1017,6 @@ export class QuotationTemplateService {
       case 'on_grid':
         // Calculate actual kW from panel data
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-        ratePerKw = project.pricePerKW || 68000;
         
         // Use project values if available (from frontend calculation)
         if ((project as any).basePrice && (project as any).gstAmount) {
@@ -1025,18 +1024,21 @@ export class QuotationTemplateService {
           gstAmount = (project as any).gstAmount;
           totalWithGST = project.projectValue;
         } else {
-          // Fallback: calculate from scratch (projectValue is total including GST)
-          totalWithGST = project.projectValue || (ratePerKw * kw * (1 + actualGstPercentage / 100));
+          // Fallback: calculate from scratch using pricePerKW or default
+          const fallbackRatePerKw = project.pricePerKW || 68000;
+          totalWithGST = project.projectValue || (fallbackRatePerKw * kw * (1 + actualGstPercentage / 100));
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
+        
+        // Calculate actual rate per kW from base price (CRITICAL FIX)
+        ratePerKw = kw > 0 ? basePrice / kw : 0;
         
         description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
         break;
 
       case 'off_grid':
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-        ratePerKw = project.pricePerKW || 85000;
         
         // Use project values if available (from frontend calculation)
         if ((project as any).basePrice && (project as any).gstAmount) {
@@ -1044,18 +1046,21 @@ export class QuotationTemplateService {
           gstAmount = (project as any).gstAmount;
           totalWithGST = project.projectValue;
         } else {
-          // Fallback: calculate from scratch (projectValue is total including GST)
-          totalWithGST = project.projectValue || (ratePerKw * kw * (1 + actualGstPercentage / 100));
+          // Fallback: calculate from scratch using pricePerKW or default
+          const fallbackRatePerKw = project.pricePerKW || 85000;
+          totalWithGST = project.projectValue || (fallbackRatePerKw * kw * (1 + actualGstPercentage / 100));
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
+        
+        // Calculate actual rate per kW from base price (CRITICAL FIX)
+        ratePerKw = kw > 0 ? basePrice / kw : 0;
         
         description = `Supply and Installation of ${Math.floor(kw)} kW Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'hybrid':
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-        ratePerKw = project.pricePerKW || 95000;
         
         // Use project values if available (from frontend calculation)
         if ((project as any).basePrice && (project as any).gstAmount) {
@@ -1063,11 +1068,15 @@ export class QuotationTemplateService {
           gstAmount = (project as any).gstAmount;
           totalWithGST = project.projectValue;
         } else {
-          // Fallback: calculate from scratch (projectValue is total including GST)
-          totalWithGST = project.projectValue || (ratePerKw * kw * (1 + actualGstPercentage / 100));
+          // Fallback: calculate from scratch using pricePerKW or default
+          const fallbackRatePerKw = project.pricePerKW || 95000;
+          totalWithGST = project.projectValue || (fallbackRatePerKw * kw * (1 + actualGstPercentage / 100));
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
+        
+        // Calculate actual rate per kW from base price (CRITICAL FIX)
+        ratePerKw = kw > 0 ? basePrice / kw : 0;
         
         description = `Supply and Installation of ${Math.floor(kw)} kW Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
@@ -1087,7 +1096,9 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
+        // For water heater, rate per kW is same as base price (no kW calculation)
         ratePerKw = basePrice;
+        kw = 1; // Set kw to 1 for water heater to avoid division by zero
         description = `Supply and Installation of ${litres}L Solar Water Heater - ${project.brand || 'Standard'} Brand`;
         break;
 
@@ -1106,7 +1117,9 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
+        // For water pump, rate per kW is same as base price (no kW calculation)
         ratePerKw = basePrice;
+        kw = 1; // Set kw to 1 for water pump to avoid division by zero
         description = `Supply and Installation of ${hp}HP Solar Water Pump with ${project.panelCount || 4} Solar Panels`;
         break;
 
