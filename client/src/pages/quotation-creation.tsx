@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -2302,6 +2302,72 @@ export default function QuotationCreation() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const { toast } = useToast();
 
+  // Memoized filter function for site visits - DRY principle
+  const filterSiteVisit = useCallback((visit: any) => {
+    // Search filter
+    const searchLower = siteVisitSearchQuery.toLowerCase();
+    const matchesSearch = !siteVisitSearchQuery || 
+      visit.customer?.name?.toLowerCase().includes(searchLower) ||
+      visit.customer?.mobile?.includes(searchLower);
+    
+    // Date filter
+    let matchesDate = true;
+    if (dateFilter !== "all" && visit.siteInTime) {
+      const visitDate = new Date(visit.siteInTime);
+      const now = new Date();
+      now.setHours(23, 59, 59, 999);
+      
+      if (dateFilter === "custom") {
+        if (customDateFrom && customDateTo) {
+          const fromDate = new Date(customDateFrom);
+          fromDate.setHours(0, 0, 0, 0);
+          const toDate = new Date(customDateTo);
+          toDate.setHours(23, 59, 59, 999);
+          matchesDate = visitDate >= fromDate && visitDate <= toDate;
+        } else {
+          matchesDate = false;
+        }
+      } else {
+        const diffTime = now.getTime() - visitDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        switch (dateFilter) {
+          case "today":
+            matchesDate = diffDays === 0;
+            break;
+          case "last7days":
+            matchesDate = diffDays <= 7;
+            break;
+          case "last30days":
+            matchesDate = diffDays <= 30;
+            break;
+          case "thisMonth":
+            matchesDate = visitDate.getMonth() === now.getMonth() && 
+                         visitDate.getFullYear() === now.getFullYear();
+            break;
+          case "lastMonth":
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            matchesDate = visitDate.getMonth() === lastMonth.getMonth() && 
+                         visitDate.getFullYear() === lastMonth.getFullYear();
+            break;
+          default:
+            matchesDate = true;
+        }
+      }
+    }
+    
+    // Department filter
+    const matchesDepartment = departmentFilter === "all" || 
+      visit.department === departmentFilter;
+    
+    return matchesSearch && matchesDate && matchesDepartment;
+  }, [siteVisitSearchQuery, dateFilter, customDateFrom, customDateTo, departmentFilter]);
+
+  // Memoized filtered site visits
+  const filteredSiteVisits = useMemo(() => {
+    return ((siteVisits as any)?.data || []).filter(filterSiteVisit);
+  }, [siteVisits, filterSiteVisit]);
+
   // Form management
   const form = useForm<QuotationFormData>({
     resolver: zodResolver(quotationFormSchema),
@@ -3009,47 +3075,7 @@ export default function QuotationCreation() {
                         <h4 className="font-medium">Select Site Visit</h4>
                         {(siteVisits as any)?.data?.length > 0 && (
                           <span className="text-sm text-muted-foreground">
-                            {((siteVisits as any)?.data || []).filter((visit: any) => {
-                              const searchLower = siteVisitSearchQuery.toLowerCase();
-                              const matchesSearch = visit.customer.name.toLowerCase().includes(searchLower) ||
-                                     visit.customer.mobile.includes(searchLower);
-                              let matchesDate = true;
-                              if (dateFilter !== "all" && visit.siteInTime) {
-                                const visitDate = new Date(visit.siteInTime);
-                                const now = new Date();
-                                now.setHours(23, 59, 59, 999);
-                                if (dateFilter === "custom") {
-                                  if (customDateFrom && customDateTo) {
-                                    const fromDate = new Date(customDateFrom);
-                                    fromDate.setHours(0, 0, 0, 0);
-                                    const toDate = new Date(customDateTo);
-                                    toDate.setHours(23, 59, 59, 999);
-                                    matchesDate = visitDate >= fromDate && visitDate <= toDate;
-                                  } else {
-                                    matchesDate = false;
-                                  }
-                                } else {
-                                  const diffTime = now.getTime() - visitDate.getTime();
-                                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                  switch (dateFilter) {
-                                    case "today": matchesDate = diffDays === 0; break;
-                                    case "last7days": matchesDate = diffDays <= 7; break;
-                                    case "last30days": matchesDate = diffDays <= 30; break;
-                                    case "thisMonth": 
-                                      matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
-                                      break;
-                                    case "lastMonth":
-                                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                      matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
-                                      break;
-                                    default: matchesDate = true;
-                                  }
-                                }
-                              }
-                              const matchesDepartment = departmentFilter === "all" || 
-                                visit.department === departmentFilter;
-                              return matchesSearch && matchesDate && matchesDepartment;
-                            }).length} of {(siteVisits as any)?.data?.length} visits
+                            {filteredSiteVisits.length} of {(siteVisits as any)?.data?.length} visits
                           </span>
                         )}
                       </div>
@@ -3063,13 +3089,14 @@ export default function QuotationCreation() {
                           {/* Search Bar */}
                           <div className="mb-4">
                             <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                               <Input
                                 placeholder="Search by customer name or mobile..."
                                 value={siteVisitSearchQuery}
                                 onChange={(e) => setSiteVisitSearchQuery(e.target.value)}
                                 className="pl-9"
                                 data-testid="input-site-visit-search"
+                                aria-label="Search site visits by customer name or mobile number"
                               />
                             </div>
                           </div>
@@ -3167,67 +3194,12 @@ export default function QuotationCreation() {
                           </div>
 
                           {/* Site Visit List */}
-                          <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3">
-                            {((siteVisits as any)?.data || [])
-                              .filter((visit: any) => {
-                                // Search filter
-                                const searchLower = siteVisitSearchQuery.toLowerCase();
-                                const matchesSearch = visit.customer.name.toLowerCase().includes(searchLower) ||
-                                       visit.customer.mobile.includes(searchLower);
-                                
-                                // Date filter
-                                let matchesDate = true;
-                                if (dateFilter !== "all" && visit.siteInTime) {
-                                  const visitDate = new Date(visit.siteInTime);
-                                  const now = new Date();
-                                  now.setHours(23, 59, 59, 999); // End of today
-                                  
-                                  if (dateFilter === "custom") {
-                                    if (customDateFrom && customDateTo) {
-                                      const fromDate = new Date(customDateFrom);
-                                      fromDate.setHours(0, 0, 0, 0); // Start of from day
-                                      const toDate = new Date(customDateTo);
-                                      toDate.setHours(23, 59, 59, 999); // End of to day
-                                      matchesDate = visitDate >= fromDate && visitDate <= toDate;
-                                    } else {
-                                      matchesDate = false; // Don't show any results if custom range is incomplete
-                                    }
-                                  } else {
-                                    const diffTime = now.getTime() - visitDate.getTime();
-                                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                    
-                                    switch (dateFilter) {
-                                      case "today":
-                                        matchesDate = diffDays === 0;
-                                        break;
-                                      case "last7days":
-                                        matchesDate = diffDays <= 7;
-                                        break;
-                                      case "last30days":
-                                        matchesDate = diffDays <= 30;
-                                        break;
-                                      case "thisMonth":
-                                        matchesDate = visitDate.getMonth() === now.getMonth() && 
-                                                     visitDate.getFullYear() === now.getFullYear();
-                                        break;
-                                      case "lastMonth":
-                                        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                        matchesDate = visitDate.getMonth() === lastMonth.getMonth() && 
-                                                     visitDate.getFullYear() === lastMonth.getFullYear();
-                                        break;
-                                      default:
-                                        matchesDate = true;
-                                    }
-                                  }
-                                }
-                                
-                                // Department filter
-                                const matchesDepartment = departmentFilter === "all" || 
-                                  visit.department === departmentFilter;
-                                
-                                return matchesSearch && matchesDate && matchesDepartment;
-                              })
-                              .map((visit: SiteVisitMapping) => (
+                          <div 
+                            className="max-h-[400px] overflow-y-auto pr-2 space-y-3"
+                            role="list"
+                            aria-label="Site visits list"
+                          >
+                            {filteredSiteVisits.map((visit: SiteVisitMapping) => (
                                 <Card 
                                   key={visit.id}
                                   className={`cursor-pointer border transition-colors ${
@@ -3289,48 +3261,7 @@ export default function QuotationCreation() {
                           </div>
 
                           {/* No Results Message */}
-                          {((siteVisits as any)?.data || [])
-                            .filter((visit: any) => {
-                              const searchLower = siteVisitSearchQuery.toLowerCase();
-                              const matchesSearch = visit.customer.name.toLowerCase().includes(searchLower) ||
-                                     visit.customer.mobile.includes(searchLower);
-                              let matchesDate = true;
-                              if (dateFilter !== "all" && visit.siteInTime) {
-                                const visitDate = new Date(visit.siteInTime);
-                                const now = new Date();
-                                now.setHours(23, 59, 59, 999);
-                                if (dateFilter === "custom") {
-                                  if (customDateFrom && customDateTo) {
-                                    const fromDate = new Date(customDateFrom);
-                                    fromDate.setHours(0, 0, 0, 0);
-                                    const toDate = new Date(customDateTo);
-                                    toDate.setHours(23, 59, 59, 999);
-                                    matchesDate = visitDate >= fromDate && visitDate <= toDate;
-                                  } else {
-                                    matchesDate = false;
-                                  }
-                                } else {
-                                  const diffTime = now.getTime() - visitDate.getTime();
-                                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                  switch (dateFilter) {
-                                    case "today": matchesDate = diffDays === 0; break;
-                                    case "last7days": matchesDate = diffDays <= 7; break;
-                                    case "last30days": matchesDate = diffDays <= 30; break;
-                                    case "thisMonth": 
-                                      matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
-                                      break;
-                                    case "lastMonth":
-                                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                      matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
-                                      break;
-                                    default: matchesDate = true;
-                                  }
-                                }
-                              }
-                              const matchesDepartment = departmentFilter === "all" || 
-                                visit.department === departmentFilter;
-                              return matchesSearch && matchesDate && matchesDepartment;
-                            }).length === 0 && (siteVisitSearchQuery || dateFilter !== "all" || departmentFilter !== "all") && (
+                          {filteredSiteVisits.length === 0 && (siteVisitSearchQuery || dateFilter !== "all" || departmentFilter !== "all") && (
                             <Alert className="mt-3">
                               <AlertTriangle className="h-4 w-4" />
                               <AlertDescription>
