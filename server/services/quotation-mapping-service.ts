@@ -662,7 +662,7 @@ export class SiteVisitDataMapper {
     const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
     
     // Calculate GST fields
-    const gstPercentage = 18; // Default GST percentage
+    const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
     
@@ -726,7 +726,7 @@ export class SiteVisitDataMapper {
     const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
     
     // Calculate GST fields
-    const gstPercentage = 18; // Default GST percentage
+    const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
     
@@ -797,7 +797,7 @@ export class SiteVisitDataMapper {
     const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
     
     // Calculate GST fields
-    const gstPercentage = 18; // Default GST percentage
+    const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
     
@@ -856,7 +856,7 @@ export class SiteVisitDataMapper {
    */
   private static mapWaterHeaterProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
     const totalValue = config.projectValue || 15000;
-    const gstPercentage = 18; // Default GST percentage
+    const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(totalValue / (1 + gstPercentage / 100));
     const gstAmount = totalValue - basePrice;
     const subsidyAmount = 0; // Water heater doesn't get subsidy
@@ -889,7 +889,7 @@ export class SiteVisitDataMapper {
    */
   private static mapWaterPumpProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
     const totalValue = config.projectValue || 50000;
-    const gstPercentage = 18; // Default GST percentage
+    const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(totalValue / (1 + gstPercentage / 100));
     const gstAmount = totalValue - basePrice;
     const subsidyAmount = 0; // Water pump doesn't get subsidy
@@ -930,9 +930,12 @@ export class SiteVisitDataMapper {
    * Calculate comprehensive pricing with business rules
    */
   private static calculatePricing(projects: QuotationProject[], warnings: string[]) {
-    const totalSystemCost = projects.reduce((sum, project) => sum + project.projectValue, 0);
-    const totalSubsidyAmount = projects.reduce((sum, project) => sum + project.subsidyAmount, 0);
-    const totalCustomerPayment = totalSystemCost - totalSubsidyAmount;
+    // totalSystemCost is the sum of base prices (before GST)
+    const totalSystemCost = projects.reduce((sum, project) => sum + (project.basePrice || 0), 0);
+    const totalGSTAmount = projects.reduce((sum, project) => sum + (project.gstAmount || 0), 0);
+    const totalWithGST = projects.reduce((sum, project) => sum + (project.projectValue || 0), 0);
+    const totalSubsidyAmount = projects.reduce((sum, project) => sum + (project.subsidyAmount || 0), 0);
+    const totalCustomerPayment = totalWithGST - totalSubsidyAmount;
     
     const advanceAmount = Math.round(totalCustomerPayment * (BUSINESS_RULES.payment.advancePercentage / 100));
     const balanceAmount = totalCustomerPayment - advanceAmount;
@@ -943,6 +946,8 @@ export class SiteVisitDataMapper {
 
     return {
       totalSystemCost,
+      totalGSTAmount,
+      totalWithGST,
       totalSubsidyAmount,
       totalCustomerPayment,
       advanceAmount,

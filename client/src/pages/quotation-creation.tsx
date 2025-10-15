@@ -156,7 +156,7 @@ const BUSINESS_RULES = {
     balancePercentage: 10
   },
   gst: {
-    percentage: 18        // 18% GST as per backend implementation
+    percentage: 8.9        // 8.9% GST as per business requirements
   }
 };
 
