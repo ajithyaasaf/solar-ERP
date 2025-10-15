@@ -2927,14 +2927,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const allSiteVisits = await siteVisitService.getSiteVisitsWithFilters(filters);
       
-      // Filter for site visits with 'converted' or 'on_process' outcome and basic required data
-      const mappableSiteVisits = allSiteVisits.filter((visit: any) => 
-        (visit.status === 'completed' || visit.status === 'on_process') && 
-        (visit.visitOutcome === 'converted' || visit.visitOutcome === 'on_process') &&
-        visit.customer &&
-        visit.customer.name &&
-        visit.customer.mobile
-      );
+      console.log(`=== MAPPABLE SITE VISITS DEBUG ===`);
+      console.log(`Total site visits fetched: ${allSiteVisits.length}`);
+      
+      // Log each visit for debugging
+      allSiteVisits.forEach((visit: any, index: number) => {
+        console.log(`Visit ${index + 1}:`, {
+          id: visit.id,
+          customerName: visit.customer?.name,
+          status: visit.status,
+          visitOutcome: visit.visitOutcome,
+          hasCustomer: !!visit.customer,
+          hasName: !!visit.customer?.name,
+          hasMobile: !!visit.customer?.mobile
+        });
+      });
+      
+      // Filter for site visits that can be used for quotations
+      // Logic: 
+      // 1. Must have customer data (name and mobile)
+      // 2. If status is 'in_progress', include regardless of visitOutcome (ongoing work, outcome not yet determined)
+      // 3. If status is 'completed', must have visitOutcome of 'converted' or 'on_process'
+      const mappableSiteVisits = allSiteVisits.filter((visit: any) => {
+        const hasRequiredCustomerData = visit.customer && visit.customer.name && visit.customer.mobile;
+        
+        if (!hasRequiredCustomerData) {
+          console.log(`Filtered out ${visit.id}: Missing customer data`);
+          return false;
+        }
+        
+        // Include in_progress visits regardless of outcome (ongoing work)
+        if (visit.status === 'in_progress') {
+          console.log(`Including ${visit.id}: In progress status (ongoing)`);
+          return true;
+        }
+        
+        // For completed visits, check the outcome
+        if (visit.status === 'completed') {
+          const hasValidOutcome = visit.visitOutcome === 'converted' || visit.visitOutcome === 'on_process';
+          if (hasValidOutcome) {
+            console.log(`Including ${visit.id}: Completed with valid outcome (${visit.visitOutcome})`);
+            return true;
+          } else {
+            console.log(`Filtered out ${visit.id}: Completed but outcome is ${visit.visitOutcome}`);
+            return false;
+          }
+        }
+        
+        console.log(`Filtered out ${visit.id}: Status is ${visit.status}`);
+        return false;
+      });
+      
+      console.log(`Mappable site visits after filter: ${mappableSiteVisits.length}`);
+      console.log(`=================================`);
 
       // Add completeness analysis for each site visit using dedicated service
       const enrichedSiteVisits = mappableSiteVisits.map((visit: any) => {

@@ -3060,7 +3060,9 @@ export default function QuotationCreation() {
                                             variant={(visit as any).status === 'completed' ? 'default' : 'secondary'}
                                             className="text-xs"
                                           >
-                                            {(visit as any).status === 'completed' ? 'Completed' : 'On Process'}
+                                            {(visit as any).status === 'completed' ? 'Completed' : 
+                                             (visit as any).status === 'in_progress' ? 'In Progress' : 
+                                             (visit as any).status === 'cancelled' ? 'Cancelled' : 'Unknown'}
                                           </Badge>
                                           <Badge 
                                             variant={(visit as any).visitOutcome === 'converted' ? 'default' : 'outline'}
