@@ -2670,9 +2670,11 @@ export default function QuotationCreation() {
     }
   };
 
-  // Calculate project totals when projects change
+  // Watch form fields to trigger re-render when they change
   const watchedProjects = form.watch("projects");
   const watchedAdvancePercentage = form.watch("advancePaymentPercentage");
+  const watchedCustomerData = form.watch("customerData");
+  const watchedCustomerId = form.watch("customerId");
   useEffect(() => {
     const calculateTotals = () => {
       const values = form.getValues();
