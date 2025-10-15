@@ -2613,11 +2613,6 @@ export default function QuotationCreation() {
   const canProceed = () => {
     const values = form.getValues();
     
-    console.log("=== canProceed Debug ===");
-    console.log("Current step:", currentStep);
-    console.log("Quotation source:", quotationSource);
-    console.log("Form values:", values);
-    
     switch (currentStep) {
       case 0: // Source selection
         return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
@@ -2626,10 +2621,8 @@ export default function QuotationCreation() {
           // For manual creation, we ALWAYS need customerData to be properly filled
           // Whether selected from database or entered manually
           const customerData = values.customerData;
-          console.log("Customer data:", customerData);
           
           if (!customerData) {
-            console.log("No customer data - cannot proceed");
             return false;
           }
           
@@ -2638,17 +2631,7 @@ export default function QuotationCreation() {
           const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
           const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
           
-          console.log("Validation results:", {
-            isNameValid,
-            isMobileValid,
-            isAddressValid,
-            isPropertyTypeValid
-          });
-          
-          const canProceedResult = isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
-          console.log("Final result:", canProceedResult);
-          
-          return canProceedResult;
+          return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
         } else {
           // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
@@ -2910,6 +2893,11 @@ export default function QuotationCreation() {
                     onClick={() => {
                       setQuotationSource("manual");
                       form.setValue("source", "manual");
+                      // Clear customer data when switching to manual
+                      form.setValue("customerData", undefined);
+                      form.setValue("customerId", "");
+                      setSelectedSiteVisit(null);
+                      setSiteVisitMapping(null);
                     }}
                     data-testid="card-manual-creation"
                   >
@@ -2941,6 +2929,9 @@ export default function QuotationCreation() {
                     onClick={() => {
                       setQuotationSource("site_visit");
                       form.setValue("source", "site_visit");
+                      // Clear customer data when switching to site visit
+                      form.setValue("customerData", undefined);
+                      form.setValue("customerId", "");
                     }}
                     data-testid="card-site-visit-integration"
                   >
