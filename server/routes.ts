@@ -2927,10 +2927,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const allSiteVisits = await siteVisitService.getSiteVisitsWithFilters(filters);
       
-      // Filter for completed or on_process site visits with 'converted' outcome and basic required data
+      // Filter for site visits with 'converted' or 'on_process' outcome and basic required data
       const mappableSiteVisits = allSiteVisits.filter((visit: any) => 
         (visit.status === 'completed' || visit.status === 'on_process') && 
-        visit.visitOutcome === 'converted' &&
+        (visit.visitOutcome === 'converted' || visit.visitOutcome === 'on_process') &&
         visit.customer &&
         visit.customer.name &&
         visit.customer.mobile

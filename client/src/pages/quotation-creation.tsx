@@ -2295,6 +2295,7 @@ export default function QuotationCreation() {
   const [quotationSource, setQuotationSource] = useState<"manual" | "site_visit">("manual");
   const [selectedSiteVisit, setSelectedSiteVisit] = useState<string | null>(null);
   const [siteVisitMapping, setSiteVisitMapping] = useState<any>(null);
+  const [siteVisitSearchQuery, setSiteVisitSearchQuery] = useState("");
   const { toast } = useToast();
 
   // Form management
@@ -3000,50 +3001,121 @@ export default function QuotationCreation() {
                   <div className="space-y-4">
                     <Separator />
                     <div>
-                      <h4 className="font-medium mb-3">Select Site Visit</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium">Select Site Visit</h4>
+                        {(siteVisits as any)?.data?.length > 0 && (
+                          <span className="text-sm text-muted-foreground">
+                            {((siteVisits as any)?.data || []).filter((visit: any) => {
+                              const searchLower = siteVisitSearchQuery.toLowerCase();
+                              return visit.customer.name.toLowerCase().includes(searchLower) ||
+                                     visit.customer.mobile.includes(searchLower);
+                            }).length} of {(siteVisits as any)?.data?.length} visits
+                          </span>
+                        )}
+                      </div>
+                      
                       {isLoadingSiteVisits ? (
                         <div className="flex items-center justify-center p-8">
                           <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
                         </div>
                       ) : (siteVisits as any)?.data?.length > 0 ? (
-                        <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3">
-                          {((siteVisits as any)?.data || []).map((visit: SiteVisitMapping) => (
-                            <Card 
-                              key={visit.id}
-                              className={`cursor-pointer border transition-colors ${
-                                selectedSiteVisit === visit.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                              }`}
-                              onClick={() => setSelectedSiteVisit(visit.id)}
-                              data-testid={`card-site-visit-${visit.id}`}
-                            >
-                              <CardContent className="p-3 sm:p-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center flex-wrap gap-2 mb-1">
-                                      <h5 className="font-medium text-sm sm:text-base">{visit.customer.name}</h5>
-                                    </div>
-                                    <p className="text-xs sm:text-sm text-muted-foreground">{visit.customer.mobile}</p>
-                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{visit.customer.address}</p>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium text-primary">
-                                      {visit.completenessAnalysis.completenessScore}%
-                                    </span>
-                                  </div>
-                                </div>
+                        <>
+                          {/* Search Bar */}
+                          <div className="mb-4">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Search by customer name or mobile..."
+                                value={siteVisitSearchQuery}
+                                onChange={(e) => setSiteVisitSearchQuery(e.target.value)}
+                                className="pl-9"
+                                data-testid="input-site-visit-search"
+                              />
+                            </div>
+                          </div>
 
-                                {visit.completenessAnalysis.missingCriticalFields.length > 0 && (
-                                  <Alert className="mt-3">
-                                    <AlertTriangle className="h-4 w-4" />
-                                    <AlertDescription className="text-xs">
-                                      Missing critical fields: {visit.completenessAnalysis.missingCriticalFields.join(", ")}
-                                    </AlertDescription>
-                                  </Alert>
-                                )}
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
+                          {/* Site Visit List */}
+                          <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3">
+                            {((siteVisits as any)?.data || [])
+                              .filter((visit: any) => {
+                                const searchLower = siteVisitSearchQuery.toLowerCase();
+                                return visit.customer.name.toLowerCase().includes(searchLower) ||
+                                       visit.customer.mobile.includes(searchLower);
+                              })
+                              .map((visit: SiteVisitMapping) => (
+                                <Card 
+                                  key={visit.id}
+                                  className={`cursor-pointer border transition-colors ${
+                                    selectedSiteVisit === visit.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                                  }`}
+                                  onClick={() => setSelectedSiteVisit(visit.id)}
+                                  data-testid={`card-site-visit-${visit.id}`}
+                                >
+                                  <CardContent className="p-3 sm:p-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center flex-wrap gap-2 mb-2">
+                                          <h5 className="font-medium text-sm sm:text-base">{visit.customer.name}</h5>
+                                          <Badge 
+                                            variant={(visit as any).status === 'completed' ? 'default' : 'secondary'}
+                                            className="text-xs"
+                                          >
+                                            {(visit as any).status === 'completed' ? 'Completed' : 'On Process'}
+                                          </Badge>
+                                          <Badge 
+                                            variant={(visit as any).visitOutcome === 'converted' ? 'default' : 'outline'}
+                                            className="text-xs"
+                                          >
+                                            {(visit as any).visitOutcome === 'converted' ? 'Converted' : 'On Process'}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-xs sm:text-sm text-muted-foreground">{visit.customer.mobile}</p>
+                                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{visit.customer.address}</p>
+                                        {(visit as any).visitDate && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            Visit: {new Date((visit as any).visitDate).toLocaleDateString('en-IN', { 
+                                              day: '2-digit', 
+                                              month: 'short', 
+                                              year: 'numeric' 
+                                            })}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-primary">
+                                          {visit.completenessAnalysis.completenessScore}%
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {visit.completenessAnalysis.missingCriticalFields.length > 0 && (
+                                      <Alert className="mt-3">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <AlertDescription className="text-xs">
+                                          Missing critical fields: {visit.completenessAnalysis.missingCriticalFields.join(", ")}
+                                        </AlertDescription>
+                                      </Alert>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                          </div>
+
+                          {/* No Results Message */}
+                          {((siteVisits as any)?.data || [])
+                            .filter((visit: any) => {
+                              const searchLower = siteVisitSearchQuery.toLowerCase();
+                              return visit.customer.name.toLowerCase().includes(searchLower) ||
+                                     visit.customer.mobile.includes(searchLower);
+                            }).length === 0 && siteVisitSearchQuery && (
+                            <Alert className="mt-3">
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>
+                                No site visits found matching "{siteVisitSearchQuery}"
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </>
                       ) : (
                         <Alert>
                           <AlertTriangle className="h-4 w-4" />
