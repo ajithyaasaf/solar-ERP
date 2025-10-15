@@ -2831,7 +2831,7 @@ export default function QuotationCreation() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" data-testid="quotation-creation-page">
+    <div className="bg-gradient-to-b from-background to-muted/20 pb-8" data-testid="quotation-creation-page">
       {/* Header Section */}
       <div className="bg-background border-b">
         <div className="container mx-auto px-4 py-6 md:py-8">
