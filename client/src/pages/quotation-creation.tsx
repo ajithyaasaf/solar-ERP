@@ -3017,30 +3017,33 @@ export default function QuotationCreation() {
                               if (dateFilter !== "all" && visit.siteInTime) {
                                 const visitDate = new Date(visit.siteInTime);
                                 const now = new Date();
+                                now.setHours(23, 59, 59, 999);
                                 if (dateFilter === "custom") {
                                   if (customDateFrom && customDateTo) {
                                     const fromDate = new Date(customDateFrom);
+                                    fromDate.setHours(0, 0, 0, 0);
                                     const toDate = new Date(customDateTo);
                                     toDate.setHours(23, 59, 59, 999);
                                     matchesDate = visitDate >= fromDate && visitDate <= toDate;
                                   } else {
-                                    matchesDate = true;
+                                    matchesDate = false;
                                   }
                                 } else {
                                   const diffTime = now.getTime() - visitDate.getTime();
                                   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                  if (dateFilter === "today") matchesDate = diffDays === 0;
-                                  else if (dateFilter === "yesterday") matchesDate = diffDays === 1;
-                                  else if (dateFilter === "last7days") matchesDate = diffDays <= 7;
-                                  else if (dateFilter === "last30days") matchesDate = diffDays <= 30;
-                                  else if (dateFilter === "thisMonth") matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
-                                  else if (dateFilter === "lastMonth") {
-                                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                    matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
+                                  switch (dateFilter) {
+                                    case "today": matchesDate = diffDays === 0; break;
+                                    case "last7days": matchesDate = diffDays <= 7; break;
+                                    case "last30days": matchesDate = diffDays <= 30; break;
+                                    case "thisMonth": 
+                                      matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
+                                      break;
+                                    case "lastMonth":
+                                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                      matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
+                                      break;
+                                    default: matchesDate = true;
                                   }
-                                  else if (dateFilter === "last3months") matchesDate = diffDays <= 90;
-                                  else if (dateFilter === "last6months") matchesDate = diffDays <= 180;
-                                  else if (dateFilter === "thisYear") matchesDate = visitDate.getFullYear() === now.getFullYear();
                                 }
                               }
                               const matchesDepartment = departmentFilter === "all" || 
@@ -3089,14 +3092,10 @@ export default function QuotationCreation() {
                                   <SelectContent>
                                     <SelectItem value="all">All Dates</SelectItem>
                                     <SelectItem value="today">Today</SelectItem>
-                                    <SelectItem value="yesterday">Yesterday</SelectItem>
                                     <SelectItem value="last7days">Last 7 Days</SelectItem>
                                     <SelectItem value="last30days">Last 30 Days</SelectItem>
                                     <SelectItem value="thisMonth">This Month</SelectItem>
                                     <SelectItem value="lastMonth">Last Month</SelectItem>
-                                    <SelectItem value="last3months">Last 3 Months</SelectItem>
-                                    <SelectItem value="last6months">Last 6 Months</SelectItem>
-                                    <SelectItem value="thisYear">This Year</SelectItem>
                                     <SelectItem value="custom">Custom Range</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -3120,27 +3119,49 @@ export default function QuotationCreation() {
 
                             {/* Custom Date Range Inputs */}
                             {dateFilter === "custom" && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">From Date</label>
-                                  <Input
-                                    type="date"
-                                    value={customDateFrom}
-                                    onChange={(e) => setCustomDateFrom(e.target.value)}
-                                    className="w-full"
-                                    data-testid="input-custom-date-from"
-                                  />
+                              <div className="space-y-3 pt-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-muted-foreground">From Date</label>
+                                    <Input
+                                      type="date"
+                                      value={customDateFrom}
+                                      onChange={(e) => {
+                                        setCustomDateFrom(e.target.value);
+                                        // Auto-clear "To" date if it's before the new "From" date
+                                        if (customDateTo && e.target.value && new Date(e.target.value) > new Date(customDateTo)) {
+                                          setCustomDateTo("");
+                                        }
+                                      }}
+                                      max={new Date().toISOString().split('T')[0]}
+                                      className="w-full"
+                                      data-testid="input-custom-date-from"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-muted-foreground">To Date</label>
+                                    <Input
+                                      type="date"
+                                      value={customDateTo}
+                                      onChange={(e) => setCustomDateTo(e.target.value)}
+                                      min={customDateFrom || undefined}
+                                      max={new Date().toISOString().split('T')[0]}
+                                      disabled={!customDateFrom}
+                                      className="w-full"
+                                      data-testid="input-custom-date-to"
+                                    />
+                                  </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">To Date</label>
-                                  <Input
-                                    type="date"
-                                    value={customDateTo}
-                                    onChange={(e) => setCustomDateTo(e.target.value)}
-                                    className="w-full"
-                                    data-testid="input-custom-date-to"
-                                  />
-                                </div>
+                                {customDateFrom && customDateTo && (
+                                  <div className="text-xs text-muted-foreground bg-muted px-3 py-2 rounded-md">
+                                    Showing site visits from {new Date(customDateFrom).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(customDateTo).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  </div>
+                                )}
+                                {customDateFrom && !customDateTo && (
+                                  <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                                    Please select an end date to complete the range
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -3159,39 +3180,43 @@ export default function QuotationCreation() {
                                 if (dateFilter !== "all" && visit.siteInTime) {
                                   const visitDate = new Date(visit.siteInTime);
                                   const now = new Date();
+                                  now.setHours(23, 59, 59, 999); // End of today
                                   
                                   if (dateFilter === "custom") {
                                     if (customDateFrom && customDateTo) {
                                       const fromDate = new Date(customDateFrom);
+                                      fromDate.setHours(0, 0, 0, 0); // Start of from day
                                       const toDate = new Date(customDateTo);
-                                      toDate.setHours(23, 59, 59, 999); // End of day
+                                      toDate.setHours(23, 59, 59, 999); // End of to day
                                       matchesDate = visitDate >= fromDate && visitDate <= toDate;
                                     } else {
-                                      matchesDate = true;
+                                      matchesDate = false; // Don't show any results if custom range is incomplete
                                     }
                                   } else {
                                     const diffTime = now.getTime() - visitDate.getTime();
                                     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                                     
-                                    if (dateFilter === "today") {
-                                      matchesDate = diffDays === 0;
-                                    } else if (dateFilter === "yesterday") {
-                                      matchesDate = diffDays === 1;
-                                    } else if (dateFilter === "last7days") {
-                                      matchesDate = diffDays <= 7;
-                                    } else if (dateFilter === "last30days") {
-                                      matchesDate = diffDays <= 30;
-                                    } else if (dateFilter === "thisMonth") {
-                                      matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
-                                    } else if (dateFilter === "lastMonth") {
-                                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                      matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
-                                    } else if (dateFilter === "last3months") {
-                                      matchesDate = diffDays <= 90;
-                                    } else if (dateFilter === "last6months") {
-                                      matchesDate = diffDays <= 180;
-                                    } else if (dateFilter === "thisYear") {
-                                      matchesDate = visitDate.getFullYear() === now.getFullYear();
+                                    switch (dateFilter) {
+                                      case "today":
+                                        matchesDate = diffDays === 0;
+                                        break;
+                                      case "last7days":
+                                        matchesDate = diffDays <= 7;
+                                        break;
+                                      case "last30days":
+                                        matchesDate = diffDays <= 30;
+                                        break;
+                                      case "thisMonth":
+                                        matchesDate = visitDate.getMonth() === now.getMonth() && 
+                                                     visitDate.getFullYear() === now.getFullYear();
+                                        break;
+                                      case "lastMonth":
+                                        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                        matchesDate = visitDate.getMonth() === lastMonth.getMonth() && 
+                                                     visitDate.getFullYear() === lastMonth.getFullYear();
+                                        break;
+                                      default:
+                                        matchesDate = true;
                                     }
                                   }
                                 }
@@ -3273,30 +3298,33 @@ export default function QuotationCreation() {
                               if (dateFilter !== "all" && visit.siteInTime) {
                                 const visitDate = new Date(visit.siteInTime);
                                 const now = new Date();
+                                now.setHours(23, 59, 59, 999);
                                 if (dateFilter === "custom") {
                                   if (customDateFrom && customDateTo) {
                                     const fromDate = new Date(customDateFrom);
+                                    fromDate.setHours(0, 0, 0, 0);
                                     const toDate = new Date(customDateTo);
                                     toDate.setHours(23, 59, 59, 999);
                                     matchesDate = visitDate >= fromDate && visitDate <= toDate;
                                   } else {
-                                    matchesDate = true;
+                                    matchesDate = false;
                                   }
                                 } else {
                                   const diffTime = now.getTime() - visitDate.getTime();
                                   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                  if (dateFilter === "today") matchesDate = diffDays === 0;
-                                  else if (dateFilter === "yesterday") matchesDate = diffDays === 1;
-                                  else if (dateFilter === "last7days") matchesDate = diffDays <= 7;
-                                  else if (dateFilter === "last30days") matchesDate = diffDays <= 30;
-                                  else if (dateFilter === "thisMonth") matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
-                                  else if (dateFilter === "lastMonth") {
-                                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                    matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
+                                  switch (dateFilter) {
+                                    case "today": matchesDate = diffDays === 0; break;
+                                    case "last7days": matchesDate = diffDays <= 7; break;
+                                    case "last30days": matchesDate = diffDays <= 30; break;
+                                    case "thisMonth": 
+                                      matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
+                                      break;
+                                    case "lastMonth":
+                                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                      matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
+                                      break;
+                                    default: matchesDate = true;
                                   }
-                                  else if (dateFilter === "last3months") matchesDate = diffDays <= 90;
-                                  else if (dateFilter === "last6months") matchesDate = diffDays <= 180;
-                                  else if (dateFilter === "thisYear") matchesDate = visitDate.getFullYear() === now.getFullYear();
                                 }
                               }
                               const matchesDepartment = departmentFilter === "all" || 
