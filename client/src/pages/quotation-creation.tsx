@@ -2503,6 +2503,11 @@ export default function QuotationCreation() {
       
       // Auto-populate form with mapped data, ensuring proper QuotationProject structure
       const mappedProjects: QuotationProject[] = (data.projects || []).map((project: any) => {
+        // Extract and normalize array fields first to avoid duplicates
+        const earth = Array.isArray(project.earth) ? project.earth : (project.earth ? [project.earth] : []);
+        const solarPanelMake = Array.isArray(project.solarPanelMake) ? project.solarPanelMake : (project.solarPanelMake ? [project.solarPanelMake] : []);
+        const inverterMake = Array.isArray(project.inverterMake) ? project.inverterMake : (project.inverterMake ? [project.inverterMake] : []);
+        
         // Ensure full QuotationProject compliance with all required fields
         return {
           projectType: project.projectType,
@@ -2512,15 +2517,17 @@ export default function QuotationCreation() {
           // Include all other QuotationProject fields as defined in schema
           systemKW: project.systemKW,
           pricePerKW: project.pricePerKW,
-          solarPanelMake: project.solarPanelMake || [],
           panelWatts: project.panelWatts,
           panelCount: project.panelCount,
-          inverterMake: project.inverterMake || [],
           inverterWatts: project.inverterWatts,
           inverterKW: project.inverterKW,
           inverterQty: project.inverterQty,
           inverterPhase: project.inverterPhase,
-          ...project // Include all other mapped fields from site visit
+          ...project, // Include all other mapped fields from site visit
+          // Override with normalized array fields
+          earth,
+          solarPanelMake,
+          inverterMake
         } as QuotationProject;
       });
       
