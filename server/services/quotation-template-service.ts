@@ -203,6 +203,17 @@ export class QuotationTemplateService {
   }
 
   /**
+   * Round system kW for rate calculations (matching frontend logic)
+   * ≤3.5 kW → floor (e.g., 3.24 → 3)
+   * >3.5 kW → ceil (e.g., 3.6 → 4)
+   * This ensures rate per kW matches what user sees in the quotation form
+   */
+  static roundSystemKWForRateCalculation(actualKW: number): number {
+    if (actualKW <= 0) return 0;
+    return actualKW <= 3.5 ? Math.floor(actualKW) : Math.ceil(actualKW);
+  }
+
+  /**
    * Calculate subsidy based on kW, property type, and project type
    * Subsidy applies ONLY for residential properties with on_grid or hybrid projects
    * Up to 1 kW: ₹30,000
@@ -1015,7 +1026,7 @@ export class QuotationTemplateService {
 
     switch (project.projectType) {
       case 'on_grid':
-        // Calculate actual kW from panel data
+        // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
         // Use project values if available (from frontend calculation)
@@ -1031,13 +1042,15 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
-        // Calculate actual rate per kW from base price (CRITICAL FIX)
-        ratePerKw = kw > 0 ? basePrice / kw : 0;
+        // FIXED: Use rounded kW for rate calculation (matching frontend logic)
+        const roundedKW_onGrid = this.roundSystemKWForRateCalculation(kw);
+        ratePerKw = roundedKW_onGrid > 0 ? basePrice / roundedKW_onGrid : 0;
         
         description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
         break;
 
       case 'off_grid':
+        // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
         // Use project values if available (from frontend calculation)
@@ -1053,13 +1066,15 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
-        // Calculate actual rate per kW from base price (CRITICAL FIX)
-        ratePerKw = kw > 0 ? basePrice / kw : 0;
+        // FIXED: Use rounded kW for rate calculation (matching frontend logic)
+        const roundedKW_offGrid = this.roundSystemKWForRateCalculation(kw);
+        ratePerKw = roundedKW_offGrid > 0 ? basePrice / roundedKW_offGrid : 0;
         
         description = `Supply and Installation of ${Math.floor(kw)} kW Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
 
       case 'hybrid':
+        // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
         // Use project values if available (from frontend calculation)
@@ -1075,8 +1090,9 @@ export class QuotationTemplateService {
           gstAmount = totalWithGST - basePrice;
         }
         
-        // Calculate actual rate per kW from base price (CRITICAL FIX)
-        ratePerKw = kw > 0 ? basePrice / kw : 0;
+        // FIXED: Use rounded kW for rate calculation (matching frontend logic)
+        const roundedKW_hybrid = this.roundSystemKWForRateCalculation(kw);
+        ratePerKw = roundedKW_hybrid > 0 ? basePrice / roundedKW_hybrid : 0;
         
         description = `Supply and Installation of ${Math.floor(kw)} kW Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
         break;
@@ -1133,8 +1149,15 @@ export class QuotationTemplateService {
     // Calculate customer payment
     const customerPayment = totalWithGST - subsidyAmount;
 
-    // Calculate GST per kW
-    const gstPerKw = kw > 0 ? Math.round(gstAmount / kw) : 0;
+    // Calculate GST per kW using rounded kW for solar projects (matching rate calculation logic)
+    let gstPerKw = 0;
+    if (['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
+      const roundedKW_forGST = this.roundSystemKWForRateCalculation(kw);
+      gstPerKw = roundedKW_forGST > 0 ? Math.round(gstAmount / roundedKW_forGST) : 0;
+    } else {
+      // For non-solar projects, just use the kw value (which is set to 1)
+      gstPerKw = kw > 0 ? Math.round(gstAmount / kw) : 0;
+    }
 
     return {
       description,
