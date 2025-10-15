@@ -2612,6 +2612,12 @@ export default function QuotationCreation() {
 
   const canProceed = () => {
     const values = form.getValues();
+    
+    console.log("=== canProceed Debug ===");
+    console.log("Current step:", currentStep);
+    console.log("Quotation source:", quotationSource);
+    console.log("Form values:", values);
+    
     switch (currentStep) {
       case 0: // Source selection
         return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
@@ -2622,20 +2628,38 @@ export default function QuotationCreation() {
           // 2. All required fields filled manually (new customer)
           const hasCustomerId = values.customerId !== undefined && values.customerId !== "";
           
+          console.log("Has customerId:", hasCustomerId, "customerId value:", values.customerId);
+          
           if (hasCustomerId) {
+            console.log("Customer selected from database - allowing proceed");
             return true; // Customer selected from database
           }
           
           // Check if required fields are filled for manual entry
           const customerData = values.customerData;
-          if (!customerData) return false;
+          console.log("Customer data:", customerData);
+          
+          if (!customerData) {
+            console.log("No customer data - cannot proceed");
+            return false;
+          }
           
           const isNameValid = customerData.name && customerData.name.trim().length >= 2;
           const isMobileValid = customerData.mobile && customerData.mobile.trim().length >= 10;
           const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
           const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
           
-          return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
+          console.log("Validation results:", {
+            isNameValid,
+            isMobileValid,
+            isAddressValid,
+            isPropertyTypeValid
+          });
+          
+          const canProceedResult = isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
+          console.log("Final result:", canProceedResult);
+          
+          return canProceedResult;
         } else {
           // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
