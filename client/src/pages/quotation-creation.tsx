@@ -2623,19 +2623,8 @@ export default function QuotationCreation() {
         return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
       case 1: // Customer details
         if (quotationSource === "manual") {
-          // For manual creation, allow either:
-          // 1. Customer selected from database (customerId is set), OR
-          // 2. All required fields filled manually (new customer)
-          const hasCustomerId = values.customerId !== undefined && values.customerId !== "";
-          
-          console.log("Has customerId:", hasCustomerId, "customerId value:", values.customerId);
-          
-          if (hasCustomerId) {
-            console.log("Customer selected from database - allowing proceed");
-            return true; // Customer selected from database
-          }
-          
-          // Check if required fields are filled for manual entry
+          // For manual creation, we ALWAYS need customerData to be properly filled
+          // Whether selected from database or entered manually
           const customerData = values.customerData;
           console.log("Customer data:", customerData);
           
