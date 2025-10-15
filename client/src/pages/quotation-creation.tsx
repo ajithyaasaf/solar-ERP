@@ -2296,8 +2296,9 @@ export default function QuotationCreation() {
   const [selectedSiteVisit, setSelectedSiteVisit] = useState<string | null>(null);
   const [siteVisitMapping, setSiteVisitMapping] = useState<any>(null);
   const [siteVisitSearchQuery, setSiteVisitSearchQuery] = useState("");
-  const [qualityFilter, setQualityFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [customDateFrom, setCustomDateFrom] = useState<string>("");
+  const [customDateTo, setCustomDateTo] = useState<string>("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const { toast } = useToast();
 
@@ -3012,23 +3013,39 @@ export default function QuotationCreation() {
                               const searchLower = siteVisitSearchQuery.toLowerCase();
                               const matchesSearch = visit.customer.name.toLowerCase().includes(searchLower) ||
                                      visit.customer.mobile.includes(searchLower);
-                              const matchesQuality = qualityFilter === "all" || 
-                                visit.completenessAnalysis?.qualityGrade === qualityFilter;
                               let matchesDate = true;
                               if (dateFilter !== "all" && visit.siteInTime) {
                                 const visitDate = new Date(visit.siteInTime);
                                 const now = new Date();
-                                const diffTime = now.getTime() - visitDate.getTime();
-                                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                if (dateFilter === "today") matchesDate = diffDays === 0;
-                                else if (dateFilter === "yesterday") matchesDate = diffDays === 1;
-                                else if (dateFilter === "last7days") matchesDate = diffDays <= 7;
-                                else if (dateFilter === "last30days") matchesDate = diffDays <= 30;
-                                else if (dateFilter === "older") matchesDate = diffDays > 30;
+                                if (dateFilter === "custom") {
+                                  if (customDateFrom && customDateTo) {
+                                    const fromDate = new Date(customDateFrom);
+                                    const toDate = new Date(customDateTo);
+                                    toDate.setHours(23, 59, 59, 999);
+                                    matchesDate = visitDate >= fromDate && visitDate <= toDate;
+                                  } else {
+                                    matchesDate = true;
+                                  }
+                                } else {
+                                  const diffTime = now.getTime() - visitDate.getTime();
+                                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                                  if (dateFilter === "today") matchesDate = diffDays === 0;
+                                  else if (dateFilter === "yesterday") matchesDate = diffDays === 1;
+                                  else if (dateFilter === "last7days") matchesDate = diffDays <= 7;
+                                  else if (dateFilter === "last30days") matchesDate = diffDays <= 30;
+                                  else if (dateFilter === "thisMonth") matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
+                                  else if (dateFilter === "lastMonth") {
+                                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                    matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
+                                  }
+                                  else if (dateFilter === "last3months") matchesDate = diffDays <= 90;
+                                  else if (dateFilter === "last6months") matchesDate = diffDays <= 180;
+                                  else if (dateFilter === "thisYear") matchesDate = visitDate.getFullYear() === now.getFullYear();
+                                }
                               }
                               const matchesDepartment = departmentFilter === "all" || 
                                 visit.department === departmentFilter;
-                              return matchesSearch && matchesQuality && matchesDate && matchesDepartment;
+                              return matchesSearch && matchesDate && matchesDepartment;
                             }).length} of {(siteVisits as any)?.data?.length} visits
                           </span>
                         )}
@@ -3055,54 +3072,77 @@ export default function QuotationCreation() {
                           </div>
 
                           {/* Filters */}
-                          <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div className="space-y-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">Quality</label>
-                              <Select value={qualityFilter} onValueChange={setQualityFilter}>
-                                <SelectTrigger className="w-full" data-testid="select-quality-filter">
-                                  <SelectValue placeholder="All Quality" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">All Quality</SelectItem>
-                                  <SelectItem value="A">Grade A (90%+)</SelectItem>
-                                  <SelectItem value="B">Grade B (80-89%)</SelectItem>
-                                  <SelectItem value="C">Grade C (70-79%)</SelectItem>
-                                  <SelectItem value="D">Grade D (60-69%)</SelectItem>
-                                </SelectContent>
-                              </Select>
+                          <div className="mb-4 space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">Date Range</label>
+                                <Select value={dateFilter} onValueChange={(value) => {
+                                  setDateFilter(value);
+                                  if (value !== "custom") {
+                                    setCustomDateFrom("");
+                                    setCustomDateTo("");
+                                  }
+                                }}>
+                                  <SelectTrigger className="w-full" data-testid="select-date-filter">
+                                    <SelectValue placeholder="All Dates" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">All Dates</SelectItem>
+                                    <SelectItem value="today">Today</SelectItem>
+                                    <SelectItem value="yesterday">Yesterday</SelectItem>
+                                    <SelectItem value="last7days">Last 7 Days</SelectItem>
+                                    <SelectItem value="last30days">Last 30 Days</SelectItem>
+                                    <SelectItem value="thisMonth">This Month</SelectItem>
+                                    <SelectItem value="lastMonth">Last Month</SelectItem>
+                                    <SelectItem value="last3months">Last 3 Months</SelectItem>
+                                    <SelectItem value="last6months">Last 6 Months</SelectItem>
+                                    <SelectItem value="thisYear">This Year</SelectItem>
+                                    <SelectItem value="custom">Custom Range</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-muted-foreground">Department</label>
+                                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                                  <SelectTrigger className="w-full" data-testid="select-department-filter">
+                                    <SelectValue placeholder="All Departments" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">All Departments</SelectItem>
+                                    <SelectItem value="technical">Technical</SelectItem>
+                                    <SelectItem value="marketing">Marketing</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">Date</label>
-                              <Select value={dateFilter} onValueChange={setDateFilter}>
-                                <SelectTrigger className="w-full" data-testid="select-date-filter">
-                                  <SelectValue placeholder="All Dates" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">All Dates</SelectItem>
-                                  <SelectItem value="today">Today</SelectItem>
-                                  <SelectItem value="yesterday">Yesterday</SelectItem>
-                                  <SelectItem value="last7days">Last 7 Days</SelectItem>
-                                  <SelectItem value="last30days">Last 30 Days</SelectItem>
-                                  <SelectItem value="older">Older than 30 Days</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <label className="text-xs font-medium text-muted-foreground">Department</label>
-                              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                                <SelectTrigger className="w-full" data-testid="select-department-filter">
-                                  <SelectValue placeholder="All Departments" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">All Departments</SelectItem>
-                                  <SelectItem value="technical">Technical</SelectItem>
-                                  <SelectItem value="marketing">Marketing</SelectItem>
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
+                            {/* Custom Date Range Inputs */}
+                            {dateFilter === "custom" && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-muted-foreground">From Date</label>
+                                  <Input
+                                    type="date"
+                                    value={customDateFrom}
+                                    onChange={(e) => setCustomDateFrom(e.target.value)}
+                                    className="w-full"
+                                    data-testid="input-custom-date-from"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-muted-foreground">To Date</label>
+                                  <Input
+                                    type="date"
+                                    value={customDateTo}
+                                    onChange={(e) => setCustomDateTo(e.target.value)}
+                                    className="w-full"
+                                    data-testid="input-custom-date-to"
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Site Visit List */}
@@ -3114,28 +3154,45 @@ export default function QuotationCreation() {
                                 const matchesSearch = visit.customer.name.toLowerCase().includes(searchLower) ||
                                        visit.customer.mobile.includes(searchLower);
                                 
-                                // Quality filter
-                                const matchesQuality = qualityFilter === "all" || 
-                                  visit.completenessAnalysis?.qualityGrade === qualityFilter;
-                                
                                 // Date filter
                                 let matchesDate = true;
                                 if (dateFilter !== "all" && visit.siteInTime) {
                                   const visitDate = new Date(visit.siteInTime);
                                   const now = new Date();
-                                  const diffTime = now.getTime() - visitDate.getTime();
-                                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                                   
-                                  if (dateFilter === "today") {
-                                    matchesDate = diffDays === 0;
-                                  } else if (dateFilter === "yesterday") {
-                                    matchesDate = diffDays === 1;
-                                  } else if (dateFilter === "last7days") {
-                                    matchesDate = diffDays <= 7;
-                                  } else if (dateFilter === "last30days") {
-                                    matchesDate = diffDays <= 30;
-                                  } else if (dateFilter === "older") {
-                                    matchesDate = diffDays > 30;
+                                  if (dateFilter === "custom") {
+                                    if (customDateFrom && customDateTo) {
+                                      const fromDate = new Date(customDateFrom);
+                                      const toDate = new Date(customDateTo);
+                                      toDate.setHours(23, 59, 59, 999); // End of day
+                                      matchesDate = visitDate >= fromDate && visitDate <= toDate;
+                                    } else {
+                                      matchesDate = true;
+                                    }
+                                  } else {
+                                    const diffTime = now.getTime() - visitDate.getTime();
+                                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                                    
+                                    if (dateFilter === "today") {
+                                      matchesDate = diffDays === 0;
+                                    } else if (dateFilter === "yesterday") {
+                                      matchesDate = diffDays === 1;
+                                    } else if (dateFilter === "last7days") {
+                                      matchesDate = diffDays <= 7;
+                                    } else if (dateFilter === "last30days") {
+                                      matchesDate = diffDays <= 30;
+                                    } else if (dateFilter === "thisMonth") {
+                                      matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
+                                    } else if (dateFilter === "lastMonth") {
+                                      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                      matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
+                                    } else if (dateFilter === "last3months") {
+                                      matchesDate = diffDays <= 90;
+                                    } else if (dateFilter === "last6months") {
+                                      matchesDate = diffDays <= 180;
+                                    } else if (dateFilter === "thisYear") {
+                                      matchesDate = visitDate.getFullYear() === now.getFullYear();
+                                    }
                                   }
                                 }
                                 
@@ -3143,7 +3200,7 @@ export default function QuotationCreation() {
                                 const matchesDepartment = departmentFilter === "all" || 
                                   visit.department === departmentFilter;
                                 
-                                return matchesSearch && matchesQuality && matchesDate && matchesDepartment;
+                                return matchesSearch && matchesDate && matchesDepartment;
                               })
                               .map((visit: SiteVisitMapping) => (
                                 <Card 
@@ -3173,22 +3230,6 @@ export default function QuotationCreation() {
                                           >
                                             {(visit as any).visitOutcome === 'converted' ? 'Converted' : 'On Process'}
                                           </Badge>
-                                          <Badge 
-                                            variant="outline"
-                                            className={`text-xs ${
-                                              visit.completenessAnalysis.qualityGrade === 'A' ? 'bg-green-100 text-green-800 border-green-300' :
-                                              visit.completenessAnalysis.qualityGrade === 'B' ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                                              visit.completenessAnalysis.qualityGrade === 'C' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                                              'bg-orange-100 text-orange-800 border-orange-300'
-                                            }`}
-                                          >
-                                            Grade {visit.completenessAnalysis.qualityGrade}
-                                          </Badge>
-                                          {(visit as any).department && (
-                                            <Badge variant="secondary" className="text-xs">
-                                              {(visit as any).department.charAt(0).toUpperCase() + (visit as any).department.slice(1)}
-                                            </Badge>
-                                          )}
                                         </div>
                                         <p className="text-xs sm:text-sm text-muted-foreground">{visit.customer.mobile}</p>
                                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{visit.customer.address}</p>
@@ -3228,24 +3269,40 @@ export default function QuotationCreation() {
                               const searchLower = siteVisitSearchQuery.toLowerCase();
                               const matchesSearch = visit.customer.name.toLowerCase().includes(searchLower) ||
                                      visit.customer.mobile.includes(searchLower);
-                              const matchesQuality = qualityFilter === "all" || 
-                                visit.completenessAnalysis?.qualityGrade === qualityFilter;
                               let matchesDate = true;
                               if (dateFilter !== "all" && visit.siteInTime) {
                                 const visitDate = new Date(visit.siteInTime);
                                 const now = new Date();
-                                const diffTime = now.getTime() - visitDate.getTime();
-                                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                                if (dateFilter === "today") matchesDate = diffDays === 0;
-                                else if (dateFilter === "yesterday") matchesDate = diffDays === 1;
-                                else if (dateFilter === "last7days") matchesDate = diffDays <= 7;
-                                else if (dateFilter === "last30days") matchesDate = diffDays <= 30;
-                                else if (dateFilter === "older") matchesDate = diffDays > 30;
+                                if (dateFilter === "custom") {
+                                  if (customDateFrom && customDateTo) {
+                                    const fromDate = new Date(customDateFrom);
+                                    const toDate = new Date(customDateTo);
+                                    toDate.setHours(23, 59, 59, 999);
+                                    matchesDate = visitDate >= fromDate && visitDate <= toDate;
+                                  } else {
+                                    matchesDate = true;
+                                  }
+                                } else {
+                                  const diffTime = now.getTime() - visitDate.getTime();
+                                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                                  if (dateFilter === "today") matchesDate = diffDays === 0;
+                                  else if (dateFilter === "yesterday") matchesDate = diffDays === 1;
+                                  else if (dateFilter === "last7days") matchesDate = diffDays <= 7;
+                                  else if (dateFilter === "last30days") matchesDate = diffDays <= 30;
+                                  else if (dateFilter === "thisMonth") matchesDate = visitDate.getMonth() === now.getMonth() && visitDate.getFullYear() === now.getFullYear();
+                                  else if (dateFilter === "lastMonth") {
+                                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                    matchesDate = visitDate.getMonth() === lastMonth.getMonth() && visitDate.getFullYear() === lastMonth.getFullYear();
+                                  }
+                                  else if (dateFilter === "last3months") matchesDate = diffDays <= 90;
+                                  else if (dateFilter === "last6months") matchesDate = diffDays <= 180;
+                                  else if (dateFilter === "thisYear") matchesDate = visitDate.getFullYear() === now.getFullYear();
+                                }
                               }
                               const matchesDepartment = departmentFilter === "all" || 
                                 visit.department === departmentFilter;
-                              return matchesSearch && matchesQuality && matchesDate && matchesDepartment;
-                            }).length === 0 && (siteVisitSearchQuery || qualityFilter !== "all" || dateFilter !== "all" || departmentFilter !== "all") && (
+                              return matchesSearch && matchesDate && matchesDepartment;
+                            }).length === 0 && (siteVisitSearchQuery || dateFilter !== "all" || departmentFilter !== "all") && (
                             <Alert className="mt-3">
                               <AlertTriangle className="h-4 w-4" />
                               <AlertDescription>
