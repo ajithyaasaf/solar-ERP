@@ -494,12 +494,8 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
     setCustomerState(updatedCustomerData);
     form.setValue("customerData", updatedCustomerData);
     
-    // If user manually edits fields, clear the auto-filled flag and customerId
-    // This indicates they're creating a new customer or modifying an existing one
-    if (isAutoFilled) {
-      setIsAutoFilled(false);
-      form.setValue("customerId", "");
-    }
+    // Keep the customerId even when editing - the backend will handle the update
+    // Just remove the visual "Auto-filled" badge to indicate the field was modified
   };
 
   return (
