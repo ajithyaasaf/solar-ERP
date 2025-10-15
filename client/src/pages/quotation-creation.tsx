@@ -493,6 +493,13 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
     const updatedCustomerData = { ...customerState, [field]: value };
     setCustomerState(updatedCustomerData);
     form.setValue("customerData", updatedCustomerData);
+    
+    // If user manually edits fields, clear the auto-filled flag and customerId
+    // This indicates they're creating a new customer or modifying an existing one
+    if (isAutoFilled) {
+      setIsAutoFilled(false);
+      form.setValue("customerId", "");
+    }
   };
 
   return (
@@ -2614,7 +2621,25 @@ export default function QuotationCreation() {
         return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
       case 1: // Customer details
         if (quotationSource === "manual") {
-          return values.customerId !== undefined && values.customerId !== "";
+          // For manual creation, allow either:
+          // 1. Customer selected from database (customerId is set), OR
+          // 2. All required fields filled manually (new customer)
+          const hasCustomerId = values.customerId !== undefined && values.customerId !== "";
+          
+          if (hasCustomerId) {
+            return true; // Customer selected from database
+          }
+          
+          // Check if required fields are filled for manual entry
+          const customerData = values.customerData;
+          if (!customerData) return false;
+          
+          const isNameValid = customerData.name && customerData.name.trim().length >= 2;
+          const isMobileValid = customerData.mobile && customerData.mobile.trim().length >= 10;
+          const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
+          const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
+          
+          return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
         } else {
           // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
