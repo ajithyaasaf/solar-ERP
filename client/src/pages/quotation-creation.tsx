@@ -683,9 +683,9 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           solarPanelMake: [],
           panelWatts: "530",
           panelType: "bifacial",
-          dcrPanelCount: 0,
+          dcrPanelCount: 6,
           nonDcrPanelCount: 0,
-          panelCount: 0,
+          panelCount: 6,
           inverterMake: [],
           inverterKW: 3,
           inverterQty: 1,
@@ -715,9 +715,9 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           solarPanelMake: [],
           panelWatts: "530",
           panelType: "bifacial",
-          dcrPanelCount: 0,
+          dcrPanelCount: 6,
           nonDcrPanelCount: 0,
-          panelCount: 0,
+          panelCount: 6,
           inverterMake: [],
           inverterKW: 3,
           inverterQty: 1,
@@ -746,9 +746,9 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           solarPanelMake: [],
           panelWatts: "530",
           panelType: "bifacial",
-          dcrPanelCount: 0,
+          dcrPanelCount: 6,
           nonDcrPanelCount: 0,
-          panelCount: 0,
+          panelCount: 6,
           inverterMake: [],
           inverterKW: 3,
           inverterQty: 1,
@@ -790,9 +790,9 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           panelType: "bifacial",
           structureType: "gp_structure",
           panelBrand: [],
-          dcrPanelCount: 0,
+          dcrPanelCount: 6,
           nonDcrPanelCount: 0,
-          panelCount: 0,
+          panelCount: 6,
           gpStructure: {
             lowerEndHeight: "0",
             higherEndHeight: "0"
@@ -829,9 +829,14 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       newProject.gstAmount = totalWithGST - basePrice;
       newProject.pricePerKW = defaultRatePerKW;
       
-      // Get propertyType from form (for manual entry: from customer, for site visit: from customerData)
+      // Get propertyType from form - always use customerData as the source of truth
       const formValues = form.getValues();
-      const propertyType = formValues.customerData?.propertyType || formValues.selectedCustomer?.propertyType || '';
+      const propertyType = formValues.customerData?.propertyType || 'residential';
+      
+      // Defensive check: Log warning if propertyType is missing for subsidy calculation
+      if (!formValues.customerData?.propertyType && ['on_grid', 'hybrid'].includes(projectType)) {
+        console.warn('⚠️ Property type missing during project creation - using default "residential" for subsidy calculation');
+      }
       
       // Use the new calculateSubsidy function
       newProject.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, projectType);
@@ -897,6 +902,9 @@ function ManualProjectConfiguration({ form }: { form: any }) {
     const updatedProjects = [...currentProjects];
     updatedProjects[index] = { ...updatedProjects[index], ...updatedData };
 
+    // Defensive check: Ensure we have the latest form values
+    const formValues = form.getValues();
+    
     // Recalculate pricing for all project types
     const project = updatedProjects[index];
     
@@ -927,9 +935,14 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       // Calculate and store rate per kW using ROUNDED kW (matching UI display)
       project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
       
-      // Get propertyType from form (for manual entry: from customer, for site visit: from customerData)
-      const formValues = form.getValues();
-      const propertyType = formValues.customerData?.propertyType || formValues.selectedCustomer?.propertyType || '';
+      // Get propertyType from form - always use customerData as the source of truth
+      // Defensive check: Use formValues already captured at the start of updateProject
+      const propertyType = formValues.customerData?.propertyType || 'residential';
+      
+      // Defensive check: Log warning if propertyType is missing for subsidy calculation
+      if (!formValues.customerData?.propertyType && ['on_grid', 'hybrid'].includes(project.projectType)) {
+        console.warn('⚠️ Property type missing - using default "residential" for subsidy calculation');
+      }
       
       // Use the new calculateSubsidy function
       project.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, project.projectType);
@@ -1058,6 +1071,48 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           <Plus className="h-4 w-4" />
           <AlertDescription>
             No projects configured yet. Please add at least one project to continue.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Validation Warnings for Projects */}
+      {projects.length > 0 && projects.some((p: any) => 
+        ['on_grid', 'off_grid', 'hybrid'].includes(p.projectType) && 
+        (p.panelCount === 0 || p.projectValue === 0)
+      ) && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Warning:</strong> Some solar projects have missing critical data:
+            <ul className="list-disc list-inside mt-2 text-sm">
+              {projects.map((p: any, idx: number) => {
+                if (['on_grid', 'off_grid', 'hybrid'].includes(p.projectType)) {
+                  const issues = [];
+                  if (p.panelCount === 0) issues.push('Panel count is 0');
+                  if (p.projectValue === 0) issues.push('Project value is 0');
+                  if (issues.length > 0) {
+                    return (
+                      <li key={idx}>
+                        Project {idx + 1} ({p.projectType}): {issues.join(', ')}
+                      </li>
+                    );
+                  }
+                }
+                return null;
+              })}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Property Type Warning */}
+      {projects.length > 0 && 
+       projects.some((p: any) => ['on_grid', 'hybrid'].includes(p.projectType)) && 
+       !form.getValues().customerData?.propertyType && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Property Type Missing:</strong> Property type is required to calculate government subsidy for solar projects. Please complete customer details in Step 2.
           </AlertDescription>
         </Alert>
       )}
@@ -1428,7 +1483,27 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">DCR Panel Count</label>
+          <label className="text-sm font-medium">Total Panel Count *</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.panelCount || 0}
+            onChange={(e) => {
+              const totalCount = parseInt(e.target.value) || 0;
+              handleFieldChange('panelCount', totalCount);
+              // Auto-distribute to DCR panels, keep non-DCR as is or 0
+              handleFieldChange('dcrPanelCount', totalCount - (project.nonDcrPanelCount || 0));
+            }}
+            className={project.panelCount === 0 ? "border-red-500" : ""}
+            data-testid={`input-panel-count-${projectIndex}`}
+          />
+          {project.panelCount === 0 && (
+            <p className="text-xs text-red-600">Panel count is required for calculations</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">DCR Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
           <Input
             type="number"
             min="0"
@@ -1456,18 +1531,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               handleFieldChange('panelCount', totalCount);
             }}
             data-testid={`input-non-dcr-panel-count-${projectIndex}`}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Total Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
-          <Input
-            type="number"
-            min="1"
-            value={project.panelCount || 0}
-            disabled
-            className="bg-muted cursor-not-allowed"
-            data-testid={`input-panel-count-${projectIndex}`}
           />
         </div>
 
@@ -1502,7 +1565,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <label className="text-sm font-medium">GST Percentage (%)</label>
           <Input
             type="number"
-            value={project.gstPercentage ?? 18}
+            value={project.gstPercentage ?? BUSINESS_RULES.gst.percentage}
             onChange={(e) => {
               const val = e.target.value;
               handleFieldChange('gstPercentage', val === '' ? 0 : parseFloat(val) || 0);
@@ -1905,8 +1968,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <label className="text-sm font-medium">GST Percentage (%)</label>
             <Input
               type="number"
-              value={project.gstPercentage || 18}
-              onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || 18)}
+              value={project.gstPercentage ?? BUSINESS_RULES.gst.percentage}
+              onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || BUSINESS_RULES.gst.percentage)}
               min="0"
               max="100"
               step="0.1"
@@ -2064,8 +2127,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <label className="text-sm font-medium">GST Percentage (%)</label>
             <Input
               type="number"
-              value={project.gstPercentage || 18}
-              onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || 18)}
+              value={project.gstPercentage ?? BUSINESS_RULES.gst.percentage}
+              onChange={(e) => handleFieldChange('gstPercentage', parseFloat(e.target.value) || BUSINESS_RULES.gst.percentage)}
               min="0"
               max="100"
               step="0.1"
@@ -2233,7 +2296,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <div className="font-medium text-lg">₹{project.basePrice?.toLocaleString() || 0}</div>
         </div>
         <div>
-          <span className="text-sm text-muted-foreground">GST {project.gstPercentage || 18}% (₹{calculatedGSTPerKW?.toLocaleString()}/kW):</span>
+          <span className="text-sm text-muted-foreground">GST {project.gstPercentage ?? BUSINESS_RULES.gst.percentage}% (₹{calculatedGSTPerKW?.toLocaleString()}/kW):</span>
           <div className="font-medium text-blue-600">₹{project.gstAmount?.toLocaleString() || 0}</div>
         </div>
         <div>
@@ -2741,7 +2804,25 @@ export default function QuotationCreation() {
           return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
         }
       case 2: // Projects
-        return values.projects && values.projects.length > 0;
+        if (!values.projects || values.projects.length === 0) {
+          return false;
+        }
+        
+        // Validate each project has required fields
+        const hasValidProjects = values.projects.every((project: any) => {
+          // For solar projects (on_grid, off_grid, hybrid)
+          if (['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
+            return (
+              project.panelCount > 0 &&
+              project.projectValue > 0 &&
+              values.customerData?.propertyType // Property type is required for subsidy calculation
+            );
+          }
+          // For water_heater and water_pump, just check projectValue
+          return project.projectValue > 0;
+        });
+        
+        return hasValidProjects;
       case 3: // Pricing
         return (values.totalCustomerPayment || 0) > 0;
       default:
