@@ -732,7 +732,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           batteryAH: "100",
           voltage: 12,
           batteryCount: 1,
-          batteryStands: 1,
+          batteryStands: "1",
           electricalWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
           others: ""
@@ -763,7 +763,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           batteryAH: "100",
           voltage: 12,
           batteryCount: 1,
-          batteryStands: 1,
+          batteryStands: "1",
           electricalWorkScope: "customer_scope",
           netMeterScope: "customer_scope",
           others: ""
