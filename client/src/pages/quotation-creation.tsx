@@ -527,6 +527,9 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
             className={isAutoFilled && customerState.name ? "bg-green-50 border-green-200" : ""}
             data-testid="input-customer-name"
           />
+          {customerState.name && customerState.name.trim().length < 2 && (
+            <p className="text-xs text-red-600">Name must be at least 2 characters</p>
+          )}
         </div>
 
         {/* Mobile */}
@@ -543,10 +546,13 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
           <Input
             value={customerState.mobile || ""}
             onChange={(e) => updateCustomerField("mobile", e.target.value)}
-            placeholder="Enter mobile number"
+            placeholder="Enter 10-digit mobile number"
             className={isAutoFilled && customerState.mobile ? "bg-green-50 border-green-200" : ""}
             data-testid="input-customer-mobile"
           />
+          {customerState.mobile && customerState.mobile.trim().length < 10 && (
+            <p className="text-xs text-red-600">Mobile number must be at least 10 digits</p>
+          )}
         </div>
 
         {/* Address */}
@@ -567,6 +573,9 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
             className={isAutoFilled && customerState.address ? "bg-green-50 border-green-200" : ""}
             data-testid="textarea-customer-address"
           />
+          {customerState.address && customerState.address.trim().length < 3 && (
+            <p className="text-xs text-red-600">Address must be at least 3 characters</p>
+          )}
         </div>
 
         {/* Property Type */}
