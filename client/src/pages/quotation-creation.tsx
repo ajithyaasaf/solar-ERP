@@ -3603,16 +3603,37 @@ export default function QuotationCreation() {
                   </div>
                   <div className="text-sm text-muted-foreground italic">
                     Amount in words: <span className="font-medium">Rupees {(() => {
-                      const amount = form.watch("totalWithGST") || 0;
-                      const words = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
-                      const lakhs = Math.floor(amount / 100000);
+                      const amount = Math.floor(form.watch("totalWithGST") || 0);
+                      
+                      const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+                      const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+                      const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+                      
+                      const convertTwoDigit = (num: number): string => {
+                        if (num === 0) return "";
+                        if (num < 10) return ones[num];
+                        if (num < 20) return teens[num - 10];
+                        const tenDigit = Math.floor(num / 10);
+                        const oneDigit = num % 10;
+                        return tens[tenDigit] + (oneDigit > 0 ? " " + ones[oneDigit] : "");
+                      };
+                      
+                      if (amount === 0) return "Zero Only";
+                      
+                      const crores = Math.floor(amount / 10000000);
+                      const lakhs = Math.floor((amount % 10000000) / 100000);
                       const thousands = Math.floor((amount % 100000) / 1000);
                       const hundreds = Math.floor((amount % 1000) / 100);
+                      const remainder = amount % 100;
+                      
                       let result = "";
-                      if (lakhs > 0) result += `${words[lakhs]} Lac${lakhs > 1 ? 's' : ''} `;
-                      if (thousands > 0) result += `${words[thousands]} Thousand `;
-                      if (hundreds > 0) result += `${words[hundreds]} Hundred `;
-                      return result + "Only";
+                      if (crores > 0) result += convertTwoDigit(crores) + " Crore" + (crores > 1 ? "s" : "") + " ";
+                      if (lakhs > 0) result += convertTwoDigit(lakhs) + " Lakh" + (lakhs > 1 ? "s" : "") + " ";
+                      if (thousands > 0) result += convertTwoDigit(thousands) + " Thousand ";
+                      if (hundreds > 0) result += ones[hundreds] + " Hundred ";
+                      if (remainder > 0) result += convertTwoDigit(remainder) + " ";
+                      
+                      return result.trim() + " Only";
                     })()}</span>
                   </div>
                 </div>
