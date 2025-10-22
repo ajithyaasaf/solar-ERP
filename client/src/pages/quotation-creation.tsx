@@ -2528,11 +2528,36 @@ export default function QuotationCreation() {
   // Create quotation mutation using proper apiRequest with auth
   const createQuotationMutation = useMutation({
     mutationFn: async (data: QuotationFormData) => {
+      let finalCustomerId = data.customerId;
+      
+      // For manual quotations, handle customer creation/lookup
+      if (quotationSource === "manual" && data.customerData) {
+        // Check if customer already has an ID (selected from existing)
+        if (data.customerData.id) {
+          finalCustomerId = data.customerData.id;
+        } else {
+          // Create new customer
+          console.log("Creating new customer:", data.customerData);
+          const customerResponse = await apiRequest("/api/customers", "POST", data.customerData);
+          const newCustomer = await customerResponse.json();
+          finalCustomerId = newCustomer.id;
+          console.log("New customer created with ID:", finalCustomerId);
+        }
+      }
+      
+      // Prepare payload without customerData (backend doesn't accept it)
+      const { customerData, totalGSTAmount, totalWithGST, ...quotationPayload } = data;
+      const payloadWithCustomerId = {
+        ...quotationPayload,
+        customerId: finalCustomerId
+      };
+      
       const url = quotationSource === "site_visit" && selectedSiteVisit 
         ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
         : "/api/quotations";
       
-      const response = await apiRequest(url, "POST", data);
+      console.log("Sending quotation payload:", payloadWithCustomerId);
+      const response = await apiRequest(url, "POST", payloadWithCustomerId);
       return response.json();
     },
     onSuccess: (data: any) => {
