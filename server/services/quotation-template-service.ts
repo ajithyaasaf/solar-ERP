@@ -287,13 +287,24 @@ export class QuotationTemplateService {
     
     items.push({
       slNo: slNo++,
-      description: "System Configuration",
-      type: `Phase: ${phase} | Inverter: ${inverterKW} kW | Total Panel Watts: ${totalPanelWatts}W`,
-      volt: "Summary",
-      rating: "-",
-      make: "-",
-      qty: 1,
-      unit: "Set"
+      description: "Phase",
+      type: "Inverter-KW",
+      volt: "Panel Watts",
+      rating: "",
+      make: "",
+      qty: 0,
+      unit: ""
+    });
+    
+    items.push({
+      slNo: slNo++,
+      description: phase,
+      type: inverterKW.toString(),
+      volt: totalPanelWatts,
+      rating: "",
+      make: "",
+      qty: 0,
+      unit: ""
     });
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
@@ -304,7 +315,7 @@ export class QuotationTemplateService {
       slNo: slNo++,
       description: "Solar Panel (D)",
       type: panelType,
-      volt: "NA",
+      volt: "24",
       rating: `${project.panelWatts || '530'} WATTS`,
       make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
       qty: project.panelCount || 1,
@@ -418,10 +429,10 @@ export class QuotationTemplateService {
         description: "Earthing",
         type: earthType,
         volt: "NA",
-        rating: "3",
+        rating: "3 Feet",
         make: "As per MNRE App",
         qty: earthQty,
-        unit: "Feet"
+        unit: "Set"
       });
     }
 
@@ -458,8 +469,8 @@ export class QuotationTemplateService {
       slNo: slNo++,
       description: "BOS (PVC pipe/Hose/etc)",
       type: "As Site Requirement",
-      volt: "NA",
-      rating: "NA",
+      volt: "-",
+      rating: "-",
       make: "As per MNRE App",
       qty: 1,
       unit: "Set"
@@ -470,8 +481,8 @@ export class QuotationTemplateService {
       slNo: slNo++,
       description: "Installation & Commissioning",
       type: "With Well trained and Experienced Persons",
-      volt: "NA",
-      rating: "NA",
+      volt: "-",
+      rating: "-",
       make: "As per MNRE App",
       qty: 1,
       unit: "Nos"
