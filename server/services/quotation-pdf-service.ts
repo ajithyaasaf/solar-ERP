@@ -53,7 +53,7 @@ export class QuotationPDFService {
       return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertTwoDigit(n % 100) : '');
     };
     
-    // Indian numbering: ones, thousands, lakhs, crores
+    // Indian numbering: ones, thousands, lacs, crores
     let crore = Math.floor(num / 10000000);
     let lakh = Math.floor((num % 10000000) / 100000);
     let thousand = Math.floor((num % 100000) / 1000);
@@ -419,20 +419,39 @@ export class QuotationPDFService {
             <td>₹${template.pricingBreakdown.ratePerKw.toLocaleString()}</td>
             <td>₹${template.pricingBreakdown.gstPerKw.toLocaleString()}</td>
             <td>${template.pricingBreakdown.gstPercentage}</td>
-            <td>₹ ${template.pricingBreakdown.valueWithGST.toLocaleString()}.00</td>
+            <td>₹ ${(() => {
+              const exactValue = template.pricingBreakdown.kw * (template.pricingBreakdown.ratePerKw + template.pricingBreakdown.gstPerKw);
+              const roundedValue = Math.round(exactValue);
+              return roundedValue.toLocaleString();
+            })()}.00</td>
           </tr>
           <tr>
             <td colspan="6" style="text-align: right; font-weight: bold;">Roundoff:</td>
-            <td>₹0.00</td>
+            <td>₹${(() => {
+              const exactValue = template.pricingBreakdown.kw * (template.pricingBreakdown.ratePerKw + template.pricingBreakdown.gstPerKw);
+              const roundedValue = Math.round(exactValue);
+              const roundoff = roundedValue - exactValue;
+              return roundoff.toFixed(2);
+            })()}</td>
           </tr>
         </tbody>
       </table>
       
       <!-- Total Calculation -->
       <div class="total-calculation">
-        <strong>Total Cost: ₹${template.pricingBreakdown.totalCost.toLocaleString()}</strong><br>
-        <strong>Total GST Exc: ₹${Math.round(template.pricingBreakdown.totalCost / 1.18).toLocaleString()}</strong><br>
-        <strong>${this.numberToWords(template.pricingBreakdown.totalCost)}</strong>
+        <strong>Total Cost: ₹${(() => {
+          const gstPercentage = template.pricingBreakdown.gstPercentage / 100;
+          const baseCost = template.pricingBreakdown.totalCost / (1 + gstPercentage);
+          return Math.round(baseCost).toLocaleString();
+        })()}</strong><br>
+        <strong>Total Gst ${template.pricingBreakdown.gstPercentage}%: ₹${(() => {
+          const gstPercentage = template.pricingBreakdown.gstPercentage / 100;
+          const baseCost = template.pricingBreakdown.totalCost / (1 + gstPercentage);
+          const gstAmount = template.pricingBreakdown.totalCost - baseCost;
+          return gstAmount.toFixed(2);
+        })()}</strong><br>
+        <strong>Total Amount in Rs: ₹${template.pricingBreakdown.totalCost.toLocaleString()}.00</strong><br>
+        <strong>Amount in Words: ${this.numberToWords(template.pricingBreakdown.totalCost)}</strong>
       </div>
 
       
