@@ -89,9 +89,11 @@ const quotationProjectSchemaWithGST = quotationProjectSchema.and(z.object({
 const quotationFormSchema = insertQuotationSchema.omit({
   quotationNumber: true, // Generated server-side
   createdAt: true,       // Set server-side
-  updatedAt: true        // Set server-side
+  updatedAt: true,       // Set server-side
+  customerId: true       // Will be set from customerData or existing customer
 }).extend({
   // Override for frontend form compatibility
+  customerId: z.string().optional(), // Allow empty for new customers (will be created server-side)
   projects: z.array(quotationProjectSchemaWithGST).min(1, "At least one project is required"),
   followUps: z.array(quotationFollowUpSchema).default([]),
   siteVisitMapping: siteVisitMappingSchema.optional(),
