@@ -46,6 +46,8 @@ export interface QuotationTemplate {
     ratePerKw: number;
     gstPerKw: number;
     gstPercentage: number;
+    basePrice: number;
+    gstAmount: number;
     valueWithGST: number;
     totalCost: number;
     subsidyAmount: number;
