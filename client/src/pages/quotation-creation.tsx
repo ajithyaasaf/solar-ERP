@@ -2742,7 +2742,7 @@ export default function QuotationCreation() {
   useEffect(() => {
     const mainElement = document.querySelector('main.overflow-y-auto');
     if (mainElement) {
-      mainElement.scrollTo({ top: 50, behavior: 'smooth' });
+      mainElement.scrollTo({ top: 20, behavior: 'smooth' });
     }
   }, [currentStep]);
 
