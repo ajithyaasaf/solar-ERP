@@ -1323,19 +1323,23 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Panel Watts</label>
-          <Select value={project.panelWatts || "530"} onValueChange={(value) => handleFieldChange('panelWatts', value)}>
-            <SelectTrigger data-testid={`select-panel-watts-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {panelWatts.map((watts) => (
-                <SelectItem key={watts} value={watts}>
-                  {watts}W
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label className="text-sm font-medium">Panel Watts <span className="text-xs text-muted-foreground">(Type or select)</span></label>
+          <Input
+            type="text"
+            list={`panel-watts-list-${projectIndex}`}
+            value={project.panelWatts || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleFieldChange('panelWatts', value);
+            }}
+            placeholder="Enter or select panel wattage"
+            data-testid={`input-panel-watts-${projectIndex}`}
+          />
+          <datalist id={`panel-watts-list-${projectIndex}`}>
+            {panelWatts.map((watts) => (
+              <option key={watts} value={watts}>{watts}W</option>
+            ))}
+          </datalist>
         </div>
 
         <div className="space-y-2">
@@ -2100,26 +2104,87 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               ))}
             </div>
           </div>
-          
+
           <div className="space-y-2">
-            <label className="text-sm font-medium">Panel Count *</label>
-            <Input
-              type="number"
-              min="1"
-              value={project.panelCount || 1}
-              onChange={(e) => handleFieldChange('panelCount', parseInt(e.target.value) || 1)}
-              data-testid={`input-pump-panel-count-${projectIndex}`}
-            />
+            <label className="text-sm font-medium">Panel Type *</label>
+            <Select value={project.panelType || "bifacial"} onValueChange={(value) => handleFieldChange('panelType', value)}>
+              <SelectTrigger data-testid={`select-pump-panel-type-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {panelTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type === 'bifacial' ? 'Bifacial' : type === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          
+
           <div className="space-y-2">
-            <label className="text-sm font-medium">Structure Height (ft)</label>
+            <label className="text-sm font-medium">Panel Watts <span className="text-xs text-muted-foreground">(Type or select)</span></label>
+            <Input
+              type="text"
+              list={`pump-panel-watts-list-${projectIndex}`}
+              value={project.panelWatts || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('panelWatts', value);
+              }}
+              placeholder="Enter or select panel wattage"
+              data-testid={`input-pump-panel-watts-${projectIndex}`}
+            />
+            <datalist id={`pump-panel-watts-list-${projectIndex}`}>
+              {panelWatts.map((watts) => (
+                <option key={watts} value={watts}>{watts}W</option>
+              ))}
+            </datalist>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Total Panel Count *</label>
             <Input
               type="number"
               min="0"
-              value={project.structureHeight || 0}
-              onChange={(e) => handleFieldChange('structureHeight', parseFloat(e.target.value) || 0)}
-              data-testid={`input-pump-structure-height-${projectIndex}`}
+              value={project.panelCount || 0}
+              onChange={(e) => {
+                const totalCount = parseInt(e.target.value) || 0;
+                handleFieldChange('panelCount', totalCount);
+                handleFieldChange('dcrPanelCount', totalCount - (project.nonDcrPanelCount || 0));
+              }}
+              data-testid={`input-pump-panel-count-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">DCR Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
+            <Input
+              type="number"
+              min="0"
+              value={project.dcrPanelCount || 0}
+              onChange={(e) => {
+                const dcrCount = parseInt(e.target.value) || 0;
+                handleFieldChange('dcrPanelCount', dcrCount);
+                const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+                handleFieldChange('panelCount', totalCount);
+              }}
+              data-testid={`input-pump-dcr-panel-count-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">NON-DCR Panel Count</label>
+            <Input
+              type="number"
+              min="0"
+              value={project.nonDcrPanelCount || 0}
+              onChange={(e) => {
+                const nonDcrCount = parseInt(e.target.value) || 0;
+                handleFieldChange('nonDcrPanelCount', nonDcrCount);
+                const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+                handleFieldChange('panelCount', totalCount);
+              }}
+              data-testid={`input-pump-non-dcr-panel-count-${projectIndex}`}
             />
           </div>
           
