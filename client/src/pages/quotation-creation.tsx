@@ -2738,22 +2738,24 @@ export default function QuotationCreation() {
     }
   }, [fallbackSiteVisitData, mappingError, mappingData, form]);
 
+  // Scroll to top when step changes
+  useEffect(() => {
+    const mainElement = document.querySelector('main.overflow-y-auto');
+    if (mainElement) {
+      mainElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentStep]);
+
   // Navigation functions
   const nextStep = () => {
     if (currentStep < WIZARD_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 0);
     }
   };
 
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 0);
     }
   };
 
