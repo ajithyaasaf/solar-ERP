@@ -53,6 +53,11 @@ export interface QuotationTemplate {
     subsidyAmount: number;
     customerPayment: number;
   };
+  bomSummary?: {
+    phase: string;
+    inverterKW: number;
+    panelWatts: number;
+  };
   billOfMaterials: BillOfMaterialsItem[];
   termsAndConditions: {
     warrantyDetails: string[];
@@ -280,32 +285,6 @@ export class QuotationTemplateService {
     // Calculate actual kW from panel data
     const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
     const inverterKW = project.inverterKW || calculatedKW;
-
-    // Add summary row at the top: Phase | Inverter-KW | Panel Watts
-    const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
-    const totalPanelWatts = (parseInt(project.panelWatts || '530') * (project.panelCount || 1)).toString();
-    
-    items.push({
-      slNo: slNo++,
-      description: "Phase",
-      type: "Inverter-KW",
-      volt: "Panel Watts",
-      rating: "",
-      make: "",
-      qty: 0,
-      unit: ""
-    });
-    
-    items.push({
-      slNo: slNo++,
-      description: phase,
-      type: inverterKW.toString(),
-      volt: totalPanelWatts,
-      rating: "",
-      make: "",
-      qty: 0,
-      unit: ""
-    });
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
@@ -1211,6 +1190,21 @@ export class QuotationTemplateService {
     const accountDetails = this.generateAccountDetails(quotation);
     const documentRequirements = this.generateDocumentRequirements(quotation);
     
+    // Generate BOM summary for on-grid projects
+    let bomSummary: { phase: string; inverterKW: number; panelWatts: number } | undefined = undefined;
+    if (project.projectType === 'on_grid') {
+      const calculatedKW = this.calculateSystemKW((project as any).panelWatts || 530, (project as any).panelCount || 1);
+      const inverterKW = (project as any).inverterKW || calculatedKW;
+      const phase = (project as any).inverterPhase === 'three_phase' ? '3' : '1';
+      const totalPanelWatts = parseInt((project as any).panelWatts || '530') * ((project as any).panelCount || 1);
+      
+      bomSummary = {
+        phase,
+        inverterKW,
+        panelWatts: totalPanelWatts
+      };
+    }
+    
     return {
       header: this.COMPANY_DETAILS,
       quotationNumber: quotation.quotationNumber || this.generateQuotationNumber(),
@@ -1225,6 +1219,7 @@ export class QuotationTemplateService {
       },
       reference: `${Math.floor(pricingBreakdown?.kw || 0)} kW ${projectTypeName} Solar Power Generation System`,
       pricingBreakdown,
+      bomSummary,
       billOfMaterials,
       termsAndConditions: {
         warrantyDetails: warrantyDetails,

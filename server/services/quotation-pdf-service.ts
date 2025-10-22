@@ -450,6 +450,21 @@ export class QuotationPDFService {
       <div class="page-break">
         <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${template.pricingBreakdown.kw} kw On-grid Solar NPG System</h3>
         
+        ${template.bomSummary ? `
+        <table style="width: 100%; margin: 10px 0; border-collapse: collapse; background-color: #90EE90;">
+          <tr style="font-weight: bold; text-align: center;">
+            <td style="border: 1px solid #000; padding: 5px;">Phase</td>
+            <td style="border: 1px solid #000; padding: 5px;">Inverter-KW</td>
+            <td style="border: 1px solid #000; padding: 5px;">Panel Watts</td>
+          </tr>
+          <tr style="text-align: center;">
+            <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.phase}</td>
+            <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.inverterKW}</td>
+            <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.panelWatts}</td>
+          </tr>
+        </table>
+        ` : ''}
+        
         <table class="bom-table">
           <thead>
             <tr>
