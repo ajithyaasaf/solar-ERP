@@ -1192,6 +1192,8 @@ export class QuotationTemplateService {
     
     // Generate BOM summary for on-grid projects
     let bomSummary: { phase: string; inverterKW: number; panelWatts: number } | undefined = undefined;
+    console.log('=== BOM SUMMARY DEBUG ===');
+    console.log('Project type:', project.projectType);
     if (project.projectType === 'on_grid') {
       const calculatedKW = this.calculateSystemKW((project as any).panelWatts || 530, (project as any).panelCount || 1);
       const inverterKW = (project as any).inverterKW || calculatedKW;
@@ -1203,7 +1205,11 @@ export class QuotationTemplateService {
         inverterKW,
         panelWatts: totalPanelWatts
       };
+      console.log('BOM Summary generated:', bomSummary);
+    } else {
+      console.log('BOM Summary NOT generated - project type is not on_grid');
     }
+    console.log('========================')
     
     return {
       header: this.COMPANY_DETAILS,
