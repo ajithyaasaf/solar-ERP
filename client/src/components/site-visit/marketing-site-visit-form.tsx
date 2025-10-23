@@ -1174,6 +1174,23 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Inverter Volt</Label>
+                    <Combobox
+                      value={formData.offGridConfig.inverterVolt || ''}
+                      onChange={(value) => {
+                        const numericValue = value.replace(/V$/i, '').trim();
+                        updateConfig('offGridConfig', { inverterVolt: numericValue });
+                      }}
+                      options={inverterVoltOptions.map((volt) => ({ value: volt, label: `${volt}V` }))}
+                      placeholder="Select or type voltage"
+                      searchPlaceholder="Search voltage..."
+                      emptyMessage="No voltage option found."
+                      allowCustom={true}
+                      formatCustomValue={(val) => val ? `${val}V` : val}
+                    />
+                  </div>
+
+                  <div>
                     <Label>Battery Brand *</Label>
                     <Select 
                       value={formData.offGridConfig.batteryBrand}
