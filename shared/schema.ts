@@ -266,6 +266,10 @@ export const batteryAHOptions = [
   "100", "120", "150", "200"
 ] as const;
 
+export const inverterVoltOptions = [
+  "48", "96", "120", "180", "240", "360"
+] as const;
+
 export const waterHeaterBrands = [
   "venus", "pressurised", "non_pressurised", "hykon"
 ] as const;
@@ -381,7 +385,8 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
   batteryAH: z.enum(batteryAHOptions).optional(),
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
-  batteryStands: z.string().optional()
+  batteryStands: z.string().optional(),
+  inverterVolt: z.string().optional() // Changed to string to allow custom values
 }).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
 export const hybridConfigSchema = offGridConfigSchema.extend({
