@@ -1504,6 +1504,7 @@ export const quotationOffGridProjectSchema = z.object({
   inverterKW: z.number().min(0).optional(),
   inverterQty: z.number().min(1).optional(),
   inverterPhase: z.enum(inverterPhases),
+  inverterVolt: z.string().optional(), // Changed to string to allow custom values
   batteryBrand: z.enum(batteryBrands),
   batteryType: z.enum(batteryTypes).optional(),
   batteryAH: z.enum(batteryAHOptions).optional(),
@@ -1553,6 +1554,7 @@ export const quotationHybridProjectSchema = z.object({
   inverterKW: z.number().min(0).optional(),
   inverterQty: z.number().min(1).optional(),
   inverterPhase: z.enum(inverterPhases),
+  inverterVolt: z.string().optional(), // Changed to string to allow custom values
   batteryBrand: z.enum(batteryBrands),
   batteryType: z.enum(batteryTypes).optional(),
   batteryAH: z.enum(batteryAHOptions).optional(),
