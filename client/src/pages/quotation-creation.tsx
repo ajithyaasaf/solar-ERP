@@ -192,6 +192,18 @@ const calculateSubsidy = (kw: number, propertyType: string, projectType: string)
   }
 };
 
+// Helper function to format structure type labels
+const formatStructureTypeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    'gp_structure': 'GP Structure',
+    'mono_rail': 'Mono Rail',
+    'gi_structure': 'GI Structure',
+    'gi_round_pipe': 'GI Round Pipe',
+    'ms_square_pipe': 'MS Square Pipe'
+  };
+  return labels[type] || type;
+};
+
 // Site visit mapping interface
 interface SiteVisitMapping {
   id: string;
@@ -1427,6 +1439,19 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </Select>
         </div>
 
+        {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Inverter Volt <span className="text-xs text-muted-foreground">(Type or select)</span></label>
+            <Input
+              type="text"
+              value={project.inverterVolt || ''}
+              onChange={(e) => handleFieldChange('inverterVolt', e.target.value)}
+              placeholder="Enter inverter voltage (e.g., 24V, 48V)"
+              data-testid={`input-inverter-volt-${projectIndex}`}
+            />
+          </div>
+        )}
+
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
             <Checkbox
@@ -1606,7 +1631,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               <SelectContent>
                 {structureTypes.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                    {formatStructureTypeLabel(type)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -2226,7 +2251,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 <SelectContent>
                   {structureTypes.map((type) => (
                     <SelectItem key={type} value={type}>
-                      {type === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                      {formatStructureTypeLabel(type)}
                     </SelectItem>
                   ))}
                 </SelectContent>

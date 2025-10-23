@@ -952,6 +952,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterQty} units</p>
                         </div>
                       )}
+                      {siteVisit.marketingData.offGridConfig.inverterVolt && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter Volt</p>
+                          <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterVolt}</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Earth Connection</p>
                         <p className="font-medium">{formatEarthConnection(siteVisit.marketingData.offGridConfig.earth)}</p>
@@ -1132,6 +1138,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <div>
                           <p className="text-sm text-muted-foreground">Inverter Qty</p>
                           <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterQty} units</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.hybridConfig.inverterVolt && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Inverter Volt</p>
+                          <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterVolt}</p>
                         </div>
                       )}
                       <div>
