@@ -439,7 +439,7 @@ export class QuotationTemplateService {
         volt: "NA",
         rating: "3",
         make: "As per MNRE App",
-        qty: 1,
+        qty: project.electricalCount || project.inverterKW || 1,
         unit: "KW"
       });
     }
@@ -543,7 +543,9 @@ export class QuotationTemplateService {
     });
 
     // Off-Grid Inverter
-    const inverterVoltage = project.inverterPhase === 'three_phase' ? '415V' : '230V';
+    const inverterVoltage = project.inverterVolt 
+      ? `${project.inverterVolt}V` 
+      : (project.inverterPhase === 'three_phase' ? '415V' : '230V');
     items.push({
       slNo: slNo++,
       description: "Off-Grid Inverter (PCU)",
@@ -736,7 +738,9 @@ export class QuotationTemplateService {
     });
 
     // Hybrid Inverter
-    const inverterVoltage = project.inverterPhase === 'three_phase' ? '415V' : '230V';
+    const inverterVoltage = project.inverterVolt 
+      ? `${project.inverterVolt}V` 
+      : (project.inverterPhase === 'three_phase' ? '415V' : '230V');
     items.push({
       slNo: slNo++,
       description: "Hybrid Inverter",

@@ -1831,16 +1831,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
       )}
 
-      {/* Lightning Arrestor */}
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id={`lightningArrest-${projectIndex}`}
-          checked={project.lightningArrest || false}
-          onCheckedChange={(checked) => handleFieldChange('lightningArrest', checked)}
-        />
-        <label htmlFor={`lightningArrest-${projectIndex}`} className="text-sm font-medium">Lightning Arrestor Required</label>
-      </div>
-
       {/* Additional Notes */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Additional Notes</label>
