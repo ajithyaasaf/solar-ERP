@@ -639,6 +639,20 @@ export class QuotationTemplateService {
       });
     }
 
+    // Electrical Accessories - Add only if selected in form
+    if (project.electricalAccessories) {
+      items.push({
+        slNo: slNo++,
+        description: "Electrical Accessories",
+        type: "NA",
+        volt: "NA",
+        rating: "3",
+        make: "As per MNRE App",
+        qty: project.electricalCount || project.inverterKW || 1,
+        unit: "KW"
+      });
+    }
+
     // Charge Controller
     items.push({
       slNo: slNo++,
@@ -831,6 +845,20 @@ export class QuotationTemplateService {
         make: "As per MNRE LIST",
         qty: earthQty,
         unit: "Set"
+      });
+    }
+
+    // Electrical Accessories - Add only if selected in form
+    if (project.electricalAccessories) {
+      items.push({
+        slNo: slNo++,
+        description: "Electrical Accessories",
+        type: "NA",
+        volt: "NA",
+        rating: "3",
+        make: "As per MNRE App",
+        qty: project.electricalCount || project.inverterKW || 1,
+        unit: "KW"
       });
     }
 
