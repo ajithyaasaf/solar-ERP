@@ -39,6 +39,7 @@ import {
   batteryBrands,
   batteryTypes,
   batteryAHOptions,
+  inverterVoltOptions,
   waterHeaterBrands,
   floorLevels,
   structureTypes,
@@ -106,6 +107,7 @@ interface OffGridConfig extends OnGridConfig {
   voltage: number;
   batteryCount: number;
   batteryStands?: string;
+  inverterVolt?: string;
   // Off-grid doesn't have net meter scope
 }
 
