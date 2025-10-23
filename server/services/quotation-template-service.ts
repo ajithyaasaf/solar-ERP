@@ -318,6 +318,7 @@ export class QuotationTemplateService {
     const structureTypeMap: Record<string, string> = {
       'gp_structure': 'GI',
       'mono_rail': 'Aluminium',
+      'gi_structure': 'GI',
       'gi_round_pipe': 'GI',
       'ms_square_pipe': 'MS'
     };
@@ -498,6 +499,7 @@ export class QuotationTemplateService {
     const structureTypeMap: Record<string, string> = {
       'gp_structure': 'GP Structure',
       'mono_rail': 'Mono Rail',
+      'gi_structure': 'GI Structure',
       'gi_round_pipe': 'GI Round Pipe',
       'ms_square_pipe': 'MS Square Pipe'
     };
@@ -690,6 +692,7 @@ export class QuotationTemplateService {
     const structureTypeMap: Record<string, string> = {
       'gp_structure': 'GP Structure',
       'mono_rail': 'Mono Rail',
+      'gi_structure': 'GI Structure',
       'gi_round_pipe': 'GI Round Pipe',
       'ms_square_pipe': 'MS Square Pipe'
     };

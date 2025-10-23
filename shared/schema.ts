@@ -283,7 +283,7 @@ export const floorLevels = [
 
 // Structure types
 export const structureTypes = [
-  "gp_structure", "mono_rail", "gi_round_pipe", "ms_square_pipe"
+  "gp_structure", "mono_rail", "gi_structure", "gi_round_pipe", "ms_square_pipe"
 ] as const;
 
 // Mono rail options

@@ -779,6 +779,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                             <SelectItem key={type} value={type}>
                               {type === 'gp_structure' ? 'GP Structure' : 
                                type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_structure' ? 'GI Structure' :
                                type === 'gi_round_pipe' ? 'GI Round Pipe' :
                                'MS Square Pipe'}
                             </SelectItem>
@@ -788,6 +789,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     </div>
 
                     {(formData.onGridConfig.structureType === 'gp_structure' || 
+                      formData.onGridConfig.structureType === 'gi_structure' ||
                       formData.onGridConfig.structureType === 'gi_round_pipe' ||
                       formData.onGridConfig.structureType === 'ms_square_pipe') && (
                       <>
@@ -1380,6 +1382,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                             <SelectItem key={type} value={type}>
                               {type === 'gp_structure' ? 'GP Structure' : 
                                type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_structure' ? 'GI Structure' :
                                type === 'gi_round_pipe' ? 'GI Round Pipe' :
                                'MS Square Pipe'}
                             </SelectItem>
@@ -1960,6 +1963,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                             <SelectItem key={type} value={type}>
                               {type === 'gp_structure' ? 'GP Structure' : 
                                type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_structure' ? 'GI Structure' :
                                type === 'gi_round_pipe' ? 'GI Round Pipe' :
                                'MS Square Pipe'}
                             </SelectItem>
@@ -2516,6 +2520,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                             <SelectItem key={type} value={type}>
                               {type === 'gp_structure' ? 'GP Structure' : 
                                type === 'mono_rail' ? 'Mono Rail' :
+                               type === 'gi_structure' ? 'GI Structure' :
                                type === 'gi_round_pipe' ? 'GI Round Pipe' :
                                'MS Square Pipe'}
                             </SelectItem>

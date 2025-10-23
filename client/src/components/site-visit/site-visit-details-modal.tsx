@@ -163,6 +163,18 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
     return value === 'ac_dc' ? 'AC/DC' : value.toUpperCase();
   };
 
+  const formatStructureType = (value: string | undefined): string => {
+    if (!value) return 'Not specified';
+    switch (value) {
+      case 'gp_structure': return 'GP Structure';
+      case 'mono_rail': return 'Mono Rail';
+      case 'gi_structure': return 'GI Structure';
+      case 'gi_round_pipe': return 'GI Round Pipe';
+      case 'ms_square_pipe': return 'MS Square Pipe';
+      default: return value.replace(/_/g, ' ').toUpperCase();
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'in_progress': return 'bg-orange-100 text-orange-800';
@@ -824,8 +836,8 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           {siteVisit.marketingData.onGridConfig.structureType && (
                             <div>
                               <p className="text-sm text-muted-foreground">Structure Type</p>
-                              <p className="font-medium capitalize">
-                                {siteVisit.marketingData.onGridConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              <p className="font-medium">
+                                {formatStructureType(siteVisit.marketingData.onGridConfig.structureType)}
                               </p>
                             </div>
                           )}
@@ -1028,8 +1040,8 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           {siteVisit.marketingData.offGridConfig.structureType && (
                             <div>
                               <p className="text-sm text-muted-foreground">Structure Type</p>
-                              <p className="font-medium capitalize">
-                                {siteVisit.marketingData.offGridConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              <p className="font-medium">
+                                {formatStructureType(siteVisit.marketingData.offGridConfig.structureType)}
                               </p>
                             </div>
                           )}
@@ -1200,8 +1212,8 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           {siteVisit.marketingData.hybridConfig.structureType && (
                             <div>
                               <p className="text-sm text-muted-foreground">Structure Type</p>
-                              <p className="font-medium capitalize">
-                                {siteVisit.marketingData.hybridConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              <p className="font-medium">
+                                {formatStructureType(siteVisit.marketingData.hybridConfig.structureType)}
                               </p>
                             </div>
                           )}
@@ -1421,8 +1433,8 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           {siteVisit.marketingData.waterPumpConfig.structureType && (
                             <div>
                               <p className="text-sm text-muted-foreground">Structure Type</p>
-                              <p className="font-medium capitalize">
-                                {siteVisit.marketingData.waterPumpConfig.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail'}
+                              <p className="font-medium">
+                                {formatStructureType(siteVisit.marketingData.waterPumpConfig.structureType)}
                               </p>
                             </div>
                           )}
