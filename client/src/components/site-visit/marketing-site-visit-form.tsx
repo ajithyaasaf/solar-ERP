@@ -1391,7 +1391,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       </Select>
                     </div>
 
-                    {formData.offGridConfig.structureType === 'gp_structure' && (
+                    {(formData.offGridConfig.structureType === 'gp_structure' || 
+                      formData.offGridConfig.structureType === 'gi_structure' ||
+                      formData.offGridConfig.structureType === 'gi_round_pipe' ||
+                      formData.offGridConfig.structureType === 'ms_square_pipe') && (
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
@@ -1972,7 +1975,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       </Select>
                     </div>
 
-                    {formData.hybridConfig.structureType === 'gp_structure' && (
+                    {(formData.hybridConfig.structureType === 'gp_structure' || 
+                      formData.hybridConfig.structureType === 'gi_structure' ||
+                      formData.hybridConfig.structureType === 'gi_round_pipe' ||
+                      formData.hybridConfig.structureType === 'ms_square_pipe') && (
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
@@ -2529,7 +2535,10 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       </Select>
                     </div>
 
-                    {formData.waterPumpConfig.structureType === 'gp_structure' && (
+                    {(formData.waterPumpConfig.structureType === 'gp_structure' || 
+                      formData.waterPumpConfig.structureType === 'gi_structure' ||
+                      formData.waterPumpConfig.structureType === 'gi_round_pipe' ||
+                      formData.waterPumpConfig.structureType === 'ms_square_pipe') && (
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
