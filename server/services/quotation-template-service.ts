@@ -221,6 +221,34 @@ export class QuotationTemplateService {
   }
 
   /**
+   * Calculate backup solutions for off-grid and hybrid systems
+   * Formula: Backup Watts = (Battery AH × 10 × Qty) - 3%
+   * Then calculate backup hours for different usage scenarios
+   */
+  static calculateBackupSolutions(project: any): { 
+    backupWatts: number; 
+    usageWatts: number[]; 
+    backupHours: number[] 
+  } {
+    const batteryAH = parseInt(project.batteryAH || '100');
+    const batteryQty = project.batteryCount || 1;
+    
+    // Calculate backup watts: (AH × 10 × Qty) - 3% loss
+    const baseWatts = batteryAH * 10 * batteryQty;
+    const backupWatts = Math.round(baseWatts - (baseWatts * 0.03));
+    
+    // Use provided usage watts or defaults
+    const usageWatts = project.backupSolutions?.usageWatts || [800, 750, 550, 450, 200];
+    
+    // Calculate backup hours for each usage watts
+    const backupHours = usageWatts.map((usage: number) => 
+      Math.round((backupWatts / usage) * 100) / 100
+    );
+    
+    return { backupWatts, usageWatts, backupHours };
+  }
+
+  /**
    * Calculate subsidy based on kW, property type, and project type
    * Subsidy applies ONLY for residential properties with on_grid or hybrid projects
    * Up to 1 kW: ₹30,000
@@ -546,24 +574,30 @@ export class QuotationTemplateService {
     const inverterVoltage = project.inverterVolt 
       ? `${project.inverterVolt}V` 
       : (project.inverterPhase === 'three_phase' ? '415V' : '230V');
+    const inverterKVA = (project as any).inverterKVA || inverterKW;
     items.push({
       slNo: slNo++,
       description: "Off-Grid Inverter (PCU)",
       type: "Pure Sine Wave",
       volt: inverterVoltage,
-      rating: `${inverterKW}KW`,
+      rating: `${inverterKVA} KVA`,
       make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "As per MNRE LIST",
       qty: project.inverterQty || 1,
       unit: "Nos"
     });
 
-    // Battery
+    // Battery - Map battery type to short code
+    const batteryTypeMap: Record<string, string> = {
+      'lead_acid': 'LA',
+      'lithium': 'Li-ion'
+    };
+    const batteryTypeCode = project.batteryType ? batteryTypeMap[project.batteryType] || project.batteryType : 'LA';
     items.push({
       slNo: slNo++,
       description: `${project.batteryBrand || 'Exide'} Battery`,
-      type: project.batteryType || 'Lead Acid',
+      type: batteryTypeCode,
       volt: `${project.voltage || 12}V`,
-      rating: `${project.batteryAH || '100'}AH`,
+      rating: `${project.batteryAH || '100'} AH`,
       make: project.batteryBrand || 'Exide',
       qty: project.batteryCount || 1,
       unit: "Nos"
@@ -755,24 +789,30 @@ export class QuotationTemplateService {
     const inverterVoltage = project.inverterVolt 
       ? `${project.inverterVolt}V` 
       : (project.inverterPhase === 'three_phase' ? '415V' : '230V');
+    const inverterKVA = (project as any).inverterKVA || inverterKW;
     items.push({
       slNo: slNo++,
       description: "Hybrid Inverter",
       type: "Grid-Interactive with Battery Backup",
       volt: inverterVoltage,
-      rating: `${inverterKW}KW`,
+      rating: `${inverterKVA} KVA`,
       make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "As per MNRE LIST",
       qty: project.inverterQty || 1,
       unit: "Nos"
     });
 
-    // Battery
+    // Battery - Map battery type to short code
+    const batteryTypeMap: Record<string, string> = {
+      'lead_acid': 'LA',
+      'lithium': 'Li-ion'
+    };
+    const batteryTypeCode = project.batteryType ? batteryTypeMap[project.batteryType] || project.batteryType : 'LA';
     items.push({
       slNo: slNo++,
       description: `${project.batteryBrand || 'Exide'} Battery`,
-      type: project.batteryType || 'Lead Acid',
+      type: batteryTypeCode,
       volt: `${project.voltage || 12}V`,
-      rating: `${project.batteryAH || '100'}AH`,
+      rating: `${project.batteryAH || '100'} AH`,
       make: project.batteryBrand || 'Exide',
       qty: project.batteryCount || 1,
       unit: "Nos"
@@ -1098,7 +1138,16 @@ export class QuotationTemplateService {
         const roundedKW_offGrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_offGrid > 0 ? basePrice / roundedKW_offGrid : 0;
         
-        description = `Supply and Installation of ${Math.floor(kw)} kW Solar Off-Grid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
+        // Dynamic description based on actual configuration
+        const panelWatts_offGrid = project.panelWatts || '530';
+        const panelCount_offGrid = project.panelCount || 1;
+        const inverterKVA_offGrid = (project as any).inverterKVA || project.inverterKW || '1';
+        const batteryVolt_offGrid = project.voltage || 12;
+        const batteryAH_offGrid = project.batteryAH || '100';
+        const batteryCount_offGrid = project.batteryCount || 1;
+        const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
+        
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${batteryVolt_offGrid}v ${phase_offGrid}PH MPPT Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
         break;
 
       case 'hybrid':
@@ -1122,7 +1171,16 @@ export class QuotationTemplateService {
         const roundedKW_hybrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_hybrid > 0 ? basePrice / roundedKW_hybrid : 0;
         
-        description = `Supply and Installation of ${Math.floor(kw)} kW Solar Hybrid System with ${project.batteryCount || 1} x ${project.batteryAH || 100}AH Battery`;
+        // Dynamic description based on actual configuration
+        const panelWatts_hybrid = project.panelWatts || '530';
+        const panelCount_hybrid = project.panelCount || 1;
+        const inverterKVA_hybrid = (project as any).inverterKVA || project.inverterKW || '1';
+        const batteryVolt_hybrid = project.voltage || 12;
+        const batteryAH_hybrid = project.batteryAH || '100';
+        const batteryCount_hybrid = project.batteryCount || 1;
+        const phase_hybrid = project.inverterPhase === 'three_phase' ? '3' : '1';
+        
+        description = `Supply and Installation of ${panelWatts_hybrid}W X ${panelCount_hybrid} Nos Panel, ${inverterKVA_hybrid}KVA/${batteryVolt_hybrid}v ${phase_hybrid}PH MPPT Inverter, ${batteryAH_hybrid}AH X ${batteryCount_hybrid}, ${phase_hybrid}-Phase Hybrid Solar System`;
         break;
 
       case 'water_heater':
@@ -1226,10 +1284,22 @@ export class QuotationTemplateService {
     const accountDetails = this.generateAccountDetails(quotation);
     const documentRequirements = this.generateDocumentRequirements(quotation);
     
-    // Generate BOM summary for on-grid projects
-    let bomSummary: { phase: string; inverterKW: number; panelWatts: number } | undefined = undefined;
-    console.log('=== BOM SUMMARY DEBUG ===');
-    console.log('Project type:', project.projectType);
+    // Generate BOM summary based on project type
+    let bomSummary: { 
+      phase: string; 
+      inverterKW?: number; 
+      inverterKVA?: string;
+      panelWatts: number;
+      batteryAH?: string;
+      dcVolt?: number;
+    } | undefined = undefined;
+    
+    let backupSolutions: { 
+      backupWatts: number; 
+      usageWatts: number[]; 
+      backupHours: number[] 
+    } | undefined = undefined;
+    
     if (project.projectType === 'on_grid') {
       const calculatedKW = this.calculateSystemKW((project as any).panelWatts || 530, (project as any).panelCount || 1);
       const inverterKW = (project as any).inverterKW || calculatedKW;
@@ -1241,11 +1311,26 @@ export class QuotationTemplateService {
         inverterKW,
         panelWatts: totalPanelWatts
       };
-      console.log('BOM Summary generated:', bomSummary);
-    } else {
-      console.log('BOM Summary NOT generated - project type is not on_grid');
+    } else if (project.projectType === 'off_grid' || project.projectType === 'hybrid') {
+      const phase = (project as any).inverterPhase === 'three_phase' ? '3' : '1';
+      const inverterKVA = (project as any).inverterKVA || (project as any).inverterKW || '1';
+      const totalPanelWatts = parseInt((project as any).panelWatts || '530') * ((project as any).panelCount || 1);
+      const batteryAH = (project as any).batteryAH || '100';
+      const batteryVolt = (project as any).voltage || 12;
+      const batteryQty = (project as any).batteryCount || 1;
+      const dcVolt = batteryVolt * batteryQty;
+      
+      bomSummary = {
+        phase,
+        inverterKVA,
+        panelWatts: totalPanelWatts,
+        batteryAH,
+        dcVolt
+      };
+      
+      // Calculate backup solutions for off-grid and hybrid
+      backupSolutions = this.calculateBackupSolutions(project);
     }
-    console.log('========================')
     
     return {
       header: this.COMPANY_DETAILS,
@@ -1262,6 +1347,7 @@ export class QuotationTemplateService {
       reference: `${Math.floor(pricingBreakdown?.kw || 0)} kW ${projectTypeName} Solar Power Generation System`,
       pricingBreakdown,
       bomSummary,
+      backupSolutions,
       billOfMaterials,
       termsAndConditions: {
         warrantyDetails: warrantyDetails,
