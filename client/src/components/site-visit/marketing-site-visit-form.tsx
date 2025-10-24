@@ -108,6 +108,7 @@ interface OffGridConfig extends OnGridConfig {
   batteryCount: number;
   batteryStands?: string;
   inverterVolt?: string;
+  inverterKVA?: string;
   // Off-grid doesn't have net meter scope
 }
 
@@ -249,6 +250,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         inverterMake: ['deye'],
         inverterPhase: 'single_phase',
         inverterKW: 5,
+        inverterKVA: '5',
         inverterQty: 1,
         lightningArrest: false,
         electricalAccessories: false,
@@ -284,6 +286,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         inverterMake: ['deye'],
         inverterPhase: 'single_phase',
         inverterKW: 5,
+        inverterKVA: '5',
         inverterQty: 1,
         lightningArrest: false,
         electricalAccessories: false,
@@ -1176,6 +1179,21 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   </div>
 
                   <div>
+                    <Label>Inverter KVA</Label>
+                    <Input
+                      type="text"
+                      value={formData.offGridConfig.inverterKVA || ''}
+                      onChange={(e) => {
+                        updateConfig('offGridConfig', { 
+                          inverterKVA: e.target.value
+                        });
+                      }}
+                      placeholder="Enter inverter KVA rating"
+                      data-testid="input-offgrid-inverter-kva"
+                    />
+                  </div>
+
+                  <div>
                     <Label>Inverter Volt</Label>
                     <Combobox
                       value={formData.offGridConfig.inverterVolt || ''}
@@ -1756,6 +1774,21 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       }}
                       min="1"
                       placeholder="Enter inverter quantity"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Inverter KVA</Label>
+                    <Input
+                      type="text"
+                      value={formData.hybridConfig.inverterKVA || ''}
+                      onChange={(e) => {
+                        updateConfig('hybridConfig', { 
+                          inverterKVA: e.target.value
+                        });
+                      }}
+                      placeholder="Enter inverter KVA rating"
+                      data-testid="input-hybrid-inverter-kva"
                     />
                   </div>
 
