@@ -53,6 +53,35 @@ Overtime calculation: Simple rule - any work beyond department checkout time is 
 
 ## Recent Changes
 
+### Site Visit System - Structure Type Enhancements (October 2025)
+
+**Enhancement**: Extended lower/higher end height fields to all structure types in the Marketing Site Visit form, providing consistent data capture across all structure configurations.
+
+**Changes Implemented**:
+1. **Structure Type Support**: Added height fields for newly introduced structure types:
+   - GI Structure
+   - GI Round Pipe
+   - MS Square Pipe
+   
+2. **Consistent Implementation**: Applied height field visibility across all project configurations:
+   - Off-Grid configuration
+   - Hybrid configuration
+   - Water Pump configuration
+   - (On-Grid already supported all structure types)
+
+3. **Data Display**: Updated Site Visit Details Modal to properly display height data for all structure types across all project configurations.
+
+**Technical Details**:
+- Height data stored in `gpStructure` object with `lowerEndHeight` and `higherEndHeight` properties (0-14 feet range)
+- Conditional rendering uses OR-conditions to check for all supported structure types
+- Both form input and display sections maintain consistent logic
+
+**Files Modified**:
+- `client/src/components/site-visit/marketing-site-visit-form.tsx`
+- `client/src/components/site-visit/site-visit-details-modal.tsx`
+
+**Impact**: Marketing team can now capture complete structural information for all structure types, ensuring comprehensive site visit documentation and accurate project planning.
+
 ### Quotation System - Critical Pricing Calculation Fixes (October 2025)
 
 **Problem Resolved**: Fixed critical subsidy calculation errors that were causing incorrect pricing and customer payments in the solar quotation system.
