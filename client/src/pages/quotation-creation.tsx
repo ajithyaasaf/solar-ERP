@@ -1638,7 +1638,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             </Select>
           </div>
 
-          {project.structureType === 'gp_structure' && (
+          {(project.structureType === 'gp_structure' || 
+            project.structureType === 'gi_structure' ||
+            project.structureType === 'gi_round_pipe' ||
+            project.structureType === 'ms_square_pipe') && (
             <>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Lower End Height (ft)</label>
@@ -2248,7 +2251,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               </Select>
             </div>
 
-            {project.structureType === 'gp_structure' && (
+            {(project.structureType === 'gp_structure' || 
+              project.structureType === 'gi_structure' ||
+              project.structureType === 'gi_round_pipe' ||
+              project.structureType === 'ms_square_pipe') && (
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Lower End Height (ft)</label>
@@ -4122,7 +4128,7 @@ export default function QuotationCreation() {
                       <span className="font-semibold">1) Civil work</span>
                       <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
                         <li>Earth pit digging</li>
-                        {form.watch("projects").some((p: any) => p.structureType === 'gp_structure' || p.structureType === 'ms_square_pipe') && (
+                        {form.watch("projects").some((p: any) => p.structureType === 'gp_structure' || p.structureType === 'gi_structure' || p.structureType === 'gi_round_pipe' || p.structureType === 'ms_square_pipe') && (
                           <li>1 feet chamber and concrete (for Structure)</li>
                         )}
                       </ul>
