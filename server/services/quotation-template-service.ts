@@ -55,8 +55,16 @@ export interface QuotationTemplate {
   };
   bomSummary?: {
     phase: string;
-    inverterKW: number;
+    inverterKW?: number;
+    inverterKVA?: string;
     panelWatts: number;
+    batteryAH?: string;
+    dcVolt?: number;
+  };
+  backupSolutions?: {
+    backupWatts: number;
+    usageWatts: number[];
+    backupHours: number[];
   };
   billOfMaterials: BillOfMaterialsItem[];
   termsAndConditions: {
