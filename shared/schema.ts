@@ -386,18 +386,21 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
   batteryStands: z.string().optional(),
-  inverterVolt: z.string().optional() // Changed to string to allow custom values
+  inverterVolt: z.string().optional(), // Changed to string to allow custom values
+  inverterKVA: z.string().optional() // For off-grid systems, inverters are rated in KVA
 }).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
 export const hybridConfigSchema = offGridConfigSchema.extend({
   electricalWorkScope: z.enum(workScopeOptions).optional(),
-  netMeterScope: z.enum(workScopeOptions).optional() // Hybrid has net meter back
+  netMeterScope: z.enum(workScopeOptions).optional(), // Hybrid has net meter back
+  inverterKVA: z.string().optional() // For hybrid systems, inverters are rated in KVA
 });
 
 export const waterHeaterConfigSchema = z.object({
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
   heatingCoil: z.string().optional(),
+  productImage: z.string().optional(), // Optional product image URL
   projectValue: z.number().min(0),
   others: z.string().optional(),
   // New fields from client specification
@@ -1446,6 +1449,13 @@ export const subsidyTypes = [
   "government", "state", "none", "custom"
 ] as const;
 
+// Backup solutions schema for off-grid and hybrid systems
+export const backupSolutionsSchema = z.object({
+  backupWatts: z.number().min(0),
+  usageWatts: z.array(z.number()).max(5).default([]),
+  backupHours: z.array(z.number()).default([])
+});
+
 // Individual project configuration schemas for quotations
 export const quotationOnGridProjectSchema = z.object({
   projectType: z.literal("on_grid"),
@@ -1502,6 +1512,7 @@ export const quotationOffGridProjectSchema = z.object({
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterKW: z.number().min(0).optional(),
+  inverterKVA: z.string().optional(), // For off-grid systems, inverters are rated in KVA
   inverterQty: z.number().min(1).optional(),
   inverterPhase: z.enum(inverterPhases),
   inverterVolt: z.string().optional(), // Changed to string to allow custom values
@@ -1525,6 +1536,7 @@ export const quotationOffGridProjectSchema = z.object({
     type: z.enum(monoRailOptions).optional()
   }).optional(),
   civilWorkScope: z.enum(workScopeOptions).optional(),
+  backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for off-grid systems
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),
@@ -1552,6 +1564,7 @@ export const quotationHybridProjectSchema = z.object({
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterKW: z.number().min(0).optional(),
+  inverterKVA: z.string().optional(), // For hybrid systems, inverters are rated in KVA
   inverterQty: z.number().min(1).optional(),
   inverterPhase: z.enum(inverterPhases),
   inverterVolt: z.string().optional(), // Changed to string to allow custom values
@@ -1577,6 +1590,7 @@ export const quotationHybridProjectSchema = z.object({
   civilWorkScope: z.enum(workScopeOptions).optional(),
   electricalWorkScope: z.enum(workScopeOptions).optional(),
   netMeterScope: z.enum(workScopeOptions).optional(),
+  backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for hybrid systems
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),
@@ -1597,6 +1611,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
   heatingCoil: z.string().optional(),
+  productImage: z.string().optional(), // Optional product image URL
   floor: z.enum(floorLevels).optional(),
   plumbingWorkScope: z.enum(workScopeOptions).optional(),
   civilWorkScope: z.enum(workScopeOptions).optional(),
