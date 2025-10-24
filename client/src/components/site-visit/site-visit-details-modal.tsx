@@ -842,7 +842,11 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                             </div>
                           )}
                           
-                          {siteVisit.marketingData.onGridConfig.structureType === 'gp_structure' && siteVisit.marketingData.onGridConfig.gpStructure && (
+                          {(siteVisit.marketingData.onGridConfig.structureType === 'gp_structure' || 
+                            siteVisit.marketingData.onGridConfig.structureType === 'gi_structure' ||
+                            siteVisit.marketingData.onGridConfig.structureType === 'gi_round_pipe' ||
+                            siteVisit.marketingData.onGridConfig.structureType === 'ms_square_pipe') && 
+                            siteVisit.marketingData.onGridConfig.gpStructure && (
                             <>
                               <div>
                                 <p className="text-sm text-muted-foreground">Lower End Height</p>
@@ -1052,7 +1056,11 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                             </div>
                           )}
                           
-                          {siteVisit.marketingData.offGridConfig.structureType === 'gp_structure' && siteVisit.marketingData.offGridConfig.gpStructure && (
+                          {(siteVisit.marketingData.offGridConfig.structureType === 'gp_structure' || 
+                            siteVisit.marketingData.offGridConfig.structureType === 'gi_structure' ||
+                            siteVisit.marketingData.offGridConfig.structureType === 'gi_round_pipe' ||
+                            siteVisit.marketingData.offGridConfig.structureType === 'ms_square_pipe') && 
+                            siteVisit.marketingData.offGridConfig.gpStructure && (
                             <>
                               <div>
                                 <p className="text-sm text-muted-foreground">Lower End Height</p>
@@ -1230,7 +1238,11 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                             </div>
                           )}
                           
-                          {siteVisit.marketingData.hybridConfig.structureType === 'gp_structure' && siteVisit.marketingData.hybridConfig.gpStructure && (
+                          {(siteVisit.marketingData.hybridConfig.structureType === 'gp_structure' || 
+                            siteVisit.marketingData.hybridConfig.structureType === 'gi_structure' ||
+                            siteVisit.marketingData.hybridConfig.structureType === 'gi_round_pipe' ||
+                            siteVisit.marketingData.hybridConfig.structureType === 'ms_square_pipe') && 
+                            siteVisit.marketingData.hybridConfig.gpStructure && (
                             <>
                               <div>
                                 <p className="text-sm text-muted-foreground">Lower End Height</p>
@@ -1451,7 +1463,11 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                             </div>
                           )}
                           
-                          {siteVisit.marketingData.waterPumpConfig.structureType === 'gp_structure' && siteVisit.marketingData.waterPumpConfig.gpStructure && (
+                          {(siteVisit.marketingData.waterPumpConfig.structureType === 'gp_structure' || 
+                            siteVisit.marketingData.waterPumpConfig.structureType === 'gi_structure' ||
+                            siteVisit.marketingData.waterPumpConfig.structureType === 'gi_round_pipe' ||
+                            siteVisit.marketingData.waterPumpConfig.structureType === 'ms_square_pipe') && 
+                            siteVisit.marketingData.waterPumpConfig.gpStructure && (
                             <>
                               <div>
                                 <p className="text-sm text-muted-foreground">Lower End Height</p>
