@@ -454,14 +454,40 @@ export class QuotationPDFService {
         <table style="width: 100%; margin: 10px 0; border-collapse: collapse; background-color: #90EE90;">
           <tr style="font-weight: bold; text-align: center;">
             <td style="border: 1px solid #000; padding: 5px;">Phase</td>
-            <td style="border: 1px solid #000; padding: 5px;">Inverter-KW</td>
+            <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.inverterKVA ? 'Inverter-KVA' : 'Inverter-KW'}</td>
             <td style="border: 1px solid #000; padding: 5px;">Panel Watts</td>
+            ${template.bomSummary.batteryAH ? '<td style="border: 1px solid #000; padding: 5px;">Batt. AH</td>' : ''}
+            ${template.bomSummary.dcVolt ? '<td style="border: 1px solid #000; padding: 5px;">DC Volt</td>' : ''}
           </tr>
           <tr style="text-align: center;">
             <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.phase}</td>
-            <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.inverterKW}</td>
+            <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.inverterKVA || template.bomSummary.inverterKW}</td>
             <td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.panelWatts}</td>
+            ${template.bomSummary.batteryAH ? `<td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.batteryAH}</td>` : ''}
+            ${template.bomSummary.dcVolt ? `<td style="border: 1px solid #000; padding: 5px;">${template.bomSummary.dcVolt}</td>` : ''}
           </tr>
+        </table>
+        ` : ''}
+        
+        ${template.backupSolutions ? `
+        <h4 style="color: #228B22; text-align: center; margin-top: 15px;">Backup Solutions</h4>
+        <table style="width: 100%; margin: 10px 0; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #228B22; color: white; font-weight: bold; text-align: center;">
+              <th style="border: 1px solid #000; padding: 5px;">Backup Watts</th>
+              ${template.backupSolutions.usageWatts.map(usage => `
+                <th style="border: 1px solid #000; padding: 5px;">${usage}W Usage</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="text-align: center;">
+              <td style="border: 1px solid #000; padding: 5px; font-weight: bold;">${template.backupSolutions.backupWatts}W</td>
+              ${template.backupSolutions.backupHours.map(hours => `
+                <td style="border: 1px solid #000; padding: 5px;">${hours} hrs</td>
+              `).join('')}
+            </tr>
+          </tbody>
         </table>
         ` : ''}
         
