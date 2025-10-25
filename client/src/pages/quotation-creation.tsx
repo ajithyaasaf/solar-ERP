@@ -1449,7 +1449,9 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Inverter KW *</label>
+          <label className="text-sm font-medium">
+            {(project.projectType === 'off_grid' || project.projectType === 'hybrid') ? 'Inverter KVA *' : 'Inverter KW *'}
+          </label>
           <Input
             type="number"
             value={project.inverterKW || ''}
@@ -1465,7 +1467,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             }}
             min="0"
             step="0.1"
-            placeholder="Enter inverter KW rating"
+            placeholder={
+              (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
+                ? 'Enter inverter KVA rating' 
+                : 'Enter inverter KW rating'
+            }
             data-testid={`input-inverter-kw-${projectIndex}`}
           />
         </div>
@@ -2918,11 +2924,11 @@ export default function QuotationCreation() {
       
       // For manual quotations, handle customer creation/lookup
       if (quotationSource === "manual" && data.customerData) {
-        // Check if customer already has an ID (selected from existing)
-        if (data.customerData.id) {
-          finalCustomerId = data.customerData.id;
+        // Check if customer already selected via customerId dropdown
+        if (data.customerId) {
+          finalCustomerId = data.customerId;
         } else {
-          // Create new customer
+          // Create new customer from customerData form
           console.log("Creating new customer:", data.customerData);
           const customerResponse = await apiRequest("/api/customers", "POST", data.customerData);
           const newCustomer = await customerResponse.json();
