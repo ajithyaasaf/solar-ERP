@@ -1486,11 +1486,15 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={project.inverterQty || ''}
             onChange={(e) => {
               const value = e.target.value;
-              const qty = parseInt(value) || 1;
-              handleFieldChange('inverterQty', value === '' ? undefined : qty);
-              
-              if (project.electricalAccessories && qty > 0) {
-                handleFieldChange('electricalCount', qty);
+              if (value === '') {
+                handleFieldChange('inverterQty', '');
+              } else {
+                const qty = parseInt(value) || 1;
+                handleFieldChange('inverterQty', qty);
+                
+                if (project.electricalAccessories && qty > 0) {
+                  handleFieldChange('electricalCount', qty);
+                }
               }
             }}
             min="1"
@@ -1566,7 +1570,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.electricalCount || ''}
               onChange={(e) => {
                 const value = e.target.value;
-                handleFieldChange('electricalCount', value === '' ? undefined : parseInt(value) || 0);
+                handleFieldChange('electricalCount', value === '' ? '' : parseInt(value) || 0);
               }}
               min="0"
               placeholder="Electrical count (auto-filled from Inverter Qty)"
@@ -1606,17 +1610,19 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <Input
             type="number"
             min="1"
-            value={project.panelCount || 0}
+            value={project.panelCount || ''}
             onChange={(e) => {
-              const totalCount = parseInt(e.target.value) || 0;
+              const value = e.target.value;
+              const totalCount = value === '' ? '' : parseInt(value) || 0;
               handleFieldChange('panelCount', totalCount);
-              // Auto-distribute to DCR panels, keep non-DCR as is or 0
-              handleFieldChange('dcrPanelCount', totalCount - (project.nonDcrPanelCount || 0));
+              if (totalCount !== '') {
+                handleFieldChange('dcrPanelCount', totalCount - (project.nonDcrPanelCount || 0));
+              }
             }}
-            className={project.panelCount === 0 ? "border-red-500" : ""}
+            className={project.panelCount === 0 || project.panelCount === '' ? "border-red-500" : ""}
             data-testid={`input-panel-count-${projectIndex}`}
           />
-          {project.panelCount === 0 && (
+          {(project.panelCount === 0 || project.panelCount === '') && (
             <p className="text-xs text-red-600">Panel count is required for calculations</p>
           )}
         </div>
@@ -1626,12 +1632,15 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <Input
             type="number"
             min="0"
-            value={project.dcrPanelCount || 0}
+            value={project.dcrPanelCount || ''}
             onChange={(e) => {
-              const dcrCount = parseInt(e.target.value) || 0;
+              const value = e.target.value;
+              const dcrCount = value === '' ? '' : parseInt(value) || 0;
               handleFieldChange('dcrPanelCount', dcrCount);
-              const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
-              handleFieldChange('panelCount', totalCount);
+              if (dcrCount !== '') {
+                const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+                handleFieldChange('panelCount', totalCount);
+              }
             }}
             data-testid={`input-dcr-panel-count-${projectIndex}`}
           />
@@ -1642,12 +1651,15 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <Input
             type="number"
             min="0"
-            value={project.nonDcrPanelCount || 0}
+            value={project.nonDcrPanelCount || ''}
             onChange={(e) => {
-              const nonDcrCount = parseInt(e.target.value) || 0;
+              const value = e.target.value;
+              const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
               handleFieldChange('nonDcrPanelCount', nonDcrCount);
-              const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
-              handleFieldChange('panelCount', totalCount);
+              if (nonDcrCount !== '') {
+                const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+                handleFieldChange('panelCount', totalCount);
+              }
             }}
             data-testid={`input-non-dcr-panel-count-${projectIndex}`}
           />
@@ -1673,8 +1685,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Total incl. GST)</span></label>
           <Input
             type="number"
-            value={project.projectValue || 0}
-            onChange={(e) => handleFieldChange('projectValue', parseFloat(e.target.value) || 0)}
+            value={project.projectValue || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
+            }}
             min="0"
             data-testid={`input-project-value-${projectIndex}`}
           />
@@ -1687,7 +1702,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={project.gstPercentage ?? BUSINESS_RULES.gst.percentage}
             onChange={(e) => {
               const val = e.target.value;
-              handleFieldChange('gstPercentage', val === '' ? 0 : parseFloat(val) || 0);
+              handleFieldChange('gstPercentage', val === '' ? '' : parseFloat(val) || 0);
             }}
             min="0"
             max="100"
@@ -1977,8 +1992,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <Input
               type="number"
               min="0"
-              value={project.voltage || 12}
-              onChange={(e) => handleFieldChange('voltage', parseFloat(e.target.value) || 12)}
+              value={project.voltage || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('voltage', value === '' ? '' : parseFloat(value) || 12);
+              }}
               data-testid={`input-voltage-${projectIndex}`}
             />
           </div>
@@ -1988,8 +2006,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <Input
               type="number"
               min="1"
-              value={project.batteryCount || 1}
-              onChange={(e) => handleFieldChange('batteryCount', parseInt(e.target.value) || 1)}
+              value={project.batteryCount || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('batteryCount', value === '' ? '' : parseInt(value) || 1);
+              }}
               data-testid={`input-battery-count-${projectIndex}`}
             />
           </div>
@@ -1999,8 +2020,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <Input
               type="number"
               min="1"
-              value={project.batteryStands || 1}
-              onChange={(e) => handleFieldChange('batteryStands', parseInt(e.target.value) || 1)}
+              value={project.batteryStands || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('batteryStands', value === '' ? '' : parseInt(value) || 1);
+              }}
               data-testid={`input-battery-stands-${projectIndex}`}
             />
           </div>
@@ -2115,8 +2139,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <Input
             type="number"
             min="0"
-            value={backupSolutions.backupWatts || 0}
-            onChange={(e) => updateBackupWatts(parseInt(e.target.value) || 0)}
+            value={backupSolutions.backupWatts || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              updateBackupWatts(value === '' ? 0 : parseInt(value) || 0);
+            }}
             placeholder="Calculated from Battery AH × Qty × 10 - 3%"
             data-testid={`input-backup-watts-${projectIndex}`}
             className="font-semibold text-primary"
@@ -2178,8 +2205,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                       <Input
                         type="number"
                         min="0"
-                        value={watts || 0}
-                        onChange={(e) => updateUsageWatts(index, parseInt(e.target.value) || 0)}
+                        value={watts || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateUsageWatts(index, value === '' ? 0 : parseInt(value) || 0);
+                        }}
                         placeholder="Enter usage watts"
                         data-testid={`input-usage-watts-${projectIndex}-${index}`}
                         className="text-sm"
@@ -3966,7 +3996,8 @@ export default function QuotationCreation() {
                                   type="number" 
                                   value={calculatedRatePerKW} 
                                   onChange={(e) => {
-                                    const newPricePerKW = parseFloat(e.target.value) || 0;
+                                    const value = e.target.value;
+                                    const newPricePerKW = value === '' ? 0 : parseFloat(value) || 0;
                                     const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
@@ -3998,7 +4029,8 @@ export default function QuotationCreation() {
                                   type="number" 
                                   value={gstPercentage} 
                                   onChange={(e) => {
-                                    const newGSTPercentage = parseFloat(e.target.value) || 0;
+                                    const value = e.target.value;
+                                    const newGSTPercentage = value === '' ? 0 : parseFloat(value) || 0;
                                     const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
                                     const newProjectValue = basePrice + newGSTAmount;
                                     
@@ -4125,7 +4157,8 @@ export default function QuotationCreation() {
                                     max="100"
                                     {...field}
                                     onChange={(e) => {
-                                      const percentage = parseFloat(e.target.value) || 0;
+                                      const value = e.target.value;
+                                      const percentage = value === '' ? 0 : parseFloat(value) || 0;
                                       field.onChange(percentage);
                                       const totalCustomerPayment = form.watch("totalCustomerPayment") || 0;
                                       const advanceAmount = Math.round(totalCustomerPayment * (percentage / 100));
