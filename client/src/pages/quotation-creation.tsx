@@ -758,6 +758,11 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           batteryStands: "1",
           electricalWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
+          backupSolutions: {
+            backupWatts: 0,
+            usageWatts: [],
+            backupHours: []
+          },
           others: ""
         };
         break;
@@ -789,6 +794,11 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           batteryStands: "1",
           electricalWorkScope: "customer_scope",
           netMeterScope: "customer_scope",
+          backupSolutions: {
+            backupWatts: 0,
+            usageWatts: [],
+            backupHours: []
+          },
           others: ""
         };
         break;
@@ -1243,9 +1253,69 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   projectIndex: number;
   onUpdate: (data: any) => void;
 }) {
+  const { toast } = useToast();
+  
   const handleFieldChange = (field: string, value: any) => {
     onUpdate({ [field]: value });
   };
+
+  // Helper function to calculate backup watts
+  const calculateBackupWatts = useCallback(() => {
+    const batteryAH = parseInt(project.batteryAH) || 100;
+    const batteryQty = project.batteryCount || 1;
+    
+    // Formula: Battery AH × Battery Qty × 10 - 3% loss
+    const rawWatts = batteryAH * batteryQty * 10;
+    const wattsAfterLoss = rawWatts - (rawWatts * 0.03);
+    
+    return Math.round(wattsAfterLoss);
+  }, [project.batteryAH, project.batteryCount]);
+
+  // Helper function to calculate backup hours for all usage watts
+  const calculateBackupHours = useCallback((backupWatts: number, usageWattsList: number[]) => {
+    return usageWattsList.map(usageWatts => {
+      if (!backupWatts || !usageWatts || usageWatts === 0) {
+        return 0;
+      }
+      return parseFloat((backupWatts / usageWatts).toFixed(2));
+    });
+  }, []);
+
+  // Auto-update backup solutions when battery specs change (for off_grid and hybrid only)
+  useEffect(() => {
+    // Only apply to off_grid and hybrid projects
+    if (project.projectType !== 'off_grid' && project.projectType !== 'hybrid') {
+      return;
+    }
+
+    // Check if battery specs are available
+    if (!project.batteryAH || !project.batteryCount) {
+      return;
+    }
+
+    const calculatedBackupWatts = calculateBackupWatts();
+    const currentBackupSolutions = project.backupSolutions || {
+      backupWatts: 0,
+      usageWatts: [],
+      backupHours: [],
+      manuallyEdited: false
+    };
+
+    // Only auto-update if not manually edited AND backup watts actually changed
+    if (!currentBackupSolutions.manuallyEdited && currentBackupSolutions.backupWatts !== calculatedBackupWatts) {
+      const newUsageWatts = currentBackupSolutions.usageWatts || [];
+      const newBackupHours = calculateBackupHours(calculatedBackupWatts, newUsageWatts);
+
+      onUpdate({ 
+        backupSolutions: {
+          backupWatts: calculatedBackupWatts,
+          usageWatts: newUsageWatts,
+          backupHours: newBackupHours,
+          manuallyEdited: false
+        }
+      });
+    }
+  }, [project.projectType, project.batteryAH, project.batteryCount, calculateBackupWatts, calculateBackupHours, onUpdate]);
 
   // Auto-calculate system kW from panel data (actual decimal value)
   const actualSystemKW = project.panelWatts && project.panelCount 
@@ -1848,86 +1918,315 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   );
 
   const renderBatteryFields = () => (
-    <div className="space-y-4 mt-4">
-      <h4 className="font-medium text-sm text-gray-700">Battery Configuration</h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Battery Brand</label>
-          <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
-            <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="exide">Exide</SelectItem>
-              <SelectItem value="utl">UTL</SelectItem>
-              <SelectItem value="exide_utl">Exide UTL</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="space-y-4 mt-4">
+        <h4 className="font-medium text-sm text-gray-700">Battery Configuration</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Battery Brand</label>
+            <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
+              <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="exide">Exide</SelectItem>
+                <SelectItem value="utl">UTL</SelectItem>
+                <SelectItem value="exide_utl">Exide UTL</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Battery Type</label>
+            <Select value={project.batteryType || "lead_acid"} onValueChange={(value) => handleFieldChange('batteryType', value)}>
+              <SelectTrigger data-testid={`select-battery-type-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lead_acid">Lead Acid</SelectItem>
+                <SelectItem value="lithium">Lithium</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Battery AH</label>
+            <Select value={project.batteryAH || "100"} onValueChange={(value) => handleFieldChange('batteryAH', value)}>
+              <SelectTrigger data-testid={`select-battery-ah-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="100">100 AH</SelectItem>
+                <SelectItem value="120">120 AH</SelectItem>
+                <SelectItem value="150">150 AH</SelectItem>
+                <SelectItem value="200">200 AH</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Voltage (V)</label>
+            <Input
+              type="number"
+              min="0"
+              value={project.voltage || 12}
+              onChange={(e) => handleFieldChange('voltage', parseFloat(e.target.value) || 12)}
+              data-testid={`input-voltage-${projectIndex}`}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Battery Count</label>
+            <Input
+              type="number"
+              min="1"
+              value={project.batteryCount || 1}
+              onChange={(e) => handleFieldChange('batteryCount', parseInt(e.target.value) || 1)}
+              data-testid={`input-battery-count-${projectIndex}`}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Battery Stands</label>
+            <Input
+              type="number"
+              min="1"
+              value={project.batteryStands || 1}
+              onChange={(e) => handleFieldChange('batteryStands', parseInt(e.target.value) || 1)}
+              data-testid={`input-battery-stands-${projectIndex}`}
+            />
+          </div>
         </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Battery Type</label>
-          <Select value={project.batteryType || "lead_acid"} onValueChange={(value) => handleFieldChange('batteryType', value)}>
-            <SelectTrigger data-testid={`select-battery-type-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="lead_acid">Lead Acid</SelectItem>
-              <SelectItem value="lithium">Lithium</SelectItem>
-            </SelectContent>
-          </Select>
+      </div>
+  );
+
+  const renderBackupSolutionsFields = () => {
+    // Initialize backupSolutions if not present
+    const backupSolutions = project.backupSolutions || {
+      backupWatts: 0,
+      usageWatts: [],
+      backupHours: []
+    };
+
+    // Calculate backup hours for a given usage watts
+    const calculateBackupHours = (usageWatts: number) => {
+      if (!backupSolutions.backupWatts || !usageWatts || usageWatts === 0) {
+        return 0;
+      }
+      return parseFloat((backupSolutions.backupWatts / usageWatts).toFixed(2));
+    };
+
+    // Recalculate all backup hours when backup watts or usage watts change
+    const recalculateBackupHours = (usageWattsList: number[]) => {
+      return usageWattsList.map(watts => calculateBackupHours(watts));
+    };
+
+    // Add new usage watts column
+    const addUsageWattsColumn = () => {
+      if (backupSolutions.usageWatts.length >= 5) {
+        toast({
+          title: "Maximum Limit Reached",
+          description: "You can add up to 5 usage watts columns only.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const newUsageWatts = [...backupSolutions.usageWatts, 0];
+      const newBackupHours = recalculateBackupHours(newUsageWatts);
+
+      handleFieldChange('backupSolutions', {
+        ...backupSolutions,
+        usageWatts: newUsageWatts,
+        backupHours: newBackupHours
+      });
+    };
+
+    // Remove usage watts column
+    const removeUsageWattsColumn = (index: number) => {
+      const newUsageWatts = backupSolutions.usageWatts.filter((_: any, i: number) => i !== index);
+      const newBackupHours = recalculateBackupHours(newUsageWatts);
+
+      handleFieldChange('backupSolutions', {
+        ...backupSolutions,
+        usageWatts: newUsageWatts,
+        backupHours: newBackupHours
+      });
+    };
+
+    // Update usage watts value
+    const updateUsageWatts = (index: number, value: number) => {
+      const newUsageWatts = [...backupSolutions.usageWatts];
+      newUsageWatts[index] = value;
+      const newBackupHours = recalculateBackupHours(newUsageWatts);
+
+      handleFieldChange('backupSolutions', {
+        ...backupSolutions,
+        usageWatts: newUsageWatts,
+        backupHours: newBackupHours
+      });
+    };
+
+    // Update backup watts value
+    const updateBackupWatts = (value: number) => {
+      const newBackupHours = recalculateBackupHours(backupSolutions.usageWatts);
+
+      handleFieldChange('backupSolutions', {
+        ...backupSolutions,
+        backupWatts: value,
+        backupHours: newBackupHours,
+        manuallyEdited: true // Mark as manually edited to prevent auto-updates
+      });
+    };
+
+    return (
+      <div className="space-y-4 mt-4 p-4 border border-dashed border-primary/30 rounded-lg bg-primary/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Battery className="h-4 w-4 text-primary" />
+            <h4 className="font-medium text-sm text-gray-700">Backup Solutions</h4>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            <Info className="h-3 w-3 mr-1" />
+            Auto-calculated from battery specs
+          </Badge>
         </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Battery AH</label>
-          <Select value={project.batteryAH || "100"} onValueChange={(value) => handleFieldChange('batteryAH', value)}>
-            <SelectTrigger data-testid={`select-battery-ah-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="100">100 AH</SelectItem>
-              <SelectItem value="120">120 AH</SelectItem>
-              <SelectItem value="150">150 AH</SelectItem>
-              <SelectItem value="200">200 AH</SelectItem>
-            </SelectContent>
-          </Select>
+
+        {/* Note about efficiency */}
+        <div className="text-xs text-muted-foreground space-y-1 bg-white dark:bg-gray-900 p-3 rounded border">
+          <p className="font-medium">*During Fully Charged Condition</p>
+          <p className="font-medium">*With Efficiency of 80%</p>
         </div>
-        
+
+        {/* Backup Watts - Editable */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Voltage (V)</label>
+          <label className="text-sm font-medium">
+            Backup Watts (W) *
+            <span className="text-xs text-muted-foreground ml-2">(Auto-calculated, editable)</span>
+          </label>
           <Input
             type="number"
             min="0"
-            value={project.voltage || 12}
-            onChange={(e) => handleFieldChange('voltage', parseFloat(e.target.value) || 12)}
-            data-testid={`input-voltage-${projectIndex}`}
+            value={backupSolutions.backupWatts || 0}
+            onChange={(e) => updateBackupWatts(parseInt(e.target.value) || 0)}
+            placeholder="Calculated from Battery AH × Qty × 10 - 3%"
+            data-testid={`input-backup-watts-${projectIndex}`}
+            className="font-semibold text-primary"
           />
+          <p className="text-xs text-muted-foreground">
+            Formula: Battery AH ({project.batteryAH || 100}) × Qty ({project.batteryCount || 1}) × 10 - 3% loss
+          </p>
         </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Battery Count</label>
-          <Input
-            type="number"
-            min="1"
-            value={project.batteryCount || 1}
-            onChange={(e) => handleFieldChange('batteryCount', parseInt(e.target.value) || 1)}
-            data-testid={`input-battery-count-${projectIndex}`}
-          />
+
+        {/* Usage Watts Columns */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium">Usage Watts Scenarios</label>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={addUsageWattsColumn}
+              disabled={backupSolutions.usageWatts.length >= 5}
+              data-testid={`button-add-usage-watts-${projectIndex}`}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add Scenario ({backupSolutions.usageWatts.length}/5)
+            </Button>
+          </div>
+
+          {backupSolutions.usageWatts.length === 0 && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Add usage watts scenarios to calculate backup hours. You can add up to 5 different scenarios.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {backupSolutions.usageWatts.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {backupSolutions.usageWatts.map((watts: number, index: number) => (
+                <Card key={index} className="p-3 bg-white dark:bg-gray-900">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Scenario {index + 1}
+                      </label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeUsageWattsColumn(index)}
+                        className="h-6 w-6 p-0"
+                        data-testid={`button-remove-usage-watts-${projectIndex}-${index}`}
+                      >
+                        <Wrench className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Usage (W)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={watts || 0}
+                        onChange={(e) => updateUsageWatts(index, parseInt(e.target.value) || 0)}
+                        placeholder="Enter usage watts"
+                        data-testid={`input-usage-watts-${projectIndex}-${index}`}
+                        className="text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-green-600">Backup Hours</label>
+                      <div className="p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded text-sm font-semibold text-green-700 dark:text-green-300 text-center">
+                        {backupSolutions.backupHours[index]?.toFixed(2) || '0.00'} hrs
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Battery Stands</label>
-          <Input
-            type="number"
-            min="1"
-            value={project.batteryStands || 1}
-            onChange={(e) => handleFieldChange('batteryStands', parseInt(e.target.value) || 1)}
-            data-testid={`input-battery-stands-${projectIndex}`}
-          />
-        </div>
+
+        {/* Summary Table - Only show if there are usage watts */}
+        {backupSolutions.usageWatts.length > 0 && (
+          <div className="mt-4">
+            <h5 className="text-xs font-medium mb-2 text-muted-foreground">Backup Solutions Summary</h5>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-primary/10">
+                    <th className="border border-gray-200 dark:border-gray-700 p-2 text-left font-medium">
+                      Backup Watts
+                    </th>
+                    {backupSolutions.usageWatts.map((watts: number, index: number) => (
+                      <th key={index} className="border border-gray-200 dark:border-gray-700 p-2 text-center font-medium">
+                        {watts}W Usage
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-gray-200 dark:border-gray-700 p-2 font-semibold text-primary">
+                      {backupSolutions.backupWatts}W
+                    </td>
+                    {backupSolutions.backupHours.map((hours: number, index: number) => (
+                      <td key={index} className="border border-gray-200 dark:border-gray-700 p-2 text-center font-semibold text-green-600">
+                        {hours.toFixed(2)} hrs
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   if (project.projectType === 'water_heater') {
     return (
@@ -2383,6 +2682,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     <div className="space-y-4">
       {renderSolarSystemFields()}
       {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && renderBatteryFields()}
+      {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && renderBackupSolutionsFields()}
       
       <Separator />
       
