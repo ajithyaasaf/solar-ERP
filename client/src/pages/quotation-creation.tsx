@@ -761,7 +761,8 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
-            backupHours: []
+            backupHours: [],
+            manuallyEdited: false
           },
           others: ""
         };
@@ -797,7 +798,8 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
-            backupHours: []
+            backupHours: [],
+            manuallyEdited: false
           },
           others: ""
         };
@@ -1315,7 +1317,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         }
       });
     }
-  }, [project.projectType, project.batteryAH, project.batteryCount, calculateBackupWatts, calculateBackupHours, onUpdate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.projectType, project.batteryAH, project.batteryCount, project.backupSolutions?.manuallyEdited]);
 
   // Auto-calculate system kW from panel data (actual decimal value)
   const actualSystemKW = project.panelWatts && project.panelCount 
