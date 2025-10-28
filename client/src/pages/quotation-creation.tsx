@@ -3256,9 +3256,9 @@ export default function QuotationCreation() {
       // Set the quotation source
       setQuotationSource(quotation.source || "manual");
       
-      // Skip source selection step in edit mode
+      // Jump directly to Review step (step 4) in edit mode for better UX
       if (currentStep === 0) {
-        setCurrentStep(1);
+        setCurrentStep(4);
       }
       
       // Populate form with all quotation data
@@ -3324,6 +3324,13 @@ export default function QuotationCreation() {
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Direct step navigation - enabled only in edit mode for better UX
+  const goToStep = (stepIndex: number) => {
+    if (isEditMode && stepIndex >= 0 && stepIndex < WIZARD_STEPS.length) {
+      setCurrentStep(stepIndex);
     }
   };
 
@@ -3536,7 +3543,8 @@ export default function QuotationCreation() {
                         : isActive 
                           ? "border-primary text-primary" 
                           : "border-muted-foreground text-muted-foreground"
-                    }`}
+                    } ${isEditMode ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                    onClick={() => isEditMode && goToStep(index)}
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
@@ -3565,7 +3573,11 @@ export default function QuotationCreation() {
               const IconComponent = step.icon;
               
               return (
-                <div key={step.id} className="flex items-center flex-1 min-w-0">
+                <div 
+                  key={step.id} 
+                  className={`flex items-center flex-1 min-w-0 ${isEditMode ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                  onClick={() => isEditMode && goToStep(index)}
+                >
                   <div 
                     className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${
                       isCompleted 
@@ -3616,7 +3628,8 @@ export default function QuotationCreation() {
                         : isActive 
                           ? "border-primary text-primary" 
                           : "border-muted-foreground text-muted-foreground"
-                    }`}
+                    } ${isEditMode ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                    onClick={() => isEditMode && goToStep(index)}
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
@@ -4462,13 +4475,63 @@ export default function QuotationCreation() {
           {currentStep === 4 && (
             <Card data-testid="card-review-submit">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Review & Submit
-                </CardTitle>
-                <CardDescription>
-                  Final review before creating the quotation
-                </CardDescription>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Review & Submit
+                    </CardTitle>
+                    <CardDescription>
+                      {isEditMode 
+                        ? "Review all quotation details before saving changes" 
+                        : "Final review before creating the quotation"}
+                    </CardDescription>
+                  </div>
+                  {isEditMode && !!existingQuotation ? (
+                    <Badge variant="outline" className="text-sm px-3 py-1">
+                      Revision {(existingQuotation as any).documentVersion || 1} → {((existingQuotation as any).documentVersion || 1) + 1}
+                    </Badge>
+                  ) : null}
+                </div>
+                
+                {/* Quick Edit Navigation - Only in Edit Mode */}
+                {isEditMode && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToStep(1)}
+                      className="flex items-center gap-2"
+                      data-testid="button-edit-customer"
+                    >
+                      <User className="h-4 w-4" />
+                      Edit Customer
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToStep(2)}
+                      className="flex items-center gap-2"
+                      data-testid="button-edit-projects"
+                    >
+                      <Zap className="h-4 w-4" />
+                      Edit Projects
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToStep(3)}
+                      className="flex items-center gap-2"
+                      data-testid="button-edit-pricing"
+                    >
+                      <Calculator className="h-4 w-4" />
+                      Edit Pricing
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
                 {/* Summary */}
