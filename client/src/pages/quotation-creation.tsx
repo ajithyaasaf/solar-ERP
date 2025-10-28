@@ -2778,6 +2778,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
 export default function QuotationCreation() {
   const [, setLocation] = useLocation();
+  const [match, params] = useRoute("/quotations/edit/:id");
+  const isEditMode = match && params?.id;
+  const quotationId = params?.id;
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [quotationSource, setQuotationSource] = useState<"manual" | "site_visit">("manual");
   const [selectedSiteVisit, setSelectedSiteVisit] = useState<string | null>(null);
@@ -2934,6 +2938,12 @@ export default function QuotationCreation() {
     }
   });
 
+  // Fetch existing quotation data in edit mode
+  const { data: existingQuotation, isLoading: isLoadingQuotation } = useQuery({
+    queryKey: [`/api/quotations/${quotationId}`],
+    enabled: !!isEditMode && !!quotationId
+  });
+
   // Fetch customers for manual entry
   const { data: customers, isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["/api/customers"],
@@ -2969,13 +2979,13 @@ export default function QuotationCreation() {
     retry: false
   });
 
-  // Create quotation mutation using proper apiRequest with auth
+  // Create/Update quotation mutation using proper apiRequest with auth
   const createQuotationMutation = useMutation({
     mutationFn: async (data: QuotationFormData) => {
       let finalCustomerId = data.customerId;
       
-      // For manual quotations, handle customer creation/lookup
-      if (quotationSource === "manual" && data.customerData) {
+      // For manual quotations (not in edit mode), handle customer creation/lookup
+      if (!isEditMode && quotationSource === "manual" && data.customerData) {
         // Check if customer already selected via customerId dropdown
         if (data.customerId) {
           finalCustomerId = data.customerId;
@@ -2996,22 +3006,40 @@ export default function QuotationCreation() {
         customerId: finalCustomerId
       };
       
-      const url = quotationSource === "site_visit" && selectedSiteVisit 
-        ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
-        : "/api/quotations";
-      
-      console.log("Sending quotation payload:", payloadWithCustomerId);
-      const response = await apiRequest(url, "POST", payloadWithCustomerId);
-      return response.json();
+      // Determine URL and method based on mode
+      if (isEditMode) {
+        // Edit mode: PATCH to update existing quotation
+        console.log("Updating quotation:", quotationId);
+        const response = await apiRequest(`/api/quotations/${quotationId}`, "PATCH", payloadWithCustomerId);
+        return response.json();
+      } else {
+        // Create mode: POST to create new quotation
+        const url = quotationSource === "site_visit" && selectedSiteVisit 
+          ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
+          : "/api/quotations";
+        
+        console.log("Sending quotation payload:", payloadWithCustomerId);
+        const response = await apiRequest(url, "POST", payloadWithCustomerId);
+        return response.json();
+      }
     },
     onSuccess: (data: any) => {
-      console.log("✅ Quotation created successfully:", data);
-      console.log("📄 Quotation Number:", data.quotation?.quotationNumber);
-      console.log("🆔 Quotation ID:", data.quotation?.id);
-      toast({
-        title: "Quotation Created",
-        description: `Quotation ${data.quotation?.quotationNumber || 'new'} has been created successfully.`
-      });
+      if (isEditMode) {
+        console.log("✅ Quotation updated successfully:", data);
+        const newRevision = data.documentVersion || ((existingQuotation as any)?.documentVersion + 1) || 2;
+        toast({
+          title: "Quotation Updated",
+          description: `Quotation updated to Revision ${newRevision}.`
+        });
+      } else {
+        console.log("✅ Quotation created successfully:", data);
+        console.log("📄 Quotation Number:", data.quotation?.quotationNumber);
+        console.log("🆔 Quotation ID:", data.quotation?.id);
+        toast({
+          title: "Quotation Created",
+          description: `Quotation ${data.quotation?.quotationNumber || 'new'} has been created successfully.`
+        });
+      }
       // Invalidate all quotation-related queries (including filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/quotations"], exact: false });
       console.log("🔄 Invalidated queries, redirecting to /quotations");
@@ -3218,6 +3246,66 @@ export default function QuotationCreation() {
     }
   }, [fallbackSiteVisitData, mappingError, mappingData, form]);
 
+  // Handle edit mode: populate form with existing quotation data
+  useEffect(() => {
+    if (isEditMode && existingQuotation && !isLoadingQuotation) {
+      const quotation = existingQuotation as any;
+      
+      console.log("📝 Populating form with existing quotation data:", quotation);
+      
+      // Set the quotation source
+      setQuotationSource(quotation.source || "manual");
+      
+      // Skip source selection step in edit mode
+      if (currentStep === 0) {
+        setCurrentStep(1);
+      }
+      
+      // Populate form with all quotation data
+      form.reset({
+        customerId: quotation.customerId,
+        source: quotation.source || "manual",
+        projects: quotation.projects || [],
+        totalSystemCost: quotation.totalSystemCost || 0,
+        totalGSTAmount: quotation.totalGSTAmount || 0,
+        totalWithGST: quotation.totalWithGST || 0,
+        totalSubsidyAmount: quotation.totalSubsidyAmount || 0,
+        totalCustomerPayment: quotation.totalCustomerPayment || 0,
+        advancePaymentPercentage: quotation.advancePaymentPercentage || 90,
+        advanceAmount: quotation.advanceAmount || 0,
+        balanceAmount: quotation.balanceAmount || 0,
+        paymentTerms: quotation.paymentTerms || "advance_90_balance_10",
+        deliveryTimeframe: quotation.deliveryTimeframe || "2_3_weeks",
+        termsTemplate: quotation.termsTemplate || "standard",
+        customTerms: quotation.customTerms,
+        status: quotation.status || "draft",
+        followUps: quotation.followUps || [],
+        lastFollowUpDate: quotation.lastFollowUpDate,
+        nextFollowUpDate: quotation.nextFollowUpDate,
+        communicationPreference: quotation.communicationPreference || "whatsapp",
+        documentVersion: quotation.documentVersion || 1,
+        preparedBy: quotation.preparedBy,
+        approvedBy: quotation.approvedBy,
+        approvedAt: quotation.approvedAt,
+        sentAt: quotation.sentAt,
+        validUntil: quotation.validUntil,
+        internalNotes: quotation.internalNotes || "",
+        customerNotes: quotation.customerNotes || "",
+        attachments: quotation.attachments || [],
+        accountDetails: quotation.accountDetails,
+        physicalDamageExclusions: quotation.physicalDamageExclusions,
+        detailedWarrantyTerms: quotation.detailedWarrantyTerms,
+        documentRequirements: quotation.documentRequirements,
+        siteVisitMapping: quotation.siteVisitMapping
+      });
+      
+      toast({
+        title: "Quotation Loaded",
+        description: `Editing quotation (Revision ${quotation.documentVersion || 1}). Changes will increment the revision number.`
+      });
+    }
+  }, [isEditMode, existingQuotation, isLoadingQuotation, form]);
+
   // Scroll to top when step changes
   useEffect(() => {
     const mainElement = document.querySelector('main.overflow-y-auto');
@@ -3419,10 +3507,10 @@ export default function QuotationCreation() {
             </div>
             <div className="flex-1">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" data-testid="text-page-title">
-                Create New Quotation
+                {isEditMode ? `Edit Quotation${existingQuotation ? ` (Revision ${(existingQuotation as any).documentVersion || 1})` : ''}` : 'Create New Quotation'}
               </h1>
               <p className="text-base text-muted-foreground">
-                Generate professional quotations for solar energy systems with our streamlined process
+                {isEditMode ? 'Update quotation details. Changes will create a new revision.' : 'Generate professional quotations for solar energy systems with our streamlined process'}
               </p>
             </div>
           </div>
@@ -4575,7 +4663,7 @@ export default function QuotationCreation() {
                 data-testid="button-submit"
                 className="w-full sm:w-auto order-1 sm:order-2"
               >
-                {createQuotationMutation.isPending ? "Creating..." : "Create Quotation"}
+                {createQuotationMutation.isPending ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Quotation" : "Create Quotation")}
               </Button>
             ) : (
               <Button
