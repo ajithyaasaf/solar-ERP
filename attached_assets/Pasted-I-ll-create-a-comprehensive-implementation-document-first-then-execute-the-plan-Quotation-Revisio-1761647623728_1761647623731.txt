@@ -1,0 +1,135 @@
+I'll create a comprehensive implementation document first, then execute the plan.
+Quotation Revision & Edit System - Complete Implementation Plan
+Overview
+Implement a quotation editing system where the revision number (documentVersion) increments only when actual changes are saved, not when the edit button is clicked.
+Current System State
+Existing Infrastructure:
+•	✅ Schema has documentVersion field (defaults to 1)
+•	✅ PATCH endpoint exists at /api/quotations/:id
+•	✅ Edit button exists in UI (no functionality)
+•	✅ Quotation creation form exists at /quotations/new
+•	✅ PDF template displays quoteRevision field
+End-to-End User Flow
+Step 1: User Clicks Edit Button
+What happens:
+•	User clicks the pencil icon on a quotation row
+•	System navigates to quotation creation page with special params: /quotations/edit/:id
+•	Form loads in "edit mode"
+•	Revision number stays the same (no increment yet)
+Step 2: Form Loads with Existing Data
+What happens:
+•	Fetch quotation data from API using quotation ID
+•	Pre-populate all form fields with existing values:
+o	Customer information
+o	Project configurations
+o	Pricing details
+o	Payment terms
+o	All other fields
+•	Page title shows: "Edit Quotation Q-XXX (Current Revision: N)"
+•	documentVersion remains unchanged at this point
+Step 3: User Makes Changes
+What happens:
+•	User modifies any field(s) in the form (pricing, projects, terms, etc.)
+•	Form tracks that changes have been made (dirty state)
+•	No API calls yet - just local form state updates
+•	documentVersion still unchanged
+Step 4: User Saves Changes
+What happens:
+•	User clicks "Update Quotation" button
+•	System sends PATCH request to /api/quotations/:id
+•	Backend automatically increments documentVersion by 1
+•	Updates updatedAt timestamp
+•	Saves all modified fields
+•	Response returns updated quotation with new revision number
+Step 5: Confirmation & Display
+What happens:
+•	Success toast: "Quotation updated to Revision N+1"
+•	Redirect to quotations list
+•	Table shows updated data
+•	Next PDF generation will show new revision number
+Implementation Details
+Frontend Changes
+1. Edit Button Handler (quotations.tsx)
+onClick={() => navigate to /quotations/edit/{quotation.id}
+2. Quotation Creation Page Enhancement (quotation-creation.tsx)
+- Detect if URL contains /edit/:id
+- If yes, fetch quotation data
+- Set mode to "edit"
+- Pre-populate form with existing data
+- Change submit button text to "Update Quotation"
+- Change page title to "Edit Quotation"
+3. Form Submission Logic
+if (mode === "edit"):
+  - Call PATCH /api/quotations/:id
+  - Don't include documentVersion in request (backend handles it)
+  - Show success message with new revision
+else:
+  - Call POST /api/quotations (existing behavior)
+Backend Changes
+1. PATCH Endpoint Enhancement (server/routes/quotations.ts)
+Current behavior:
+- Accepts updated fields
+- Validates data
+- Calls storage.updateQuotation()
+New behavior:
+- Same as above, PLUS
+- Automatically increment documentVersion by 1
+- Set updatedAt to current timestamp
+- Return updated quotation with new revision
+2. Storage Method Update (server/storage.ts)
+updateQuotation(id, data):
+  - Fetch current quotation
+  - Get current documentVersion
+  - Increment it: newVersion = currentVersion + 1
+  - Include in update: { ...data, documentVersion: newVersion, updatedAt: now }
+  - Save to database
+  - Return updated quotation
+Revision Tracking Logic
+Per-Quotation Versioning:
+•	Each quotation has its own independent documentVersion
+•	Customer A's Quotation Q-100: Revisions 1, 2, 3, 4...
+•	Customer A's Quotation Q-101: Revisions 1, 2, 3... (separate counter)
+•	Customer B's Quotation Q-102: Revisions 1, 2... (separate counter)
+Increment Rules:
+•	✅ Increment on PATCH/update with actual changes
+•	❌ No increment on just viewing/opening edit form
+•	❌ No increment on GET requests
+•	✅ Each save = +1 revision
+PDF Template Integration
+Current State:
+•	Template already has quoteRevision field
+•	It reads from quotation.documentVersion
+No changes needed - it will automatically show the updated revision number
+Validation & Safety
+Edit Restrictions:
+•	Allow editing quotations in: draft, review, approved, sent
+•	Warn user if editing already-sent quotation
+•	Optional: Block editing if status is "converted" or "rejected"
+Data Integrity:
+•	Validate all fields before saving
+•	Ensure documentVersion is always positive integer
+•	Prevent concurrent edits (optimistic locking - future enhancement)
+Implementation Tasks
+Task 1: Create Edit Route & Navigation
+•	Add edit route in App.tsx
+•	Wire up edit button click handler
+•	Create URL pattern /quotations/edit/:id
+Task 2: Enhance Quotation Creation Form
+•	Detect edit mode from URL params
+•	Fetch quotation data when in edit mode
+•	Pre-populate all form fields
+•	Change UI labels (title, button text)
+Task 3: Update Backend Logic
+•	Modify PATCH endpoint to auto-increment documentVersion
+•	Update storage method to handle versioning
+•	Add validation for revision numbers
+Task 4: Update Success Messages
+•	Show current revision in edit form
+•	Display new revision in success toast
+•	Update quotation list to show revision (optional)
+Task 5: Testing
+•	Test edit flow end-to-end
+•	Verify revision increments only on save
+•	Check PDF shows correct revision
+•	Test with multiple edits (1→2→3...)
+
