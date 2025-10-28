@@ -492,15 +492,17 @@ export default function Quotations() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0"
-                          title="Edit Quotation"
-                          data-testid={`button-edit-${quotation.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/quotations/edit/${quotation.id}`}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            title="Edit Quotation"
+                            data-testid={`button-edit-${quotation.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         <Button 
                           variant="ghost" 
                           size="sm" 
