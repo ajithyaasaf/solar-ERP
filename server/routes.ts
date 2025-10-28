@@ -2852,14 +2852,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
+      
+      // Fetch current quotation to get current documentVersion
+      const currentQuotation = await storage.getQuotation(req.params.id);
+      if (!currentQuotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+      
+      // Parse and validate the update data
       const quotationData = insertQuotationSchema.partial().parse(req.body);
+      
+      // Auto-increment documentVersion on every update
+      const currentVersion = currentQuotation.documentVersion || 1;
+      const newVersion = currentVersion + 1;
+      
+      // Update quotation with incremented version
       const updatedQuotation = await storage.updateQuotation(
         req.params.id,
-        quotationData,
+        {
+          ...quotationData,
+          documentVersion: newVersion
+        },
       );
+      
       if (!updatedQuotation) {
         return res.status(404).json({ message: "Quotation not found" });
       }
+      
+      console.log(`✅ Quotation ${req.params.id} updated: Revision ${currentVersion} → ${newVersion}`);
       res.json(updatedQuotation);
     } catch (error) {
       if (error instanceof z.ZodError) {
