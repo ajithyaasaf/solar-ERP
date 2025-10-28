@@ -2778,10 +2778,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
 export default function QuotationCreation() {
   const [, setLocation] = useLocation();
-  const [match, params] = useRoute("/quotations/edit/:id");
-  const isEditMode = match && params?.id;
-  const quotationId = params?.id;
-  
   const [currentStep, setCurrentStep] = useState(0);
   const [quotationSource, setQuotationSource] = useState<"manual" | "site_visit">("manual");
   const [selectedSiteVisit, setSelectedSiteVisit] = useState<string | null>(null);
@@ -2938,12 +2934,6 @@ export default function QuotationCreation() {
     }
   });
 
-  // Fetch existing quotation data in edit mode
-  const { data: existingQuotation, isLoading: isLoadingQuotation } = useQuery({
-    queryKey: [`/api/quotations/${quotationId}`],
-    enabled: !!isEditMode && !!quotationId
-  });
-
   // Fetch customers for manual entry
   const { data: customers, isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["/api/customers"],
@@ -2979,13 +2969,13 @@ export default function QuotationCreation() {
     retry: false
   });
 
-  // Create/Update quotation mutation using proper apiRequest with auth
+  // Create quotation mutation using proper apiRequest with auth
   const createQuotationMutation = useMutation({
     mutationFn: async (data: QuotationFormData) => {
       let finalCustomerId = data.customerId;
       
-      // For manual quotations (not in edit mode), handle customer creation/lookup
-      if (!isEditMode && quotationSource === "manual" && data.customerData) {
+      // For manual quotations, handle customer creation/lookup
+      if (quotationSource === "manual" && data.customerData) {
         // Check if customer already selected via customerId dropdown
         if (data.customerId) {
           finalCustomerId = data.customerId;
@@ -3006,40 +2996,22 @@ export default function QuotationCreation() {
         customerId: finalCustomerId
       };
       
-      // Determine URL and method based on mode
-      if (isEditMode) {
-        // Edit mode: PATCH to update existing quotation
-        console.log("Updating quotation:", quotationId);
-        const response = await apiRequest(`/api/quotations/${quotationId}`, "PATCH", payloadWithCustomerId);
-        return response.json();
-      } else {
-        // Create mode: POST to create new quotation
-        const url = quotationSource === "site_visit" && selectedSiteVisit 
-          ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
-          : "/api/quotations";
-        
-        console.log("Sending quotation payload:", payloadWithCustomerId);
-        const response = await apiRequest(url, "POST", payloadWithCustomerId);
-        return response.json();
-      }
+      const url = quotationSource === "site_visit" && selectedSiteVisit 
+        ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
+        : "/api/quotations";
+      
+      console.log("Sending quotation payload:", payloadWithCustomerId);
+      const response = await apiRequest(url, "POST", payloadWithCustomerId);
+      return response.json();
     },
     onSuccess: (data: any) => {
-      if (isEditMode) {
-        console.log("✅ Quotation updated successfully:", data);
-        const newRevision = data.documentVersion || ((existingQuotation as any)?.documentVersion + 1) || 2;
-        toast({
-          title: "Quotation Updated",
-          description: `Quotation updated to Revision ${newRevision}.`
-        });
-      } else {
-        console.log("✅ Quotation created successfully:", data);
-        console.log("📄 Quotation Number:", data.quotation?.quotationNumber);
-        console.log("🆔 Quotation ID:", data.quotation?.id);
-        toast({
-          title: "Quotation Created",
-          description: `Quotation ${data.quotation?.quotationNumber || 'new'} has been created successfully.`
-        });
-      }
+      console.log("✅ Quotation created successfully:", data);
+      console.log("📄 Quotation Number:", data.quotation?.quotationNumber);
+      console.log("🆔 Quotation ID:", data.quotation?.id);
+      toast({
+        title: "Quotation Created",
+        description: `Quotation ${data.quotation?.quotationNumber || 'new'} has been created successfully.`
+      });
       // Invalidate all quotation-related queries (including filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/quotations"], exact: false });
       console.log("🔄 Invalidated queries, redirecting to /quotations");
@@ -3246,66 +3218,6 @@ export default function QuotationCreation() {
     }
   }, [fallbackSiteVisitData, mappingError, mappingData, form]);
 
-  // Handle edit mode: populate form with existing quotation data
-  useEffect(() => {
-    if (isEditMode && existingQuotation && !isLoadingQuotation) {
-      const quotation = existingQuotation as any;
-      
-      console.log("📝 Populating form with existing quotation data:", quotation);
-      
-      // Set the quotation source
-      setQuotationSource(quotation.source || "manual");
-      
-      // Jump directly to Review step (step 4) in edit mode for better UX
-      if (currentStep === 0) {
-        setCurrentStep(4);
-      }
-      
-      // Populate form with all quotation data
-      form.reset({
-        customerId: quotation.customerId,
-        source: quotation.source || "manual",
-        projects: quotation.projects || [],
-        totalSystemCost: quotation.totalSystemCost || 0,
-        totalGSTAmount: quotation.totalGSTAmount || 0,
-        totalWithGST: quotation.totalWithGST || 0,
-        totalSubsidyAmount: quotation.totalSubsidyAmount || 0,
-        totalCustomerPayment: quotation.totalCustomerPayment || 0,
-        advancePaymentPercentage: quotation.advancePaymentPercentage || 90,
-        advanceAmount: quotation.advanceAmount || 0,
-        balanceAmount: quotation.balanceAmount || 0,
-        paymentTerms: quotation.paymentTerms || "advance_90_balance_10",
-        deliveryTimeframe: quotation.deliveryTimeframe || "2_3_weeks",
-        termsTemplate: quotation.termsTemplate || "standard",
-        customTerms: quotation.customTerms,
-        status: quotation.status || "draft",
-        followUps: quotation.followUps || [],
-        lastFollowUpDate: quotation.lastFollowUpDate,
-        nextFollowUpDate: quotation.nextFollowUpDate,
-        communicationPreference: quotation.communicationPreference || "whatsapp",
-        documentVersion: quotation.documentVersion || 1,
-        preparedBy: quotation.preparedBy,
-        approvedBy: quotation.approvedBy,
-        approvedAt: quotation.approvedAt,
-        sentAt: quotation.sentAt,
-        validUntil: quotation.validUntil,
-        internalNotes: quotation.internalNotes || "",
-        customerNotes: quotation.customerNotes || "",
-        attachments: quotation.attachments || [],
-        accountDetails: quotation.accountDetails,
-        physicalDamageExclusions: quotation.physicalDamageExclusions,
-        detailedWarrantyTerms: quotation.detailedWarrantyTerms,
-        documentRequirements: quotation.documentRequirements,
-        siteVisitMapping: quotation.siteVisitMapping
-      });
-      
-      toast({
-        title: "Quotation Loaded",
-        description: `Editing quotation (Revision ${quotation.documentVersion || 1}). Changes will increment the revision number.`
-      });
-    }
-  }, [isEditMode, existingQuotation, isLoadingQuotation, form]);
-
   // Scroll to top when step changes
   useEffect(() => {
     const mainElement = document.querySelector('main.overflow-y-auto');
@@ -3324,13 +3236,6 @@ export default function QuotationCreation() {
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
-    }
-  };
-
-  // Direct step navigation - enabled only in edit mode for better UX
-  const goToStep = (stepIndex: number) => {
-    if (isEditMode && stepIndex >= 0 && stepIndex < WIZARD_STEPS.length) {
-      setCurrentStep(stepIndex);
     }
   };
 
@@ -3514,10 +3419,10 @@ export default function QuotationCreation() {
             </div>
             <div className="flex-1">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" data-testid="text-page-title">
-                {isEditMode ? `Edit Quotation${existingQuotation ? ` (Revision ${(existingQuotation as any).documentVersion || 1})` : ''}` : 'Create New Quotation'}
+                Create New Quotation
               </h1>
               <p className="text-base text-muted-foreground">
-                {isEditMode ? 'Update quotation details. Changes will create a new revision.' : 'Generate professional quotations for solar energy systems with our streamlined process'}
+                Generate professional quotations for solar energy systems with our streamlined process
               </p>
             </div>
           </div>
@@ -3543,8 +3448,7 @@ export default function QuotationCreation() {
                         : isActive 
                           ? "border-primary text-primary" 
                           : "border-muted-foreground text-muted-foreground"
-                    } ${isEditMode ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
-                    onClick={() => isEditMode && goToStep(index)}
+                    }`}
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
@@ -3573,11 +3477,7 @@ export default function QuotationCreation() {
               const IconComponent = step.icon;
               
               return (
-                <div 
-                  key={step.id} 
-                  className={`flex items-center flex-1 min-w-0 ${isEditMode ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
-                  onClick={() => isEditMode && goToStep(index)}
-                >
+                <div key={step.id} className="flex items-center flex-1 min-w-0">
                   <div 
                     className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${
                       isCompleted 
@@ -3628,8 +3528,7 @@ export default function QuotationCreation() {
                         : isActive 
                           ? "border-primary text-primary" 
                           : "border-muted-foreground text-muted-foreground"
-                    } ${isEditMode ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
-                    onClick={() => isEditMode && goToStep(index)}
+                    }`}
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
@@ -4475,63 +4374,13 @@ export default function QuotationCreation() {
           {currentStep === 4 && (
             <Card data-testid="card-review-submit">
               <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Review & Submit
-                    </CardTitle>
-                    <CardDescription>
-                      {isEditMode 
-                        ? "Review all quotation details before saving changes" 
-                        : "Final review before creating the quotation"}
-                    </CardDescription>
-                  </div>
-                  {isEditMode && !!existingQuotation ? (
-                    <Badge variant="outline" className="text-sm px-3 py-1">
-                      Revision {(existingQuotation as any).documentVersion || 1} → {((existingQuotation as any).documentVersion || 1) + 1}
-                    </Badge>
-                  ) : null}
-                </div>
-                
-                {/* Quick Edit Navigation - Only in Edit Mode */}
-                {isEditMode && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToStep(1)}
-                      className="flex items-center gap-2"
-                      data-testid="button-edit-customer"
-                    >
-                      <User className="h-4 w-4" />
-                      Edit Customer
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToStep(2)}
-                      className="flex items-center gap-2"
-                      data-testid="button-edit-projects"
-                    >
-                      <Zap className="h-4 w-4" />
-                      Edit Projects
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToStep(3)}
-                      className="flex items-center gap-2"
-                      data-testid="button-edit-pricing"
-                    >
-                      <Calculator className="h-4 w-4" />
-                      Edit Pricing
-                    </Button>
-                  </div>
-                )}
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Review & Submit
+                </CardTitle>
+                <CardDescription>
+                  Final review before creating the quotation
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
                 {/* Summary */}
@@ -4726,7 +4575,7 @@ export default function QuotationCreation() {
                 data-testid="button-submit"
                 className="w-full sm:w-auto order-1 sm:order-2"
               >
-                {createQuotationMutation.isPending ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Quotation" : "Create Quotation")}
+                {createQuotationMutation.isPending ? "Creating..." : "Create Quotation"}
               </Button>
             ) : (
               <Button
