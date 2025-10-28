@@ -166,12 +166,18 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Quotation not found" });
       }
 
+      // Auto-increment documentVersion on every update
+      const currentVersion = quotation.documentVersion || 1;
+      const newVersion = currentVersion + 1;
+
       const updatedQuotation = await storage.updateQuotation(req.params.id, {
         ...req.body,
+        documentVersion: newVersion,
         updatedBy: user.uid,
         updatedAt: new Date()
       });
 
+      console.log(`✅ Quotation ${req.params.id} updated: Revision ${currentVersion} → ${newVersion}`);
       res.json(updatedQuotation);
     } catch (error) {
       console.error("Error updating quotation:", error);
