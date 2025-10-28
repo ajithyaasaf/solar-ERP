@@ -1303,8 +1303,9 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       manuallyEdited: false
     };
 
-    // Only auto-update if not manually edited AND backup watts actually changed
-    if (!currentBackupSolutions.manuallyEdited && currentBackupSolutions.backupWatts !== calculatedBackupWatts) {
+    // Auto-update whenever battery specs change AND the calculated value differs
+    // Reset manuallyEdited to false so auto-calculation continues working
+    if (currentBackupSolutions.backupWatts !== calculatedBackupWatts) {
       const newUsageWatts = currentBackupSolutions.usageWatts || [];
       const newBackupHours = calculateBackupHours(calculatedBackupWatts, newUsageWatts);
 
@@ -1313,12 +1314,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           backupWatts: calculatedBackupWatts,
           usageWatts: newUsageWatts,
           backupHours: newBackupHours,
-          manuallyEdited: false
+          manuallyEdited: false // Reset to allow future auto-calculations
         }
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.projectType, project.batteryAH, project.batteryCount, project.backupSolutions?.manuallyEdited]);
+  }, [project.projectType, project.batteryAH, project.batteryCount]);
 
   // Auto-calculate system kW from panel data (actual decimal value)
   const actualSystemKW = project.panelWatts && project.panelCount 
@@ -2037,7 +2038,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     const backupSolutions = project.backupSolutions || {
       backupWatts: 0,
       usageWatts: [],
-      backupHours: []
+      backupHours: [],
+      manuallyEdited: false
     };
 
     // Calculate backup hours for a given usage watts
