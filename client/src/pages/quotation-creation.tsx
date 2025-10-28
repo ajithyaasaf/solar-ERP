@@ -437,7 +437,8 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
     email: "",
     propertyType: "",
     ebServiceNumber: "",
-    location: ""
+    location: "",
+    source: "manual"
   });
   const [isAutoFilled, setIsAutoFilled] = useState(false);
   
@@ -448,7 +449,18 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
   // Sync local state with form data when it changes
   useEffect(() => {
     if (formCustomerData && Object.keys(formCustomerData).length > 0) {
-      setCustomerState(formCustomerData);
+      // Ensure source field is always present
+      const customerDataWithSource = {
+        ...formCustomerData,
+        source: formCustomerData.source || "manual"
+      };
+      setCustomerState(customerDataWithSource);
+      
+      // Update form if source was missing
+      if (!formCustomerData.source) {
+        form.setValue("customerData", customerDataWithSource, { shouldValidate: true });
+      }
+      
       // If there's a customerId, mark as auto-filled
       if (formCustomerId) {
         setIsAutoFilled(true);
@@ -462,11 +474,12 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
         email: "",
         propertyType: "",
         ebServiceNumber: "",
-        location: ""
+        location: "",
+        source: "manual"
       });
       setIsAutoFilled(false);
     }
-  }, [formCustomerData, formCustomerId]);
+  }, [formCustomerData, formCustomerId, form]);
 
   const handleCustomerChange = (customerData: any) => {
     // Update local state
@@ -495,7 +508,11 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
   };
 
   const updateCustomerField = (field: string, value: any) => {
-    const updatedCustomerData = { ...customerState, [field]: value };
+    const updatedCustomerData = { 
+      ...customerState, 
+      [field]: value,
+      source: "manual" // Always set source for manual quotations
+    };
     setCustomerState(updatedCustomerData);
     form.setValue("customerData", updatedCustomerData);
     
