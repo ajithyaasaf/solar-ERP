@@ -2173,9 +2173,14 @@ export class FirestoreStorage implements IStorage {
     const existingHistory = currentData.revisionHistory || [];
     const updatedHistory = [...existingHistory, revisionEntry];
     
+    // Remove undefined values from validatedData (Firestore doesn't accept undefined)
+    const cleanedData = Object.fromEntries(
+      Object.entries(validatedData).filter(([_, value]) => value !== undefined)
+    );
+    
     // Update quotation with incremented version and revision history
     await quotationDoc.update({
-      ...validatedData,
+      ...cleanedData,
       documentVersion: currentVersion + 1,
       revisionHistory: updatedHistory,
       updatedAt: Timestamp.now(),
