@@ -114,6 +114,19 @@ function Router() {
         </ProtectedRoute>
       </Route>
       
+      {/* Quotation Edit - enterprise permission based */}
+      <Route path="/quotations/:id/edit">
+        <ProtectedRoute 
+          requiredPermissions={["quotations.edit", "quotations.create"]}
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <QuotationCreation />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      
       {/* Invoice management - enterprise permission based */}
       <Route path="/invoices">
         <ProtectedRoute 

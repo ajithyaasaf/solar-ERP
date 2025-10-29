@@ -1344,7 +1344,7 @@ export class QuotationTemplateService {
       header: this.COMPANY_DETAILS,
       quotationNumber: quotation.quotationNumber || this.generateQuotationNumber(),
       quotationDate: new Date().toLocaleDateString('en-GB'),
-      quoteRevision: quotation.documentVersion || 0,
+      quoteRevision: quotation.documentVersion || 1,
       quoteValidity: `${validityDays} Days`,
       preparedBy: preparedByName || quotation.preparedBy || "SM",
       customer: {

@@ -2149,24 +2149,51 @@ export class FirestoreStorage implements IStorage {
   async updateQuotation(
     id: string,
     data: Partial<z.infer<typeof insertQuotationSchema>>,
+    updatedBy: string
   ): Promise<Quotation> {
     const validatedData = insertQuotationSchema.partial().parse(data);
     const quotationDoc = this.db.collection("quotations").doc(id);
     
+    // Fetch current quotation to create revision history
+    const currentDoc = await quotationDoc.get();
+    if (!currentDoc.exists) throw new Error("Quotation not found");
+    
+    const currentData = currentDoc.data() || {};
+    const currentVersion = currentData.documentVersion || 1;
+    
+    // Create revision history entry with snapshot of current state
+    const revisionEntry = {
+      version: currentVersion,
+      updatedAt: Timestamp.now(),
+      updatedBy,
+      changeNote: `Revision ${currentVersion + 1}`
+    };
+    
+    // Append to existing revision history or create new array
+    const existingHistory = currentData.revisionHistory || [];
+    const updatedHistory = [...existingHistory, revisionEntry];
+    
+    // Update quotation with incremented version and revision history
     await quotationDoc.update({
       ...validatedData,
+      documentVersion: currentVersion + 1,
+      revisionHistory: updatedHistory,
       updatedAt: Timestamp.now(),
     });
     
     const updatedDoc = await quotationDoc.get();
-    if (!updatedDoc.exists) throw new Error("Quotation not found");
+    if (!updatedDoc.exists) throw new Error("Quotation not found after update");
     
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
       ...updatedData,
       createdAt: updatedData.createdAt?.toDate() || new Date(),
-      updatedAt: updatedData.updatedAt?.toDate() || new Date()
+      updatedAt: updatedData.updatedAt?.toDate() || new Date(),
+      revisionHistory: updatedData.revisionHistory?.map((r: any) => ({
+        ...r,
+        updatedAt: r.updatedAt?.toDate() || new Date()
+      }))
     } as Quotation;
   }
 

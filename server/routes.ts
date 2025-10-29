@@ -2841,6 +2841,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Update quotation with revision tracking
+  app.put("/api/quotations/:id", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Check permissions
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.edit") ||
+                           req.authenticatedUser.permissions.includes("quotations.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Fetch existing quotation to enforce immutability of customer and source
+      const existingQuotation = await storage.getQuotation(req.params.id);
+      if (!existingQuotation) {
+        return res.status(404).json({ message: "Quotation not found" });
+      }
+
+      // Import the update schema
+      const { updateQuotationSchema } = await import("@shared/schema");
+      
+      // Validate the request body against update schema (excludes immutable fields)
+      const quotationData = updateQuotationSchema.parse(req.body);
+      
+      // Enforce immutability: override customerId, source, and siteVisitMapping with existing values
+      // This prevents client-side tampering and ensures data integrity
+      const immutableQuotationData = {
+        ...quotationData,
+        customerId: existingQuotation.customerId, // Locked - cannot change customer
+        source: existingQuotation.source, // Locked - cannot change source
+        siteVisitMapping: existingQuotation.siteVisitMapping, // Locked - cannot change site visit association
+      };
+      
+      // Update quotation with revision tracking
+      const updatedQuotation = await storage.updateQuotation(
+        req.params.id,
+        immutableQuotationData,
+        req.authenticatedUser.uid // Pass the user ID for revision history
+      );
+      
+      // Invalidate caches if needed
+      res.json(updatedQuotation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error",
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating quotation:", error);
+      res.status(500).json({ message: "Failed to update quotation" });
+    }
+  });
+
+  // Legacy PATCH endpoint for partial updates (deprecated, use PUT)
   app.patch("/api/quotations/:id", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
@@ -2856,6 +2915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedQuotation = await storage.updateQuotation(
         req.params.id,
         quotationData,
+        req.authenticatedUser?.uid || ""
       );
       if (!updatedQuotation) {
         return res.status(404).json({ message: "Quotation not found" });

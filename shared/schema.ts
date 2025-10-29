@@ -1796,6 +1796,14 @@ export const insertQuotationSchema = z.object({
     note: z.string().default("All Required Documents should be in the same name as mentioned in the EB Service Number.")
   }).optional(),
   
+  // Revision History Tracking
+  revisionHistory: z.array(z.object({
+    version: z.number(),
+    updatedAt: z.date(),
+    updatedBy: z.string(),
+    changeNote: z.string().optional()
+  })).optional().default([]),
+  
   // Metadata
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date())
@@ -1821,6 +1829,7 @@ export type QuotationProject = z.infer<typeof quotationProjectSchema>;
 export type SiteVisitMapping = z.infer<typeof siteVisitMappingSchema>;
 export type QuotationFollowUp = z.infer<typeof quotationFollowUpSchema>;
 export type InsertQuotation = z.infer<typeof insertQuotationSchema>;
+export type UpdateQuotation = z.infer<typeof updateQuotationSchema>;
 
 export interface Quotation extends InsertQuotation {
   id: string;
@@ -1828,6 +1837,19 @@ export interface Quotation extends InsertQuotation {
 
 // Create insert schema from drizzle-zod (for API validation)
 export const createInsertQuotationSchema = insertQuotationSchema;
+
+// Update quotation schema - excludes immutable fields
+export const updateQuotationSchema = insertQuotationSchema.omit({
+  quotationNumber: true,  // Can't change quotation number
+  createdAt: true,        // Can't change creation date
+  source: true,           // Can't change original source
+  siteVisitMapping: true, // Can't change original site visit mapping
+  documentVersion: true,  // Server-controlled, auto-incremented
+  revisionHistory: true   // Server-controlled, managed automatically
+}).extend({
+  // updatedAt will be set server-side automatically
+  updatedAt: z.date().optional()
+});
 
 // ================================
 // LEAVE MANAGEMENT SYSTEM SCHEMAS

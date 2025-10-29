@@ -225,7 +225,7 @@ interface SiteVisitMapping {
 }
 
 // Site Visit Customer Details Form Component
-function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisitData }: { form: any; siteVisitMapping: any; fallbackSiteVisitData?: any }) {
+function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisitData, isEditMode = false }: { form: any; siteVisitMapping: any; fallbackSiteVisitData?: any; isEditMode?: boolean }) {
   const [customerState, setCustomerState] = useState<any>({});
 
   // Extract customer data from site visit mapping with updated structure - be very flexible
@@ -429,7 +429,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
 }
 
 // Manual Customer Details Form Component
-function ManualCustomerDetailsForm({ form }: { form: any }) {
+function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; isEditMode?: boolean }) {
   const [customerState, setCustomerState] = useState<any>({
     name: "",
     mobile: "",
@@ -523,20 +523,22 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
   return (
     <div className="space-y-6">
       {/* Customer Search/Autocomplete */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Search Customer</label>
-        <CustomerAutocomplete
-          value={customerState}
-          onChange={handleCustomerChange}
-          onCustomerSelected={(customerId) => {
-            form.setValue("customerId", customerId);
-          }}
-          placeholder="Start typing customer name or mobile number..."
-        />
-        <p className="text-xs text-muted-foreground">
-          Search for existing customer or enter new customer details below
-        </p>
-      </div>
+      {!isEditMode && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Search Customer</label>
+          <CustomerAutocomplete
+            value={customerState}
+            onChange={handleCustomerChange}
+            onCustomerSelected={(customerId) => {
+              form.setValue("customerId", customerId);
+            }}
+            placeholder="Start typing customer name or mobile number..."
+          />
+          <p className="text-xs text-muted-foreground">
+            Search for existing customer or enter new customer details below
+          </p>
+        </div>
+      )}
 
       {/* Customer Details Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -557,6 +559,7 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
             placeholder="Enter customer name"
             className={isAutoFilled && customerState.name ? "bg-green-50 border-green-200" : ""}
             data-testid="input-customer-name"
+            disabled={isEditMode}
           />
           {customerState.name && customerState.name.trim().length < 2 && (
             <p className="text-xs text-red-600">Name must be at least 2 characters</p>
@@ -577,6 +580,7 @@ function ManualCustomerDetailsForm({ form }: { form: any }) {
           <Input
             value={customerState.mobile || ""}
             onChange={(e) => updateCustomerField("mobile", e.target.value)}
+            disabled={isEditMode}
             placeholder="Enter 10-digit mobile number"
             className={isAutoFilled && customerState.mobile ? "bg-green-50 border-green-200" : ""}
             data-testid="input-customer-mobile"
@@ -2778,6 +2782,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
 export default function QuotationCreation() {
   const [, setLocation] = useLocation();
+  
+  // Detect edit mode using URL pattern
+  const [isEditMode, params] = useRoute("/quotations/:id/edit");
+  const quotationId = params?.id;
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [quotationSource, setQuotationSource] = useState<"manual" | "site_visit">("manual");
   const [selectedSiteVisit, setSelectedSiteVisit] = useState<string | null>(null);
@@ -2788,6 +2797,19 @@ export default function QuotationCreation() {
   const [customDateTo, setCustomDateTo] = useState<string>("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const { toast } = useToast();
+  
+  // Fetch existing quotation data if in edit mode
+  const { data: existingQuotation, isLoading: isLoadingQuotation } = useQuery({
+    queryKey: ["/api/quotations", quotationId],
+    enabled: isEditMode && !!quotationId,
+  });
+  
+  // Fetch customer data for the quotation in edit mode
+  const customerId = (existingQuotation as any)?.customerId;
+  const { data: existingCustomer, isLoading: isLoadingCustomer } = useQuery({
+    queryKey: ["/api/customers", customerId],
+    enabled: isEditMode && !!customerId,
+  });
 
   // Memoized filter function for site visits - DRY principle
   const filterSiteVisit = useCallback((visit: any) => {
@@ -2969,13 +2991,13 @@ export default function QuotationCreation() {
     retry: false
   });
 
-  // Create quotation mutation using proper apiRequest with auth
+  // Create/Update quotation mutation using proper apiRequest with auth
   const createQuotationMutation = useMutation({
     mutationFn: async (data: QuotationFormData) => {
       let finalCustomerId = data.customerId;
       
-      // For manual quotations, handle customer creation/lookup
-      if (quotationSource === "manual" && data.customerData) {
+      // For manual quotations (NOT in edit mode), handle customer creation/lookup
+      if (!isEditMode && quotationSource === "manual" && data.customerData) {
         // Check if customer already selected via customerId dropdown
         if (data.customerId) {
           finalCustomerId = data.customerId;
@@ -2989,28 +3011,48 @@ export default function QuotationCreation() {
         }
       }
       
+      // In edit mode, use existing customer ID
+      if (isEditMode && existingQuotation) {
+        finalCustomerId = (existingQuotation as any).customerId;
+      }
+      
       // Prepare payload without customerData (backend doesn't accept it)
       const { customerData, totalGSTAmount, totalWithGST, ...quotationPayload } = data;
-      const payloadWithCustomerId = {
-        ...quotationPayload,
-        customerId: finalCustomerId
-      };
       
-      const url = quotationSource === "site_visit" && selectedSiteVisit 
-        ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
-        : "/api/quotations";
-      
-      console.log("Sending quotation payload:", payloadWithCustomerId);
-      const response = await apiRequest(url, "POST", payloadWithCustomerId);
-      return response.json();
+      // Use PUT for edit mode, POST for create mode
+      if (isEditMode && quotationId) {
+        console.log("Updating quotation with ID:", quotationId);
+        
+        // For edit mode: remove ALL immutable fields (customerId, source, customerData)
+        // The backend will enforce these values from the existing quotation
+        // This prevents any client-side tampering and ensures data integrity
+        const { customerId, source, siteVisitMapping, ...editableFields } = quotationPayload;
+        
+        console.log("Sending update payload (immutable fields excluded):", editableFields);
+        const response = await apiRequest(`/api/quotations/${quotationId}`, "PUT", editableFields);
+        return response.json();
+      } else {
+        // For create mode: include customerId
+        const payloadWithCustomerId = {
+          ...quotationPayload,
+          customerId: finalCustomerId
+        };
+        const url = quotationSource === "site_visit" && selectedSiteVisit 
+          ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
+          : "/api/quotations";
+        
+        console.log("Sending quotation payload:", payloadWithCustomerId);
+        const response = await apiRequest(url, "POST", payloadWithCustomerId);
+        return response.json();
+      }
     },
     onSuccess: (data: any) => {
-      console.log("✅ Quotation created successfully:", data);
-      console.log("📄 Quotation Number:", data.quotation?.quotationNumber);
-      console.log("🆔 Quotation ID:", data.quotation?.id);
+      console.log(`✅ Quotation ${isEditMode ? 'updated' : 'created'} successfully:`, data);
+      console.log("📄 Quotation Number:", data.quotation?.quotationNumber || data.quotationNumber);
+      console.log("🆔 Quotation ID:", data.quotation?.id || data.id);
       toast({
-        title: "Quotation Created",
-        description: `Quotation ${data.quotation?.quotationNumber || 'new'} has been created successfully.`
+        title: isEditMode ? "Quotation Updated" : "Quotation Created",
+        description: `Quotation ${data.quotation?.quotationNumber || data.quotationNumber || 'new'} has been ${isEditMode ? 'updated' : 'created'} successfully.${isEditMode ? ` Revision: R${data.documentVersion || data.quotation?.documentVersion || 1}` : ''}`
       });
       // Invalidate all quotation-related queries (including filtered ones)
       queryClient.invalidateQueries({ queryKey: ["/api/quotations"], exact: false });
@@ -3038,9 +3080,101 @@ export default function QuotationCreation() {
     }
   });
 
-  // Handle site visit selection and auto-populate form
+  // Pre-fill form when in edit mode and quotation data is loaded
   useEffect(() => {
-    if (mappingData && (mappingData as any).quotationData) {
+    if (isEditMode && existingQuotation && !isLoadingQuotation && existingCustomer && !isLoadingCustomer) {
+      const quotation = existingQuotation as any;
+      const customer = existingCustomer as any;
+      console.log("📝 Pre-filling form with existing quotation data:", quotation);
+      console.log("👤 Customer data:", customer);
+      
+      // Set the source and skip the source selection step in edit mode
+      setQuotationSource(quotation.source || "manual");
+      if (quotation.siteVisitMapping?.siteVisitId) {
+        setSelectedSiteVisit(quotation.siteVisitMapping.siteVisitId);
+      }
+      
+      // Skip to customer step (step 1) in edit mode since source is locked
+      setCurrentStep(1);
+      
+      // Prepare customer data from the fetched customer
+      const customerData = {
+        name: customer.name || "",
+        mobile: customer.mobile || "",
+        address: customer.address || "",
+        email: customer.email || "",
+        propertyType: customer.propertyType || "",
+        ebServiceNumber: customer.ebServiceNumber || "",
+        location: customer.location || "",
+        source: quotation.source || "manual"
+      };
+      
+      // Reset form with existing quotation data
+      form.reset({
+        customerId: quotation.customerId || "",
+        customerData: customerData, // Add customer data for form population
+        source: quotation.source || "manual",
+        projects: quotation.projects || [],
+        totalSystemCost: quotation.totalSystemCost || 0,
+        totalGSTAmount: quotation.totalGSTAmount || 0,
+        totalWithGST: quotation.totalWithGST || 0,
+        totalSubsidyAmount: quotation.totalSubsidyAmount || 0,
+        totalCustomerPayment: quotation.totalCustomerPayment || 0,
+        advancePaymentPercentage: quotation.advancePaymentPercentage || 90,
+        advanceAmount: quotation.advanceAmount || 0,
+        balanceAmount: quotation.balanceAmount || 0,
+        paymentTerms: quotation.paymentTerms || "advance_90_balance_10",
+        deliveryTimeframe: quotation.deliveryTimeframe || "2_3_weeks",
+        termsTemplate: quotation.termsTemplate || "standard",
+        status: quotation.status || "draft",
+        followUps: quotation.followUps || [],
+        communicationPreference: quotation.communicationPreference || "whatsapp",
+        internalNotes: quotation.internalNotes || "",
+        customerNotes: quotation.customerNotes || "",
+        attachments: quotation.attachments || [],
+        validUntil: quotation.validUntil || "",
+        accountDetails: quotation.accountDetails || {
+          bankName: "State Bank of India",
+          accountNumber: "31746205818",
+          ifscCode: "SBIN0001766",
+          accountHolderName: "Prakash Green Energy",
+          branch: "Madurai Main Branch"
+        },
+        physicalDamageExclusions: quotation.physicalDamageExclusions || {
+          enabled: true,
+          disclaimerText: "***Physical Damages will not be Covered***"
+        },
+        detailedWarrantyTerms: quotation.detailedWarrantyTerms || {
+          solarPanels: {
+            manufacturingDefect: "5 Years Replacement Warranty",
+            serviceWarranty: "25 Years Service Warranty",
+            performanceWarranty: [
+              "10 Years 90% performance Warranty",
+              "25 Years 80% performance Warranty"
+            ]
+          },
+          inverter: {
+            replacementWarranty: "15 Years Replacement Warranty",
+            serviceWarranty: "25 Years Service Warranty"
+          },
+          installation: {
+            warrantyPeriod: "1 Year Warranty on Installation",
+            serviceWarranty: "25 Years Service Warranty"
+          }
+        },
+        siteVisitMapping: quotation.siteVisitMapping
+      });
+      
+      toast({
+        title: "Edit Mode",
+        description: `Editing quotation ${quotation.quotationNumber}. Revision: R${quotation.documentVersion || 1}`,
+      });
+    }
+  }, [isEditMode, existingQuotation, isLoadingQuotation, existingCustomer, isLoadingCustomer, form, toast]);
+
+  // Handle site visit selection and auto-populate form (skip in edit mode)
+  useEffect(() => {
+    if (!isEditMode && mappingData && (mappingData as any).quotationData) {
       const data = (mappingData as any).quotationData;
       const metadata = (mappingData as any).mappingMetadata;
       const originalSiteVisitData = (mappingData as any).originalSiteVisitData;
@@ -3256,8 +3390,8 @@ export default function QuotationCreation() {
     }
     
     switch (currentStep) {
-      case 0: // Source selection
-        return quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
+      case 0: // Source selection (skipped in edit mode)
+        return isEditMode || quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
       case 1: // Customer details
         if (quotationSource === "manual") {
           // For manual creation, we ALWAYS need customerData to be properly filled
@@ -3419,7 +3553,7 @@ export default function QuotationCreation() {
             </div>
             <div className="flex-1">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2" data-testid="text-page-title">
-                Create New Quotation
+                {isEditMode ? "Edit Quotation" : "Create New Quotation"}
               </h1>
               <p className="text-base text-muted-foreground">
                 Generate professional quotations for solar energy systems with our streamlined process
@@ -3558,8 +3692,8 @@ export default function QuotationCreation() {
             }}
             className="space-y-6"
           >
-          {/* Step 0: Source Selection */}
-          {currentStep === 0 && (
+          {/* Step 0: Source Selection (skipped in edit mode) */}
+          {currentStep === 0 && !isEditMode && (
             <Card data-testid="card-source-selection">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -3869,22 +4003,34 @@ export default function QuotationCreation() {
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
                   Customer Information
+                  {isEditMode && <Badge variant="secondary" className="ml-2">Locked</Badge>}
                 </CardTitle>
                 <CardDescription>
-                  {quotationSource === "site_visit" && siteVisitMapping ? 
-                    "Review and complete customer details from site visit" :
-                    "Enter customer details for the quotation"
+                  {isEditMode 
+                    ? "Customer and source cannot be changed when editing a quotation" 
+                    : quotationSource === "site_visit" && siteVisitMapping 
+                      ? "Review and complete customer details from site visit" 
+                      : "Enter customer details for the quotation"
                   }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {isEditMode && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      Customer and quotation source are locked in edit mode. Only project details, pricing, and terms can be modified. The revision number will be automatically incremented.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {quotationSource === "manual" ? (
-                  <ManualCustomerDetailsForm form={form} />
+                  <ManualCustomerDetailsForm form={form} isEditMode={isEditMode} />
                 ) : (
                   <SiteVisitCustomerDetailsForm 
                     form={form}
                     siteVisitMapping={siteVisitMapping}
                     fallbackSiteVisitData={fallbackSiteVisitData}
+                    isEditMode={isEditMode}
                   />
                 )}
               </CardContent>
@@ -4575,7 +4721,10 @@ export default function QuotationCreation() {
                 data-testid="button-submit"
                 className="w-full sm:w-auto order-1 sm:order-2"
               >
-                {createQuotationMutation.isPending ? "Creating..." : "Create Quotation"}
+                {createQuotationMutation.isPending 
+                  ? (isEditMode ? "Updating..." : "Creating...") 
+                  : (isEditMode ? "Update Quotation" : "Create Quotation")
+                }
               </Button>
             ) : (
               <Button
