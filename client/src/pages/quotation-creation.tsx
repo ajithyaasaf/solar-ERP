@@ -3134,7 +3134,8 @@ export default function QuotationCreation() {
         internalNotes: quotation.internalNotes || "",
         customerNotes: quotation.customerNotes || "",
         attachments: quotation.attachments || [],
-        validUntil: quotation.validUntil || "",
+        preparedBy: quotation.preparedBy || "",
+        validUntil: quotation.validUntil ? new Date(quotation.validUntil) : undefined,
         accountDetails: quotation.accountDetails || {
           bankName: "State Bank of India",
           accountNumber: "31746205818",
