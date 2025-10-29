@@ -3395,6 +3395,11 @@ export default function QuotationCreation() {
       case 0: // Source selection (skipped in edit mode)
         return isEditMode || quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
       case 1: // Customer details
+        // In edit mode, customer data is locked and already validated - always allow proceeding
+        if (isEditMode) {
+          return true;
+        }
+        
         if (quotationSource === "manual") {
           // For manual creation, we ALWAYS need customerData to be properly filled
           // Whether selected from database or entered manually
