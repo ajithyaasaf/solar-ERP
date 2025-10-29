@@ -1841,6 +1841,7 @@ export const createInsertQuotationSchema = insertQuotationSchema;
 // Update quotation schema - excludes immutable fields
 export const updateQuotationSchema = insertQuotationSchema.omit({
   quotationNumber: true,  // Can't change quotation number
+  customerId: true,       // Can't change customer
   createdAt: true,        // Can't change creation date
   source: true,           // Can't change original source
   siteVisitMapping: true, // Can't change original site visit mapping
