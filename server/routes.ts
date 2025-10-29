@@ -2820,15 +2820,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/quotations/:id", verifyAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !["master_admin", "admin", "sales_and_marketing"].includes(
-          user.role || user.department || "",
-        )
-      ) {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Check permissions - use same permission check as PUT endpoint
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
+                           req.authenticatedUser.permissions.includes("quotations.edit") ||
+                           req.authenticatedUser.permissions.includes("quotations.create") ||
+                           req.authenticatedUser.user.role === "master_admin";
+      
+      if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
+
       const quotation = await storage.getQuotation(req.params.id);
       if (!quotation) {
         return res.status(404).json({ message: "Quotation not found" });
