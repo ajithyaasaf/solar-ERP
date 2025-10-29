@@ -39,13 +39,12 @@ export function formatTime12Hour(time: string | Date): string {
 
 // Currency formatting for Indian Rupees
 export function formatCurrency(amount: number): string {
-  // Convert paise/cents to rupees
-  const amountInRupees = amount / 100;
+  // Amount is already in rupees (not paise)
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(amountInRupees);
+  }).format(amount);
 }
 
 // Get initials from name
