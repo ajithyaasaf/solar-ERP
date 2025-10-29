@@ -51,7 +51,8 @@ import {
   Droplets,
   Wrench,
   Info,
-  Sun
+  Sun,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -2787,7 +2788,8 @@ export default function QuotationCreation() {
   const [isEditMode, params] = useRoute("/quotations/:id/edit");
   const quotationId = params?.id;
   
-  const [currentStep, setCurrentStep] = useState(0);
+  // Initialize step to 2 (Project Configuration) in edit mode, 0 in create mode
+  const [currentStep, setCurrentStep] = useState(isEditMode ? 2 : 0);
   const [quotationSource, setQuotationSource] = useState<"manual" | "site_visit">("manual");
   const [selectedSiteVisit, setSelectedSiteVisit] = useState<string | null>(null);
   const [siteVisitMapping, setSiteVisitMapping] = useState<any>(null);
@@ -2798,16 +2800,16 @@ export default function QuotationCreation() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const { toast } = useToast();
   
-  // Fetch existing quotation data if in edit mode
+  // Fetch existing quotation data if in edit mode (FIX: Use proper URL string)
   const { data: existingQuotation, isLoading: isLoadingQuotation } = useQuery({
-    queryKey: ["/api/quotations", quotationId],
+    queryKey: [`/api/quotations/${quotationId}`],
     enabled: isEditMode && !!quotationId,
   });
   
-  // Fetch customer data for the quotation in edit mode
+  // Fetch customer data for the quotation in edit mode (FIX: Use proper URL string)
   const customerId = (existingQuotation as any)?.customerId;
   const { data: existingCustomer, isLoading: isLoadingCustomer } = useQuery({
-    queryKey: ["/api/customers", customerId],
+    queryKey: [`/api/customers/${customerId}`],
     enabled: isEditMode && !!customerId,
   });
 
@@ -3094,8 +3096,8 @@ export default function QuotationCreation() {
         setSelectedSiteVisit(quotation.siteVisitMapping.siteVisitId);
       }
       
-      // Skip to customer step (step 1) in edit mode since source is locked
-      setCurrentStep(1);
+      // Note: currentStep is already initialized to 2 (Project Configuration) for edit mode
+      // so we don't need to set it here
       
       // Prepare customer data from the fetched customer
       const customerData = {
@@ -3530,6 +3532,27 @@ export default function QuotationCreation() {
     
     createQuotationMutation.mutate(submissionData);
   };
+
+  // Show loading state while fetching data in edit mode
+  if (isEditMode && (isLoadingQuotation || isLoadingCustomer)) {
+    return (
+      <div className="bg-gradient-to-b from-background to-muted/20 pb-8 min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div>
+                <h3 className="font-semibold text-lg">Loading Quotation Data</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Fetching quotation details and customer information...
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gradient-to-b from-background to-muted/20 pb-8" data-testid="quotation-creation-page">
