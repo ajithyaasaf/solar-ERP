@@ -57,6 +57,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
+import { useAuthContext } from "@/contexts/auth-context";
 import { 
   insertQuotationSchema, 
   type InsertQuotation, 
@@ -2783,6 +2784,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
 export default function QuotationCreation() {
   const [, setLocation] = useLocation();
+  const { user } = useAuthContext();
   
   // Detect edit mode using URL pattern
   const [isEditMode, params] = useRoute("/quotations/:id/edit");
@@ -3527,7 +3529,7 @@ export default function QuotationCreation() {
     const submissionData: QuotationFormData = {
       ...data,
       source: quotationSource, // Use the actual selected source
-      preparedBy: "current-user-id", // Should come from auth context
+      preparedBy: user?.uid || "", // Use actual authenticated user ID
       projects: data.projects, // Already validated by schema
       totalSystemCost,
       totalSubsidyAmount,
