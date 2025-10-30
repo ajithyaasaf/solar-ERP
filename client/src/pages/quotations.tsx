@@ -27,6 +27,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { 
   Search, 
@@ -39,7 +59,22 @@ import {
   ChevronRight,
   ArrowUp,
   ArrowDown,
-  Filter
+  Filter,
+  Calendar,
+  User,
+  FileText,
+  DollarSign,
+  Package,
+  Shield,
+  Clock,
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  Zap,
+  Battery,
+  Droplet,
+  Wind
 } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +115,8 @@ export default function Quotations() {
   const [statusFilter, setStatusFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [projectTypeFilter, setProjectTypeFilter] = useState("");
+  const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState<QuotationDisplay | null>(null);
   
   // Debounce search input
   useEffect(() => {
@@ -203,6 +240,12 @@ export default function Quotations() {
         variant: "destructive",
       });
     }
+  };
+
+  // View details handler
+  const handleViewDetails = (quotation: QuotationDisplay) => {
+    setSelectedQuotation(quotation);
+    setViewDetailsOpen(true);
   };
   
   // Function to handle sort changes
@@ -489,6 +532,7 @@ export default function Quotations() {
                           className="h-8 w-8 p-0"
                           title="View Details"
                           data-testid={`button-view-${quotation.id}`}
+                          onClick={() => handleViewDetails(quotation)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -567,6 +611,765 @@ export default function Quotations() {
           </div>
         </CardFooter>
       )}
+
+      {/* View Details Modal */}
+      <Dialog open={viewDetailsOpen} onOpenChange={setViewDetailsOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <div>
+                  <div className="text-xl font-semibold">
+                    {selectedQuotation?.quotationNumber}
+                  </div>
+                  <div className="text-sm text-gray-500 font-normal mt-1">
+                    {selectedQuotation?.customerName}
+                  </div>
+                </div>
+              </div>
+              <Badge className={cn("text-xs", selectedQuotation?.status && statusStyles[selectedQuotation.status as keyof typeof statusStyles] ? statusStyles[selectedQuotation.status as keyof typeof statusStyles] : "bg-gray-100 text-gray-800")}>
+                {selectedQuotation?.status?.replace('_', ' ').toUpperCase()}
+              </Badge>
+            </DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="summary" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="summary" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Summary
+              </TabsTrigger>
+              <TabsTrigger value="projects" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Projects
+              </TabsTrigger>
+              <TabsTrigger value="financials" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Financials
+              </TabsTrigger>
+              <TabsTrigger value="compliance" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Compliance
+              </TabsTrigger>
+            </TabsList>
+
+            <ScrollArea className="h-[calc(90vh-200px)] mt-4">
+              {/* Summary Tab */}
+              <TabsContent value="summary" className="space-y-6">
+                {/* Key Metrics */}
+                <div className="grid grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">Total Value</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {formatCurrency(selectedQuotation?.totalCustomerPayment || 0)}
+                          </p>
+                        </div>
+                        <DollarSign className="h-8 w-8 text-blue-600 opacity-20" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">System Capacity</p>
+                          <p className="text-2xl font-bold text-green-600">
+                            {getTotalSystemKW(selectedQuotation?.projects)} kW
+                          </p>
+                        </div>
+                        <Zap className="h-8 w-8 text-green-600 opacity-20" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">Version</p>
+                          <p className="text-2xl font-bold text-purple-600">
+                            R{selectedQuotation?.documentVersion || 1}
+                          </p>
+                        </div>
+                        <FileText className="h-8 w-8 text-purple-600 opacity-20" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Customer Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <User className="h-5 w-5" />
+                      Customer Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <User className="h-4 w-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm text-gray-500">Customer Name</p>
+                          <p className="font-medium">{selectedQuotation?.customerName || 'N/A'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Building2 className="h-4 w-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm text-gray-500">Source</p>
+                          <Badge variant="outline" className="mt-1">
+                            {selectedQuotation?.source?.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm text-gray-500">Created Date</p>
+                          <p className="font-medium">{formatDate(selectedQuotation?.createdAt || new Date())}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Clock className="h-4 w-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-sm text-gray-500">Last Updated</p>
+                          <p className="font-medium">{formatDate(selectedQuotation?.updatedAt || new Date())}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Payment Overview */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <DollarSign className="h-5 w-5" />
+                      Payment Overview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-gray-600">System Cost</span>
+                      <span className="font-semibold">{formatCurrency(selectedQuotation?.totalSystemCost || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-gray-600">Subsidy Amount</span>
+                      <span className="font-semibold text-green-600">-{formatCurrency(selectedQuotation?.totalSubsidyAmount || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b font-bold">
+                      <span className="text-gray-900">Customer Payment</span>
+                      <span className="text-blue-600 text-lg">{formatCurrency(selectedQuotation?.totalCustomerPayment || 0)}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
+                      <div>
+                        <p className="text-sm text-gray-500">Advance ({selectedQuotation?.advancePaymentPercentage}%)</p>
+                        <p className="font-semibold text-lg">{formatCurrency(selectedQuotation?.advanceAmount || 0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Balance</p>
+                        <p className="font-semibold text-lg">{formatCurrency(selectedQuotation?.balanceAmount || 0)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Terms & Delivery */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Clock className="h-5 w-5" />
+                      Terms & Delivery
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Payment Terms</p>
+                      <p className="font-medium mt-1">{selectedQuotation?.paymentTerms?.replace(/_/g, ' ').toUpperCase()}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Delivery Timeframe</p>
+                      <p className="font-medium mt-1">{selectedQuotation?.deliveryTimeframe?.replace(/_/g, ' ')}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Notes */}
+                {(selectedQuotation?.customerNotes || selectedQuotation?.internalNotes) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FileText className="h-5 w-5" />
+                        Notes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {selectedQuotation?.customerNotes && (
+                        <div>
+                          <p className="text-sm text-gray-500 font-medium mb-1">Customer Notes</p>
+                          <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedQuotation.customerNotes}</p>
+                        </div>
+                      )}
+                      {selectedQuotation?.internalNotes && (
+                        <div>
+                          <p className="text-sm text-gray-500 font-medium mb-1">Internal Notes</p>
+                          <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedQuotation.internalNotes}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Projects Tab */}
+              <TabsContent value="projects" className="space-y-4">
+                <Accordion type="single" collapsible className="w-full">
+                  {selectedQuotation?.projects?.map((project, index) => (
+                    <AccordionItem key={index} value={`project-${index}`}>
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <div className="flex items-center gap-3">
+                            {project.projectType === 'on_grid' && <Zap className="h-5 w-5 text-yellow-600" />}
+                            {project.projectType === 'off_grid' && <Battery className="h-5 w-5 text-blue-600" />}
+                            {project.projectType === 'hybrid' && <Zap className="h-5 w-5 text-purple-600" />}
+                            {project.projectType === 'water_heater' && <Droplet className="h-5 w-5 text-orange-600" />}
+                            {project.projectType === 'water_pump' && <Wind className="h-5 w-5 text-cyan-600" />}
+                            <span className="font-semibold">
+                              Project {index + 1}: {project.projectType?.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </div>
+                          <Badge variant="outline">{formatCurrency(project.customerPayment || 0)}</Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-4">
+                        <Card className="mt-2">
+                          <CardContent className="p-4 space-y-4">
+                            {/* System Specifications for Solar Projects */}
+                            {(project.projectType === 'on_grid' || project.projectType === 'off_grid' || project.projectType === 'hybrid') && (
+                              <>
+                                <div>
+                                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                    <Zap className="h-4 w-4" />
+                                    System Specifications
+                                  </h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                      <span className="text-gray-600">System Capacity:</span>
+                                      <span className="font-medium">{project.systemKW} kW</span>
+                                    </div>
+                                    <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                      <span className="text-gray-600">Price per kW:</span>
+                                      <span className="font-medium">{formatCurrency(project.pricePerKW || 0)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* Solar Panel Details */}
+                                <div>
+                                  <h4 className="font-semibold mb-3">Solar Panel Details</h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Make:</span>
+                                      <p className="font-medium">{project.solarPanelMake?.join(', ') || 'N/A'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Wattage:</span>
+                                      <p className="font-medium">{project.panelWatts}W</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Panel Count:</span>
+                                      <p className="font-medium">{project.panelCount} panels</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">DCR Panels:</span>
+                                      <p className="font-medium">{project.dcrPanelCount || 0}</p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* Inverter Details */}
+                                <div>
+                                  <h4 className="font-semibold mb-3">Inverter Details</h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Make:</span>
+                                      <p className="font-medium">{project.inverterMake?.join(', ') || 'N/A'}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Phase:</span>
+                                      <p className="font-medium">{project.inverterPhase}</p>
+                                    </div>
+                                    {project.inverterKW && (
+                                      <div className="space-y-1">
+                                        <span className="text-gray-600">Capacity:</span>
+                                        <p className="font-medium">{project.inverterKW} kW</p>
+                                      </div>
+                                    )}
+                                    {project.inverterQty && (
+                                      <div className="space-y-1">
+                                        <span className="text-gray-600">Quantity:</span>
+                                        <p className="font-medium">{project.inverterQty}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Battery Details for Off-grid/Hybrid */}
+                                {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && project.batteryBrand && (
+                                  <>
+                                    <Separator />
+                                    <div>
+                                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                        <Battery className="h-4 w-4" />
+                                        Battery Details
+                                      </h4>
+                                      <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div className="space-y-1">
+                                          <span className="text-gray-600">Brand:</span>
+                                          <p className="font-medium">{project.batteryBrand}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <span className="text-gray-600">Type:</span>
+                                          <p className="font-medium">{project.batteryType || 'N/A'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <span className="text-gray-600">Capacity:</span>
+                                          <p className="font-medium">{project.batteryAH || 'N/A'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <span className="text-gray-600">Voltage:</span>
+                                          <p className="font-medium">{project.voltage}V</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                          <span className="text-gray-600">Battery Count:</span>
+                                          <p className="font-medium">{project.batteryCount}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            )}
+
+                            {/* Water Heater Details */}
+                            {project.projectType === 'water_heater' && (
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <Droplet className="h-4 w-4" />
+                                  Water Heater Specifications
+                                </h4>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div className="space-y-1">
+                                    <span className="text-gray-600">Brand:</span>
+                                    <p className="font-medium">{project.brand}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-gray-600">Capacity:</span>
+                                    <p className="font-medium">{project.litre} Litres</p>
+                                  </div>
+                                  {project.heatingCoil && (
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Heating Coil:</span>
+                                      <p className="font-medium">{project.heatingCoil}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Water Pump Details */}
+                            {project.projectType === 'water_pump' && (
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <Wind className="h-4 w-4" />
+                                  Water Pump Specifications
+                                </h4>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div className="space-y-1">
+                                    <span className="text-gray-600">HP:</span>
+                                    <p className="font-medium">{project.hp}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-gray-600">Drive:</span>
+                                    <p className="font-medium">{project.drive}</p>
+                                  </div>
+                                  {project.solarPanel && (
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Solar Panel:</span>
+                                      <p className="font-medium">{project.solarPanel}</p>
+                                    </div>
+                                  )}
+                                  {project.panelCount && (
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Panel Count:</span>
+                                      <p className="font-medium">{project.panelCount}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            <Separator />
+
+                            {/* Pricing Breakdown */}
+                            <div>
+                              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                <DollarSign className="h-4 w-4" />
+                                Pricing Breakdown
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                  <span className="text-gray-600">Base Price:</span>
+                                  <span className="font-medium">{formatCurrency(project.basePrice || 0)}</span>
+                                </div>
+                                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                  <span className="text-gray-600">GST ({project.gstPercentage}%):</span>
+                                  <span className="font-medium">{formatCurrency(project.gstAmount || 0)}</span>
+                                </div>
+                                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                  <span className="text-gray-600">Project Value:</span>
+                                  <span className="font-medium">{formatCurrency(project.projectValue || 0)}</span>
+                                </div>
+                                <div className="flex justify-between p-2 bg-green-50 rounded">
+                                  <span className="text-gray-600">Subsidy:</span>
+                                  <span className="font-medium text-green-600">-{formatCurrency(project.subsidyAmount || 0)}</span>
+                                </div>
+                                <div className="flex justify-between p-2 bg-blue-50 rounded font-semibold">
+                                  <span className="text-gray-900">Customer Payment:</span>
+                                  <span className="text-blue-600">{formatCurrency(project.customerPayment || 0)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Installation Notes */}
+                            {project.installationNotes && (
+                              <>
+                                <Separator />
+                                <div>
+                                  <h4 className="font-semibold mb-2">Installation Notes</h4>
+                                  <p className="text-sm bg-gray-50 p-3 rounded-md">{project.installationNotes}</p>
+                                </div>
+                              </>
+                            )}
+
+                            {/* Warranty Information */}
+                            {project.warranty && (
+                              <>
+                                <Separator />
+                                <div>
+                                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                    <Shield className="h-4 w-4" />
+                                    Warranty
+                                  </h4>
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    {'panel' in project.warranty && project.warranty.panel && (
+                                      <div className="p-2 bg-green-50 rounded">
+                                        <span className="text-gray-600">Panel:</span>
+                                        <span className="font-medium ml-2">{project.warranty.panel.replace('_', ' ')}</span>
+                                      </div>
+                                    )}
+                                    {'inverter' in project.warranty && project.warranty.inverter && (
+                                      <div className="p-2 bg-blue-50 rounded">
+                                        <span className="text-gray-600">Inverter:</span>
+                                        <span className="font-medium ml-2">{project.warranty.inverter.replace('_', ' ')}</span>
+                                      </div>
+                                    )}
+                                    {'battery' in project.warranty && project.warranty.battery && (
+                                      <div className="p-2 bg-purple-50 rounded">
+                                        <span className="text-gray-600">Battery:</span>
+                                        <span className="font-medium ml-2">{project.warranty.battery.replace('_', ' ')}</span>
+                                      </div>
+                                    )}
+                                    {'installation' in project.warranty && project.warranty.installation && (
+                                      <div className="p-2 bg-orange-50 rounded">
+                                        <span className="text-gray-600">Installation:</span>
+                                        <span className="font-medium ml-2">{project.warranty.installation.replace('_', ' ')}</span>
+                                      </div>
+                                    )}
+                                    {'heater' in project.warranty && project.warranty.heater && (
+                                      <div className="p-2 bg-red-50 rounded">
+                                        <span className="text-gray-600">Heater:</span>
+                                        <span className="font-medium ml-2">{project.warranty.heater.replace('_', ' ')}</span>
+                                      </div>
+                                    )}
+                                    {'pump' in project.warranty && project.warranty.pump && (
+                                      <div className="p-2 bg-cyan-50 rounded">
+                                        <span className="text-gray-600">Pump:</span>
+                                        <span className="font-medium ml-2">{project.warranty.pump.replace('_', ' ')}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </TabsContent>
+
+              {/* Financials Tab */}
+              <TabsContent value="financials" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Financial Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-1">Total System Cost</p>
+                          <p className="text-2xl font-bold text-blue-600">{formatCurrency(selectedQuotation?.totalSystemCost || 0)}</p>
+                        </div>
+                        <div className="p-4 bg-green-50 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-1">Total Subsidy</p>
+                          <p className="text-2xl font-bold text-green-600">{formatCurrency(selectedQuotation?.totalSubsidyAmount || 0)}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-1">Customer Payment</p>
+                          <p className="text-2xl font-bold text-purple-600">{formatCurrency(selectedQuotation?.totalCustomerPayment || 0)}</p>
+                        </div>
+                        <div className="p-4 bg-orange-50 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-1">GST Total</p>
+                          <p className="text-2xl font-bold text-orange-600">
+                            {formatCurrency(
+                              selectedQuotation?.projects?.reduce((sum, p) => sum + (p.gstAmount || 0), 0) || 0
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Payment Schedule
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="text-sm text-gray-600">Advance Payment ({selectedQuotation?.advancePaymentPercentage}%)</p>
+                        <p className="text-xs text-gray-500 mt-1">Due at order confirmation</p>
+                      </div>
+                      <p className="text-xl font-bold text-blue-600">{formatCurrency(selectedQuotation?.advanceAmount || 0)}</p>
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="text-sm text-gray-600">Balance Payment</p>
+                        <p className="text-xs text-gray-500 mt-1">Due at installation completion</p>
+                      </div>
+                      <p className="text-xl font-bold text-green-600">{formatCurrency(selectedQuotation?.balanceAmount || 0)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Account Details */}
+                {selectedQuotation?.accountDetails && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5" />
+                        Bank Account Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600">Bank Name</p>
+                          <p className="font-medium mt-1">{selectedQuotation.accountDetails.bankName}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Account Holder</p>
+                          <p className="font-medium mt-1">{selectedQuotation.accountDetails.accountHolderName}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Account Number</p>
+                          <p className="font-medium mt-1">{selectedQuotation.accountDetails.accountNumber}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">IFSC Code</p>
+                          <p className="font-medium mt-1">{selectedQuotation.accountDetails.ifscCode}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Branch</p>
+                          <p className="font-medium mt-1">{selectedQuotation.accountDetails.branch}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Compliance Tab */}
+              <TabsContent value="compliance" className="space-y-4">
+                {/* Warranty Terms */}
+                {selectedQuotation?.detailedWarrantyTerms && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        Detailed Warranty Terms
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {selectedQuotation.detailedWarrantyTerms.solarPanels && (
+                        <div>
+                          <h4 className="font-semibold mb-2 text-green-600">Solar Panels</h4>
+                          <ul className="space-y-1 text-sm">
+                            <li className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 mt-0.5 text-green-600" />
+                              <span>{selectedQuotation.detailedWarrantyTerms.solarPanels.manufacturingDefect}</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 mt-0.5 text-green-600" />
+                              <span>{selectedQuotation.detailedWarrantyTerms.solarPanels.serviceWarranty}</span>
+                            </li>
+                            {selectedQuotation.detailedWarrantyTerms.solarPanels.performanceWarranty?.map((term, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <Shield className="h-4 w-4 mt-0.5 text-green-600" />
+                                <span>{term}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {selectedQuotation.detailedWarrantyTerms.inverter && (
+                        <div>
+                          <h4 className="font-semibold mb-2 text-blue-600">Inverter</h4>
+                          <ul className="space-y-1 text-sm">
+                            <li className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 mt-0.5 text-blue-600" />
+                              <span>{selectedQuotation.detailedWarrantyTerms.inverter.replacementWarranty}</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 mt-0.5 text-blue-600" />
+                              <span>{selectedQuotation.detailedWarrantyTerms.inverter.serviceWarranty}</span>
+                            </li>
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {selectedQuotation.detailedWarrantyTerms.installation && (
+                        <div>
+                          <h4 className="font-semibold mb-2 text-orange-600">Installation</h4>
+                          <ul className="space-y-1 text-sm">
+                            <li className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 mt-0.5 text-orange-600" />
+                              <span>{selectedQuotation.detailedWarrantyTerms.installation.warrantyPeriod}</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 mt-0.5 text-orange-600" />
+                              <span>{selectedQuotation.detailedWarrantyTerms.installation.serviceWarranty}</span>
+                            </li>
+                          </ul>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Physical Damage Exclusions */}
+                {selectedQuotation?.physicalDamageExclusions?.enabled && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-red-600 flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        Important Notice
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm font-medium text-red-600 bg-red-50 p-3 rounded-md">
+                        {selectedQuotation.physicalDamageExclusions.disclaimerText}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Document Requirements */}
+                {selectedQuotation?.documentRequirements && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Required Documents for Subsidy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        {selectedQuotation.documentRequirements.subsidyDocuments?.map((doc, idx) => (
+                          <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                            <FileText className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm">{doc}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedQuotation.documentRequirements.note && (
+                        <div className="bg-yellow-50 p-3 rounded-md">
+                          <p className="text-sm text-yellow-800 font-medium">{selectedQuotation.documentRequirements.note}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Revision History */}
+                {selectedQuotation?.revisionHistory && selectedQuotation.revisionHistory.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        Revision History
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {selectedQuotation.revisionHistory.map((revision, idx) => (
+                          <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                            <Badge variant="outline" className="mt-0.5">R{revision.version}</Badge>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="text-sm font-medium">Updated by {revision.updatedBy}</p>
+                                <p className="text-xs text-gray-500">{formatDate(revision.updatedAt)}</p>
+                              </div>
+                              {revision.changeNote && (
+                                <p className="text-sm text-gray-600">{revision.changeNote}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
