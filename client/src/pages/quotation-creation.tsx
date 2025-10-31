@@ -2256,7 +2256,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={backupSolutions.backupWatts || ''}
             onChange={(e) => {
               const value = e.target.value;
-              updateBackupWatts(value === '' ? '' : parseInt(value) || 0);
+              updateBackupWatts(value === '' ? 0 : parseInt(value) || 0);
             }}
             onBlur={(e) => {
               if (e.target.value === '') {
@@ -2327,7 +2327,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                         value={watts || ''}
                         onChange={(e) => {
                           const value = e.target.value;
-                          updateUsageWatts(index, value === '' ? '' : parseInt(value) || 0);
+                          updateUsageWatts(index, value === '' ? 0 : parseInt(value) || 0);
                         }}
                         onBlur={(e) => {
                           if (e.target.value === '') {
@@ -4349,8 +4349,8 @@ export default function QuotationCreation() {
                                   value={systemKW} 
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    const newKW = value === '' ? '' : (parseFloat(value) || 0);
-                                    const newRoundedKW = (newKW && newKW !== '' && newKW > 0)
+                                    const newKW = value === '' ? 0 : (parseFloat(value) || 0);
+                                    const newRoundedKW = newKW > 0
                                       ? (newKW <= 3.5 ? Math.floor(newKW) : Math.ceil(newKW))
                                       : 0;
                                     const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
@@ -4359,7 +4359,7 @@ export default function QuotationCreation() {
                                     
                                     // Recalculate subsidy based on new kW
                                     const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(newKW === '' ? 0 : newKW, propertyType, project.projectType);
+                                    const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
                                     const newCustomerPayment = newProjectValue - newSubsidy;
                                     
                                     form.setValue(`projects.${index}.systemKW`, newKW);
@@ -4384,8 +4384,8 @@ export default function QuotationCreation() {
                                   value={calculatedRatePerKW} 
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    const newPricePerKW = value === '' ? '' : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newBasePrice = Math.round(roundedSystemKW * (newPricePerKW === '' ? 0 : newPricePerKW));
+                                    const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                    const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
                                     
@@ -4422,8 +4422,8 @@ export default function QuotationCreation() {
                                   value={gstPercentage} 
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    const newGSTPercentage = value === '' ? '' : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newGSTAmount = Math.round(basePrice * ((newGSTPercentage === '' ? 0 : newGSTPercentage) / 100));
+                                    const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                    const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
                                     const newProjectValue = basePrice + newGSTAmount;
                                     
                                     // Recalculate subsidy (subsidy doesn't change with GST)
