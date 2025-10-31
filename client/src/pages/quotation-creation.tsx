@@ -1306,6 +1306,35 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     });
   }, []);
 
+  // Auto-populate inverterKW when panel details change (for solar projects)
+  useEffect(() => {
+    // Only apply to solar projects (on_grid, off_grid, hybrid)
+    if (!['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
+      return;
+    }
+
+    // Only auto-populate if inverterKW is not already set
+    if (project.inverterKW !== undefined && project.inverterKW !== null) {
+      return;
+    }
+
+    // Calculate systemKW from panel data
+    const actualSystemKW = project.panelWatts && project.panelCount 
+      ? (parseInt(project.panelWatts) * project.panelCount) / 1000
+      : 0;
+
+    // Round system kW: ≤3.5 → floor, >3.5 → ceil
+    const roundedKW = actualSystemKW > 0 
+      ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.ceil(actualSystemKW))
+      : 0;
+
+    // Auto-populate inverterKW if roundedKW is valid
+    if (roundedKW > 0) {
+      onUpdate({ inverterKW: roundedKW });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.projectType, project.panelWatts, project.panelCount]);
+
   // Auto-update backup solutions when battery specs change (for off_grid and hybrid only)
   useEffect(() => {
     // Only apply to off_grid and hybrid projects
@@ -1478,10 +1507,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         <div className="space-y-2">
           <label className="text-sm font-medium">
             {(project.projectType === 'off_grid' || project.projectType === 'hybrid') ? 'Inverter KVA *' : 'Inverter KW *'}
+            {roundedSystemKW > 0 && (
+              <span className="text-xs text-muted-foreground ml-2">(Auto: {roundedSystemKW} KW)</span>
+            )}
           </label>
           <Input
             type="number"
-            value={project.inverterKW || ''}
+            value={project.inverterKW ?? ''}
             onChange={(e) => {
               const value = e.target.value;
               const kw = parseFloat(value) || 0;
@@ -1507,7 +1539,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <label className="text-sm font-medium">Inverter Qty</label>
           <Input
             type="number"
-            value={project.inverterQty || ''}
+            value={project.inverterQty ?? ''}
             onChange={(e) => {
               const value = e.target.value;
               if (value === '') {
@@ -1591,7 +1623,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           {project.electricalAccessories && (
             <Input
               type="number"
-              value={project.electricalCount || ''}
+              value={project.electricalCount ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
                 handleFieldChange('electricalCount', value === '' ? '' : parseInt(value) || 0);
