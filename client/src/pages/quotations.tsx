@@ -734,14 +734,14 @@ export default function Quotations() {
                         <Calendar className="h-4 w-4 text-gray-400 mt-1" />
                         <div>
                           <p className="text-sm text-gray-500">Created Date</p>
-                          <p className="font-medium">{formatDate(selectedQuotation?.createdAt || new Date())}</p>
+                          <p className="font-medium">{formatDate(selectedQuotation?.createdAt) || 'N/A'}</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-2">
                         <Clock className="h-4 w-4 text-gray-400 mt-1" />
                         <div>
                           <p className="text-sm text-gray-500">Last Updated</p>
-                          <p className="font-medium">{formatDate(selectedQuotation?.updatedAt || new Date())}</p>
+                          <p className="font-medium">{formatDate(selectedQuotation?.updatedAt) || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
