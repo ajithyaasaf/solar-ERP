@@ -680,12 +680,25 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       value={formData.onGridConfig.dcrPanelCount}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const dcrCount = value === '' ? 0 : parseInt(value) || 0;
-                        const totalCount = dcrCount + (formData.onGridConfig?.nonDcrPanelCount || 0);
-                        updateConfig('onGridConfig', { 
-                          dcrPanelCount: dcrCount,
-                          panelCount: totalCount
-                        });
+                        const dcrCount = value === '' ? '' : parseInt(value) || 0;
+                        if (dcrCount !== '') {
+                          const totalCount = dcrCount + (formData.onGridConfig?.nonDcrPanelCount || 0);
+                          updateConfig('onGridConfig', { 
+                            dcrPanelCount: dcrCount,
+                            panelCount: totalCount
+                          });
+                        } else {
+                          updateConfig('onGridConfig', { dcrPanelCount: dcrCount });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const totalCount = 0 + (formData.onGridConfig?.nonDcrPanelCount || 0);
+                          updateConfig('onGridConfig', { 
+                            dcrPanelCount: 0,
+                            panelCount: totalCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter DCR panel count"
@@ -699,12 +712,25 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       value={formData.onGridConfig.nonDcrPanelCount}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const nonDcrCount = value === '' ? 0 : parseInt(value) || 0;
-                        const totalCount = (formData.onGridConfig?.dcrPanelCount || 0) + nonDcrCount;
-                        updateConfig('onGridConfig', { 
-                          nonDcrPanelCount: nonDcrCount,
-                          panelCount: totalCount
-                        });
+                        const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
+                        if (nonDcrCount !== '') {
+                          const totalCount = (formData.onGridConfig?.dcrPanelCount || 0) + nonDcrCount;
+                          updateConfig('onGridConfig', { 
+                            nonDcrPanelCount: nonDcrCount,
+                            panelCount: totalCount
+                          });
+                        } else {
+                          updateConfig('onGridConfig', { nonDcrPanelCount: nonDcrCount });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const totalCount = (formData.onGridConfig?.dcrPanelCount || 0) + 0;
+                          updateConfig('onGridConfig', { 
+                            nonDcrPanelCount: 0,
+                            panelCount: totalCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter NON DCR panel count"

@@ -1637,9 +1637,24 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={project.panelCount ?? ''}
             onChange={(e) => {
               const value = e.target.value;
-              const totalCount = value === '' ? 0 : parseInt(value) || 0;
+              const totalCount = value === '' ? '' : parseInt(value) || 0;
               handleFieldChange('panelCount', totalCount);
-              handleFieldChange('dcrPanelCount', totalCount - (project.nonDcrPanelCount || 0));
+              if (totalCount !== '') {
+                const currentNonDcr = project.nonDcrPanelCount || 0;
+                if (totalCount < currentNonDcr) {
+                  handleFieldChange('nonDcrPanelCount', totalCount);
+                  handleFieldChange('dcrPanelCount', 0);
+                } else {
+                  handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
+                }
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('panelCount', 0);
+                handleFieldChange('dcrPanelCount', 0);
+                handleFieldChange('nonDcrPanelCount', 0);
+              }
             }}
             className={project.panelCount === 0 || project.panelCount === '' ? "border-red-500" : ""}
             data-testid={`input-panel-count-${projectIndex}`}
@@ -1657,10 +1672,19 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={project.dcrPanelCount ?? ''}
             onChange={(e) => {
               const value = e.target.value;
-              const dcrCount = value === '' ? 0 : parseInt(value) || 0;
+              const dcrCount = value === '' ? '' : parseInt(value) || 0;
               handleFieldChange('dcrPanelCount', dcrCount);
-              const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
-              handleFieldChange('panelCount', totalCount);
+              if (dcrCount !== '') {
+                const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+                handleFieldChange('panelCount', totalCount);
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('dcrPanelCount', 0);
+                const totalCount = 0 + (project.nonDcrPanelCount || 0);
+                handleFieldChange('panelCount', totalCount);
+              }
             }}
             data-testid={`input-dcr-panel-count-${projectIndex}`}
           />
@@ -1674,10 +1698,19 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={project.nonDcrPanelCount ?? ''}
             onChange={(e) => {
               const value = e.target.value;
-              const nonDcrCount = value === '' ? 0 : parseInt(value) || 0;
+              const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
               handleFieldChange('nonDcrPanelCount', nonDcrCount);
-              const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
-              handleFieldChange('panelCount', totalCount);
+              if (nonDcrCount !== '') {
+                const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+                handleFieldChange('panelCount', totalCount);
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('nonDcrPanelCount', 0);
+                const totalCount = (project.dcrPanelCount || 0) + 0;
+                handleFieldChange('panelCount', totalCount);
+              }
             }}
             data-testid={`input-non-dcr-panel-count-${projectIndex}`}
           />
@@ -1706,7 +1739,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={project.projectValue ?? ''}
             onChange={(e) => {
               const value = e.target.value;
-              handleFieldChange('projectValue', value === '' ? 0 : parseFloat(value) || 0);
+              handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('projectValue', 0);
+              }
             }}
             min="0"
             data-testid={`input-project-value-${projectIndex}`}
@@ -1721,10 +1759,15 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             onChange={(e) => {
               const val = e.target.value;
               if (val === '') {
-                handleFieldChange('gstPercentage', 0);
+                handleFieldChange('gstPercentage', '');
               } else {
                 const parsed = parseFloat(val);
-                handleFieldChange('gstPercentage', isNaN(parsed) ? 0 : parsed);
+                handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('gstPercentage', BUSINESS_RULES.gst.percentage);
               }
             }}
             min="0"
@@ -2018,7 +2061,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.voltage ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                handleFieldChange('voltage', value === '' ? 0 : parseFloat(value) || 0);
+                handleFieldChange('voltage', value === '' ? '' : parseFloat(value) || 0);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('voltage', 12);
+                }
               }}
               data-testid={`input-voltage-${projectIndex}`}
             />
@@ -2032,7 +2080,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.batteryCount ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                handleFieldChange('batteryCount', value === '' ? 0 : parseInt(value) || 0);
+                handleFieldChange('batteryCount', value === '' ? '' : parseInt(value) || 0);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('batteryCount', 1);
+                }
               }}
               data-testid={`input-battery-count-${projectIndex}`}
             />
@@ -2046,7 +2099,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.batteryStands ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                handleFieldChange('batteryStands', value === '' ? 0 : parseInt(value) || 0);
+                handleFieldChange('batteryStands', value === '' ? '' : parseInt(value) || 0);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('batteryStands', 1);
+                }
               }}
               data-testid={`input-battery-stands-${projectIndex}`}
             />
@@ -2166,7 +2224,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             value={backupSolutions.backupWatts || ''}
             onChange={(e) => {
               const value = e.target.value;
-              updateBackupWatts(value === '' ? 0 : parseInt(value) || 0);
+              updateBackupWatts(value === '' ? '' : parseInt(value) || 0);
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                updateBackupWatts(0);
+              }
             }}
             placeholder="Calculated from Battery AH × Qty × 10 - 3%"
             data-testid={`input-backup-watts-${projectIndex}`}
@@ -2232,7 +2295,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                         value={watts || ''}
                         onChange={(e) => {
                           const value = e.target.value;
-                          updateUsageWatts(index, value === '' ? 0 : parseInt(value) || 0);
+                          updateUsageWatts(index, value === '' ? '' : parseInt(value) || 0);
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === '') {
+                            updateUsageWatts(index, 0);
+                          }
                         }}
                         placeholder="Enter usage watts"
                         data-testid={`input-usage-watts-${projectIndex}-${index}`}
@@ -2318,7 +2386,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.litre ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                handleFieldChange('litre', value === '' ? 0 : parseInt(value) || 100);
+                handleFieldChange('litre', value === '' ? '' : parseInt(value) || 0);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('litre', 100);
+                }
               }}
               placeholder="100, 150, 200, 300..."
               data-testid={`input-litre-${projectIndex}`}
@@ -2359,7 +2432,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.projectValue ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                handleFieldChange('projectValue', value === '' ? 0 : parseFloat(value) || 0);
+                handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('projectValue', 0);
+                }
               }}
               data-testid={`input-project-value-${projectIndex}`}
             />
@@ -2373,10 +2451,15 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               onChange={(e) => {
                 const value = e.target.value;
                 if (value === '') {
-                  handleFieldChange('gstPercentage', 0);
+                  handleFieldChange('gstPercentage', '');
                 } else {
                   const parsed = parseFloat(value);
-                  handleFieldChange('gstPercentage', isNaN(parsed) ? BUSINESS_RULES.gst.percentage : parsed);
+                  handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('gstPercentage', BUSINESS_RULES.gst.percentage);
                 }
               }}
               min="0"
@@ -2543,9 +2626,24 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.panelCount ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                const totalCount = value === '' ? 0 : parseInt(value) || 0;
+                const totalCount = value === '' ? '' : parseInt(value) || 0;
                 handleFieldChange('panelCount', totalCount);
-                handleFieldChange('dcrPanelCount', totalCount - (project.nonDcrPanelCount || 0));
+                if (totalCount !== '') {
+                  const currentNonDcr = project.nonDcrPanelCount || 0;
+                  if (totalCount < currentNonDcr) {
+                    handleFieldChange('nonDcrPanelCount', totalCount);
+                    handleFieldChange('dcrPanelCount', 0);
+                  } else {
+                    handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('panelCount', 0);
+                  handleFieldChange('dcrPanelCount', 0);
+                  handleFieldChange('nonDcrPanelCount', 0);
+                }
               }}
               data-testid={`input-pump-panel-count-${projectIndex}`}
             />
@@ -2559,10 +2657,19 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.dcrPanelCount ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                const dcrCount = value === '' ? 0 : parseInt(value) || 0;
+                const dcrCount = value === '' ? '' : parseInt(value) || 0;
                 handleFieldChange('dcrPanelCount', dcrCount);
-                const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
-                handleFieldChange('panelCount', totalCount);
+                if (dcrCount !== '') {
+                  const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+                  handleFieldChange('panelCount', totalCount);
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('dcrPanelCount', 0);
+                  const totalCount = 0 + (project.nonDcrPanelCount || 0);
+                  handleFieldChange('panelCount', totalCount);
+                }
               }}
               data-testid={`input-pump-dcr-panel-count-${projectIndex}`}
             />
@@ -2576,10 +2683,19 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.nonDcrPanelCount ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                const nonDcrCount = value === '' ? 0 : parseInt(value) || 0;
+                const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
                 handleFieldChange('nonDcrPanelCount', nonDcrCount);
-                const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
-                handleFieldChange('panelCount', totalCount);
+                if (nonDcrCount !== '') {
+                  const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+                  handleFieldChange('panelCount', totalCount);
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('nonDcrPanelCount', 0);
+                  const totalCount = (project.dcrPanelCount || 0) + 0;
+                  handleFieldChange('panelCount', totalCount);
+                }
               }}
               data-testid={`input-pump-non-dcr-panel-count-${projectIndex}`}
             />
@@ -2593,7 +2709,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               value={project.projectValue ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                handleFieldChange('projectValue', value === '' ? 0 : parseFloat(value) || 0);
+                handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('projectValue', 0);
+                }
               }}
               data-testid={`input-pump-project-value-${projectIndex}`}
             />
@@ -2607,10 +2728,15 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               onChange={(e) => {
                 const value = e.target.value;
                 if (value === '') {
-                  handleFieldChange('gstPercentage', 0);
+                  handleFieldChange('gstPercentage', '');
                 } else {
                   const parsed = parseFloat(value);
-                  handleFieldChange('gstPercentage', isNaN(parsed) ? BUSINESS_RULES.gst.percentage : parsed);
+                  handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('gstPercentage', BUSINESS_RULES.gst.percentage);
                 }
               }}
               min="0"
@@ -4191,8 +4317,8 @@ export default function QuotationCreation() {
                                   value={systemKW} 
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    const newKW = value === '' ? 0 : (parseFloat(value) || 0);
-                                    const newRoundedKW = newKW > 0 
+                                    const newKW = value === '' ? '' : (parseFloat(value) || 0);
+                                    const newRoundedKW = (newKW && newKW !== '' && newKW > 0)
                                       ? (newKW <= 3.5 ? Math.floor(newKW) : Math.ceil(newKW))
                                       : 0;
                                     const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
@@ -4201,7 +4327,7 @@ export default function QuotationCreation() {
                                     
                                     // Recalculate subsidy based on new kW
                                     const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
+                                    const newSubsidy = calculateSubsidy(newKW === '' ? 0 : newKW, propertyType, project.projectType);
                                     const newCustomerPayment = newProjectValue - newSubsidy;
                                     
                                     form.setValue(`projects.${index}.systemKW`, newKW);
@@ -4210,6 +4336,11 @@ export default function QuotationCreation() {
                                     form.setValue(`projects.${index}.projectValue`, newProjectValue);
                                     form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
                                     form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      form.setValue(`projects.${index}.systemKW`, 0);
+                                    }
                                   }}
                                   className="w-20 text-center"
                                   data-testid={`input-systemkw-${index}`}
@@ -4221,8 +4352,8 @@ export default function QuotationCreation() {
                                   value={calculatedRatePerKW} 
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
+                                    const newPricePerKW = value === '' ? '' : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                    const newBasePrice = Math.round(roundedSystemKW * (newPricePerKW === '' ? 0 : newPricePerKW));
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
                                     
@@ -4237,6 +4368,11 @@ export default function QuotationCreation() {
                                     form.setValue(`projects.${index}.projectValue`, newProjectValue);
                                     form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
                                     form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      form.setValue(`projects.${index}.pricePerKW`, 0);
+                                    }
                                   }}
                                   className="w-28 text-right"
                                   data-testid={`input-priceperkw-${index}`}
@@ -4254,8 +4390,8 @@ export default function QuotationCreation() {
                                   value={gstPercentage} 
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
+                                    const newGSTPercentage = value === '' ? '' : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                    const newGSTAmount = Math.round(basePrice * ((newGSTPercentage === '' ? 0 : newGSTPercentage) / 100));
                                     const newProjectValue = basePrice + newGSTAmount;
                                     
                                     // Recalculate subsidy (subsidy doesn't change with GST)
@@ -4268,6 +4404,11 @@ export default function QuotationCreation() {
                                     form.setValue(`projects.${index}.projectValue`, newProjectValue);
                                     form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
                                     form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
+                                    }
                                   }}
                                   className="w-20 text-right"
                                   data-testid={`input-gstpercentage-${index}`}
@@ -4382,13 +4523,23 @@ export default function QuotationCreation() {
                                     {...field}
                                     onChange={(e) => {
                                       const value = e.target.value;
-                                      const percentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                      const percentage = value === '' ? '' : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
                                       field.onChange(percentage);
                                       const totalCustomerPayment = form.watch("totalCustomerPayment") || 0;
-                                      const advanceAmount = Math.round(totalCustomerPayment * (percentage / 100));
+                                      const advanceAmount = Math.round(totalCustomerPayment * ((percentage === '' ? 0 : percentage) / 100));
                                       const balanceAmount = totalCustomerPayment - advanceAmount;
                                       form.setValue("advanceAmount", advanceAmount);
                                       form.setValue("balanceAmount", balanceAmount);
+                                    }}
+                                    onBlur={(e) => {
+                                      if (e.target.value === '') {
+                                        field.onChange(90);
+                                        const totalCustomerPayment = form.watch("totalCustomerPayment") || 0;
+                                        const advanceAmount = Math.round(totalCustomerPayment * 0.9);
+                                        const balanceAmount = totalCustomerPayment - advanceAmount;
+                                        form.setValue("advanceAmount", advanceAmount);
+                                        form.setValue("balanceAmount", balanceAmount);
+                                      }
                                     }}
                                     className="w-24"
                                     data-testid="input-advance-percentage"
