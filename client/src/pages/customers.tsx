@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import {
   Dialog,
   DialogContent,
@@ -200,16 +201,6 @@ export default function Customers() {
       : <ArrowDown className="inline h-4 w-4 ml-1" />;
   };
 
-  // Loading state
-  if (isLoading && !customersResponse) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-lg">Loading customers...</span>
-      </div>
-    );
-  }
-
   return (
     <>
       <Card className="mb-6">
@@ -309,12 +300,7 @@ export default function Customers() {
               </TableHeader>
               <TableBody>
                 {isLoading && !customers.length ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      <div className="mt-2">Loading customers...</div>
-                    </TableCell>
-                  </TableRow>
+                  <TableSkeleton columns={6} rows={5} />
                 ) : customers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-gray-500">
