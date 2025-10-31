@@ -8,7 +8,18 @@ export function cn(...inputs: ClassValue[]) {
 // Date formatting
 export function formatDate(date: Date | string | any): string {
   if (!date) return "";
-  const d = typeof date === "string" ? new Date(date) : date;
+  
+  let d: Date;
+  
+  if (typeof date === "string") {
+    d = new Date(date);
+  } else if (date.toDate && typeof date.toDate === "function") {
+    d = date.toDate();
+  } else if (date instanceof Date) {
+    d = date;
+  } else {
+    return "";
+  }
   
   if (isNaN(d.getTime())) return "";
   
@@ -26,10 +37,20 @@ export function formatDate(date: Date | string | any): string {
 // REMOVED: formatTime function - use TimeDisplay component instead
 
 // Enhanced time formatting for 12-hour consistency
-export function formatTime12Hour(time: string | Date): string {
+export function formatTime12Hour(time: string | Date | any): string {
   if (!time) return "";
   
-  const date = typeof time === 'string' ? new Date(time) : time;
+  let date: Date;
+  
+  if (typeof time === 'string') {
+    date = new Date(time);
+  } else if (time.toDate && typeof time.toDate === 'function') {
+    date = time.toDate();
+  } else if (time instanceof Date) {
+    date = time;
+  } else {
+    return "";
+  }
   
   if (isNaN(date.getTime())) return "";
   
