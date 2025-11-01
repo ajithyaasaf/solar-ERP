@@ -889,9 +889,8 @@ export default function AttendanceManagement() {
               </>
             )}
           </div>
-        </div>
 
-        {/* Dashboard Tab - New Professional Overview */}
+          {/* Dashboard Tab - New Professional Overview */}
         <TabsContent value="dashboard" className="space-y-6">
           {/* KPI Cards */}
           <KPICards
