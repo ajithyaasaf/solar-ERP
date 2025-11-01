@@ -322,29 +322,45 @@ export default function AttendanceManagement() {
     totalIncomplete: incompleteRecords.length,
   };
 
-  // Generate trend data for the last 7 days
-  const generateTrendData = () => {
-    const data = [];
+  // Generate real trend data from daily attendance records
+  const trendData = React.useMemo(() => {
     const today = new Date();
+    const data = [];
+    
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dateKey = date.toISOString().split('T')[0];
+      
+      // Count actual attendance records for this date
+      const recordsForDate = dailyAttendance.filter((record: any) => {
+        const recordDate = new Date(record.date).toISOString().split('T')[0];
+        return recordDate === dateKey;
+      });
       
       data.push({
         date: dateStr,
-        present: Math.floor(Math.random() * 20) + 30,
-        late: Math.floor(Math.random() * 5) + 2,
-        absent: Math.floor(Math.random() * 3) + 1,
+        present: recordsForDate.filter((r: any) => r.status === 'present').length,
+        late: recordsForDate.filter((r: any) => r.status === 'late').length,
+        absent: recordsForDate.filter((r: any) => r.status === 'absent').length,
       });
     }
     return data;
-  };
+  }, [dailyAttendance]);
 
-  // Generate department breakdown data
-  const generateDepartmentData = () => {
-    const deptCounts: { [key: string]: number } = {};
+  // Use real department stats data from the API
+  const departmentData = React.useMemo(() => {
+    // Use the departmentStats from the API query result
+    if (departmentStats && departmentStats.length > 0) {
+      return departmentStats.map((dept: any) => ({
+        department: dept.department.charAt(0).toUpperCase() + dept.department.slice(1),
+        count: dept.present + dept.absent + dept.late,
+      }));
+    }
     
+    // Fallback: Calculate from daily attendance if department stats aren't available
+    const deptCounts: { [key: string]: number } = {};
     dailyAttendance.forEach((record: any) => {
       const dept = record.userDepartment || 'Unknown';
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
@@ -354,10 +370,7 @@ export default function AttendanceManagement() {
       department: department.charAt(0).toUpperCase() + department.slice(1),
       count,
     }));
-  };
-
-  const trendData = generateTrendData();
-  const departmentData = generateDepartmentData();
+  }, [departmentStats, dailyAttendance]);
 
   // Get unique departments for filter
   const uniqueDepartments = Array.from(new Set(
@@ -1487,7 +1500,8 @@ export default function AttendanceManagement() {
           </Card>
         </TabsContent>
 
-      </Tabs>
+        </Tabs>
+      </div>
 
       {/* Image Viewer Modal */}
       <Dialog open={showImageModal} onOpenChange={handleCloseImageModal}>
