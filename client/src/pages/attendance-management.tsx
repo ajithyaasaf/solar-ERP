@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -323,7 +323,7 @@ export default function AttendanceManagement() {
   };
 
   // Generate real trend data from daily attendance records
-  const trendData = React.useMemo(() => {
+  const trendData = useMemo(() => {
     const today = new Date();
     const data = [];
     
@@ -350,7 +350,7 @@ export default function AttendanceManagement() {
   }, [dailyAttendance]);
 
   // Use real department stats data from the API
-  const departmentData = React.useMemo(() => {
+  const departmentData = useMemo(() => {
     // Use the departmentStats from the API query result
     if (departmentStats && departmentStats.length > 0) {
       return departmentStats.map((dept: any) => ({
