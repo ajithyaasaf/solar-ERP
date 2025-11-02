@@ -104,11 +104,11 @@ export class QuotationPDFService {
   }
 
   /**
-   * Format number for display - shows decimals when needed (e.g., 3.24), whole numbers otherwise (e.g., 3)
+   * Format number for display - rounds to whole number for PDF display
    */
   private static formatNumber(num: number): string {
-    // If number has decimals, show up to 2 decimal places, otherwise show as whole number
-    return num % 1 === 0 ? num.toString() : num.toFixed(2);
+    // Round to nearest whole number for display in PDF
+    return Math.round(num).toString();
   }
 
   /**
@@ -576,18 +576,34 @@ export class QuotationPDFService {
           ${(template.scopeOfWork.structure || []).map(item => `<div>${item}</div>`).join('')}
         </div>
         
+        ${template.scopeOfWork.netBiDirectionalMeter && template.scopeOfWork.netBiDirectionalMeter.length > 0 ? `
         <div style="margin-top: 15px;">
-          ${(template.scopeOfWork.netBiDirectionalMeter || []).map(item => `<div>${item}</div>`).join('')}
-        </div>
+          ${template.scopeOfWork.netBiDirectionalMeter.map(item => `<div>${item}</div>`).join('')}
+        </div>` : ''}
         
+        ${template.scopeOfWork.electricalWork && template.scopeOfWork.electricalWork.length > 0 ? `
+        <div style="margin-top: 15px;">
+          ${template.scopeOfWork.electricalWork.map(item => `<div>${item}</div>`).join('')}
+        </div>` : ''}
+        
+        ${template.scopeOfWork.plumbingWork && template.scopeOfWork.plumbingWork.length > 0 ? `
+        <div style="margin-top: 15px;">
+          ${template.scopeOfWork.plumbingWork.map(item => `<div>${item}</div>`).join('')}
+        </div>` : ''}
+        
+        ${(template.scopeOfWork.customerScope.civilWork.length > 0 || 
+           template.scopeOfWork.customerScope.netBiDirectionalMeter.length > 0 ||
+           template.scopeOfWork.customerScope.electricalWork.length > 0 ||
+           template.scopeOfWork.customerScope.plumbingWork.length > 0) ? `
         <div style="margin-top: 20px;">
           <strong>• Customer's Scope of Work:</strong><br>
           <div style="margin-left: 20px;">
-            ${(template.scopeOfWork.customerScope.civilWork || []).map(item => `<div>${item}</div>`).join('')}
-            <br>
-            ${(template.scopeOfWork.customerScope.netBiDirectionalMeter || []).map(item => `<div>${item}</div>`).join('')}
+            ${template.scopeOfWork.customerScope.civilWork.length > 0 ? template.scopeOfWork.customerScope.civilWork.map(item => `<div>${item}</div>`).join('') : ''}
+            ${template.scopeOfWork.customerScope.netBiDirectionalMeter.length > 0 ? '<br>' + template.scopeOfWork.customerScope.netBiDirectionalMeter.map(item => `<div>${item}</div>`).join('') : ''}
+            ${template.scopeOfWork.customerScope.electricalWork.length > 0 ? '<br>' + template.scopeOfWork.customerScope.electricalWork.map(item => `<div>${item}</div>`).join('') : ''}
+            ${template.scopeOfWork.customerScope.plumbingWork.length > 0 ? '<br>' + template.scopeOfWork.customerScope.plumbingWork.map(item => `<div>${item}</div>`).join('') : ''}
           </div>
-        </div>
+        </div>` : ''}
       </div>
       
       <!-- Documents Required -->

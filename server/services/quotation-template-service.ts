@@ -86,9 +86,13 @@ export interface QuotationTemplate {
   scopeOfWork: {
     structure: string[];
     netBiDirectionalMeter: string[];
+    electricalWork: string[];
+    plumbingWork: string[];
     customerScope: {
       civilWork: string[];
       netBiDirectionalMeter: string[];
+      electricalWork: string[];
+      plumbingWork: string[];
     };
   };
   documentsRequiredForSubsidy: {
@@ -161,27 +165,163 @@ export class QuotationTemplateService {
     };
   }
 
-  private static readonly SCOPE_OF_WORK = {
-    structure: [
-      "1) Structure:",
-      "   • For this On-targ, South facing slant mounting of lower end height in 7 feet",
-      "   • and higher end in 7 Feet)"
-    ],
-    netBiDirectionalMeter: [
-      "2) Net (Bi-directional) Meter:",
-      "   • We will take the responsibility of applying to EB at Customer's Expense."
-    ],
+  /**
+   * Generate dynamic scope of work based on project configuration
+   */
+  private static generateScopeOfWork(project: QuotationProject): {
+    structure: string[];
+    netBiDirectionalMeter: string[];
+    electricalWork: string[];
+    plumbingWork: string[];
     customerScope: {
-      civilWork: [
-        "1) Civil work:",
-        "   • Earth pit Construction as perspec (for Structure)"
-      ],
-      netBiDirectionalMeter: [
-        "2) Net (Bi-directional) Meter:",
-        "   • Any registration and modification charges for not meter to be paid by Customer."
-      ]
+      civilWork: string[];
+      netBiDirectionalMeter: string[];
+      electricalWork: string[];
+      plumbingWork: string[];
+    };
+  } {
+    const scopeOfWork: any = {
+      structure: [],
+      netBiDirectionalMeter: [],
+      electricalWork: [],
+      plumbingWork: [],
+      customerScope: {
+        civilWork: [],
+        netBiDirectionalMeter: [],
+        electricalWork: [],
+        plumbingWork: []
+      }
+    };
+
+    // Generate structure description based on structure type and heights
+    const projectWithStructure = project as any;
+    if (projectWithStructure.structureType) {
+      let structureDesc = "1) Structure:";
+      
+      // Format structure type name
+      let structureTypeName = '';
+      switch (projectWithStructure.structureType) {
+        case 'gp_structure':
+          structureTypeName = 'GP Structure';
+          break;
+        case 'mono_rail':
+          structureTypeName = 'Mono Rail';
+          break;
+        case 'gi_structure':
+          structureTypeName = 'GI Structure';
+          break;
+        case 'gi_round_pipe':
+          structureTypeName = 'GI Round Pipe';
+          break;
+        case 'ms_square_pipe':
+          structureTypeName = 'MS Square Pipe';
+          break;
+        default:
+          structureTypeName = projectWithStructure.structureType;
+      }
+
+      // Add structure type
+      scopeOfWork.structure.push(structureDesc);
+      
+      // Add height details if applicable
+      if (projectWithStructure.structureType === 'mono_rail' && projectWithStructure.monoRail) {
+        const monoRailType = projectWithStructure.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail';
+        scopeOfWork.structure.push(`   • ${structureTypeName} - ${monoRailType}, South facing slant mounting`);
+      } else if (projectWithStructure.gpStructure) {
+        const lowerHeight = projectWithStructure.gpStructure.lowerEndHeight || '0';
+        const higherHeight = projectWithStructure.gpStructure.higherEndHeight || '0';
+        scopeOfWork.structure.push(`   • ${structureTypeName}, South facing slant mounting of lower end height in ${lowerHeight} feet`);
+        scopeOfWork.structure.push(`   • and higher end in ${higherHeight} feet`);
+      } else {
+        scopeOfWork.structure.push(`   • ${structureTypeName}, South facing slant mounting`);
+      }
     }
-  };
+
+    // Handle scope based on project type
+    if (project.projectType === 'on_grid') {
+      // Civil Work Scope
+      const civilWorkScope = (project as any).civilWorkScope || 'customer_scope';
+      if (civilWorkScope === 'company_scope') {
+        scopeOfWork.structure.push("   • Civil work including earth pit construction (Company Scope)");
+      } else {
+        scopeOfWork.customerScope.civilWork.push("1) Civil work:");
+        scopeOfWork.customerScope.civilWork.push("   • Earth pit Construction as per spec (for Structure)");
+      }
+
+      // Net Meter Scope
+      const netMeterScope = (project as any).netMeterScope || 'customer_scope';
+      if (netMeterScope === 'company_scope') {
+        scopeOfWork.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
+        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB and all charges (Company Scope)");
+      } else {
+        scopeOfWork.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
+        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB at Customer's Expense");
+        scopeOfWork.customerScope.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
+        scopeOfWork.customerScope.netBiDirectionalMeter.push("   • Any registration and modification charges for net meter to be paid by Customer");
+      }
+    } else if (project.projectType === 'off_grid') {
+      // Civil Work Scope
+      const civilWorkScope = (project as any).civilWorkScope || 'customer_scope';
+      if (civilWorkScope === 'company_scope') {
+        scopeOfWork.structure.push("   • Civil work including earth pit construction (Company Scope)");
+      } else {
+        scopeOfWork.customerScope.civilWork.push("1) Civil work:");
+        scopeOfWork.customerScope.civilWork.push("   • Earth pit Construction as per spec (for Structure)");
+        scopeOfWork.customerScope.civilWork.push("   • Battery stand and inverter installation base to be provided by Customer");
+      }
+    } else if (project.projectType === 'hybrid') {
+      // Electrical Work Scope
+      const electricalWorkScope = (project as any).electricalWorkScope || 'customer_scope';
+      if (electricalWorkScope === 'company_scope') {
+        scopeOfWork.electricalWork.push("3) Electrical Work:");
+        scopeOfWork.electricalWork.push("   • All electrical wiring and accessories (Company Scope)");
+      } else {
+        scopeOfWork.customerScope.electricalWork.push("3) Electrical Work:");
+        scopeOfWork.customerScope.electricalWork.push("   • Basic electrical wiring to be provided by Customer");
+      }
+
+      // Net Meter Scope
+      const netMeterScope = (project as any).netMeterScope || 'customer_scope';
+      if (netMeterScope === 'company_scope') {
+        scopeOfWork.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
+        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB and all charges (Company Scope)");
+      } else {
+        scopeOfWork.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
+        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB at Customer's Expense");
+        scopeOfWork.customerScope.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
+        scopeOfWork.customerScope.netBiDirectionalMeter.push("   • Any registration and modification charges for net meter to be paid by Customer");
+      }
+    } else if (project.projectType === 'water_pump') {
+      // Plumbing Work Scope
+      const plumbingWorkScope = (project as any).plumbingWorkScope || 'customer_scope';
+      if (plumbingWorkScope === 'company_scope') {
+        scopeOfWork.plumbingWork.push("2) Plumbing Work:");
+        scopeOfWork.plumbingWork.push("   • All plumbing work including pipe fittings (Company Scope)");
+      } else {
+        scopeOfWork.customerScope.plumbingWork.push("2) Plumbing Work:");
+        scopeOfWork.customerScope.plumbingWork.push("   • Plumbing connections and pipe work to be provided by Customer");
+      }
+
+      // Civil Work Scope
+      const civilWorkScope = (project as any).civilWorkScope || 'customer_scope';
+      if (civilWorkScope === 'company_scope') {
+        scopeOfWork.structure.push("   • Civil work including foundation and mounting (Company Scope)");
+      } else {
+        scopeOfWork.customerScope.civilWork.push("1) Civil work:");
+        scopeOfWork.customerScope.civilWork.push("   • Foundation and mounting base to be provided by Customer");
+      }
+    } else if (project.projectType === 'water_heater') {
+      // Water heater typically has structure installation as company scope
+      scopeOfWork.structure.push("   • Installation and mounting on roof/terrace (Company Scope)");
+      scopeOfWork.structure.push("   • Piping work up to 15 feet included");
+      
+      scopeOfWork.customerScope.civilWork.push("1) Additional Work:");
+      scopeOfWork.customerScope.civilWork.push("   • Any additional piping beyond 15 feet to be paid by Customer");
+      scopeOfWork.customerScope.civilWork.push("   • Roof reinforcement if required to be done by Customer");
+    }
+
+    return scopeOfWork;
+  }
 
   private static generateDocumentRequirements(quotation: any) {
     const docs = quotation.documentRequirements;
@@ -1377,7 +1517,7 @@ export class QuotationTemplateService {
         },
         deliveryPeriod: this.getDeliveryTimeframeText(quotation.deliveryTimeframe)
       },
-      scopeOfWork: this.SCOPE_OF_WORK,
+      scopeOfWork: this.generateScopeOfWork(project),
       documentsRequiredForSubsidy: documentRequirements || {
         list: [
           "1) EB Number",
