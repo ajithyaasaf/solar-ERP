@@ -104,6 +104,14 @@ export class QuotationPDFService {
   }
 
   /**
+   * Format number for display - shows decimals when needed (e.g., 3.24), whole numbers otherwise (e.g., 3)
+   */
+  private static formatNumber(num: number): string {
+    // If number has decimals, show up to 2 decimal places, otherwise show as whole number
+    return num % 1 === 0 ? num.toString() : num.toFixed(2);
+  }
+
+  /**
    * Generate HTML content for quotation PDF
    */
   static generateHTMLContent(template: QuotationTemplate): string {
@@ -112,7 +120,7 @@ export class QuotationPDFService {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Quotation ${template.quotationNumber}</title>
+      <title>${template.customer.name}-${template.customer.contactNumber}-${template.quotationNumber}</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -359,7 +367,7 @@ export class QuotationPDFService {
         
         <div class="contact-info">
           <div class="section-title">Contact us at</div>
-          Contact Person: Mr. Saba Kumar<br>
+          Contact Person: ${template.preparedBy}<br>
           Contact Number: +91 - ${template.header.contact.phone[0]}
         </div>
       </div>
@@ -368,7 +376,7 @@ export class QuotationPDFService {
       <div class="reference">
         <strong>Dear Sir,</strong><br>
         <strong>Sub: Requirement of ${template.reference}</strong><br>
-        <strong>Ref: Discussion with Mr. Saba Kumar, President</strong><br>
+        <strong>Ref: Discussion with ${template.preparedBy}, President</strong><br>
         <strong>Prakash Green Energy.</strong>
       </div>
       
@@ -388,7 +396,7 @@ export class QuotationPDFService {
         We assure you of our best services always.
         <br><br>
         Thank you,<br>
-        <strong>M. Salva Prakash,</strong><br>
+        <strong>M. Selva Prakash,</strong><br>
         Managing Director<br>
         <strong>Prakash Green Energy.</strong>
       </div>
@@ -414,8 +422,8 @@ export class QuotationPDFService {
         <tbody>
           <tr>
             <td>1</td>
-            <td style="text-align: left; padding-left: 10px;">Supply and install ${template.pricingBreakdown.kw} kW Inverter 3 Phase DC-GBD Solar Energy: Madurai</td>
-            <td>${template.pricingBreakdown.kw}</td>
+            <td style="text-align: left; padding-left: 10px;">Supply and install ${this.formatNumber(template.pricingBreakdown.kw)} kW Inverter 3 Phase DC-GBD Solar Energy: Madurai</td>
+            <td>${this.formatNumber(template.pricingBreakdown.kw)}</td>
             <td>₹${template.pricingBreakdown.ratePerKw.toLocaleString()}</td>
             <td>₹${template.pricingBreakdown.gstPerKw.toLocaleString()}</td>
             <td>${template.pricingBreakdown.gstPercentage}</td>
@@ -443,12 +451,12 @@ export class QuotationPDFService {
       
       ${template.pricingBreakdown.subsidyAmount > 0 ? `
       <div class="subsidy-note">
-        <strong>${template.pricingBreakdown.kw} kw Subsidy ${template.pricingBreakdown.subsidyAmount.toLocaleString()} Will be Credited to The Customer's Account</strong>
+        <strong>${this.formatNumber(template.pricingBreakdown.kw)} kw Subsidy ${template.pricingBreakdown.subsidyAmount.toLocaleString()} Will be Credited to The Customer's Account</strong>
       </div>` : ''}
       
       <!-- Bill of Materials -->
       <div class="page-break">
-        <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${template.pricingBreakdown.kw} kw On-grid Solar NPG System</h3>
+        <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${this.formatNumber(template.pricingBreakdown.kw)} kw On-grid Solar NPG System</h3>
         
         ${template.bomSummary ? `
         <table style="width: 100%; margin: 10px 0; border-collapse: collapse; background-color: #90EE90;">
