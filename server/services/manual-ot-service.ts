@@ -215,17 +215,8 @@ export class ManualOTService {
       const otDurationMs = otEndTime.getTime() - otStartTime.getTime();
       const otHours = Number((otDurationMs / (1000 * 60 * 60)).toFixed(2));
 
-      // Calculate total working hours (regular + OT)
-      let regularHours = 0;
-      if (todayAttendance.checkInTime && todayAttendance.checkOutTime) {
-        const regularDurationMs = new Date(todayAttendance.checkOutTime).getTime() - new Date(todayAttendance.checkInTime).getTime();
-        regularHours = regularDurationMs / (1000 * 60 * 60);
-      }
-
-      const totalWorkingHours = Number((regularHours + otHours).toFixed(2));
-
       // Update attendance record with OT end
-      const updateData = {
+      const updateData: any = {
         otStatus: 'completed' as const,
         otEndTime,
         otEndLatitude: request.latitude.toString(),
@@ -234,8 +225,32 @@ export class ManualOTService {
         otEndAddress: request.address,
         manualOTHours: otHours,
         overtimeHours: otHours, // Update the legacy field for compatibility
-        workingHours: totalWorkingHours,
       };
+
+      // IMPORTANT: Only set checkOutTime if it doesn't already exist
+      // This preserves the original checkout data if user did regular checkout before starting OT
+      // But also marks attendance complete if they went directly to OT without regular checkout
+      if (!todayAttendance.checkOutTime) {
+        updateData.checkOutTime = otEndTime;
+        updateData.checkOutLatitude = request.latitude.toString();
+        updateData.checkOutLongitude = request.longitude.toString();
+        updateData.checkOutImageUrl = request.imageUrl;
+        updateData.checkOutAddress = request.address;
+      }
+
+      // Calculate total working hours AFTER setting checkout time
+      // This ensures accurate calculation whether user did regular checkout or not
+      let regularHours = 0;
+      if (todayAttendance.checkInTime) {
+        const effectiveCheckOutTime = todayAttendance.checkOutTime 
+          ? new Date(todayAttendance.checkOutTime) 
+          : otEndTime;
+        const regularDurationMs = effectiveCheckOutTime.getTime() - new Date(todayAttendance.checkInTime).getTime();
+        regularHours = regularDurationMs / (1000 * 60 * 60);
+      }
+
+      const totalWorkingHours = Number(regularHours.toFixed(2));
+      updateData.workingHours = totalWorkingHours;
 
       await storage.updateAttendance(todayAttendance.id, updateData);
 
