@@ -380,7 +380,7 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
     checkoutMutation.mutate();
   };
 
-  const canSubmit = location && photo && !isSubmitting;
+  const canSubmit = location && photo && reason.trim().length >= 10 && !isSubmitting;
 
   if (!currentAttendance) return null;
 
@@ -537,21 +537,32 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
             </CardContent>
           </Card>
 
-          {/* Optional Reason */}
+          {/* Checkout Reason */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Notes (Optional)</CardTitle>
+              <CardTitle className="text-base">
+                Checkout Reason <span className="text-red-600">*</span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <Textarea
-                placeholder="Add any notes about your checkout..."
+                placeholder="Provide a detailed reason for checkout (minimum 10 characters)..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 maxLength={500}
+                className={reason.trim().length > 0 && reason.trim().length < 10 ? "border-red-300" : ""}
               />
-              <div className="text-xs text-muted-foreground mt-1 text-right">
-                {reason.length}/500
+              <div className="flex justify-between items-center mt-1 text-xs">
+                <span className={reason.trim().length < 10 ? "text-red-500" : "text-green-600"}>
+                  {reason.trim().length < 10 
+                    ? `Minimum 10 characters required (${10 - reason.trim().length} more needed)` 
+                    : "✓ Requirement met"
+                  }
+                </span>
+                <span className="text-muted-foreground">
+                  {reason.length}/500
+                </span>
               </div>
             </CardContent>
           </Card>
