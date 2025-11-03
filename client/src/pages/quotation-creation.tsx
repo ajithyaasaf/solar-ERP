@@ -287,12 +287,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
         </Badge>
       );
     }
-    return (
-      <Badge variant="outline" className="text-xs ml-2 text-orange-600">
-        <AlertTriangle className="h-3 w-3 mr-1" />
-        Needs Input
-      </Badge>
-    );
+    return null;
   };
 
   return (
