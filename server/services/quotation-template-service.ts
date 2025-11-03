@@ -359,12 +359,14 @@ export class QuotationTemplateService {
 
   /**
    * Round system kW for rate calculations (matching frontend logic)
-   * ≤3.5 kW → floor (e.g., 3.24 → 3)
+   * <1 kW → use actual decimal value (e.g., 0.68 → 0.68)
+   * 1-3.5 kW → floor (e.g., 3.24 → 3)
    * >3.5 kW → ceil (e.g., 3.6 → 4)
    * This ensures rate per kW matches what user sees in the quotation form
    */
   static roundSystemKWForRateCalculation(actualKW: number): number {
     if (actualKW <= 0) return 0;
+    if (actualKW < 1) return actualKW; // Use actual decimal value for sub-1kW systems
     return actualKW <= 3.5 ? Math.floor(actualKW) : Math.ceil(actualKW);
   }
 
@@ -1269,17 +1271,6 @@ export class QuotationTemplateService {
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
-        // Debug logging
-        console.log('🔍 Off-Grid Pricing Breakdown Debug:', {
-          panelWatts: project.panelWatts,
-          panelCount: project.panelCount,
-          calculatedKW: kw,
-          projectBasePrice: (project as any).basePrice,
-          projectGstAmount: (project as any).gstAmount,
-          projectValue: project.projectValue,
-          gstPercentage: actualGstPercentage
-        });
-        
         // Use project values if available (from frontend calculation)
         if ((project as any).basePrice && (project as any).gstAmount) {
           basePrice = (project as any).basePrice;
@@ -1296,15 +1287,6 @@ export class QuotationTemplateService {
         // FIXED: Use rounded kW for rate calculation (matching frontend logic)
         const roundedKW_offGrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_offGrid > 0 ? basePrice / roundedKW_offGrid : 0;
-        
-        // Debug logging for calculated values
-        console.log('📊 Calculated Pricing Values:', {
-          roundedKW: roundedKW_offGrid,
-          basePrice,
-          gstAmount,
-          totalWithGST,
-          ratePerKw
-        });
         
         // Dynamic description based on actual configuration
         const panelWatts_offGrid = project.panelWatts || '530';
