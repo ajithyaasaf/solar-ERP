@@ -317,6 +317,8 @@ export interface Attendance {
   status: string;
   overtimeHours?: number;
   otReason?: string;
+  otStartTime?: Date;
+  otEndTime?: Date;
 }
 
 export interface Leave {
@@ -2378,6 +2380,12 @@ export class FirestoreStorage implements IStorage {
     if (validatedData.checkOutTime) {
       firestoreData.checkOutTime = Timestamp.fromDate(validatedData.checkOutTime);
     }
+    if (validatedData.otStartTime) {
+      firestoreData.otStartTime = Timestamp.fromDate(validatedData.otStartTime);
+    }
+    if (validatedData.otEndTime) {
+      firestoreData.otEndTime = Timestamp.fromDate(validatedData.otEndTime);
+    }
     
     // Remove undefined values to avoid Firestore errors
     Object.keys(firestoreData).forEach(key => {
@@ -2400,6 +2408,8 @@ export class FirestoreStorage implements IStorage {
       date: updatedData.date?.toDate() || new Date(),
       checkInTime: updatedData.checkInTime?.toDate() || null,
       checkOutTime: updatedData.checkOutTime?.toDate() || null,
+      otStartTime: updatedData.otStartTime?.toDate() || undefined,
+      otEndTime: updatedData.otEndTime?.toDate() || undefined,
     } as Attendance;
   }
 
@@ -2427,6 +2437,8 @@ export class FirestoreStorage implements IStorage {
       date: data.date?.toDate() || new Date(),
       checkInTime: data.checkInTime?.toDate() || null,
       checkOutTime: data.checkOutTime?.toDate() || null,
+      otStartTime: data.otStartTime?.toDate() || undefined,
+      otEndTime: data.otEndTime?.toDate() || undefined,
     } as Attendance;
   }
 
@@ -2448,6 +2460,8 @@ export class FirestoreStorage implements IStorage {
           date: data.date?.toDate() || new Date(),
           checkInTime: data.checkInTime?.toDate() || null,
           checkOutTime: data.checkOutTime?.toDate() || null,
+          otStartTime: data.otStartTime?.toDate() || undefined,
+          otEndTime: data.otEndTime?.toDate() || undefined,
         } as Attendance;
         
         console.log(`STORAGE: Record ${doc.id} - Date: ${record.date?.toISOString()}, Status: ${record.status}, UserID: ${record.userId}`);
@@ -2481,6 +2495,8 @@ export class FirestoreStorage implements IStorage {
         date: data.date?.toDate() || new Date(),
         checkInTime: data.checkInTime?.toDate() || null,
         checkOutTime: data.checkOutTime?.toDate() || null,
+        otStartTime: data.otStartTime?.toDate() || undefined,
+        otEndTime: data.otEndTime?.toDate() || undefined,
       } as Attendance;
     });
   }
@@ -2508,6 +2524,8 @@ export class FirestoreStorage implements IStorage {
         date: data.date?.toDate() || new Date(),
         checkInTime: data.checkInTime?.toDate() || null,
         checkOutTime: data.checkOutTime?.toDate() || null,
+        otStartTime: data.otStartTime?.toDate() || undefined,
+        otEndTime: data.otEndTime?.toDate() || undefined,
       } as Attendance;
     });
   }
@@ -2537,6 +2555,8 @@ export class FirestoreStorage implements IStorage {
         date: data.date?.toDate() || new Date(),
         checkInTime: data.checkInTime?.toDate() || null,
         checkOutTime: data.checkOutTime?.toDate() || null,
+        otStartTime: data.otStartTime?.toDate() || undefined,
+        otEndTime: data.otEndTime?.toDate() || undefined,
       } as Attendance;
     });
   }
@@ -2553,6 +2573,8 @@ export class FirestoreStorage implements IStorage {
       date: data.date?.toDate() || new Date(),
       checkInTime: data.checkInTime?.toDate() || null,
       checkOutTime: data.checkOutTime?.toDate() || null,
+      otStartTime: data.otStartTime?.toDate() || undefined,
+      otEndTime: data.otEndTime?.toDate() || undefined,
     } as Attendance;
   }
 
@@ -2582,6 +2604,8 @@ export class FirestoreStorage implements IStorage {
         date: data.date?.toDate() || new Date(),
         checkInTime: data.checkInTime?.toDate() || null,
         checkOutTime: data.checkOutTime?.toDate() || null,
+        otStartTime: data.otStartTime?.toDate() || undefined,
+        otEndTime: data.otEndTime?.toDate() || undefined,
       } as Attendance;
     });
   }

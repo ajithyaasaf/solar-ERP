@@ -196,7 +196,20 @@ export class ManualOTService {
       }
 
       const otEndTime = new Date();
-      const otStartTime = new Date(todayAttendance.otStartTime);
+      const otStartTime = todayAttendance.otStartTime ? new Date(todayAttendance.otStartTime) : null;
+      
+      // Validate that otStartTime is a valid date
+      if (!otStartTime || isNaN(otStartTime.getTime())) {
+        console.error('MANUAL OT SERVICE: Invalid otStartTime:', todayAttendance.otStartTime);
+        return {
+          success: false,
+          message: 'Invalid OT start time. Please try again or contact support.',
+          otHours: 0,
+          totalWorkingHours: 0,
+          startTime: '',
+          endTime: ''
+        };
+      }
       
       // Calculate OT hours
       const otDurationMs = otEndTime.getTime() - otStartTime.getTime();
