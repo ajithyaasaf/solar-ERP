@@ -403,7 +403,10 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         <Button
           type="button"
           variant="outline"
-          onClick={() => form.reset()}
+          onClick={() => {
+            form.reset();
+            onSuccess?.();
+          }}
           data-testid="button-cancel"
           className="w-full sm:w-auto order-2 sm:order-1"
         >
