@@ -506,6 +506,12 @@ export default function HRManagement() {
               onSubmit={onSubmit} 
               isLoading={createUserMutation.isPending}
               submitText="Create Employee"
+              profilePhotoData={profilePhotoData}
+              setProfilePhotoData={setProfilePhotoData}
+              aadharCardData={aadharCardData}
+              setAadharCardData={setAadharCardData}
+              panCardData={panCardData}
+              setPanCardData={setPanCardData}
             />
           </DialogContent>
         </Dialog>
@@ -731,6 +737,12 @@ export default function HRManagement() {
               onSubmit={onEditSubmit} 
               isLoading={updateUserMutation.isPending}
               submitText="Update Employee"
+              profilePhotoData={profilePhotoData}
+              setProfilePhotoData={setProfilePhotoData}
+              aadharCardData={aadharCardData}
+              setAadharCardData={setAadharCardData}
+              panCardData={panCardData}
+              setPanCardData={setPanCardData}
             />
           </DialogContent>
         </Dialog>
@@ -824,12 +836,24 @@ function UserForm({
   form, 
   onSubmit, 
   isLoading, 
-  submitText 
+  submitText,
+  profilePhotoData,
+  setProfilePhotoData,
+  aadharCardData,
+  setAadharCardData,
+  panCardData,
+  setPanCardData
 }: {
   form: any;
   onSubmit: (values: z.infer<typeof userFormSchema>) => void;
   isLoading: boolean;
   submitText: string;
+  profilePhotoData: string;
+  setProfilePhotoData: (data: string) => void;
+  aadharCardData: string;
+  setAadharCardData: (data: string) => void;
+  panCardData: string;
+  setPanCardData: (data: string) => void;
 }) {
   return (
     <Form {...form}>
