@@ -104,9 +104,15 @@ export class QuotationPDFService {
   }
 
   /**
-   * Format number for display - rounds to whole number for PDF display
+   * Format number for display in PDF
+   * For sub-1kW systems: show decimal (e.g., 0.68)
+   * For >= 1kW systems: round to whole number (e.g., 3.24 → 3)
    */
   private static formatNumber(num: number): string {
+    if (num < 1) {
+      // For sub-1kW systems, show up to 2 decimal places
+      return num.toFixed(2).replace(/\.?0+$/, ''); // Remove trailing zeros
+    }
     // Round to nearest whole number for display in PDF
     return Math.round(num).toString();
   }

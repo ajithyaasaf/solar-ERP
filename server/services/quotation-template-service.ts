@@ -358,6 +358,20 @@ export class QuotationTemplateService {
   }
 
   /**
+   * Format kW for display in quotation
+   * <1 kW → show decimal (e.g., 0.68)
+   * >= 1 kW → round to whole (e.g., 3.24 → 3)
+   */
+  static formatKWForDisplay(kw: number): string {
+    if (kw < 1) {
+      // For sub-1kW systems, show up to 2 decimal places, remove trailing zeros
+      return kw.toFixed(2).replace(/\.?0+$/, '');
+    }
+    // For >= 1kW systems, round to whole number
+    return Math.floor(kw).toString();
+  }
+
+  /**
    * Round system kW for rate calculations (matching frontend logic)
    * <1 kW → use actual decimal value (e.g., 0.68 → 0.68)
    * 1-3.5 kW → floor (e.g., 3.24 → 3)
@@ -1494,7 +1508,7 @@ export class QuotationTemplateService {
         address: customer.address,
         contactNumber: customer.mobile
       },
-      reference: `${Math.floor(pricingBreakdown?.kw || 0)} kW ${projectTypeName} Solar Power Generation System`,
+      reference: `${this.formatKWForDisplay(pricingBreakdown?.kw || 0)} kW ${projectTypeName} Solar Power Generation System`,
       pricingBreakdown,
       bomSummary,
       backupSolutions,
