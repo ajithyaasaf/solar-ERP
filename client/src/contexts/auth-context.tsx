@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { User } from "firebase/auth";
 import { apiRequest } from "@/lib/queryClient";
-import { onAuthChange } from "@/lib/firebase";
+import { onAuthChange, syncUser } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import type { Department, Designation, PayrollGrade, SystemPermission } from "@shared/schema";
+import { getEffectivePermissions, systemPermissions } from "@shared/schema";
 
 type UserRole = "master_admin" | "admin" | "employee";
 
@@ -252,9 +253,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         try {
-          // Import syncUser function for auto-sync
-          const { syncUser } = await import("@/lib/firebase");
-          
           // Sync this user with our database
           const result = await syncUser(firebaseUser.uid, true);
           
@@ -429,7 +427,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       // Calculate permissions based on department + designation (or default for new employees)
-      const { getEffectivePermissions } = await import("@shared/schema");
       const effectivePermissions = getEffectivePermissions(user.department, user.designation);
       
       console.log("=== PERMISSION CALCULATION DEBUG ===");
