@@ -1787,7 +1787,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <label className="text-sm font-medium">GST Percentage (%)</label>
           <Input
             type="number"
-            value={project.gstPercentage ?? BUSINESS_RULES.gst.percentage}
+            value={project.gstPercentage ?? ''}
             onChange={(e) => {
               const val = e.target.value;
               if (val === '') {
@@ -1797,11 +1797,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
               }
             }}
-            onBlur={(e) => {
-              if (e.target.value === '') {
-                handleFieldChange('gstPercentage', BUSINESS_RULES.gst.percentage);
-              }
-            }}
+            placeholder={`Default: ${BUSINESS_RULES.gst.percentage}%`}
             min="0"
             max="100"
             step="0.1"
@@ -2479,7 +2475,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <label className="text-sm font-medium">GST Percentage (%)</label>
             <Input
               type="number"
-              value={project.gstPercentage ?? BUSINESS_RULES.gst.percentage}
+              value={project.gstPercentage ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
                 if (value === '') {
@@ -2489,11 +2485,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
                 }
               }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('gstPercentage', BUSINESS_RULES.gst.percentage);
-                }
-              }}
+              placeholder={`Default: ${BUSINESS_RULES.gst.percentage}%`}
               min="0"
               max="100"
               step="0.1"
@@ -2756,7 +2748,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <label className="text-sm font-medium">GST Percentage (%)</label>
             <Input
               type="number"
-              value={project.gstPercentage ?? BUSINESS_RULES.gst.percentage}
+              value={project.gstPercentage ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
                 if (value === '') {
@@ -2766,11 +2758,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
                 }
               }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('gstPercentage', BUSINESS_RULES.gst.percentage);
-                }
-              }}
+              placeholder={`Default: ${BUSINESS_RULES.gst.percentage}%`}
               min="0"
               max="100"
               step="0.1"
