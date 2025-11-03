@@ -1269,6 +1269,17 @@ export class QuotationTemplateService {
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
+        // Debug logging
+        console.log('🔍 Off-Grid Pricing Breakdown Debug:', {
+          panelWatts: project.panelWatts,
+          panelCount: project.panelCount,
+          calculatedKW: kw,
+          projectBasePrice: (project as any).basePrice,
+          projectGstAmount: (project as any).gstAmount,
+          projectValue: project.projectValue,
+          gstPercentage: actualGstPercentage
+        });
+        
         // Use project values if available (from frontend calculation)
         if ((project as any).basePrice && (project as any).gstAmount) {
           basePrice = (project as any).basePrice;
@@ -1285,6 +1296,15 @@ export class QuotationTemplateService {
         // FIXED: Use rounded kW for rate calculation (matching frontend logic)
         const roundedKW_offGrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_offGrid > 0 ? basePrice / roundedKW_offGrid : 0;
+        
+        // Debug logging for calculated values
+        console.log('📊 Calculated Pricing Values:', {
+          roundedKW: roundedKW_offGrid,
+          basePrice,
+          gstAmount,
+          totalWithGST,
+          ratePerKw
+        });
         
         // Dynamic description based on actual configuration
         const panelWatts_offGrid = project.panelWatts || '530';
