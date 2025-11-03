@@ -66,9 +66,15 @@ export const insertUserSchema = z.object({
   fatherName: z.string().optional(),
   spouseName: z.string().optional(),
   dateOfBirth: z.date().optional(),
+  age: z.number().min(0).max(150).optional(),
   gender: z.enum(["male", "female", "other"]).optional(),
   maritalStatus: z.enum(sharedMaritalStatus).optional(),
   bloodGroup: z.enum(sharedBloodGroups).optional(),
+  
+  // Employee Document URLs
+  profilePhotoUrl: z.string().optional(),
+  aadharCardUrl: z.string().optional(),
+  panCardUrl: z.string().optional(),
   
   // Professional Information
   educationalQualification: z.string().optional(),

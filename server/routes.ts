@@ -1207,6 +1207,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee document upload endpoint (Photo, Aadhar, PAN)
+  app.post("/api/employees/upload-document", verifyAuth, async (req, res) => {
+    try {
+      const { imageData, employeeId, documentType } = req.body;
+
+      // Validate request
+      if (!imageData || !employeeId || !documentType) {
+        return res.status(400).json({ 
+          message: "Invalid request - image data, employee ID, and document type required" 
+        });
+      }
+
+      // Validate document type
+      const validDocumentTypes = ['photo', 'aadhar', 'pan'];
+      if (!validDocumentTypes.includes(documentType)) {
+        return res.status(400).json({ 
+          message: `Invalid document type. Must be one of: ${validDocumentTypes.join(', ')}` 
+        });
+      }
+
+      // Validate base64 image format
+      if (!imageData.startsWith('data:image/')) {
+        return res.status(400).json({ 
+          message: "Invalid image format - base64 image data required" 
+        });
+      }
+
+      console.log('SERVER: Processing employee document upload for:', employeeId, 'type:', documentType);
+      console.log('SERVER: Image data size:', imageData.length);
+
+      // Import Cloudinary service
+      const { CloudinaryService } = await import('./services/cloudinary-service');
+      
+      // Upload to appropriate Cloudinary folder based on document type
+      let uploadResult;
+      switch (documentType) {
+        case 'photo':
+          uploadResult = await CloudinaryService.uploadEmployeePhoto(imageData, employeeId);
+          break;
+        case 'aadhar':
+          uploadResult = await CloudinaryService.uploadAadharCard(imageData, employeeId);
+          break;
+        case 'pan':
+          uploadResult = await CloudinaryService.uploadPanCard(imageData, employeeId);
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid document type" });
+      }
+
+      if (!uploadResult.success) {
+        console.error('SERVER: Cloudinary document upload failed:', uploadResult.error);
+        return res.status(500).json({
+          message: "Document upload failed",
+          error: uploadResult.error
+        });
+      }
+
+      console.log('SERVER: Employee document uploaded successfully to:', uploadResult.url);
+
+      // Log the document upload activity
+      const user = await storage.getUser(req.user.uid);
+      if (user) {
+        await storage.createActivityLog({
+          type: 'hr',
+          title: `Employee ${documentType.toUpperCase()} Document Uploaded`,
+          description: `${user.displayName} uploaded ${documentType} document for employee ${employeeId}`,
+          entityId: employeeId,
+          entityType: 'employee_document',
+          userId: user.uid
+        });
+      }
+
+      res.json({
+        success: true,
+        url: uploadResult.url,
+        publicId: uploadResult.publicId,
+        documentType: documentType,
+        message: `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} document uploaded successfully`
+      });
+
+    } catch (error) {
+      console.error('SERVER: Employee document upload error:', error);
+      res.status(500).json({
+        message: "Internal server error during document upload",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   app.post("/api/attendance/check-out", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
     try {
       const { userId, latitude, longitude, imageUrl, reason, otReason } = req.body;

@@ -9,10 +9,11 @@ import { v2 as cloudinary } from 'cloudinary';
 cloudinary.config({
   cloud_name: 'doeodacsg',
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: 'wUw9Seu6drQEIbQ1tAvYeVyqHdU'
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 console.log('CLOUDINARY: Service initialized with API key:', process.env.CLOUDINARY_API_KEY ? 'present' : 'missing');
+console.log('CLOUDINARY: Service initialized with API secret:', process.env.CLOUDINARY_API_SECRET ? 'present' : 'missing');
 
 export interface CloudinaryUploadResult {
   success: boolean;
@@ -23,6 +24,153 @@ export interface CloudinaryUploadResult {
 
 export class CloudinaryService {
   private static readonly FOLDER_NAME = 'prakash attendance field images';
+  private static readonly EMPLOYEE_PHOTO_FOLDER = 'employee-documents/photos';
+  private static readonly AADHAR_FOLDER = 'employee-documents/aadhar';
+  private static readonly PAN_FOLDER = 'employee-documents/pan';
+
+  /**
+   * Upload employee profile photo to Cloudinary
+   * Optimized for small profile pictures (400x400, good quality)
+   * @param base64Image - Base64 encoded image data
+   * @param employeeId - Employee ID for file naming
+   */
+  static async uploadEmployeePhoto(
+    base64Image: string,
+    employeeId: string
+  ): Promise<CloudinaryUploadResult> {
+    try {
+      const timestamp = new Date();
+      const dateStr = timestamp.toISOString().split('T')[0];
+      const publicId = `${this.EMPLOYEE_PHOTO_FOLDER}/${employeeId}_${dateStr}`;
+
+      console.log('CLOUDINARY: Uploading employee photo to folder:', this.EMPLOYEE_PHOTO_FOLDER);
+      console.log('CLOUDINARY: Public ID:', publicId);
+
+      const result = await cloudinary.uploader.upload(base64Image, {
+        public_id: publicId,
+        folder: this.EMPLOYEE_PHOTO_FOLDER,
+        resource_type: 'image',
+        format: 'jpg',
+        transformation: [
+          { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+          { quality: 'auto:good' }
+        ],
+        tags: ['employee', 'profile_photo', employeeId]
+      });
+
+      console.log('CLOUDINARY: Employee photo upload successful:', result.secure_url);
+
+      return {
+        success: true,
+        url: result.secure_url,
+        publicId: result.public_id
+      };
+
+    } catch (error) {
+      console.error('CLOUDINARY: Employee photo upload failed:', error);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
+  /**
+   * Upload Aadhar card document to Cloudinary
+   * Optimized for document scans (1200x800, eco quality to save space)
+   * @param base64Image - Base64 encoded image data
+   * @param employeeId - Employee ID for file naming
+   */
+  static async uploadAadharCard(
+    base64Image: string,
+    employeeId: string
+  ): Promise<CloudinaryUploadResult> {
+    try {
+      const timestamp = new Date();
+      const dateStr = timestamp.toISOString().split('T')[0];
+      const publicId = `${this.AADHAR_FOLDER}/${employeeId}_${dateStr}`;
+
+      console.log('CLOUDINARY: Uploading Aadhar card to folder:', this.AADHAR_FOLDER);
+      console.log('CLOUDINARY: Public ID:', publicId);
+
+      const result = await cloudinary.uploader.upload(base64Image, {
+        public_id: publicId,
+        folder: this.AADHAR_FOLDER,
+        resource_type: 'image',
+        format: 'jpg',
+        transformation: [
+          { width: 1200, height: 800, crop: 'limit' },
+          { quality: 'auto:eco' }
+        ],
+        tags: ['employee', 'aadhar', employeeId]
+      });
+
+      console.log('CLOUDINARY: Aadhar card upload successful:', result.secure_url);
+
+      return {
+        success: true,
+        url: result.secure_url,
+        publicId: result.public_id
+      };
+
+    } catch (error) {
+      console.error('CLOUDINARY: Aadhar card upload failed:', error);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
+  /**
+   * Upload PAN card document to Cloudinary
+   * Optimized for document scans (1200x800, eco quality to save space)
+   * @param base64Image - Base64 encoded image data
+   * @param employeeId - Employee ID for file naming
+   */
+  static async uploadPanCard(
+    base64Image: string,
+    employeeId: string
+  ): Promise<CloudinaryUploadResult> {
+    try {
+      const timestamp = new Date();
+      const dateStr = timestamp.toISOString().split('T')[0];
+      const publicId = `${this.PAN_FOLDER}/${employeeId}_${dateStr}`;
+
+      console.log('CLOUDINARY: Uploading PAN card to folder:', this.PAN_FOLDER);
+      console.log('CLOUDINARY: Public ID:', publicId);
+
+      const result = await cloudinary.uploader.upload(base64Image, {
+        public_id: publicId,
+        folder: this.PAN_FOLDER,
+        resource_type: 'image',
+        format: 'jpg',
+        transformation: [
+          { width: 1200, height: 800, crop: 'limit' },
+          { quality: 'auto:eco' }
+        ],
+        tags: ['employee', 'pan', employeeId]
+      });
+
+      console.log('CLOUDINARY: PAN card upload successful:', result.secure_url);
+
+      return {
+        success: true,
+        url: result.secure_url,
+        publicId: result.public_id
+      };
+
+    } catch (error) {
+      console.error('CLOUDINARY: PAN card upload failed:', error);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
 
   /**
    * Upload attendance photo to Cloudinary

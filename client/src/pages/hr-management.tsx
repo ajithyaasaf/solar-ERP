@@ -57,6 +57,7 @@ import {
 import { z } from "zod";
 import { formatDate, getInitials } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { DocumentUpload } from "@/components/ui/document-upload";
 
 type User = z.infer<typeof insertUserEnhancedSchema> & {
   id: string;
@@ -83,6 +84,11 @@ export default function HRManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Document upload states
+  const [profilePhotoData, setProfilePhotoData] = useState<string>("");
+  const [aadharCardData, setAadharCardData] = useState<string>("");
+  const [panCardData, setPanCardData] = useState<string>("");
 
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ['/api/users'],
@@ -176,9 +182,13 @@ export default function HRManagement() {
       fatherName: "",
       spouseName: "",
       dateOfBirth: undefined,
+      age: undefined,
       gender: undefined,
       maritalStatus: undefined,
       bloodGroup: undefined,
+      profilePhotoUrl: "",
+      aadharCardUrl: "",
+      panCardUrl: "",
       educationalQualification: "",
       experienceYears: undefined,
       dateOfLeaving: undefined,
@@ -202,13 +212,173 @@ export default function HRManagement() {
     resolver: zodResolver(userFormSchema),
   });
 
-  const onSubmit = (values: z.infer<typeof userFormSchema>) => {
-    createUserMutation.mutate(values);
+  const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
+    try {
+      const finalValues = { ...values };
+      const employeeId = values.employeeId || 'temp_' + Date.now();
+
+      // Upload documents if they exist
+      const uploadPromises = [];
+
+      if (profilePhotoData) {
+        uploadPromises.push(
+          apiRequest('/api/employees/upload-document', 'POST', {
+            imageData: profilePhotoData,
+            employeeId: employeeId,
+            documentType: 'photo'
+          }).then(async res => {
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.message || 'Photo upload failed');
+            }
+            return res.json();
+          }).then(data => {
+            finalValues.profilePhotoUrl = data.url;
+          })
+        );
+      }
+
+      if (aadharCardData) {
+        uploadPromises.push(
+          apiRequest('/api/employees/upload-document', 'POST', {
+            imageData: aadharCardData,
+            employeeId: employeeId,
+            documentType: 'aadhar'
+          }).then(async res => {
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.message || 'Aadhar card upload failed');
+            }
+            return res.json();
+          }).then(data => {
+            finalValues.aadharCardUrl = data.url;
+          })
+        );
+      }
+
+      if (panCardData) {
+        uploadPromises.push(
+          apiRequest('/api/employees/upload-document', 'POST', {
+            imageData: panCardData,
+            employeeId: employeeId,
+            documentType: 'pan'
+          }).then(async res => {
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.message || 'PAN card upload failed');
+            }
+            return res.json();
+          }).then(data => {
+            finalValues.panCardUrl = data.url;
+          })
+        );
+      }
+
+      // Wait for all uploads to complete
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+      }
+
+      // Submit the form with document URLs
+      createUserMutation.mutate(finalValues);
+
+      // Reset document states
+      setProfilePhotoData("");
+      setAadharCardData("");
+      setPanCardData("");
+
+    } catch (error) {
+      toast({
+        title: "Document Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload documents",
+        variant: "destructive",
+      });
+    }
   };
 
-  const onEditSubmit = (values: z.infer<typeof userFormSchema>) => {
-    if (selectedUser) {
-      updateUserMutation.mutate({ uid: selectedUser.uid, data: values });
+  const onEditSubmit = async (values: z.infer<typeof userFormSchema>) => {
+    if (!selectedUser) return;
+
+    try {
+      const finalValues = { ...values };
+      const employeeId = selectedUser.employeeId || selectedUser.uid;
+
+      // Upload documents if they exist
+      const uploadPromises = [];
+
+      if (profilePhotoData) {
+        uploadPromises.push(
+          apiRequest('/api/employees/upload-document', 'POST', {
+            imageData: profilePhotoData,
+            employeeId: employeeId,
+            documentType: 'photo'
+          }).then(async res => {
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.message || 'Photo upload failed');
+            }
+            return res.json();
+          }).then(data => {
+            finalValues.profilePhotoUrl = data.url;
+          })
+        );
+      }
+
+      if (aadharCardData) {
+        uploadPromises.push(
+          apiRequest('/api/employees/upload-document', 'POST', {
+            imageData: aadharCardData,
+            employeeId: employeeId,
+            documentType: 'aadhar'
+          }).then(async res => {
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.message || 'Aadhar card upload failed');
+            }
+            return res.json();
+          }).then(data => {
+            finalValues.aadharCardUrl = data.url;
+          })
+        );
+      }
+
+      if (panCardData) {
+        uploadPromises.push(
+          apiRequest('/api/employees/upload-document', 'POST', {
+            imageData: panCardData,
+            employeeId: employeeId,
+            documentType: 'pan'
+          }).then(async res => {
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.message || 'PAN card upload failed');
+            }
+            return res.json();
+          }).then(data => {
+            finalValues.panCardUrl = data.url;
+          })
+        );
+      }
+
+      // Wait for all uploads to complete
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+      }
+
+      // Submit the form with document URLs
+      updateUserMutation.mutate({ uid: selectedUser.uid, data: finalValues });
+
+      // Reset document states
+      setProfilePhotoData("");
+      setAadharCardData("");
+      setPanCardData("");
+
+    } catch (error) {
+      toast({
+        title: "Document Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload documents",
+        variant: "destructive",
+      });
     }
   };
 
@@ -261,6 +431,52 @@ export default function HRManagement() {
       });
     }
   }, [selectedUser, isEditDialogOpen, editForm]);
+
+  // Auto-calculate age when date of birth changes (Create Form)
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'dateOfBirth' && value.dateOfBirth) {
+        const birthDate = new Date(value.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age >= 0 && age <= 150) {
+          form.setValue('age', age);
+        }
+      } else if (name === 'dateOfBirth' && !value.dateOfBirth) {
+        form.setValue('age', undefined);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  // Auto-calculate age when date of birth changes (Edit Form)
+  useEffect(() => {
+    const subscription = editForm.watch((value, { name }) => {
+      if (name === 'dateOfBirth' && value.dateOfBirth) {
+        const birthDate = new Date(value.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age >= 0 && age <= 150) {
+          editForm.setValue('age', age);
+        }
+      } else if (name === 'dateOfBirth' && !value.dateOfBirth) {
+        editForm.setValue('age', undefined);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [editForm]);
 
   return (
     <div className="space-y-8">
@@ -881,6 +1097,26 @@ function UserForm({
               />
               <FormField
                 control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Age</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        value={field.value !== undefined ? field.value : ''}
+                        disabled
+                        placeholder="Auto-calculated from DOB"
+                        className="bg-gray-50 dark:bg-gray-800"
+                        data-testid="input-age"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
@@ -949,6 +1185,36 @@ function UserForm({
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-medium mb-4">Employee Documents</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <DocumentUpload
+                  label="Profile Photo"
+                  documentType="photo"
+                  currentUrl={form.getValues('profilePhotoUrl')}
+                  onFileSelect={setProfilePhotoData}
+                  onRemove={() => setProfilePhotoData("")}
+                  maxSizeMB={2}
+                />
+                <DocumentUpload
+                  label="Aadhar Card"
+                  documentType="aadhar"
+                  currentUrl={form.getValues('aadharCardUrl')}
+                  onFileSelect={setAadharCardData}
+                  onRemove={() => setAadharCardData("")}
+                  maxSizeMB={5}
+                />
+                <DocumentUpload
+                  label="PAN Card"
+                  documentType="pan"
+                  currentUrl={form.getValues('panCardUrl')}
+                  onFileSelect={setPanCardData}
+                  onRemove={() => setPanCardData("")}
+                  maxSizeMB={5}
+                />
+              </div>
             </div>
           </TabsContent>
 
