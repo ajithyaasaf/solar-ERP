@@ -1498,6 +1498,7 @@ export const quotationOnGridProjectSchema = z.object({
   basePrice: z.number().min(0).default(0),
   subsidyAmount: z.number().min(0).default(0),
   customerPayment: z.number().min(0),
+  customDescription: z.string().optional(),
   installationNotes: z.string().optional(),
   warranty: z.object({
     panel: z.enum(warrantyPeriods).default("25_years"),
@@ -1549,6 +1550,7 @@ export const quotationOffGridProjectSchema = z.object({
   basePrice: z.number().min(0).default(0),
   subsidyAmount: z.number().min(0).default(0),
   customerPayment: z.number().min(0),
+  customDescription: z.string().optional(),
   installationNotes: z.string().optional(),
   warranty: z.object({
     panel: z.enum(warrantyPeriods).default("25_years"),
@@ -1603,6 +1605,7 @@ export const quotationHybridProjectSchema = z.object({
   basePrice: z.number().min(0).default(0),
   subsidyAmount: z.number().min(0).default(0),
   customerPayment: z.number().min(0),
+  customDescription: z.string().optional(),
   installationNotes: z.string().optional(),
   warranty: z.object({
     panel: z.enum(warrantyPeriods).default("25_years"),
@@ -1627,6 +1630,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
   basePrice: z.number().min(0).default(0),
   subsidyAmount: z.number().min(0).default(0),
   customerPayment: z.number().min(0),
+  customDescription: z.string().optional(),
   installationNotes: z.string().optional(),
   warranty: z.object({
     heater: z.enum(warrantyPeriods).default("5_years"),
@@ -1661,6 +1665,7 @@ export const quotationWaterPumpProjectSchema = z.object({
   basePrice: z.number().min(0).default(0),
   subsidyAmount: z.number().min(0).default(0),
   customerPayment: z.number().min(0),
+  customDescription: z.string().optional(),
   installationNotes: z.string().optional(),
   warranty: z.object({
     pump: z.enum(warrantyPeriods).default("2_years"),

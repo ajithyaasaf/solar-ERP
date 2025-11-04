@@ -4403,10 +4403,22 @@ export default function QuotationCreation() {
                             ? Math.round(gstAmount / roundedSystemKW)
                             : 0;
                           
+                          // Generate default description if custom one doesn't exist
+                          const defaultDescription = `Supply and Installation of ${systemKW}kw ${project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System`;
+                          const description = project.customDescription || defaultDescription;
+                          
                           return (
                             <tr key={index} className="border-t">
                               <td className="p-3 text-sm">
-                                Supply and Installation of {systemKW}kw {project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System
+                                <Input 
+                                  type="text" 
+                                  value={description}
+                                  onChange={(e) => {
+                                    form.setValue(`projects.${index}.customDescription`, e.target.value);
+                                  }}
+                                  className="w-full min-w-[300px]"
+                                  data-testid={`input-description-${index}`}
+                                />
                               </td>
                               <td className="p-3 text-center">
                                 <Input 
@@ -4427,6 +4439,13 @@ export default function QuotationCreation() {
                                     const propertyType = getPropertyType();
                                     const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
                                     const newCustomerPayment = newProjectValue - newSubsidy;
+                                    
+                                    // Update description if user hasn't customized it
+                                    if (!project.customDescription) {
+                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
+                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
+                                      form.setValue(`projects.${index}.customDescription`, newDescription);
+                                    }
                                     
                                     form.setValue(`projects.${index}.systemKW`, newKW);
                                     form.setValue(`projects.${index}.basePrice`, newBasePrice);
