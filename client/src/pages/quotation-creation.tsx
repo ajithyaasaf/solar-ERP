@@ -3743,6 +3743,13 @@ export default function QuotationCreation() {
     console.log("═══════════════════════════════════════════");
     console.log("Form data:", data);
     
+    // GUARD: Only allow submission if we're on the final step (Review & Submit)
+    if (currentStep !== WIZARD_STEPS.length - 1) {
+      console.log("❌ BLOCKED: Form submission prevented - not on final step");
+      console.log("Current step:", currentStep, "Final step:", WIZARD_STEPS.length - 1);
+      return;
+    }
+    
     // Validate business rules before submission
     const totalSystemCost = data.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
     const totalGSTAmount = data.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
@@ -5259,6 +5266,7 @@ export default function QuotationCreation() {
 
             {currentStep === WIZARD_STEPS.length - 1 ? (
               <Button
+                key="submit-button"
                 type="submit"
                 disabled={!canProceed() || createQuotationMutation.isPending}
                 data-testid="button-submit"
@@ -5271,8 +5279,13 @@ export default function QuotationCreation() {
               </Button>
             ) : (
               <Button
+                key="next-button"
                 type="button"
-                onClick={nextStep}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextStep();
+                }}
                 disabled={!canProceed()}
                 data-testid="button-next"
                 className="w-full sm:w-auto order-1 sm:order-2"
