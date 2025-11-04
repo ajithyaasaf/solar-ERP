@@ -1713,6 +1713,18 @@ export const insertQuotationSchema = z.object({
   // Multi-project support
   projects: z.array(quotationProjectSchema).min(1, "At least one project is required"),
   
+  // Custom Bill of Materials (optional override)
+  customBillOfMaterials: z.array(z.object({
+    slNo: z.number(),
+    description: z.string(),
+    type: z.string(),
+    volt: z.string(),
+    rating: z.string(),
+    make: z.string(),
+    qty: z.number(),
+    unit: z.string()
+  })).optional(),
+  
   // Pricing and financial details
   totalSystemCost: z.number().min(0),
   totalSubsidyAmount: z.number().min(0).default(0),
