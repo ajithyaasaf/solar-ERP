@@ -1434,7 +1434,11 @@ export class QuotationTemplateService {
     preparedByName?: string
   ): QuotationTemplate {
     const pricingBreakdown = this.calculatePricingBreakdown(project, customer.propertyType);
-    const billOfMaterials = this.generateBillOfMaterials(project, customer.propertyType);
+    
+    // Use custom BOM if provided, otherwise generate default BOM
+    const billOfMaterials = (quotation as any).customBillOfMaterials && (quotation as any).customBillOfMaterials.length > 0
+      ? (quotation as any).customBillOfMaterials
+      : this.generateBillOfMaterials(project, customer.propertyType);
     
     // Generate dynamic quote validity based on quotation settings
     const validityDays = quotation.validUntil ? 

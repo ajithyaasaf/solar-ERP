@@ -263,6 +263,30 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
     }
   });
 
+  // Preview BOM for project configuration (before creating quotation)
+  app.post("/api/quotations/preview-bom", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.view"))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { project, propertyType } = req.body;
+      
+      if (!project) {
+        return res.status(400).json({ message: "Project configuration is required" });
+      }
+
+      // Generate BOM using the template service
+      const billOfMaterials = QuotationTemplateService.generateBillOfMaterials(project, propertyType);
+
+      res.json({ billOfMaterials });
+    } catch (error) {
+      console.error("Error generating BOM preview:", error);
+      res.status(500).json({ message: "Failed to generate BOM preview" });
+    }
+  });
+
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
     try {
