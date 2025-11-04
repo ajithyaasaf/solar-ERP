@@ -52,7 +52,11 @@ import {
   Wrench,
   Info,
   Sun,
-  Loader2
+  Loader2,
+  Edit2,
+  Save,
+  X,
+  Table
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -2986,6 +2990,9 @@ export default function QuotationCreation() {
   const [customDateFrom, setCustomDateFrom] = useState<string>("");
   const [customDateTo, setCustomDateTo] = useState<string>("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [bomItems, setBomItems] = useState<any[]>([]);
+  const [isFetchingBom, setIsFetchingBom] = useState(false);
+  const [editingBomItem, setEditingBomItem] = useState<number | null>(null);
   const { toast } = useToast();
   
   // Fetch existing quotation data if in edit mode (FIX: Use proper URL string)
@@ -3681,6 +3688,45 @@ export default function QuotationCreation() {
     calculateTotals();
   }, [watchedProjects, watchedAdvancePercentage, form]);
 
+  // Fetch BOM preview when entering Review & Submit step (step 4)
+  useEffect(() => {
+    const fetchBomPreview = async () => {
+      if (currentStep === 4 && form.watch("projects").length > 0) {
+        // Check if we have custom BOM from edit mode
+        if (isEditMode && existingQuotation && (existingQuotation as any).customBillOfMaterials) {
+          setBomItems((existingQuotation as any).customBillOfMaterials);
+          return;
+        }
+
+        setIsFetchingBom(true);
+        try {
+          // Get the first project for BOM generation (multi-project BOM coming later)
+          const project = form.watch("projects")[0];
+          const propertyType = getPropertyType();
+          
+          const response = await apiRequest("/api/quotations/preview-bom", "POST", {
+            project,
+            propertyType
+          });
+          
+          const data = await response.json();
+          setBomItems(data.billOfMaterials || []);
+        } catch (error) {
+          console.error("Error fetching BOM preview:", error);
+          toast({
+            title: "Error Loading BOM",
+            description: "Could not load Bill of Materials preview. Please try again.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsFetchingBom(false);
+        }
+      }
+    };
+
+    fetchBomPreview();
+  }, [currentStep, form, isEditMode, existingQuotation, toast]);
+
   const onSubmit = (data: QuotationFormData) => {
     console.log("🚀 SUBMIT CLICKED - onSubmit triggered");
     console.log("⏰ Timestamp:", new Date().toISOString());
@@ -3717,6 +3763,7 @@ export default function QuotationCreation() {
       source: quotationSource, // Use the actual selected source
       preparedBy: user?.uid || "", // Use actual authenticated user ID
       projects: data.projects, // Already validated by schema
+      customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
       totalSystemCost,
       totalSubsidyAmount,
       totalCustomerPayment: calculatedCustomerPayment,
@@ -4891,6 +4938,206 @@ export default function QuotationCreation() {
                       </ul>
                     </div>
                   </div>
+                </div>
+
+                {/* Bill of Materials Preview */}
+                <div className="space-y-4 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-base flex items-center gap-2">
+                      <Table className="h-5 w-5" />
+                      Bill of Materials (BOM)
+                    </h4>
+                    {bomItems.length > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        {bomItems.length} items
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Review and edit the bill of materials before generating the quotation. Click on any field to edit.
+                  </p>
+                  
+                  {isFetchingBom ? (
+                    <div className="flex items-center justify-center p-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="ml-2 text-sm">Loading BOM...</span>
+                    </div>
+                  ) : bomItems.length > 0 ? (
+                    <div className="overflow-x-auto border rounded-lg">
+                      <table className="w-full text-xs sm:text-sm">
+                        <thead className="bg-green-100 dark:bg-green-900/30">
+                          <tr>
+                            <th className="p-2 text-left border-r">Sl.No</th>
+                            <th className="p-2 text-left border-r">Description</th>
+                            <th className="p-2 text-left border-r">Type</th>
+                            <th className="p-2 text-left border-r">Volt</th>
+                            <th className="p-2 text-left border-r">Rating</th>
+                            <th className="p-2 text-left border-r">Make</th>
+                            <th className="p-2 text-left border-r">Qty</th>
+                            <th className="p-2 text-left border-r">Unit</th>
+                            <th className="p-2 text-left">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bomItems.map((item, index) => (
+                            <tr key={index} className="border-t hover:bg-green-50/50 dark:hover:bg-green-900/10">
+                              <td className="p-2 border-r">{item.slNo}</td>
+                              <td className="p-2 border-r">
+                                {editingBomItem === index ? (
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => {
+                                      const updated = [...bomItems];
+                                      updated[index].description = e.target.value;
+                                      setBomItems(updated);
+                                    }}
+                                    className="min-w-[200px]"
+                                  />
+                                ) : (
+                                  item.description
+                                )}
+                              </td>
+                              <td className="p-2 border-r">
+                                {editingBomItem === index ? (
+                                  <Input
+                                    value={item.type}
+                                    onChange={(e) => {
+                                      const updated = [...bomItems];
+                                      updated[index].type = e.target.value;
+                                      setBomItems(updated);
+                                    }}
+                                    className="min-w-[100px]"
+                                  />
+                                ) : (
+                                  item.type
+                                )}
+                              </td>
+                              <td className="p-2 border-r">
+                                {editingBomItem === index ? (
+                                  <Input
+                                    value={item.volt}
+                                    onChange={(e) => {
+                                      const updated = [...bomItems];
+                                      updated[index].volt = e.target.value;
+                                      setBomItems(updated);
+                                    }}
+                                    className="min-w-[80px]"
+                                  />
+                                ) : (
+                                  item.volt
+                                )}
+                              </td>
+                              <td className="p-2 border-r">
+                                {editingBomItem === index ? (
+                                  <Input
+                                    value={item.rating}
+                                    onChange={(e) => {
+                                      const updated = [...bomItems];
+                                      updated[index].rating = e.target.value;
+                                      setBomItems(updated);
+                                    }}
+                                    className="min-w-[100px]"
+                                  />
+                                ) : (
+                                  item.rating
+                                )}
+                              </td>
+                              <td className="p-2 border-r">
+                                {editingBomItem === index ? (
+                                  <Input
+                                    value={item.make}
+                                    onChange={(e) => {
+                                      const updated = [...bomItems];
+                                      updated[index].make = e.target.value;
+                                      setBomItems(updated);
+                                    }}
+                                    className="min-w-[120px]"
+                                  />
+                                ) : (
+                                  item.make
+                                )}
+                              </td>
+                              <td className="p-2 border-r">
+                                {editingBomItem === index ? (
+                                  <Input
+                                    type="number"
+                                    value={item.qty}
+                                    onChange={(e) => {
+                                      const updated = [...bomItems];
+                                      updated[index].qty = parseInt(e.target.value) || 0;
+                                      setBomItems(updated);
+                                    }}
+                                    className="min-w-[80px]"
+                                  />
+                                ) : (
+                                  item.qty
+                                )}
+                              </td>
+                              <td className="p-2 border-r">
+                                {editingBomItem === index ? (
+                                  <Input
+                                    value={item.unit}
+                                    onChange={(e) => {
+                                      const updated = [...bomItems];
+                                      updated[index].unit = e.target.value;
+                                      setBomItems(updated);
+                                    }}
+                                    className="min-w-[80px]"
+                                  />
+                                ) : (
+                                  item.unit
+                                )}
+                              </td>
+                              <td className="p-2">
+                                <div className="flex gap-1">
+                                  {editingBomItem === index ? (
+                                    <>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setEditingBomItem(null)}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <Save className="h-4 w-4 text-green-600" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setEditingBomItem(null);
+                                          // Reload BOM to cancel changes (you can store original state if needed)
+                                        }}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <X className="h-4 w-4 text-red-600" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setEditingBomItem(index)}
+                                      className="h-7 w-7 p-0"
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center p-8 text-muted-foreground">
+                      <Table className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No BOM items available</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Documents Required */}
