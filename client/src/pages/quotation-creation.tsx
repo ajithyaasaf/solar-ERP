@@ -5081,33 +5081,6 @@ export default function QuotationCreation() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="space-y-3 sm:space-y-4">
-                    <h4 className="font-medium text-sm sm:text-base">Quality Check</h4>
-                    {quotationSource === "site_visit" && siteVisitMapping && (
-                      <div className="space-y-2 text-xs sm:text-sm">
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="text-muted-foreground">Data Completeness:</span>
-                          <Badge variant={
-                            (siteVisitMapping as any).completenessAnalysis?.qualityGrade === 'A' ? 'default' :
-                            (siteVisitMapping as any).completenessAnalysis?.qualityGrade === 'B' ? 'secondary' : 'destructive'
-                          } className="text-xs">
-                            Grade {(siteVisitMapping as any).completenessAnalysis?.qualityGrade || 'Unknown'}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="text-muted-foreground">Completeness Score:</span>
-                          <span className="font-medium">
-                            {(siteVisitMapping as any).completenessAnalysis?.completenessScore || 0}%
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="text-xs text-muted-foreground">
-                      All required fields have been validated and pricing calculations are complete.
-                    </div>
-                  </div>
                 </div>
 
                 {/* Scope of Work */}
