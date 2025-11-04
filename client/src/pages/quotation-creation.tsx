@@ -4998,7 +4998,6 @@ export default function QuotationCreation() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        e.stopPropagation();
                                         setEditingBomItem(null);
                                       }
                                     }}
@@ -5020,7 +5019,6 @@ export default function QuotationCreation() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        e.stopPropagation();
                                         setEditingBomItem(null);
                                       }
                                     }}
@@ -5042,7 +5040,6 @@ export default function QuotationCreation() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        e.stopPropagation();
                                         setEditingBomItem(null);
                                       }
                                     }}
@@ -5064,7 +5061,6 @@ export default function QuotationCreation() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        e.stopPropagation();
                                         setEditingBomItem(null);
                                       }
                                     }}
@@ -5086,7 +5082,6 @@ export default function QuotationCreation() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        e.stopPropagation();
                                         setEditingBomItem(null);
                                       }
                                     }}
@@ -5109,7 +5104,6 @@ export default function QuotationCreation() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        e.stopPropagation();
                                         setEditingBomItem(null);
                                       }
                                     }}
@@ -5131,7 +5125,6 @@ export default function QuotationCreation() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        e.stopPropagation();
                                         setEditingBomItem(null);
                                       }
                                     }}
