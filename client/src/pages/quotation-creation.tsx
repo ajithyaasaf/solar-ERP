@@ -4367,7 +4367,9 @@ export default function QuotationCreation() {
                 {/* Editable Pricing Table */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-base">Quotation Pricing Details</h4>
-                  <div className="border rounded-lg overflow-hidden">
+                  
+                  {/* Desktop Table View (hidden on mobile) */}
+                  <div className="hidden lg:block border rounded-lg overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-muted">
                         <tr>
@@ -4553,6 +4555,204 @@ export default function QuotationCreation() {
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile/Tablet Card View (hidden on desktop) */}
+                  <div className="lg:hidden space-y-4">
+                    {form.watch("projects").map((project: any, index: number) => {
+                      const systemKW = project.systemKW || 0;
+                      const basePrice = project.basePrice || 0;
+                      const gstAmount = project.gstAmount || 0;
+                      const gstPercentage = project.gstPercentage || 18;
+                      const projectValue = project.projectValue || 0;
+                      
+                      const roundedSystemKW = systemKW > 0 
+                        ? (systemKW <= 3.5 ? Math.floor(systemKW) : Math.ceil(systemKW))
+                        : 0;
+                      
+                      const calculatedRatePerKW = basePrice && roundedSystemKW > 0
+                        ? Math.round(basePrice / roundedSystemKW)
+                        : 0;
+                      
+                      const calculatedGSTPerKW = gstAmount && roundedSystemKW > 0
+                        ? Math.round(gstAmount / roundedSystemKW)
+                        : 0;
+                      
+                      const defaultDescription = `Supply and Installation of ${systemKW}kw ${project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System`;
+                      const description = project.customDescription || defaultDescription;
+                      
+                      return (
+                        <Card key={index} className="border-2" data-testid={`card-pricing-project-${index}`}>
+                          <CardContent className="p-4 space-y-4">
+                            {/* Description */}
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">Description</label>
+                              <Input 
+                                type="text" 
+                                value={description}
+                                onChange={(e) => {
+                                  form.setValue(`projects.${index}.customDescription`, e.target.value);
+                                }}
+                                className="w-full"
+                                data-testid={`input-description-${index}`}
+                              />
+                            </div>
+
+                            {/* kW and Rate/kW */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground">kW</label>
+                                <Input 
+                                  type="number" 
+                                  step="0.01"
+                                  value={systemKW} 
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const newKW = value === '' ? 0 : (parseFloat(value) || 0);
+                                    const newRoundedKW = newKW > 0
+                                      ? (newKW <= 3.5 ? Math.floor(newKW) : Math.ceil(newKW))
+                                      : 0;
+                                    const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
+                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                    const newProjectValue = newBasePrice + newGSTAmount;
+                                    
+                                    const propertyType = getPropertyType();
+                                    const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
+                                    const newCustomerPayment = newProjectValue - newSubsidy;
+                                    
+                                    if (!project.customDescription) {
+                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
+                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
+                                      form.setValue(`projects.${index}.customDescription`, newDescription);
+                                    }
+                                    
+                                    form.setValue(`projects.${index}.systemKW`, newKW);
+                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      form.setValue(`projects.${index}.systemKW`, 0);
+                                    }
+                                  }}
+                                  className="w-full"
+                                  data-testid={`input-systemkw-${index}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground">Rate/kW (₹)</label>
+                                <Input 
+                                  type="number" 
+                                  value={calculatedRatePerKW} 
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                    const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
+                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                    const newProjectValue = newBasePrice + newGSTAmount;
+                                    
+                                    const propertyType = getPropertyType();
+                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                    const newCustomerPayment = newProjectValue - newSubsidy;
+                                    
+                                    form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
+                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      form.setValue(`projects.${index}.pricePerKW`, 0);
+                                    }
+                                  }}
+                                  className="w-full"
+                                  data-testid={`input-priceperkw-${index}`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Base Value */}
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">Base Value (₹)</label>
+                              <div className="p-2 bg-muted rounded-md font-medium">₹{basePrice.toLocaleString()}</div>
+                            </div>
+
+                            {/* GST Details */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground">GST %</label>
+                                <Input 
+                                  type="number" 
+                                  value={gstPercentage} 
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                    const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
+                                    const newProjectValue = basePrice + newGSTAmount;
+                                    
+                                    const propertyType = getPropertyType();
+                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                    const newCustomerPayment = newProjectValue - newSubsidy;
+                                    
+                                    form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
+                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                  }}
+                                  onBlur={(e) => {
+                                    if (e.target.value === '') {
+                                      form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
+                                    }
+                                  }}
+                                  className="w-full"
+                                  data-testid={`input-gstpercentage-${index}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground">GST/kW (₹)</label>
+                                <div className="p-2 bg-muted rounded-md text-sm">{calculatedGSTPerKW.toLocaleString()}</div>
+                              </div>
+                            </div>
+
+                            {/* GST Amount */}
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">GST Amount (₹)</label>
+                              <div className="p-2 bg-muted rounded-md font-medium">₹{gstAmount.toLocaleString()}</div>
+                            </div>
+
+                            {/* Total Value */}
+                            <div className="space-y-2 pt-2 border-t">
+                              <label className="text-xs font-medium text-muted-foreground">Total Value (₹)</label>
+                              <div className="p-3 bg-primary/10 rounded-md font-bold text-lg text-primary">₹{projectValue.toLocaleString()}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+
+                    {/* Totals Card for Mobile */}
+                    <Card className="border-2 bg-primary/5">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total System Cost:</span>
+                          <span className="font-bold">₹{form.watch("totalSystemCost")?.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total GST:</span>
+                          <span className="font-bold">₹{form.watch("totalGSTAmount")?.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-3 border-t-2">
+                          <span className="text-base font-bold">Grand Total (Including GST):</span>
+                          <span className="font-bold text-lg text-primary">₹{form.watch("totalWithGST")?.toLocaleString()}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                   <div className="text-sm text-muted-foreground italic">
                     Amount in words: <span className="font-medium">Rupees {(() => {
