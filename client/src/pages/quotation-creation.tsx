@@ -3692,6 +3692,9 @@ export default function QuotationCreation() {
   useEffect(() => {
     const fetchBomPreview = async () => {
       if (currentStep === 4 && form.watch("projects").length > 0) {
+        console.log("📦 BOM FETCH useEffect triggered - currentStep:", currentStep);
+        console.log("⚠️ WARNING: This useEffect should ONLY fetch BOM, NOT create quotation");
+        
         // Check if we have custom BOM from edit mode
         if (isEditMode && existingQuotation && (existingQuotation as any).customBillOfMaterials) {
           setBomItems((existingQuotation as any).customBillOfMaterials);
@@ -3704,6 +3707,7 @@ export default function QuotationCreation() {
           const project = form.watch("projects")[0];
           const propertyType = getPropertyType();
           
+          console.log("📦 Fetching BOM preview only (NOT creating quotation)");
           const response = await apiRequest("/api/quotations/preview-bom", "POST", {
             project,
             propertyType
@@ -3711,6 +3715,7 @@ export default function QuotationCreation() {
           
           const data = await response.json();
           setBomItems(data.billOfMaterials || []);
+          console.log("✅ BOM preview fetched successfully");
         } catch (error) {
           console.error("Error fetching BOM preview:", error);
           toast({
@@ -3729,10 +3734,12 @@ export default function QuotationCreation() {
 
   const onSubmit = (data: QuotationFormData) => {
     console.log("═══════════════════════════════════════════");
-    console.log("🚀 SUBMIT CLICKED - onSubmit triggered");
+    console.log("🚀🚀🚀 FORM SUBMIT - onSubmit triggered 🚀🚀🚀");
     console.log("⏰ Timestamp:", new Date().toISOString());
     console.log("📋 Current Step:", currentStep);
     console.log("📊 BOM Items Count:", bomItems.length);
+    console.log("🔍 Stack trace to see WHO called this:");
+    console.trace("Form submission trace");
     console.log("═══════════════════════════════════════════");
     console.log("Form data:", data);
     
