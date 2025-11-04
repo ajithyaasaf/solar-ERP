@@ -3728,9 +3728,12 @@ export default function QuotationCreation() {
   }, [currentStep, form, isEditMode, existingQuotation, toast]);
 
   const onSubmit = (data: QuotationFormData) => {
+    console.log("═══════════════════════════════════════════");
     console.log("🚀 SUBMIT CLICKED - onSubmit triggered");
     console.log("⏰ Timestamp:", new Date().toISOString());
     console.log("📋 Current Step:", currentStep);
+    console.log("📊 BOM Items Count:", bomItems.length);
+    console.log("═══════════════════════════════════════════");
     console.log("Form data:", data);
     
     // Validate business rules before submission
@@ -3951,7 +3954,8 @@ export default function QuotationCreation() {
               // Prevent Enter key from submitting form except on the submit button
               if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'BUTTON') {
                 e.preventDefault();
-                console.log("⚠️ Enter key pressed - prevented automatic form submission");
+                e.stopPropagation();
+                console.log("⚠️ Enter key pressed - prevented automatic form submission from:", e.target.tagName, e.target);
               }
             }}
             className="space-y-6"
@@ -4991,6 +4995,13 @@ export default function QuotationCreation() {
                                       updated[index].description = e.target.value;
                                       setBomItems(updated);
                                     }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingBomItem(null);
+                                      }
+                                    }}
                                     className="min-w-[200px]"
                                   />
                                 ) : (
@@ -5005,6 +5016,13 @@ export default function QuotationCreation() {
                                       const updated = [...bomItems];
                                       updated[index].type = e.target.value;
                                       setBomItems(updated);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingBomItem(null);
+                                      }
                                     }}
                                     className="min-w-[100px]"
                                   />
@@ -5021,6 +5039,13 @@ export default function QuotationCreation() {
                                       updated[index].volt = e.target.value;
                                       setBomItems(updated);
                                     }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingBomItem(null);
+                                      }
+                                    }}
                                     className="min-w-[80px]"
                                   />
                                 ) : (
@@ -5036,6 +5061,13 @@ export default function QuotationCreation() {
                                       updated[index].rating = e.target.value;
                                       setBomItems(updated);
                                     }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingBomItem(null);
+                                      }
+                                    }}
                                     className="min-w-[100px]"
                                   />
                                 ) : (
@@ -5050,6 +5082,13 @@ export default function QuotationCreation() {
                                       const updated = [...bomItems];
                                       updated[index].make = e.target.value;
                                       setBomItems(updated);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingBomItem(null);
+                                      }
                                     }}
                                     className="min-w-[120px]"
                                   />
@@ -5067,6 +5106,13 @@ export default function QuotationCreation() {
                                       updated[index].qty = parseInt(e.target.value) || 0;
                                       setBomItems(updated);
                                     }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingBomItem(null);
+                                      }
+                                    }}
                                     className="min-w-[80px]"
                                   />
                                 ) : (
@@ -5081,6 +5127,13 @@ export default function QuotationCreation() {
                                       const updated = [...bomItems];
                                       updated[index].unit = e.target.value;
                                       setBomItems(updated);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingBomItem(null);
+                                      }
                                     }}
                                     className="min-w-[80px]"
                                   />
