@@ -153,11 +153,11 @@ export default function Attendance() {
     refetch();
   };
 
-  // Enhanced timing refresh with cache clearing
+  // Enhanced timing refresh - keeps old data visible while fetching
   const refreshTiming = () => {
     console.log('ATTENDANCE: Refreshing department timing');
-    // Clear all timing-related cache
-    queryClient.removeQueries({ 
+    // Invalidate timing cache (keeps old data visible until new data arrives)
+    queryClient.invalidateQueries({ 
       predicate: (query) => {
         const queryKey = query.queryKey[0];
         if (typeof queryKey === 'string') {
