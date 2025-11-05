@@ -344,7 +344,6 @@ export default function Attendance() {
             disabled={currentPage === 1}
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="ml-1">Previous</span>
           </Button>
           <div className="hidden sm:flex items-center gap-1">
             {renderPageNumbers()}
@@ -358,7 +357,6 @@ export default function Attendance() {
             onClick={goToNextPage}
             disabled={currentPage === totalPages}
           >
-            <span className="mr-1">Next</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
