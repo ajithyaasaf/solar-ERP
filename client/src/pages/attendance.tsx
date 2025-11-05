@@ -15,7 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { 
   CalendarIcon, Search, Loader2, UserCheck, Clock, 
-  MapPin, Timer, Users, TrendingUp, Activity, Zap, RefreshCw
+  MapPin, Timer, Users, TrendingUp, Activity, Zap, RefreshCw,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { OvertimeExplanationCard } from "@/components/attendance/overtime-explanation-card";
@@ -32,6 +33,10 @@ export default function Attendance() {
   const [date, setDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("today");
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Check-in/out modal states
   const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -221,6 +226,28 @@ export default function Attendance() {
       return dateB - dateA;
     });
 
+  // Pagination calculations
+  const totalRecords = filteredAttendance.length;
+  const totalPages = Math.ceil(totalRecords / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAttendance = filteredAttendance.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search query or tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, activeTab]);
+
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const goToFirstPage = () => setCurrentPage(1);
+  const goToLastPage = () => setCurrentPage(totalPages);
+  const goToPreviousPage = () => setCurrentPage((prev) => Math.max(1, prev - 1));
+  const goToNextPage = () => setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+
   // Get attendance statistics
   const getAttendanceStats = (records: any[]) => {
     const total = records.length;
@@ -263,6 +290,90 @@ export default function Attendance() {
   const attendanceState = getAttendanceState();
   const canCheckIn = attendanceState.canCheckIn;
   const canCheckOut = attendanceState.canCheckOut;
+
+  // Pagination Component
+  const PaginationControls = () => {
+    if (totalPages <= 1) return null;
+
+    const renderPageNumbers = () => {
+      const pages = [];
+      const maxVisiblePages = 5;
+      
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(
+          <Button
+            key={i}
+            variant={currentPage === i ? "default" : "outline"}
+            size="sm"
+            onClick={() => goToPage(i)}
+            className="min-w-[2.5rem]"
+          >
+            {i}
+          </Button>
+        );
+      }
+      return pages;
+    };
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {startIndex + 1} to {Math.min(endIndex, totalRecords)} of {totalRecords} records
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToFirstPage}
+            disabled={currentPage === 1}
+            className="hidden sm:flex"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPreviousPage}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="ml-1">Previous</span>
+          </Button>
+          <div className="hidden sm:flex items-center gap-1">
+            {renderPageNumbers()}
+          </div>
+          <div className="sm:hidden text-sm font-medium">
+            Page {currentPage} of {totalPages}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+          >
+            <span className="mr-1">Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToLastPage}
+            disabled={currentPage === totalPages}
+            className="hidden sm:flex"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -603,19 +714,20 @@ export default function Attendance() {
               No attendance records found for the selected date
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Hours</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAttendance.map((record: any) => (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Check In</TableHead>
+                      <TableHead>Check Out</TableHead>
+                      <TableHead>Hours</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedAttendance.map((record: any) => (
                     <TableRow key={record.id}>
                       <TableCell>
                         <div className="flex flex-col">
@@ -654,10 +766,12 @@ export default function Attendance() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls />
+            </>
           )}
         </CardContent>
           </Card>
@@ -681,8 +795,9 @@ export default function Attendance() {
                   No attendance records found for this week
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {filteredAttendance.slice(0, 7).map((record: any) => (
+                <>
+                  <div className="space-y-4">
+                    {paginatedAttendance.map((record: any) => (
                     <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
                       <div className="flex items-center gap-4">
                         <div className="flex flex-col">
@@ -715,8 +830,10 @@ export default function Attendance() {
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                  <PaginationControls />
+                </>
               )}
             </CardContent>
           </Card>
@@ -760,19 +877,20 @@ export default function Attendance() {
                   No attendance records found for the selected month
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Check In</TableHead>
-                        <TableHead>Check Out</TableHead>
-                        <TableHead>Hours</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAttendance.map((record: any) => (
+                <>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Check Out</TableHead>
+                          <TableHead>Hours</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedAttendance.map((record: any) => (
                         <TableRow key={record.id}>
                           <TableCell>
                             <div className="flex flex-col">
@@ -811,10 +929,12 @@ export default function Attendance() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <PaginationControls />
+                </>
               )}
             </CardContent>
           </Card>
