@@ -207,12 +207,19 @@ export default function Attendance() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // Filter attendance records based on search query
-  const filteredAttendance = attendanceRecords.filter((record: any) =>
-    record.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    record.userEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    record.userDepartment?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter and sort attendance records based on search query
+  const filteredAttendance = attendanceRecords
+    .filter((record: any) =>
+      record.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.userEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.userDepartment?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a: any, b: any) => {
+      // Sort by date in descending order (newest first)
+      const dateA = new Date(a.checkInTime || a.date).getTime();
+      const dateB = new Date(b.checkInTime || b.date).getTime();
+      return dateB - dateA;
+    });
 
   // Get attendance statistics
   const getAttendanceStats = (records: any[]) => {
