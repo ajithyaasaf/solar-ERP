@@ -405,7 +405,10 @@ export const hybridConfigSchema = offGridConfigSchema.extend({
 export const waterHeaterConfigSchema = z.object({
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
+  qty: z.number().min(1).default(1),
+  waterHeaterModel: z.enum(['pressurised', 'non_pressurised']).optional(),
   heatingCoil: z.string().optional(),
+  labourAndTransport: z.boolean().default(false),
   productImage: z.string().optional(), // Optional product image URL
   projectValue: z.number().min(0),
   others: z.string().optional(),
@@ -425,6 +428,11 @@ export const waterPumpConfigSchema = z.object({
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
+  inverterPhase: z.enum(inverterPhases).optional(),
+  lightningArrest: z.boolean().default(false),
+  electricalAccessories: z.boolean().default(false),
+  earthConnection: z.array(z.enum(earthingTypes)).default([]),
+  labourAndTransport: z.boolean().default(false),
   projectValue: z.number().min(0),
   others: z.string().optional(),
   // New fields from client specification
@@ -1619,7 +1627,10 @@ export const quotationWaterHeaterProjectSchema = z.object({
   projectType: z.literal("water_heater"),
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
+  qty: z.number().min(1).default(1),
+  waterHeaterModel: z.enum(['pressurised', 'non_pressurised']).optional(),
   heatingCoil: z.string().optional(),
+  labourAndTransport: z.boolean().default(false),
   productImage: z.string().optional(), // Optional product image URL
   floor: z.enum(floorLevels).optional(),
   plumbingWorkScope: z.enum(workScopeOptions).optional(),
@@ -1649,6 +1660,11 @@ export const quotationWaterPumpProjectSchema = z.object({
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
+  inverterPhase: z.enum(inverterPhases).optional(),
+  lightningArrest: z.boolean().default(false),
+  electricalAccessories: z.boolean().default(false),
+  earthConnection: z.array(z.enum(earthingTypes)).default([]),
+  labourAndTransport: z.boolean().default(false),
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
     lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),

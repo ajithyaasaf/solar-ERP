@@ -1278,7 +1278,9 @@ export class QuotationTemplateService {
         const roundedKW_onGrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_onGrid > 0 ? basePrice / roundedKW_onGrid : 0;
         
-        description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
+        const inverterKW_onGrid = project.inverterKW || Math.floor(kw);
+        const phase_onGrid = project.inverterPhase === 'three_phase' ? '3 Phase' : 'Single Phase';
+        description = `Supply and Installation of ${Math.floor(kw)} kW, ${inverterKW_onGrid} KW Inverter, ${phase_onGrid} On GRID Solar System`;
         break;
 
       case 'off_grid':
@@ -1306,12 +1308,13 @@ export class QuotationTemplateService {
         const panelWatts_offGrid = project.panelWatts || '530';
         const panelCount_offGrid = project.panelCount || 1;
         const inverterKVA_offGrid = (project as any).inverterKVA || project.inverterKW || '1';
-        const batteryVolt_offGrid = project.voltage || 12;
+        const inverterVolt_offGrid = (project as any).inverterVolt || (project.voltage * project.batteryCount) || 12;
         const batteryAH_offGrid = project.batteryAH || '100';
         const batteryCount_offGrid = project.batteryCount || 1;
-        const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
+        const phase_offGrid = project.inverterPhase === 'three_phase' ? '3-phase' : '1-phase';
+        const inverterMake_offGrid = project.inverterMake && project.inverterMake.length > 0 ? project.inverterMake.join('/').toUpperCase() : 'MPPT';
         
-        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${batteryVolt_offGrid}v ${phase_offGrid}PH MPPT Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid} Offgrid Solar System`;
         break;
 
       case 'hybrid':
@@ -1336,19 +1339,21 @@ export class QuotationTemplateService {
         ratePerKw = roundedKW_hybrid > 0 ? basePrice / roundedKW_hybrid : 0;
         
         // Dynamic description based on actual configuration
-        const panelWatts_hybrid = project.panelWatts || '530';
-        const panelCount_hybrid = project.panelCount || 1;
+        const panelKW_hybrid = Math.floor(kw);
         const inverterKVA_hybrid = (project as any).inverterKVA || project.inverterKW || '1';
-        const batteryVolt_hybrid = project.voltage || 12;
+        const inverterVolt_hybrid = (project as any).inverterVolt || (project.voltage * project.batteryCount) || 12;
+        const phase_hybrid = project.inverterPhase === 'three_phase' ? '3 phase' : 'single phase';
+        const batteryBrand_hybrid = project.batteryBrand ? project.batteryBrand.toUpperCase().replace('_', ' ') : 'UTL';
         const batteryAH_hybrid = project.batteryAH || '100';
+        const batteryType_hybrid = project.batteryType === 'lithium' ? 'Lithium Battery' : 'Lead Acid Battery';
         const batteryCount_hybrid = project.batteryCount || 1;
-        const phase_hybrid = project.inverterPhase === 'three_phase' ? '3' : '1';
         
-        description = `Supply and Installation of ${panelWatts_hybrid}W X ${panelCount_hybrid} Nos Panel, ${inverterKVA_hybrid}KVA/${batteryVolt_hybrid}v ${phase_hybrid}PH MPPT Inverter, ${batteryAH_hybrid}AH X ${batteryCount_hybrid}, ${phase_hybrid}-Phase Hybrid Solar System`;
+        description = `Supply and Installation of ${panelKW_hybrid} KW PANEL, ${inverterKVA_hybrid}KVA/${inverterVolt_hybrid}V ${phase_hybrid} ${batteryBrand_hybrid} ${batteryAH_hybrid}AH ${batteryType_hybrid} ${batteryCount_hybrid} Nos, Hybrid Solar System`;
         break;
 
       case 'water_heater':
         const litres = project.litre || 100;
+        const qty = (project as any).qty || 1;
         
         // Use project values if available (from frontend calculation)
         if ((project as any).basePrice && (project as any).gstAmount) {
@@ -1365,7 +1370,13 @@ export class QuotationTemplateService {
         // For water heater, rate per kW is same as base price (no kW calculation)
         ratePerKw = basePrice;
         kw = 1; // Set kw to 1 for water heater to avoid division by zero
-        description = `Supply and Installation of ${litres}L Solar Water Heater - ${project.brand || 'Standard'} Brand`;
+        
+        const brandName = project.brand ? project.brand.replace('_', ' ').toUpperCase() : 'VENUS';
+        const modelType = (project as any).waterHeaterModel === 'pressurised' ? 'Pressurized' : 'Non-Pressurized';
+        const heatingCoilText = (project as any).heatingCoil ? ` ${(project as any).heatingCoil}` : '';
+        const labourAndTransportText = (project as any).labourAndTransport ? ' Labour and Transport' : '';
+        
+        description = `Supply and installation of ${brandName} make solar water heater ${litres} LPD commercial ${modelType} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilText}${labourAndTransportText} Including GST`;
         break;
 
       case 'water_pump':
@@ -1386,7 +1397,37 @@ export class QuotationTemplateService {
         // For water pump, rate per kW is same as base price (no kW calculation)
         ratePerKw = basePrice;
         kw = 1; // Set kw to 1 for water pump to avoid division by zero
-        description = `Supply and Installation of ${hp}HP Solar Water Pump with ${project.panelCount || 4} Solar Panels`;
+        
+        const driveHP = hp;
+        const panelWatts_pump = project.panelWatts || '540';
+        const panelCount_pump = project.panelCount || 10;
+        const panelKW_pump = Math.floor((parseInt(panelWatts_pump) * panelCount_pump) / 1000);
+        const panelBrand_pump = project.panelBrand && project.panelBrand.length > 0 ? project.panelBrand.join('/').toUpperCase() : 'UTL';
+        const phase_pump = (project as any).inverterPhase === 'three_phase' ? '3 Phase' : 'Single Phase';
+        const lowerHeight_pump = (project as any).gpStructure?.lowerEndHeight || '3';
+        const higherHeight_pump = (project as any).gpStructure?.higherEndHeight || '4';
+        
+        let descriptionParts = [`Supply and Installation solar power System Includes: ${driveHP}HP Drive`];
+        descriptionParts.push(`${panelKW_pump}KW ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${driveHP}HP Drive`);
+        descriptionParts.push(`${phase_pump}, ${panelKW_pump}KW Structure`);
+        descriptionParts.push(`Structure ${lowerHeight_pump} feet lower to ${higherHeight_pump} feet higher`);
+        
+        if ((project as any).earthConnection && (project as any).earthConnection.length > 0) {
+          descriptionParts.push('Earth kit');
+        }
+        if ((project as any).lightningArrest) {
+          descriptionParts.push('Lighting Arrester');
+        }
+        if ((project as any).electricalAccessories) {
+          descriptionParts.push('Electrical Accessories');
+        } else {
+          descriptionParts.push('DC Cable');
+        }
+        if ((project as any).labourAndTransport) {
+          descriptionParts.push('Labour and Transport');
+        }
+        
+        description = descriptionParts.join(', ');
         break;
 
       default:
