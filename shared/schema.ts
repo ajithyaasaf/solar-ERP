@@ -1730,6 +1730,10 @@ export const insertQuotationSchema = z.object({
     unit: z.string()
   })).optional(),
   
+  // Custom Scope of Work items (optional override)
+  customCompanyScopeItems: z.record(z.array(z.string())).optional(), // Key: projectIndex, Value: array of scope items
+  customCustomerScopeItems: z.record(z.array(z.string())).optional(), // Key: projectIndex, Value: array of scope items
+  
   // Pricing and financial details
   totalSystemCost: z.number().min(0),
   totalSubsidyAmount: z.number().min(0).default(0),

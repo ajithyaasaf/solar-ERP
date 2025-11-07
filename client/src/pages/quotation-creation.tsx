@@ -2993,6 +2993,15 @@ export default function QuotationCreation() {
   const [bomItems, setBomItems] = useState<any[]>([]);
   const [isFetchingBom, setIsFetchingBom] = useState(false);
   const [editingBomItem, setEditingBomItem] = useState<number | null>(null);
+  
+  // State for editable scope of work sections
+  const [companyScopeItems, setCompanyScopeItems] = useState<{[projectIndex: number]: string[]}>({});
+  const [customerScopeItems, setCustomerScopeItems] = useState<{[projectIndex: number]: string[]}>({});
+  const [editingCompanyScope, setEditingCompanyScope] = useState<{projectIndex: number, itemIndex: number} | null>(null);
+  const [editingCustomerScope, setEditingCustomerScope] = useState<{projectIndex: number, itemIndex: number} | null>(null);
+  const [customFloorText, setCustomFloorText] = useState<{[projectIndex: number]: string}>({});
+  const [editingFloor, setEditingFloor] = useState<number | null>(null);
+  
   const { toast } = useToast();
   
   // Fetch existing quotation data if in edit mode (FIX: Use proper URL string)
@@ -3363,6 +3372,19 @@ export default function QuotationCreation() {
         siteVisitMapping: quotation.siteVisitMapping
       });
       
+      // Initialize custom scope items from existing quotation data
+      if (quotation.customCompanyScopeItems) {
+        setCompanyScopeItems(quotation.customCompanyScopeItems);
+      }
+      if (quotation.customCustomerScopeItems) {
+        setCustomerScopeItems(quotation.customCustomerScopeItems);
+      }
+      
+      // Also load custom BOM if it exists
+      if (quotation.customBillOfMaterials && quotation.customBillOfMaterials.length > 0) {
+        setBomItems(quotation.customBillOfMaterials);
+      }
+      
       toast({
         title: "Edit Mode",
         description: `Editing quotation ${quotation.quotationNumber}. Revision: R${quotation.documentVersion || 1}`,
@@ -3550,6 +3572,114 @@ export default function QuotationCreation() {
     }
   }, [fallbackSiteVisitData, mappingError, mappingData, form]);
 
+  // Initialize scope items from project configuration
+  useEffect(() => {
+    const projects = form.watch("projects");
+    if (!projects || projects.length === 0 || currentStep !== 4) return; // Only when on Review & Submit step
+    
+    // Helper to generate default company scope items for a project
+    const generateCompanyScopeItems = (project: any, projectIndex: number): string[] => {
+      const items: string[] = [];
+      const floor = project.floor || '0';
+      const lowerHeight = project.gpStructure?.lowerEndHeight || '7';
+      const higherHeight = project.gpStructure?.higherEndHeight || '8';
+      const floorMap: Record<string, string> = {
+        '0': 'Ground Floor',
+        '1': '1st Floor',
+        '2': '2nd Floor',
+        '3': '3rd Floor',
+        '4': '4th Floor'
+      };
+      const floorText = customFloorText[projectIndex] || floorMap[floor] || 'Ground Floor';
+      
+      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : 
+                              project.projectType === 'off_grid' ? 'Off-Grid' : 
+                              project.projectType === 'hybrid' ? 'Hybrid' :
+                              project.projectType === 'water_heater' ? 'Solar Water Heater' :
+                              project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType;
+      
+      // Structure item for solar projects
+      if (['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
+        items.push(`For ${projectTypeName}, South facing slant mounting of lower end height is ${lowerHeight} feet & ${higherHeight} feet at higher end. (${floorText})`);
+      }
+      
+      // Civil work if company scope
+      if (project.civilWorkScope === 'company_scope') {
+        items.push('Civil work including earth pit digging and chamber construction');
+      }
+      
+      // Net meter if company scope
+      if (project.netMeterScope === 'company_scope') {
+        items.push('Net (Bi-directional) Meter - Application and Installation');
+      }
+      
+      // Electrical work if company scope
+      if (project.electricalWorkScope === 'company_scope') {
+        items.push('Complete electrical work and wiring');
+      }
+      
+      // Plumbing work if company scope (for water heater/pump)
+      if (project.plumbingWorkScope === 'company_scope') {
+        items.push('Plumbing work and water connections');
+      }
+      
+      return items;
+    };
+    
+    // Helper to generate default customer scope items for a project
+    const generateCustomerScopeItems = (project: any): string[] => {
+      const items: string[] = [];
+      
+      // Civil work if customer scope
+      if (project.civilWorkScope === 'customer_scope') {
+        items.push('Earth pit digging');
+        if (['gp_structure', 'gi_structure', 'gi_round_pipe', 'ms_square_pipe'].includes(project.structureType)) {
+          items.push('1 feet chamber and concrete (for Structure)');
+        }
+      }
+      
+      // Net meter if customer scope
+      if (project.netMeterScope === 'customer_scope') {
+        items.push('Application and Installation charges for net meter to be paid by Customer');
+      }
+      
+      // Electrical work if customer scope
+      if (project.electricalWorkScope === 'customer_scope') {
+        items.push('Electrical work and wiring');
+      }
+      
+      // Plumbing work if customer scope (for water heater/pump)
+      if (project.plumbingWorkScope === 'customer_scope') {
+        items.push('Plumbing work and water connections');
+      }
+      
+      return items;
+    };
+    
+    // Initialize or update scope items for all projects
+    setCompanyScopeItems(prev => {
+      const updated = { ...prev };
+      projects.forEach((project: any, index: number) => {
+        // Only initialize if not already set (preserve user edits)
+        if (!updated[index]) {
+          updated[index] = generateCompanyScopeItems(project, index);
+        }
+      });
+      return updated;
+    });
+    
+    setCustomerScopeItems(prev => {
+      const updated = { ...prev };
+      projects.forEach((project: any, index: number) => {
+        // Only initialize if not already set (preserve user edits)
+        if (!updated[index]) {
+          updated[index] = generateCustomerScopeItems(project);
+        }
+      });
+      return updated;
+    });
+  }, [form, currentStep, customFloorText]); // Re-run when projects change or step changes
+  
   // Scroll to top when step changes
   useEffect(() => {
     const mainElement = document.querySelector('main.overflow-y-auto');
@@ -3781,6 +3911,8 @@ export default function QuotationCreation() {
       preparedBy: user?.uid || "", // Use actual authenticated user ID
       projects: data.projects, // Already validated by schema
       customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
+      customCompanyScopeItems: Object.keys(companyScopeItems).length > 0 ? companyScopeItems : undefined, // Include custom company scope if edited
+      customCustomerScopeItems: Object.keys(customerScopeItems).length > 0 ? customerScopeItems : undefined, // Include custom customer scope if edited
       totalSystemCost,
       totalSubsidyAmount,
       totalCustomerPayment: calculatedCustomerPayment,
@@ -5085,69 +5217,190 @@ export default function QuotationCreation() {
 
                 {/* Scope of Work */}
                 <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <h4 className="font-medium text-base">Scope of Work</h4>
-                  {form.watch("projects").map((project: any, index: number) => {
-                    const structureTypeMap: Record<string, string> = {
-                      'gp_structure': 'GI Pole',
-                      'mono_rail': 'Mono Rail',
-                      'gi_round_pipe': 'GI Round Pipe',
-                      'ms_square_pipe': 'MS Square Pipe'
-                    };
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-base">Scope of Work</h4>
+                    <Badge variant="outline" className="text-xs">Company Responsibility</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Click on any item to edit. Items shown are marked as company scope.</p>
+                  
+                  {form.watch("projects").map((project: any, projectIndex: number) => {
+                    const items = companyScopeItems[projectIndex] || [];
                     
-                    const structureType = structureTypeMap[project.structureType] || 'GI Pole';
-                    const floorLevel = project.floorLevel || 'ground';
-                    const lowerHeight = project.lowerEndHeight || '7';
-                    const higherHeight = project.higherEndHeight || '8';
-                    
-                    return (
-                      <div key={index} className="space-y-3">
-                        {index > 0 && <Separator className="my-3" />}
+                    return items.length > 0 ? (
+                      <div key={projectIndex} className="space-y-3">
+                        {projectIndex > 0 && <Separator className="my-3" />}
                         
-                        <div className="space-y-2 text-sm">
-                          <div>
-                            <span className="font-semibold">1) Structure</span>
-                            <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                              <li>
-                                For {project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType}, 
-                                South facing slant mounting of lower end height is {lowerHeight} feet & {higherHeight} feet at higher end. 
-                                ({floorLevel === 'ground' ? 'Ground Floor' : floorLevel === '1st_floor' ? '1st Floor' : floorLevel === '2nd_floor' ? '2nd Floor' : floorLevel === '3rd_floor' ? '3rd Floor' : 'Ground Floor'})
-                              </li>
-                            </ul>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              Project {projectIndex + 1}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {project.projectType === 'on_grid' ? 'On-Grid Solar' : 
+                               project.projectType === 'off_grid' ? 'Off-Grid Solar' : 
+                               project.projectType === 'hybrid' ? 'Hybrid Solar' :
+                               project.projectType === 'water_heater' ? 'Solar Water Heater' :
+                               project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType}
+                            </span>
                           </div>
                           
-                          <div>
-                            <span className="font-semibold">2) Net (Bi-directional) Meter</span>
-                            <ul className="list-disc list-inside ml-4 mt-1">
-                              <li>We will take the responsibility of applying to EB at Customer's Expense.</li>
-                            </ul>
-                          </div>
+                          <ul className="space-y-2 text-sm">
+                            {items.map((item, itemIndex) => (
+                              <li key={itemIndex} className="flex items-start gap-2 group">
+                                <span className="text-muted-foreground mt-0.5">•</span>
+                                {editingCompanyScope?.projectIndex === projectIndex && editingCompanyScope?.itemIndex === itemIndex ? (
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const newItems = [...items];
+                                      newItems[itemIndex] = e.target.value;
+                                      setCompanyScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                                    }}
+                                    onBlur={() => setEditingCompanyScope(null)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        setEditingCompanyScope(null);
+                                      }
+                                      if (e.key === 'Escape') {
+                                        setEditingCompanyScope(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                    className="flex-1 text-sm"
+                                  />
+                                ) : (
+                                  <>
+                                    <span className="flex-1">{item}</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => setEditingCompanyScope({ projectIndex, itemIndex })}
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-xs mt-2"
+                            onClick={() => {
+                              const newItems = [...(companyScopeItems[projectIndex] || []), 'New scope item'];
+                              setCompanyScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                              setEditingCompanyScope({ projectIndex, itemIndex: newItems.length - 1 });
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Item
+                          </Button>
                         </div>
                       </div>
-                    );
+                    ) : null;
                   })}
                 </div>
 
                 {/* Customer's Scope of Work */}
                 <div className="space-y-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <h4 className="font-medium text-base">Customer's Scope of Work</h4>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <span className="font-semibold">1) Civil work</span>
-                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                        <li>Earth pit digging</li>
-                        {form.watch("projects").some((p: any) => p.structureType === 'gp_structure' || p.structureType === 'gi_structure' || p.structureType === 'gi_round_pipe' || p.structureType === 'ms_square_pipe') && (
-                          <li>1 feet chamber and concrete (for Structure)</li>
-                        )}
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <span className="font-semibold">2) Net (Bi-directional) Meter</span>
-                      <ul className="list-disc list-inside ml-4 mt-1">
-                        <li>Application and Installation charges for net meter to be paid by Customer.</li>
-                      </ul>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-base">Customer's Scope of Work</h4>
+                    <Badge variant="outline" className="text-xs">Customer Responsibility</Badge>
                   </div>
+                  <p className="text-xs text-muted-foreground">Click on any item to edit. Items shown are marked as customer scope.</p>
+                  
+                  {form.watch("projects").map((project: any, projectIndex: number) => {
+                    const items = customerScopeItems[projectIndex] || [];
+                    
+                    return items.length > 0 ? (
+                      <div key={projectIndex} className="space-y-3">
+                        {projectIndex > 0 && <Separator className="my-3" />}
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              Project {projectIndex + 1}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {project.projectType === 'on_grid' ? 'On-Grid Solar' : 
+                               project.projectType === 'off_grid' ? 'Off-Grid Solar' : 
+                               project.projectType === 'hybrid' ? 'Hybrid Solar' :
+                               project.projectType === 'water_heater' ? 'Solar Water Heater' :
+                               project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType}
+                            </span>
+                          </div>
+                          
+                          <ul className="space-y-2 text-sm">
+                            {items.map((item, itemIndex) => (
+                              <li key={itemIndex} className="flex items-start gap-2 group">
+                                <span className="text-muted-foreground mt-0.5">•</span>
+                                {editingCustomerScope?.projectIndex === projectIndex && editingCustomerScope?.itemIndex === itemIndex ? (
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const newItems = [...items];
+                                      newItems[itemIndex] = e.target.value;
+                                      setCustomerScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                                    }}
+                                    onBlur={() => setEditingCustomerScope(null)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        setEditingCustomerScope(null);
+                                      }
+                                      if (e.key === 'Escape') {
+                                        setEditingCustomerScope(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                    className="flex-1 text-sm"
+                                  />
+                                ) : (
+                                  <>
+                                    <span className="flex-1">{item}</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => setEditingCustomerScope({ projectIndex, itemIndex })}
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-xs mt-2"
+                            onClick={() => {
+                              const newItems = [...(customerScopeItems[projectIndex] || []), 'New scope item'];
+                              setCustomerScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                              setEditingCustomerScope({ projectIndex, itemIndex: newItems.length - 1 });
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Item
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={projectIndex} className="text-sm text-muted-foreground italic">
+                        No customer scope items for Project {projectIndex + 1}. All work is company's responsibility.
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Bill of Materials Preview */}
