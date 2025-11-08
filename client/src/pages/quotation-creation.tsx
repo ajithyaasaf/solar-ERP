@@ -210,134 +210,6 @@ const formatStructureTypeLabel = (type: string): string => {
   return labels[type] || type;
 };
 
-// Helper function to format brand names
-const formatBrandName = (brand: string): string => {
-  const labels: Record<string, string> = {
-    'renew': 'Renew',
-    'premier': 'Premier',
-    'utl_solar': 'UTL Solar',
-    'loom_solar': 'Loom Solar',
-    'kirloskar': 'Kirloskar',
-    'adani_solar': 'Adani Solar',
-    'vikram_solar': 'Vikram Solar',
-    'growatt': 'Growatt',
-    'deye': 'Deye',
-    'polycab': 'Polycab',
-    'utl': 'UTL',
-    'microtech': 'Microtech',
-    'exide': 'Exide',
-    'exide_utl': 'Exide UTL',
-    'venus': 'Venus',
-    'pressurised': 'Pressurised',
-    'non_pressurised': 'Non-Pressurised',
-    'hykon': 'Hykon'
-  };
-  return labels[brand] || brand;
-};
-
-// Helper function to format battery type
-const formatBatteryType = (type: string): string => {
-  const labels: Record<string, string> = {
-    'lead_acid': 'Lead Acid Battery',
-    'lithium': 'Lithium Battery'
-  };
-  return labels[type] || type;
-};
-
-// Helper function to format phase
-const formatPhase = (phase: string): string => {
-  return phase === 'single_phase' ? '1-Phase' : '3 Phase';
-};
-
-// Helper function to generate project description based on project type
-const getProjectDescription = (project: any): string => {
-  const projectType = project.projectType;
-  
-  if (projectType === 'on_grid') {
-    const systemKW = project.systemKW || 0;
-    const inverterKW = project.inverterKW || 0;
-    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
-    return `Supply and Installation of ${systemKW}kw, ${inverterKW}KW Inverter ${phase}, On-Grid Solar System`;
-  }
-  
-  if (projectType === 'off_grid') {
-    const panelWatts = project.panelWatts || '';
-    const panelCount = project.panelCount || 0;
-    const inverterKVA = project.inverterKVA || '';
-    const inverterVolt = project.inverterVolt || '';
-    const inverterMake = project.inverterMake && project.inverterMake.length > 0 
-      ? formatBrandName(project.inverterMake[0]).toUpperCase() 
-      : 'MPPT';
-    const batteryAH = project.batteryAH || '';
-    const batteryCount = project.batteryCount || 0;
-    
-    return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}V ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount} Off-Grid Solar System`;
-  }
-  
-  if (projectType === 'hybrid') {
-    const systemKW = project.systemKW || 0;
-    const inverterKVA = project.inverterKVA || '';
-    const inverterVolt = project.inverterVolt || '';
-    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
-    const batteryBrand = project.batteryBrand ? formatBrandName(project.batteryBrand) : '';
-    const batteryAH = project.batteryAH || '';
-    const batteryType = project.batteryType ? formatBatteryType(project.batteryType) : '';
-    const batteryCount = project.batteryCount || 0;
-    
-    return `Supply and Installation of ${systemKW}KW Panel, ${inverterKVA}KVA/${inverterVolt}V ${phase} Hybrid Inverter, ${batteryBrand} ${batteryAH}AH ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
-  }
-  
-  if (projectType === 'water_heater') {
-    const brand = project.brand ? formatBrandName(project.brand) : '';
-    const litre = project.litre || 0;
-    const model = project.waterHeaterModel === 'pressurised' ? 'Pressurized' : 'Non-Pressurized';
-    const heatingCoilText = project.heatingCoilType ? ` ${project.heatingCoilType}` : '';
-    const labourAndTransportText = project.labourAndTransport ? ' Labour and Transport' : '';
-    
-    return `Supply and installation of ${brand} make solar water heater ${litre} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilText}${labourAndTransportText} Including GST`;
-  }
-  
-  if (projectType === 'water_pump') {
-    const driveHP = project.driveHP || project.hp || ''; // Support both old and new field names
-    const systemKW = project.systemKW || 0;
-    const panelWatts = project.panelWatts || '';
-    const panelCount = project.panelCount || 0;
-    const panelBrand = project.panelBrand && project.panelBrand.length > 0 
-      ? formatBrandName(project.panelBrand[0]) 
-      : '';
-    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
-    
-    // Structure details
-    const lowerHeight = project.gpStructure?.lowerEndHeight || '3';
-    const higherHeight = project.gpStructure?.higherEndHeight || '4';
-    
-    // Build optional components list
-    const components: string[] = [];
-    if (project.lightningArrest) {
-      components.push('Lightning Arrester');
-    }
-    if (project.earthConnection && project.earthConnection.length > 0) {
-      components.push('Earth kit');
-    }
-    if (project.electricalAccessories) {
-      components.push('Electrical Accessories');
-    } else {
-      components.push('DC Cable');
-    }
-    if (project.labourAndTransport) {
-      components.push('Labour and Transport');
-    }
-    
-    const componentsText = components.length > 0 ? `, ${components.join(', ')}` : '';
-    
-    return `Supply and Installation solar power System Includes: ${driveHP}HP Drive, ${systemKW}KW ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase}, ${systemKW}KW Structure, Structure ${lowerHeight} feet lower to ${higherHeight} feet higher${componentsText}`;
-  }
-  
-  // Fallback for unknown project types
-  const systemKW = project.systemKW || 0;
-  return `Supply and Installation of ${systemKW}kw ${projectType.replace('_', ' ')} Solar System`;
-};
-
 // Site visit mapping interface
 interface SiteVisitMapping {
   id: string;
@@ -959,10 +831,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           ...newProject,
           brand: "venus",
           litre: 100,
-          qty: 1,
-          waterHeaterModel: "non_pressurised",
-          heatingCoilType: "heating_coil",
-          labourAndTransport: false,
+          heatingCoil: "",
           floor: "0",
           plumbingWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
@@ -972,23 +841,18 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       case "water_pump":
         newProject = {
           ...newProject,
-          driveHP: "1",
+          hp: "1",
           drive: "vfd",
-          panelWatts: "540",
+          panelWatts: "530",
           panelType: "bifacial",
           structureType: "gp_structure",
           panelBrand: [],
-          dcrPanelCount: 10,
+          dcrPanelCount: 6,
           nonDcrPanelCount: 0,
-          panelCount: 10,
-          inverterPhase: "three_phase",
-          lightningArrest: false,
-          electricalAccessories: false,
-          earthConnection: [],
-          labourAndTransport: false,
+          panelCount: 6,
           gpStructure: {
-            lowerEndHeight: "3",
-            higherEndHeight: "4"
+            lowerEndHeight: "0",
+            higherEndHeight: "0"
           },
           monoRail: {
             type: "mini_rail"
@@ -2580,34 +2444,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Quantity *</label>
-            <Input
-              type="number"
-              min="1"
-              value={project.qty ?? 1}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFieldChange('qty', value === '' ? 1 : parseInt(value) || 1);
-              }}
-              placeholder="1"
-              data-testid={`input-qty-${projectIndex}`}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Water Heater Model *</label>
-            <Select value={project.waterHeaterModel || 'non_pressurised'} onValueChange={(value) => handleFieldChange('waterHeaterModel', value)}>
-              <SelectTrigger data-testid={`select-heater-model-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pressurised">Pressurised</SelectItem>
-                <SelectItem value="non_pressurised">Non-Pressurised</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
             <label className="text-sm font-medium">Heating Coil Type</label>
             <Input
               value={project.heatingCoil || ''}
@@ -2677,7 +2513,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
         {/* Work Scope Section for Water Heater */}
         <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Work Scope & Additional Options</h4>
+          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Plumbing Work Scope</label>
@@ -2710,18 +2546,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2 flex items-center space-x-2 pt-6">
-              <Checkbox
-                id={`labour-transport-heater-${projectIndex}`}
-                checked={project.labourAndTransport || false}
-                onCheckedChange={(checked) => handleFieldChange('labourAndTransport', checked)}
-                data-testid={`checkbox-labour-transport-heater-${projectIndex}`}
-              />
-              <label htmlFor={`labour-transport-heater-${projectIndex}`} className="text-sm font-medium cursor-pointer">
-                Labour and Transport
-              </label>
-            </div>
           </div>
         </div>
 
@@ -2744,8 +2568,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Drive HP *</label>
-            <Select value={project.driveHP || project.hp || "1"} onValueChange={(value) => handleFieldChange('driveHP', value)}>
+            <label className="text-sm font-medium">Motor HP *</label>
+            <Select value={project.hp || "1"} onValueChange={(value) => handleFieldChange('hp', value)}>
               <SelectTrigger data-testid={`select-hp-${projectIndex}`}>
                 <SelectValue />
               </SelectTrigger>
@@ -3056,77 +2880,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
         </div>
 
-        {/* Inverter & Electrical Options for Water Pump */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Inverter & Electrical Options</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Inverter Phase</label>
-              <Select value={project.inverterPhase || 'three_phase'} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
-                <SelectTrigger data-testid={`select-inverter-phase-pump-${projectIndex}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {inverterPhases.map((phase) => (
-                    <SelectItem key={phase} value={phase}>
-                      {phase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Earth Connection</label>
-              <div className="space-y-2 max-h-20 overflow-y-auto border rounded p-2">
-                {earthingTypes.map((type) => (
-                  <div key={type} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`earth-${type}-${projectIndex}`}
-                      checked={project.earthConnection?.includes(type) || false}
-                      onCheckedChange={(checked) => {
-                        const currentTypes = project.earthConnection || [];
-                        const newTypes = checked 
-                          ? [...currentTypes, type]
-                          : currentTypes.filter((t: string) => t !== type);
-                        handleFieldChange('earthConnection', newTypes);
-                      }}
-                      data-testid={`checkbox-earth-${type}-${projectIndex}`}
-                    />
-                    <label htmlFor={`earth-${type}-${projectIndex}`} className="text-sm cursor-pointer">
-                      {type === 'pipe_earthing' ? 'Pipe Earthing' : type === 'plate_earthing' ? 'Plate Earthing' : 'Chemical Earthing'}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2 flex items-center space-x-2 pt-6">
-              <Checkbox
-                id={`lightning-arrest-pump-${projectIndex}`}
-                checked={project.lightningArrest || false}
-                onCheckedChange={(checked) => handleFieldChange('lightningArrest', checked)}
-                data-testid={`checkbox-lightning-arrest-pump-${projectIndex}`}
-              />
-              <label htmlFor={`lightning-arrest-pump-${projectIndex}`} className="text-sm font-medium cursor-pointer">
-                Lightning Arrest
-              </label>
-            </div>
-
-            <div className="space-y-2 flex items-center space-x-2 pt-6">
-              <Checkbox
-                id={`electrical-accessories-pump-${projectIndex}`}
-                checked={project.electricalAccessories || false}
-                onCheckedChange={(checked) => handleFieldChange('electricalAccessories', checked)}
-                data-testid={`checkbox-electrical-accessories-pump-${projectIndex}`}
-              />
-              <label htmlFor={`electrical-accessories-pump-${projectIndex}`} className="text-sm font-medium cursor-pointer">
-                Electrical Accessories
-              </label>
-            </div>
-          </div>
-        </div>
-
         {/* Work Scope Section for Water Pump */}
         <div className="space-y-4">
           <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
@@ -3161,18 +2914,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2 flex items-center space-x-2 pt-6">
-              <Checkbox
-                id={`labour-transport-pump-${projectIndex}`}
-                checked={project.labourAndTransport || false}
-                onCheckedChange={(checked) => handleFieldChange('labourAndTransport', checked)}
-                data-testid={`checkbox-labour-transport-pump-${projectIndex}`}
-              />
-              <label htmlFor={`labour-transport-pump-${projectIndex}`} className="text-sm font-medium cursor-pointer">
-                Labour and Transport
-              </label>
             </div>
           </div>
         </div>
@@ -4797,7 +4538,7 @@ export default function QuotationCreation() {
                             : 0;
                           
                           // Generate default description if custom one doesn't exist
-                          const defaultDescription = getProjectDescription(project);
+                          const defaultDescription = `Supply and Installation of ${systemKW}kw ${project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System`;
                           const description = project.customDescription || defaultDescription;
                           
                           return (
@@ -4835,8 +4576,8 @@ export default function QuotationCreation() {
                                     
                                     // Update description if user hasn't customized it
                                     if (!project.customDescription) {
-                                      const updatedProject = { ...project, systemKW: newKW };
-                                      const newDescription = getProjectDescription(updatedProject);
+                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
+                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
                                       form.setValue(`projects.${index}.customDescription`, newDescription);
                                     }
                                     
@@ -5012,8 +4753,8 @@ export default function QuotationCreation() {
                                     const newCustomerPayment = newProjectValue - newSubsidy;
                                     
                                     if (!project.customDescription) {
-                                      const updatedProject = { ...project, systemKW: newKW };
-                                      const newDescription = getProjectDescription(updatedProject);
+                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
+                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
                                       form.setValue(`projects.${index}.customDescription`, newDescription);
                                     }
                                     

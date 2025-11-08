@@ -280,10 +280,6 @@ export const waterHeaterBrands = [
   "venus", "pressurised", "non_pressurised", "hykon"
 ] as const;
 
-export const heatingCoilTypes = [
-  "heating_coil", "no_heating_coil"
-] as const;
-
 // New schema additions for enhanced project specifications
 
 // Floor levels for installations
@@ -409,10 +405,7 @@ export const hybridConfigSchema = offGridConfigSchema.extend({
 export const waterHeaterConfigSchema = z.object({
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
-  qty: z.number().min(1).default(1),
-  waterHeaterModel: z.enum(['pressurised', 'non_pressurised']).optional(),
-  heatingCoilType: z.enum(heatingCoilTypes).optional(),
-  labourAndTransport: z.boolean().default(false),
+  heatingCoil: z.string().optional(),
   productImage: z.string().optional(), // Optional product image URL
   projectValue: z.number().min(0),
   others: z.string().optional(),
@@ -423,7 +416,7 @@ export const waterHeaterConfigSchema = z.object({
 });
 
 export const waterPumpConfigSchema = z.object({
-  driveHP: z.string(),
+  hp: z.string(),
   drive: z.string(),
   solarPanel: z.string().optional(),
   panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
@@ -432,11 +425,6 @@ export const waterPumpConfigSchema = z.object({
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
-  inverterPhase: z.enum(inverterPhases).optional(),
-  lightningArrest: z.boolean().default(false),
-  electricalAccessories: z.boolean().default(false),
-  earthConnection: z.array(z.enum(earthingTypes)).default([]),
-  labourAndTransport: z.boolean().default(false),
   projectValue: z.number().min(0),
   others: z.string().optional(),
   // New fields from client specification
@@ -1631,10 +1619,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
   projectType: z.literal("water_heater"),
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
-  qty: z.number().min(1).default(1),
-  waterHeaterModel: z.enum(['pressurised', 'non_pressurised']).optional(),
-  heatingCoilType: z.enum(heatingCoilTypes).optional(),
-  labourAndTransport: z.boolean().default(false),
+  heatingCoil: z.string().optional(),
   productImage: z.string().optional(), // Optional product image URL
   floor: z.enum(floorLevels).optional(),
   plumbingWorkScope: z.enum(workScopeOptions).optional(),
@@ -1655,7 +1640,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
 
 export const quotationWaterPumpProjectSchema = z.object({
   projectType: z.literal("water_pump"),
-  driveHP: z.string(),
+  hp: z.string(),
   drive: z.string(),
   solarPanel: z.string().optional(),
   panelWatts: z.string().optional(),
@@ -1664,11 +1649,6 @@ export const quotationWaterPumpProjectSchema = z.object({
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
-  inverterPhase: z.enum(inverterPhases).optional(),
-  lightningArrest: z.boolean().default(false),
-  electricalAccessories: z.boolean().default(false),
-  earthConnection: z.array(z.enum(earthingTypes)).default([]),
-  labourAndTransport: z.boolean().default(false),
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
     lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),

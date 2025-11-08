@@ -34,7 +34,7 @@ const FIELD_MAPPING_MATRIX = {
     'marketingData.offGridConfig.batteryCount',
     'marketingData.hybridConfig.inverterKW',
     'marketingData.waterHeaterConfig.litre',
-    'marketingData.waterPumpConfig.driveHP',
+    'marketingData.waterPumpConfig.hp',
     'technicalData.serviceTypes',
     'technicalData.workType',
     'adminData.bankProcess',
@@ -270,7 +270,7 @@ export class DataCompletenessAnalyzer {
       
       case 'water_pump':
         return marketingData.waterPumpConfig &&
-               marketingData.waterPumpConfig.driveHP &&
+               marketingData.waterPumpConfig.hp &&
                marketingData.waterPumpConfig.panelBrand &&
                marketingData.waterPumpConfig.panelBrand.length > 0 &&
                (marketingData.waterPumpConfig.panelCount || 0) > 0;
@@ -517,7 +517,7 @@ export class SiteVisitDataMapper {
     }
     
     // Map water pump project if configured
-    if (marketingData.waterPumpConfig && marketingData.waterPumpConfig.driveHP) {
+    if (marketingData.waterPumpConfig && marketingData.waterPumpConfig.hp) {
       projects.push(this.mapWaterPumpProject(marketingData.waterPumpConfig, warnings, transformations));
       transformations.push({
         field: 'projects.water_pump',
@@ -575,7 +575,7 @@ export class SiteVisitDataMapper {
           break;
         
         case 'water_pump':
-          projects.push(this.mapWaterPumpProject({ driveHP: '1' }, warnings, transformations));
+          projects.push(this.mapWaterPumpProject({ hp: '1' }, warnings, transformations));
           transformations.push({
             field: 'projects.water_pump_default',
             originalValue: 'incomplete_marketing_data',
@@ -870,10 +870,7 @@ export class SiteVisitDataMapper {
       projectType: 'water_heater',
       brand: config.brand || "venus",
       litre: config.litre || 100,
-      qty: config.qty || 1,
-      waterHeaterModel: config.waterHeaterModel,
-      heatingCoilType: config.heatingCoilType,
-      labourAndTransport: config.labourAndTransport || false,
+      heatingCoil: config.heatingCoil,
       floor: config.floor,
       plumbingWorkScope: config.plumbingWorkScope,
       civilWorkScope: config.civilWorkScope,
@@ -904,7 +901,7 @@ export class SiteVisitDataMapper {
 
     return {
       projectType: 'water_pump',
-      driveHP: config.driveHP || config.hp || "1HP",
+      hp: config.hp || "1HP",
       drive: config.drive || "AC Drive",
       solarPanel: config.solarPanel,
       panelWatts: config.panelWatts,
@@ -913,11 +910,6 @@ export class SiteVisitDataMapper {
       dcrPanelCount: config.dcrPanelCount || 0,
       nonDcrPanelCount: config.nonDcrPanelCount || 0,
       panelCount: config.panelCount || 4,
-      inverterPhase: config.inverterPhase,
-      lightningArrest: config.lightningArrest || false,
-      electricalAccessories: config.electricalAccessories || false,
-      earthConnection: config.earthConnection || [],
-      labourAndTransport: config.labourAndTransport || false,
       structureType: config.structureType,
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
@@ -1194,7 +1186,7 @@ export class SiteVisitDataMapper {
       if (siteVisit.marketingData.waterPumpConfig) {
         const config = siteVisit.marketingData.waterPumpConfig;
         notesSections.push("--- Water Pump Configuration ---");
-        notesSections.push(`HP Rating: ${config.driveHP || 'Not specified'}`);
+        notesSections.push(`HP Rating: ${config.hp || 'Not specified'}`);
         notesSections.push(`Drive Type: ${config.drive || 'Not specified'}`);
         notesSections.push(`Panel Count: ${config.panelCount || 'Not specified'}`);
       }
