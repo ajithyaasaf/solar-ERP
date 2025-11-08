@@ -1633,7 +1633,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
   litre: z.number().min(1),
   qty: z.number().min(1).default(1),
   waterHeaterModel: z.enum(['pressurised', 'non_pressurised']).optional(),
-  heatingCoil: z.string().optional(),
+  heatingCoilType: z.enum(heatingCoilTypes).optional(),
   labourAndTransport: z.boolean().default(false),
   productImage: z.string().optional(), // Optional product image URL
   floor: z.enum(floorLevels).optional(),
@@ -1655,7 +1655,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
 
 export const quotationWaterPumpProjectSchema = z.object({
   projectType: z.literal("water_pump"),
-  hp: z.string(),
+  driveHP: z.string(),
   drive: z.string(),
   solarPanel: z.string().optional(),
   panelWatts: z.string().optional(),

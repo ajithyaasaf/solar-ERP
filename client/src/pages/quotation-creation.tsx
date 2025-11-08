@@ -257,7 +257,7 @@ const getProjectDescription = (project: any): string => {
     const systemKW = project.systemKW || 0;
     const inverterKW = project.inverterKW || 0;
     const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
-    return `Supply and Installation of ${systemKW}kw, ${inverterKW}KW Inverter, ${phase} On-Grid Solar System`;
+    return `Supply and Installation of ${systemKW}kw, ${inverterKW}KW Inverter ${phase}, On-Grid Solar System`;
   }
   
   if (projectType === 'off_grid') {
@@ -270,9 +270,8 @@ const getProjectDescription = (project: any): string => {
       : 'MPPT';
     const batteryAH = project.batteryAH || '';
     const batteryCount = project.batteryCount || 0;
-    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
     
-    return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}V ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount}, ${phase} Off-Grid Solar System`;
+    return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}V ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount} Off-Grid Solar System`;
   }
   
   if (projectType === 'hybrid') {
@@ -292,9 +291,10 @@ const getProjectDescription = (project: any): string => {
     const brand = project.brand ? formatBrandName(project.brand) : '';
     const litre = project.litre || 0;
     const model = project.waterHeaterModel === 'pressurised' ? 'Pressurized' : 'Non-Pressurized';
-    const heatingCoilText = project.heatingCoilType === 'heating_coil' ? 'Heating Coil' : 'No Heating Coil';
+    const heatingCoilText = project.heatingCoilType ? ` ${project.heatingCoilType}` : '';
+    const labourAndTransportText = project.labourAndTransport ? ' Labour and Transport' : '';
     
-    return `Supply and installation of ${brand} make solar water heater ${litre} LPD commercial ${model} with corrosion-resistant epoxy-coated inner tank and powder-coated outer tank ${heatingCoilText} and Transport Including GST`;
+    return `Supply and installation of ${brand} make solar water heater ${litre} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilText}${labourAndTransportText} Including GST`;
   }
   
   if (projectType === 'water_pump') {
@@ -314,21 +314,23 @@ const getProjectDescription = (project: any): string => {
     // Build optional components list
     const components: string[] = [];
     if (project.lightningArrest) {
-      components.push('Lighting Arrester');
+      components.push('Lightning Arrester');
     }
     if (project.earthConnection && project.earthConnection.length > 0) {
       components.push('Earth kit');
     }
     if (project.electricalAccessories) {
-      components.push('DC Cable, Electrical Accessories');
+      components.push('Electrical Accessories');
+    } else {
+      components.push('DC Cable');
     }
     if (project.labourAndTransport) {
       components.push('Labour and Transport');
     }
     
-    const componentsText = components.length > 0 ? components.join(', ') : '';
+    const componentsText = components.length > 0 ? `, ${components.join(', ')}` : '';
     
-    return `Supply and Installation solar power System Includes:${driveHP} hp Drive ${systemKW}kw ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${driveHP} hp Drive ${phase}, ${systemKW}kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher ${componentsText}`;
+    return `Supply and Installation solar power System Includes: ${driveHP}HP Drive, ${systemKW}KW ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase}, ${systemKW}KW Structure, Structure ${lowerHeight} feet lower to ${higherHeight} feet higher${componentsText}`;
   }
   
   // Fallback for unknown project types
