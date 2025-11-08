@@ -1334,10 +1334,34 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Capacity</p>
                         <p className="font-medium">{siteVisit.marketingData.waterHeaterConfig.litre} Litres</p>
                       </div>
-                      {siteVisit.marketingData.waterHeaterConfig.heatingCoil && (
+                      {(siteVisit.marketingData.waterHeaterConfig as any).qty && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Heating Coil</p>
-                          <p className="font-medium">{siteVisit.marketingData.waterHeaterConfig.heatingCoil}</p>
+                          <p className="text-sm text-muted-foreground">Quantity</p>
+                          <p className="font-medium">{(siteVisit.marketingData.waterHeaterConfig as any).qty} Units</p>
+                        </div>
+                      )}
+                      {(siteVisit.marketingData.waterHeaterConfig as any).waterHeaterModel && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Model Type</p>
+                          <p className="font-medium capitalize">
+                            {(siteVisit.marketingData.waterHeaterConfig as any).waterHeaterModel === 'pressurised' ? 'Pressurised' : 'Non-Pressurised'}
+                          </p>
+                        </div>
+                      )}
+                      {(siteVisit.marketingData.waterHeaterConfig as any).heatingCoilType && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Heating Coil Type</p>
+                          <p className="font-medium capitalize">
+                            {(siteVisit.marketingData.waterHeaterConfig as any).heatingCoilType === 'heating_coil' ? 'With Heating Coil' : 'No Heating Coil'}
+                          </p>
+                        </div>
+                      )}
+                      {(siteVisit.marketingData.waterHeaterConfig as any).labourAndTransport !== undefined && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Labour and Transport</p>
+                          <p className="font-medium">
+                            {(siteVisit.marketingData.waterHeaterConfig as any).labourAndTransport ? 'Included' : 'Not Included'}
+                          </p>
                         </div>
                       )}
                       {siteVisit.marketingData.waterHeaterConfig.floor && (
@@ -1399,13 +1423,21 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <h4 className="font-medium text-cyan-700">Solar Water Pump Configuration</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-cyan-50 p-4 rounded-lg">
                       <div>
-                        <p className="text-sm text-muted-foreground">Motor HP</p>
-                        <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.hp} HP</p>
+                        <p className="text-sm text-muted-foreground">Drive HP</p>
+                        <p className="font-medium">{(siteVisit.marketingData.waterPumpConfig as any).driveHP || siteVisit.marketingData.waterPumpConfig.hp} HP</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Drive Type</p>
                         <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.drive}</p>
                       </div>
+                      {(siteVisit.marketingData.waterPumpConfig as any).inverterPhase && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Phase</p>
+                          <p className="font-medium">
+                            {(siteVisit.marketingData.waterPumpConfig as any).inverterPhase === 'three_phase' ? '3 Phase' : 'Single Phase'}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Panel Brand</p>
                         <p className="font-medium">{formatStringOrArray(siteVisit.marketingData.waterPumpConfig.panelBrand)}</p>
@@ -1446,6 +1478,42 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.waterPumpConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
                     </div>
+
+                    {/* Accessories and Additional Components */}
+                    {((siteVisit.marketingData.waterPumpConfig as any).lightningArrest || 
+                      (siteVisit.marketingData.waterPumpConfig as any).electricalAccessories || 
+                      (siteVisit.marketingData.waterPumpConfig as any).earthConnection || 
+                      (siteVisit.marketingData.waterPumpConfig as any).labourAndTransport) && (
+                      <div className="space-y-3">
+                        <h5 className="font-medium text-cyan-600">Additional Components</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-cyan-25 p-3 rounded-lg border border-cyan-200">
+                          {(siteVisit.marketingData.waterPumpConfig as any).lightningArrest && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <p className="font-medium">Lightning Arrester</p>
+                            </div>
+                          )}
+                          {(siteVisit.marketingData.waterPumpConfig as any).electricalAccessories && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <p className="font-medium">Electrical Accessories</p>
+                            </div>
+                          )}
+                          {(siteVisit.marketingData.waterPumpConfig as any).earthConnection && (siteVisit.marketingData.waterPumpConfig as any).earthConnection.length > 0 && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <p className="font-medium">Earth Connection ({formatEarthConnection((siteVisit.marketingData.waterPumpConfig as any).earthConnection)})</p>
+                            </div>
+                          )}
+                          {(siteVisit.marketingData.waterPumpConfig as any).labourAndTransport && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <p className="font-medium">Labour and Transport</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Structure Configuration */}
                     {(siteVisit.marketingData.waterPumpConfig.structureType || 

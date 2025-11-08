@@ -1312,8 +1312,9 @@ export class QuotationTemplateService {
         const batteryAH_offGrid = project.batteryAH || '100';
         const batteryCount_offGrid = project.batteryCount || 1;
         const inverterMake_offGrid = project.inverterMake && project.inverterMake.length > 0 ? project.inverterMake.join('/').toUpperCase() : 'MPPT';
+        const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
         
-        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid} Offgrid Solar System`;
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
         break;
 
       case 'hybrid':
@@ -1372,7 +1373,7 @@ export class QuotationTemplateService {
         
         const brandName = project.brand ? project.brand.replace('_', ' ').toUpperCase() : 'VENUS';
         const modelType = (project as any).waterHeaterModel === 'pressurised' ? 'Pressurized' : 'Non-Pressurized';
-        const heatingCoilText = (project as any).heatingCoilType ? ` ${(project as any).heatingCoilType}` : '';
+        const heatingCoilText = (project as any).heatingCoilType === 'heating_coil' ? ' Heating Coil' : '';
         const labourAndTransportText = (project as any).labourAndTransport ? ' Labour and Transport' : '';
         
         description = `Supply and installation of ${brandName} make solar water heater ${litres} LPD commercial ${modelType} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilText}${labourAndTransportText} Including GST`;
