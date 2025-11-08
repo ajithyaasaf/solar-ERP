@@ -210,6 +210,132 @@ const formatStructureTypeLabel = (type: string): string => {
   return labels[type] || type;
 };
 
+// Helper function to format brand names
+const formatBrandName = (brand: string): string => {
+  const labels: Record<string, string> = {
+    'renew': 'Renew',
+    'premier': 'Premier',
+    'utl_solar': 'UTL Solar',
+    'loom_solar': 'Loom Solar',
+    'kirloskar': 'Kirloskar',
+    'adani_solar': 'Adani Solar',
+    'vikram_solar': 'Vikram Solar',
+    'growatt': 'Growatt',
+    'deye': 'Deye',
+    'polycab': 'Polycab',
+    'utl': 'UTL',
+    'microtech': 'Microtech',
+    'exide': 'Exide',
+    'exide_utl': 'Exide UTL',
+    'venus': 'Venus',
+    'pressurised': 'Pressurised',
+    'non_pressurised': 'Non-Pressurised',
+    'hykon': 'Hykon'
+  };
+  return labels[brand] || brand;
+};
+
+// Helper function to format battery type
+const formatBatteryType = (type: string): string => {
+  const labels: Record<string, string> = {
+    'lead_acid': 'Lead Acid Battery',
+    'lithium': 'Lithium Battery'
+  };
+  return labels[type] || type;
+};
+
+// Helper function to format phase
+const formatPhase = (phase: string): string => {
+  return phase === 'single_phase' ? '1-Phase' : '3 Phase';
+};
+
+// Helper function to generate project description based on project type
+const getProjectDescription = (project: any): string => {
+  const projectType = project.projectType;
+  
+  if (projectType === 'on_grid') {
+    const systemKW = project.systemKW || 0;
+    const inverterKW = project.inverterKW || 0;
+    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
+    return `Supply and Installation of ${systemKW}kw, ${inverterKW}KW Inverter, ${phase} On-Grid Solar System`;
+  }
+  
+  if (projectType === 'off_grid') {
+    const panelWatts = project.panelWatts || '';
+    const panelCount = project.panelCount || 0;
+    const inverterKVA = project.inverterKVA || '';
+    const inverterVolt = project.inverterVolt || '';
+    const inverterMake = project.inverterMake && project.inverterMake.length > 0 
+      ? formatBrandName(project.inverterMake[0]).toUpperCase() 
+      : 'MPPT';
+    const batteryAH = project.batteryAH || '';
+    const batteryCount = project.batteryCount || 0;
+    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
+    
+    return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}V ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount}, ${phase} Off-Grid Solar System`;
+  }
+  
+  if (projectType === 'hybrid') {
+    const systemKW = project.systemKW || 0;
+    const inverterKVA = project.inverterKVA || '';
+    const inverterVolt = project.inverterVolt || '';
+    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
+    const batteryBrand = project.batteryBrand ? formatBrandName(project.batteryBrand) : '';
+    const batteryAH = project.batteryAH || '';
+    const batteryType = project.batteryType ? formatBatteryType(project.batteryType) : '';
+    const batteryCount = project.batteryCount || 0;
+    
+    return `Supply and Installation of ${systemKW}KW Panel, ${inverterKVA}KVA/${inverterVolt}V ${phase} Hybrid Inverter, ${batteryBrand} ${batteryAH}AH ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
+  }
+  
+  if (projectType === 'water_heater') {
+    const brand = project.brand ? formatBrandName(project.brand) : '';
+    const litre = project.litre || 0;
+    const model = project.waterHeaterModel === 'pressurised' ? 'Pressurized' : 'Non-Pressurized';
+    const heatingCoilText = project.heatingCoilType === 'heating_coil' ? 'Heating Coil' : 'No Heating Coil';
+    
+    return `Supply and installation of ${brand} make solar water heater ${litre} LPD commercial ${model} with corrosion-resistant epoxy-coated inner tank and powder-coated outer tank ${heatingCoilText} and Transport Including GST`;
+  }
+  
+  if (projectType === 'water_pump') {
+    const driveHP = project.driveHP || project.hp || ''; // Support both old and new field names
+    const systemKW = project.systemKW || 0;
+    const panelWatts = project.panelWatts || '';
+    const panelCount = project.panelCount || 0;
+    const panelBrand = project.panelBrand && project.panelBrand.length > 0 
+      ? formatBrandName(project.panelBrand[0]) 
+      : '';
+    const phase = project.inverterPhase ? formatPhase(project.inverterPhase) : '';
+    
+    // Structure details
+    const lowerHeight = project.gpStructure?.lowerEndHeight || '3';
+    const higherHeight = project.gpStructure?.higherEndHeight || '4';
+    
+    // Build optional components list
+    const components: string[] = [];
+    if (project.lightningArrest) {
+      components.push('Lighting Arrester');
+    }
+    if (project.earthConnection && project.earthConnection.length > 0) {
+      components.push('Earth kit');
+    }
+    if (project.electricalAccessories) {
+      components.push('DC Cable, Electrical Accessories');
+    }
+    if (project.labourAndTransport) {
+      components.push('Labour and Transport');
+    }
+    
+    const componentsText = components.length > 0 ? components.join(', ') : '';
+    
+    return `Supply and Installation solar power System Includes:${driveHP} hp Drive ${systemKW}kw ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${driveHP} hp Drive ${phase}, ${systemKW}kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher ${componentsText}`;
+  }
+  
+  // Fallback for unknown project types
+  const systemKW = project.systemKW || 0;
+  return `Supply and Installation of ${systemKW}kw ${projectType.replace('_', ' ')} Solar System`;
+};
+
 // Site visit mapping interface
 interface SiteVisitMapping {
   id: string;
@@ -833,7 +959,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           litre: 100,
           qty: 1,
           waterHeaterModel: "non_pressurised",
-          heatingCoil: "",
+          heatingCoilType: "heating_coil",
           labourAndTransport: false,
           floor: "0",
           plumbingWorkScope: "customer_scope",
@@ -844,7 +970,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
       case "water_pump":
         newProject = {
           ...newProject,
-          hp: "1",
+          driveHP: "1",
           drive: "vfd",
           panelWatts: "540",
           panelType: "bifacial",
@@ -2617,7 +2743,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Drive HP *</label>
-            <Select value={project.hp || "1"} onValueChange={(value) => handleFieldChange('hp', value)}>
+            <Select value={project.driveHP || project.hp || "1"} onValueChange={(value) => handleFieldChange('driveHP', value)}>
               <SelectTrigger data-testid={`select-hp-${projectIndex}`}>
                 <SelectValue />
               </SelectTrigger>
@@ -4669,7 +4795,7 @@ export default function QuotationCreation() {
                             : 0;
                           
                           // Generate default description if custom one doesn't exist
-                          const defaultDescription = `Supply and Installation of ${systemKW}kw ${project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System`;
+                          const defaultDescription = getProjectDescription(project);
                           const description = project.customDescription || defaultDescription;
                           
                           return (
@@ -4707,8 +4833,8 @@ export default function QuotationCreation() {
                                     
                                     // Update description if user hasn't customized it
                                     if (!project.customDescription) {
-                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
-                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
+                                      const updatedProject = { ...project, systemKW: newKW };
+                                      const newDescription = getProjectDescription(updatedProject);
                                       form.setValue(`projects.${index}.customDescription`, newDescription);
                                     }
                                     
@@ -4884,8 +5010,8 @@ export default function QuotationCreation() {
                                     const newCustomerPayment = newProjectValue - newSubsidy;
                                     
                                     if (!project.customDescription) {
-                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
-                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
+                                      const updatedProject = { ...project, systemKW: newKW };
+                                      const newDescription = getProjectDescription(updatedProject);
                                       form.setValue(`projects.${index}.customDescription`, newDescription);
                                     }
                                     

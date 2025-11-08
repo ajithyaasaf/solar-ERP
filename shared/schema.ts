@@ -280,6 +280,10 @@ export const waterHeaterBrands = [
   "venus", "pressurised", "non_pressurised", "hykon"
 ] as const;
 
+export const heatingCoilTypes = [
+  "heating_coil", "no_heating_coil"
+] as const;
+
 // New schema additions for enhanced project specifications
 
 // Floor levels for installations
@@ -407,7 +411,7 @@ export const waterHeaterConfigSchema = z.object({
   litre: z.number().min(1),
   qty: z.number().min(1).default(1),
   waterHeaterModel: z.enum(['pressurised', 'non_pressurised']).optional(),
-  heatingCoil: z.string().optional(),
+  heatingCoilType: z.enum(heatingCoilTypes).optional(),
   labourAndTransport: z.boolean().default(false),
   productImage: z.string().optional(), // Optional product image URL
   projectValue: z.number().min(0),
@@ -419,7 +423,7 @@ export const waterHeaterConfigSchema = z.object({
 });
 
 export const waterPumpConfigSchema = z.object({
-  hp: z.string(),
+  driveHP: z.string(),
   drive: z.string(),
   solarPanel: z.string().optional(),
   panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
