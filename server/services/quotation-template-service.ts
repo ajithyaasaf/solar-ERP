@@ -1415,11 +1415,16 @@ export class QuotationTemplateService {
         descParts_wp.push(`${phase_wp}, ${panelKW_wp} kW Structure`);
         descParts_wp.push(`Structure ${lowerHeight_wp} feet lower to ${higherHeight_wp} feet higher`);
         
+        if ((project as any).lightningArrest) {
+          descParts_wp.push('Lightning Arrester');
+        }
         if ((project as any).earthConnection && (project as any).earthConnection.length > 0) {
-          descParts_wp.push('Earth kit, Lightening Arrest');
+          descParts_wp.push('Earth kit');
         }
         if ((project as any).electricalAccessories) {
-          descParts_wp.push('DC Cable, Electrical Accessories');
+          descParts_wp.push('Electrical Accessories');
+        } else {
+          descParts_wp.push('DC Cable');
         }
         if ((project as any).labourAndTransport) {
           descParts_wp.push('Labour and Transport');
