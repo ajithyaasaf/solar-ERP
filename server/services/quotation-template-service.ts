@@ -1279,8 +1279,9 @@ export class QuotationTemplateService {
         ratePerKw = roundedKW_onGrid > 0 ? basePrice / roundedKW_onGrid : 0;
         
         const inverterKW_onGrid = project.inverterKW || Math.floor(kw);
-        const phase_onGrid = project.inverterPhase === 'three_phase' ? '3 Phase' : 'Single Phase';
-        description = `Supply and Installation of ${Math.floor(kw)} kW, ${inverterKW_onGrid} KW Inverter ${phase_onGrid}, On GRID Solar System`;
+        const inverterKVA_onGrid = (project as any).inverterKVA || inverterKW_onGrid;
+        const phase_onGrid = project.inverterPhase === 'three_phase' ? 'Three Phase' : 'Single Phase';
+        description = `Supply and Installation of ${Math.floor(kw)} kW, ${inverterKVA_onGrid} KW Inverter ${phase_onGrid}, On GRID Solar System`;
         break;
 
       case 'off_grid':
@@ -1312,9 +1313,9 @@ export class QuotationTemplateService {
         const batteryAH_offGrid = project.batteryAH || '100';
         const batteryCount_offGrid = project.batteryCount || 1;
         const inverterMake_offGrid = project.inverterMake && project.inverterMake.length > 0 ? project.inverterMake.join('/').toUpperCase() : 'MPPT';
-        const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
+        const phase_offGrid = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
         
-        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid} Offgrid Solar System`;
         break;
 
       case 'hybrid':
@@ -1339,16 +1340,17 @@ export class QuotationTemplateService {
         ratePerKw = roundedKW_hybrid > 0 ? basePrice / roundedKW_hybrid : 0;
         
         // Dynamic description based on actual configuration
+        const panelWatts_hybrid = project.panelWatts || '530';
         const panelKW_hybrid = Math.floor(kw);
         const inverterKVA_hybrid = (project as any).inverterKVA || project.inverterKW || '1';
         const inverterVolt_hybrid = (project as any).inverterVolt || (project.voltage * project.batteryCount) || 12;
-        const phase_hybrid = project.inverterPhase === 'three_phase' ? '3 phase' : 'single phase';
+        const phase_hybrid = project.inverterPhase === 'three_phase' ? '3 Phase' : 'Single Phase';
         const batteryBrand_hybrid = project.batteryBrand ? project.batteryBrand.toUpperCase().replace('_', ' ') : 'UTL';
         const batteryAH_hybrid = project.batteryAH || '100';
-        const batteryType_hybrid = project.batteryType === 'lithium' ? 'Lithium Battery' : 'Lead Acid Battery';
+        const batteryType_hybrid = project.batteryType === 'lithium' ? 'Lithium' : 'Lead Acid';
         const batteryCount_hybrid = project.batteryCount || 1;
         
-        description = `Supply and Installation of ${panelKW_hybrid} KW PANEL, ${inverterKVA_hybrid}KVA/${inverterVolt_hybrid}V ${phase_hybrid} Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}AH ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
+        description = `Supply and Installation of ${panelKW_hybrid}KW PANEL, ${inverterKVA_hybrid}KVA/${inverterVolt_hybrid}V ${phase_hybrid} Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}AH ${batteryType_hybrid} Battery-${batteryCount_hybrid} Nos, Hybrid Solar System`;
         break;
 
       case 'water_heater':
@@ -1371,12 +1373,12 @@ export class QuotationTemplateService {
         ratePerKw = basePrice;
         kw = 1; // Set kw to 1 for water heater to avoid division by zero
         
-        const brandName = project.brand ? project.brand.replace('_', ' ').toUpperCase() : 'VENUS';
-        const modelType = (project as any).waterHeaterModel === 'pressurised' ? 'Pressurized' : 'Non-Pressurized';
-        const heatingCoilText = (project as any).heatingCoilType === 'heating_coil' ? ' Heating Coil' : '';
-        const labourAndTransportText = (project as any).labourAndTransport ? ' Labour and Transport' : '';
+        const brandName_wh = project.brand ? project.brand.replace('_', ' ').toUpperCase() : 'VENUS';
+        const modelType_wh = (project as any).waterHeaterModel === 'pressurised' ? 'Pressurized' : 'Non-Pressurized';
+        const heatingCoilText_wh = (project as any).heatingCoilType === 'heating_coil' ? ' Heating Coil' : '';
+        const transportText_wh = (project as any).labourAndTransport ? ' and Transport Including GST' : '';
         
-        description = `Supply and installation of ${brandName} make solar water heater ${litres} LPD commercial ${modelType} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilText}${labourAndTransportText} Including GST`;
+        description = `Supply and installation of ${brandName_wh} make solar water heater ${litres} LPD commercial ${modelType_wh} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilText_wh}${transportText_wh}`;
         break;
 
       case 'water_pump':
@@ -1398,36 +1400,32 @@ export class QuotationTemplateService {
         ratePerKw = basePrice;
         kw = 1; // Set kw to 1 for water pump to avoid division by zero
         
-        const driveHP = hp;
-        const panelWatts_pump = project.panelWatts || '540';
-        const panelCount_pump = project.panelCount || 10;
-        const panelKW_pump = Math.floor((parseInt(panelWatts_pump) * panelCount_pump) / 1000);
-        const panelBrand_pump = project.panelBrand && project.panelBrand.length > 0 ? project.panelBrand.join('/').toUpperCase() : 'UTL';
-        const phase_pump = (project as any).inverterPhase === 'three_phase' ? '3 Phase' : 'Single Phase';
-        const lowerHeight_pump = (project as any).gpStructure?.lowerEndHeight || '3';
-        const higherHeight_pump = (project as any).gpStructure?.higherEndHeight || '4';
+        const driveHP_wp = hp;
+        const panelWatts_wp = project.panelWatts || '540';
+        const panelCount_wp = project.panelCount || 10;
+        const panelKW_wp = Math.floor((parseInt(panelWatts_wp) * panelCount_wp) / 1000);
+        const panelBrand_wp = project.panelBrand && project.panelBrand.length > 0 ? project.panelBrand.join('/').toUpperCase() : 'UTL';
+        const phase_wp = (project as any).inverterPhase === 'three_phase' ? '3 Phase' : 'Single Phase';
+        const lowerHeight_wp = (project as any).gpStructure?.lowerEndHeight || '3';
+        const higherHeight_wp = (project as any).gpStructure?.higherEndHeight || '4';
         
-        let descriptionParts = [`Supply and Installation solar power System Includes: ${driveHP}HP Drive`];
-        descriptionParts.push(`${panelKW_pump}KW ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel`);
-        descriptionParts.push(`${phase_pump}, ${panelKW_pump}KW Structure`);
-        descriptionParts.push(`Structure ${lowerHeight_pump} feet lower to ${higherHeight_pump} feet higher`);
+        let descParts_wp = [`Supply and Installation solar power System Includes: ${driveHP_wp} hp Drive`];
+        descParts_wp.push(`${panelKW_wp} kW ${panelWatts_wp}Wp x ${panelCount_wp} Nos ${panelBrand_wp} Panel`);
+        descParts_wp.push(`${driveHP_wp} hp Drive`);
+        descParts_wp.push(`${phase_wp}, ${panelKW_wp} kW Structure`);
+        descParts_wp.push(`Structure ${lowerHeight_wp} feet lower to ${higherHeight_wp} feet higher`);
         
         if ((project as any).earthConnection && (project as any).earthConnection.length > 0) {
-          descriptionParts.push('Earth kit');
-        }
-        if ((project as any).lightningArrest) {
-          descriptionParts.push('Lightning Arrester');
+          descParts_wp.push('Earth kit, Lightening Arrest');
         }
         if ((project as any).electricalAccessories) {
-          descriptionParts.push('Electrical Accessories');
-        } else {
-          descriptionParts.push('DC Cable');
+          descParts_wp.push('DC Cable, Electrical Accessories');
         }
         if ((project as any).labourAndTransport) {
-          descriptionParts.push('Labour and Transport');
+          descParts_wp.push('Labour and Transport');
         }
         
-        description = descriptionParts.join(', ');
+        description = descParts_wp.join(', ');
         break;
 
       default:
