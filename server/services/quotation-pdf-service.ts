@@ -121,6 +121,9 @@ export class QuotationPDFService {
    * Generate HTML content for quotation PDF
    */
   static generateHTMLContent(template: QuotationTemplate): string {
+    // Check if this is a service-only quotation (water heater or water pump)
+    const isWaterUtility = ['water_heater', 'water_pump'].includes(template.projectType);
+    
     return `
     <!DOCTYPE html>
     <html>
@@ -412,6 +415,7 @@ export class QuotationPDFService {
         Quotation for ${template.reference}
       </div>
       
+      ${!isWaterUtility ? `
       <!-- Pricing Table -->
       <table class="pricing-table">
         <thead>
@@ -459,6 +463,7 @@ export class QuotationPDFService {
       <div class="subsidy-note">
         <strong>${this.formatNumber(template.pricingBreakdown.kw)} kw Subsidy ${template.pricingBreakdown.subsidyAmount.toLocaleString()} Will be Credited to The Customer's Account</strong>
       </div>` : ''}
+      ` : ''}
       
       <!-- Bill of Materials -->
       <div class="page-break">
@@ -505,6 +510,32 @@ export class QuotationPDFService {
         </table>
         ` : ''}
         
+        ${isWaterUtility ? `
+        <!-- Simplified BOM Table for Water Heater/Pump -->
+        <table class="bom-table">
+          <thead>
+            <tr>
+              <th>Sl No</th>
+              <th>Description</th>
+              <th>QTY</th>
+              <th>Rate/Qty</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(template.billOfMaterials || []).map(item => `
+              <tr>
+                <td>${item.slNo}</td>
+                <td style="text-align: left;">${item.description}</td>
+                <td>${item.qty}</td>
+                <td>${(item as any).rate || ''}</td>
+                <td>${(item as any).amount || ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ` : `
+        <!-- Standard BOM Table -->
         <table class="bom-table">
           <thead>
             <tr>
@@ -533,6 +564,7 @@ export class QuotationPDFService {
             `).join('')}
           </tbody>
         </table>
+        `}
       </div>
       
       <!-- Terms & Conditions -->
