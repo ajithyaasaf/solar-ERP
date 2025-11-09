@@ -125,10 +125,15 @@ interface WaterHeaterConfig extends BaseConfig {
   floor?: string;
   plumbingWorkScope?: string;
   civilWorkScope?: string;
+  // New fields for quotation description changes
+  qty?: number;
+  waterHeaterModel?: string;
+  labourAndTransport?: boolean;
 }
 
 interface WaterPumpConfig extends BaseConfig {
-  hp: string;
+  driveHP?: string; // Renamed from 'hp'
+  hp?: string; // Keep for backward compatibility
   drive: string;
   solarPanel?: string;
   panelBrand: string[];
@@ -146,8 +151,16 @@ interface WaterPumpConfig extends BaseConfig {
   monoRail?: {
     type?: string;
   };
-  plumbingWorkScope?: string;
+  // Replaced field: plumbingWorkScope renamed to earthWork
+  earthWork?: string;
+  plumbingWorkScope?: string; // Keep for backward compatibility
   civilWorkScope?: string;
+  // New checkbox fields
+  lightningArrest?: boolean;
+  electricalAccessories?: boolean;
+  electricalCount?: number;
+  earth?: string[];
+  labourAndTransport?: boolean;
 }
 
 // Project type options with descriptions
@@ -325,10 +338,14 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         others: '',
         floor: '0',
         plumbingWorkScope: 'customer_scope',
-        civilWorkScope: 'customer_scope'
+        civilWorkScope: 'customer_scope',
+        qty: 1,
+        waterHeaterModel: 'non_pressurized',
+        labourAndTransport: false
       } : undefined,
       waterPumpConfig: projectType === 'water_pump' ? {
-        hp: '1',
+        driveHP: '1',
+        hp: '1', // Keep for backward compatibility
         drive: 'AC',
         solarPanel: '',
         panelBrand: ['premier'],
@@ -347,8 +364,14 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         monoRail: {
           type: 'mini_rail'
         },
-        plumbingWorkScope: 'customer_scope',
-        civilWorkScope: 'customer_scope'
+        earthWork: 'customer_scope',
+        plumbingWorkScope: 'customer_scope', // Keep for backward compatibility
+        civilWorkScope: 'customer_scope',
+        lightningArrest: false,
+        electricalAccessories: false,
+        electricalCount: 0,
+        earth: [],
+        labourAndTransport: false
       } : undefined
     }));
 
@@ -2332,6 +2355,58 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       min="0"
                     />
                   </div>
+
+                  <div>
+                    <Label>Quantity *</Label>
+                    <Input
+                      type="number"
+                      value={formData.waterHeaterConfig.qty || 1}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterHeaterConfig', { qty: '' as any });
+                        } else {
+                          updateConfig('waterHeaterConfig', { qty: parseInt(value) || 1 });
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || parseInt(value) < 1) {
+                          updateConfig('waterHeaterConfig', { qty: 1 });
+                        }
+                      }}
+                      min="1"
+                      placeholder="1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Water Heater Model *</Label>
+                    <Select 
+                      value={formData.waterHeaterConfig.waterHeaterModel || 'non_pressurized'}
+                      onValueChange={(value) => updateConfig('waterHeaterConfig', { waterHeaterModel: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select model type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pressurized">Pressurized</SelectItem>
+                        <SelectItem value="non_pressurized">Non-Pressurized</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="water-heater-labour-transport"
+                      checked={formData.waterHeaterConfig.labourAndTransport || false}
+                      onCheckedChange={(checked) => updateConfig('waterHeaterConfig', { labourAndTransport: checked as boolean })}
+                      data-testid="checkbox-water-heater-labour-transport"
+                    />
+                    <Label htmlFor="water-heater-labour-transport" className="font-normal cursor-pointer">
+                      Labour and Transport
+                    </Label>
+                  </div>
                 </div>
 
                 {/* Work Scope Section for Water Heater */}
@@ -2402,13 +2477,13 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Motor HP *</Label>
+                    <Label>Drive HP *</Label>
                     <Select 
-                      value={formData.waterPumpConfig.hp}
-                      onValueChange={(value) => updateConfig('waterPumpConfig', { hp: value })}
+                      value={formData.waterPumpConfig.driveHP || formData.waterPumpConfig.hp}
+                      onValueChange={(value) => updateConfig('waterPumpConfig', { driveHP: value, hp: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select motor horsepower" />
+                        <SelectValue placeholder="Select drive horsepower" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0.5">0.5 HP</SelectItem>
@@ -2681,13 +2756,13 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                   <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label>Plumbing Work Scope</Label>
+                      <Label>Earth Work Scope</Label>
                       <Select 
-                        value={formData.waterPumpConfig.plumbingWorkScope || 'customer_scope'}
-                        onValueChange={(value) => updateConfig('waterPumpConfig', { plumbingWorkScope: value })}
+                        value={formData.waterPumpConfig.earthWork || formData.waterPumpConfig.plumbingWorkScope || 'customer_scope'}
+                        onValueChange={(value) => updateConfig('waterPumpConfig', { earthWork: value, plumbingWorkScope: value })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select plumbing work scope" />
+                          <SelectValue placeholder="Select earth work scope" />
                         </SelectTrigger>
                         <SelectContent>
                           {workScopeOptions.map((scope) => (
@@ -2716,6 +2791,79 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Features for Water Pump */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-gray-700">Additional Features</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="water-pump-lightning"
+                        checked={formData.waterPumpConfig.lightningArrest || false}
+                        onCheckedChange={(checked) => updateConfig('waterPumpConfig', { lightningArrest: checked as boolean })}
+                        data-testid="checkbox-water-pump-lightning"
+                      />
+                      <Label htmlFor="water-pump-lightning" className="font-normal cursor-pointer">
+                        Lightening Arrest
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="water-pump-electrical"
+                        checked={formData.waterPumpConfig?.electricalAccessories || false}
+                        onCheckedChange={(checked) => {
+                          const electricalCount = checked ? (formData.waterPumpConfig?.driveHP ? parseFloat(formData.waterPumpConfig.driveHP) : 1) : 0;
+                          updateConfig('waterPumpConfig', { 
+                            electricalAccessories: checked as boolean,
+                            electricalCount
+                          });
+                        }}
+                        data-testid="checkbox-water-pump-electrical"
+                      />
+                      <Label htmlFor="water-pump-electrical" className="font-normal cursor-pointer">
+                        Electrical Accessories
+                      </Label>
+                    </div>
+
+                    <div className="col-span-full">
+                      <Label>Earth Connection</Label>
+                      <div className="grid grid-cols-3 gap-4 mt-2">
+                        {earthingTypes.map((type) => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`water-pump-earth-${type}`}
+                              checked={formData.waterPumpConfig?.earth?.includes(type) || false}
+                              onCheckedChange={(checked) => {
+                                const currentEarth = formData.waterPumpConfig?.earth || [];
+                                const newEarth = checked 
+                                  ? [...currentEarth, type]
+                                  : currentEarth.filter(e => e !== type);
+                                updateConfig('waterPumpConfig', { earth: newEarth });
+                              }}
+                              data-testid={`checkbox-water-pump-earth-${type}`}
+                            />
+                            <Label htmlFor={`water-pump-earth-${type}`} className="text-sm font-normal cursor-pointer">
+                              {type.toUpperCase()}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="water-pump-labour-transport"
+                        checked={formData.waterPumpConfig.labourAndTransport || false}
+                        onCheckedChange={(checked) => updateConfig('waterPumpConfig', { labourAndTransport: checked as boolean })}
+                        data-testid="checkbox-water-pump-labour-transport"
+                      />
+                      <Label htmlFor="water-pump-labour-transport" className="font-normal cursor-pointer">
+                        Labour and Transport
+                      </Label>
                     </div>
                   </div>
                 </div>

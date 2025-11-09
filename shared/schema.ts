@@ -412,11 +412,16 @@ export const waterHeaterConfigSchema = z.object({
   // New fields from client specification
   floor: z.enum(floorLevels).optional(),
   plumbingWorkScope: z.enum(workScopeOptions).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional()
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  // New fields for quotation description changes
+  qty: z.number().min(1).default(1),
+  waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).optional(),
+  labourAndTransport: z.boolean().default(false)
 });
 
 export const waterPumpConfigSchema = z.object({
-  hp: z.string(),
+  driveHP: z.string().optional(), // Renamed from 'hp'
+  hp: z.string().optional(), // Keep for backward compatibility
   drive: z.string(),
   solarPanel: z.string().optional(),
   panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
@@ -436,8 +441,16 @@ export const waterPumpConfigSchema = z.object({
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
   }).optional(),
-  plumbingWorkScope: z.enum(workScopeOptions).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional()
+  // Replaced field: plumbingWorkScope renamed to earthWork
+  earthWork: z.enum(workScopeOptions).optional(),
+  plumbingWorkScope: z.enum(workScopeOptions).optional(), // Keep for backward compatibility
+  civilWorkScope: z.enum(workScopeOptions).optional(),
+  // New checkbox fields
+  lightningArrest: z.boolean().default(false),
+  electricalAccessories: z.boolean().default(false),
+  electricalCount: z.number().min(0).optional(),
+  earth: z.array(z.enum(earthingTypes)).default([]),
+  labourAndTransport: z.boolean().default(false)
 });
 
 // Marketing site visit schema
@@ -1624,6 +1637,10 @@ export const quotationWaterHeaterProjectSchema = z.object({
   floor: z.enum(floorLevels).optional(),
   plumbingWorkScope: z.enum(workScopeOptions).optional(),
   civilWorkScope: z.enum(workScopeOptions).optional(),
+  // New fields for quotation description changes
+  qty: z.number().min(1).default(1),
+  waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).optional(),
+  labourAndTransport: z.boolean().default(false),
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),
@@ -1640,7 +1657,8 @@ export const quotationWaterHeaterProjectSchema = z.object({
 
 export const quotationWaterPumpProjectSchema = z.object({
   projectType: z.literal("water_pump"),
-  hp: z.string(),
+  driveHP: z.string().optional(), // Renamed from 'hp'
+  hp: z.string().optional(), // Keep for backward compatibility
   drive: z.string(),
   solarPanel: z.string().optional(),
   panelWatts: z.string().optional(),
@@ -1657,8 +1675,16 @@ export const quotationWaterPumpProjectSchema = z.object({
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
   }).optional(),
-  plumbingWorkScope: z.enum(workScopeOptions).optional(),
+  // Replaced field: plumbingWorkScope renamed to earthWork
+  earthWork: z.enum(workScopeOptions).optional(),
+  plumbingWorkScope: z.enum(workScopeOptions).optional(), // Keep for backward compatibility
   civilWorkScope: z.enum(workScopeOptions).optional(),
+  // New checkbox fields
+  lightningArrest: z.boolean().default(false),
+  electricalAccessories: z.boolean().default(false),
+  electricalCount: z.number().min(0).optional(),
+  earth: z.array(z.enum(earthingTypes)).default([]),
+  labourAndTransport: z.boolean().default(false),
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),

@@ -1355,6 +1355,26 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.waterHeaterConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
+                      {siteVisit.marketingData.waterHeaterConfig.qty && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Quantity</p>
+                          <p className="font-medium">{siteVisit.marketingData.waterHeaterConfig.qty}</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.waterHeaterConfig.waterHeaterModel && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Water Heater Model</p>
+                          <p className="font-medium capitalize">
+                            {siteVisit.marketingData.waterHeaterConfig.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized'}
+                          </p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.waterHeaterConfig.labourAndTransport && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Labour and Transport</p>
+                          <p className="font-medium text-green-600">✓ Included</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Work Scope Configuration */}
@@ -1399,8 +1419,8 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <h4 className="font-medium text-cyan-700">Solar Water Pump Configuration</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-cyan-50 p-4 rounded-lg">
                       <div>
-                        <p className="text-sm text-muted-foreground">Motor HP</p>
-                        <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.hp} HP</p>
+                        <p className="text-sm text-muted-foreground">Drive HP</p>
+                        <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.driveHP || siteVisit.marketingData.waterPumpConfig.hp} HP</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Drive Type</p>
@@ -1445,6 +1465,30 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.waterPumpConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
+                      {siteVisit.marketingData.waterPumpConfig.lightningArrest && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Lightening Arrest</p>
+                          <p className="font-medium text-green-600">✓ Included</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.waterPumpConfig.electricalAccessories && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Electrical Accessories</p>
+                          <p className="font-medium text-green-600">✓ Included</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.waterPumpConfig.earth && siteVisit.marketingData.waterPumpConfig.earth.length > 0 && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Earth Connection</p>
+                          <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.earth.map((e: string) => e.toUpperCase()).join(', ')}</p>
+                        </div>
+                      )}
+                      {siteVisit.marketingData.waterPumpConfig.labourAndTransport && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Labour and Transport</p>
+                          <p className="font-medium text-green-600">✓ Included</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Structure Configuration */}
@@ -1493,16 +1537,16 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     )}
 
                     {/* Work Scope Configuration */}
-                    {(siteVisit.marketingData.waterPumpConfig.plumbingWorkScope || 
+                    {(siteVisit.marketingData.waterPumpConfig.earthWork || siteVisit.marketingData.waterPumpConfig.plumbingWorkScope || 
                       siteVisit.marketingData.waterPumpConfig.civilWorkScope) && (
                       <div className="space-y-3">
                         <h5 className="font-medium text-cyan-600">Work Scope</h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-cyan-25 p-3 rounded-lg border border-cyan-200">
-                          {siteVisit.marketingData.waterPumpConfig.plumbingWorkScope && (
+                          {(siteVisit.marketingData.waterPumpConfig.earthWork || siteVisit.marketingData.waterPumpConfig.plumbingWorkScope) && (
                             <div>
-                              <p className="text-sm text-muted-foreground">Plumbing Work Scope</p>
+                              <p className="text-sm text-muted-foreground">Earth Work Scope</p>
                               <p className="font-medium capitalize">
-                                {siteVisit.marketingData.waterPumpConfig.plumbingWorkScope === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
+                                {(siteVisit.marketingData.waterPumpConfig.earthWork || siteVisit.marketingData.waterPumpConfig.plumbingWorkScope) === 'customer_scope' ? 'Customer Scope' : 'Company Scope'}
                               </p>
                             </div>
                           )}

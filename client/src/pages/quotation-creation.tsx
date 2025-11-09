@@ -708,6 +708,11 @@ function ManualProjectConfiguration({ form }: { form: any }) {
   const [activeProjectIndex, setActiveProjectIndex] = useState<number | null>(null);
 
   const projects = form.watch("projects") || [];
+  
+  // Check if all projects are water heater or water pump (service-only types)
+  const isServiceOnlyQuotation = projects.length > 0 && projects.every((p: any) => 
+    ['water_heater', 'water_pump'].includes(p.projectType)
+  );
 
   const addProject = (projectType: string) => {
     const currentProjects = form.getValues("projects") || [];
@@ -4923,32 +4928,34 @@ export default function QuotationCreation() {
                   </div>
                 </div>
 
-                {/* Warranty Details */}
-                <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <h4 className="font-medium text-base flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    Warranty Details
-                  </h4>
-                  <div className="text-sm space-y-2">
-                    <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
-                    <div className="space-y-1">
-                      <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
-                      <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                        <li>15 Years Manufacturing defect Warranty</li>
-                        <li>15 Years Service Warranty</li>
-                        <li>90% Performance Warranty till the end of 15 years</li>
-                        <li>80% Performance Warranty till the end of 15 years</li>
-                      </ul>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold">2. Solar On grid Inverter (15 Years)</p>
-                      <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                        <li>Replacement Warranty for 10 Years</li>
-                        <li>Service Warranty for 5 Years</li>
-                      </ul>
+                {/* Warranty Details - Hidden for service-only quotations (water heater and water pump) */}
+                {!isServiceOnlyQuotation && (
+                  <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <h4 className="font-medium text-base flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Warranty Details
+                    </h4>
+                    <div className="text-sm space-y-2">
+                      <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
+                      <div className="space-y-1">
+                        <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
+                        <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                          <li>15 Years Manufacturing defect Warranty</li>
+                          <li>15 Years Service Warranty</li>
+                          <li>90% Performance Warranty till the end of 15 years</li>
+                          <li>80% Performance Warranty till the end of 15 years</li>
+                        </ul>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-semibold">2. Solar On grid Inverter (15 Years)</p>
+                        <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                          <li>Replacement Warranty for 10 Years</li>
+                          <li>Service Warranty for 5 Years</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Payment Details */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -5097,36 +5104,38 @@ export default function QuotationCreation() {
                   </div>
                 </div>
 
-                {/* Delivery Period */}
-                <div className="space-y-3">
-                  <h4 className="font-medium text-base">Delivery Period</h4>
-                  <FormField
-                    control={form.control}
-                    name="deliveryTimeframe"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Delivery Timeframe</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-delivery-timeframe" className="max-w-xs">
-                              <SelectValue placeholder="Select delivery timeframe" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="1_2_weeks">1-2 weeks from confirmation</SelectItem>
-                            <SelectItem value="2_3_weeks">2-3 weeks from confirmation</SelectItem>
-                            <SelectItem value="3_4_weeks">3-4 weeks from confirmation</SelectItem>
-                            <SelectItem value="1_month">1 month from confirmation</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    • {form.watch("deliveryTimeframe")?.replace(/_/g, '-') || '2-3 weeks'} from the date of confirmation of order
-                  </p>
-                </div>
+                {/* Delivery Period - Hidden for service-only quotations */}
+                {!isServiceOnlyQuotation && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-base">Delivery Period</h4>
+                    <FormField
+                      control={form.control}
+                      name="deliveryTimeframe"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Delivery Timeframe</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-delivery-timeframe" className="max-w-xs">
+                                <SelectValue placeholder="Select delivery timeframe" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1_2_weeks">1-2 weeks from confirmation</SelectItem>
+                              <SelectItem value="2_3_weeks">2-3 weeks from confirmation</SelectItem>
+                              <SelectItem value="3_4_weeks">3-4 weeks from confirmation</SelectItem>
+                              <SelectItem value="1_month">1 month from confirmation</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      • {form.watch("deliveryTimeframe")?.replace(/_/g, '-') || '2-3 weeks'} from the date of confirmation of order
+                    </p>
+                  </div>
+                )}
 
                 {/* Additional Notes */}
                 <div className="space-y-4">
@@ -5188,32 +5197,34 @@ export default function QuotationCreation() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
-                {/* Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="space-y-3 sm:space-y-4">
-                    <h4 className="font-medium text-sm sm:text-base">Quotation Summary</h4>
-                    <div className="space-y-2 text-xs sm:text-sm">
-                      <div className="flex justify-between items-center gap-2">
-                        <span className="text-muted-foreground">Source:</span>
-                        <Badge variant="outline" className="text-xs">
-                          {quotationSource === "site_visit" ? "Site Visit" : "Manual"}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center gap-2">
-                        <span className="text-muted-foreground">Projects:</span>
-                        <span className="font-medium">{form.watch("projects").length} system(s)</span>
-                      </div>
-                      <div className="flex justify-between items-center gap-2">
-                        <span className="text-muted-foreground">Total Value:</span>
-                        <span className="font-medium">₹{form.watch("totalCustomerPayment")?.toLocaleString() || 0}</span>
-                      </div>
-                      <div className="flex justify-between items-center gap-2">
-                        <span className="text-muted-foreground">Delivery:</span>
-                        <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || 'TBD'}</span>
+                {/* Summary - Hidden for service-only quotations */}
+                {!isServiceOnlyQuotation && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="space-y-3 sm:space-y-4">
+                      <h4 className="font-medium text-sm sm:text-base">Quotation Summary</h4>
+                      <div className="space-y-2 text-xs sm:text-sm">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-muted-foreground">Source:</span>
+                          <Badge variant="outline" className="text-xs">
+                            {quotationSource === "site_visit" ? "Site Visit" : "Manual"}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-muted-foreground">Projects:</span>
+                          <span className="font-medium">{form.watch("projects").length} system(s)</span>
+                        </div>
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-muted-foreground">Total Value:</span>
+                          <span className="font-medium">₹{form.watch("totalCustomerPayment")?.toLocaleString() || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-muted-foreground">Delivery:</span>
+                          <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || 'TBD'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Scope of Work */}
                 <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -5645,28 +5656,30 @@ export default function QuotationCreation() {
                   )}
                 </div>
 
-                {/* Documents Required */}
-                <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                  <h4 className="font-medium text-base">Documents Required for PM Surya Ghar</h4>
-                  <div className="space-y-2 text-sm">
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>EB Number</li>
-                      <li>EB Register Mobile Number</li>
-                      <li>Email ID</li>
-                      <li>Aadhar Card</li>
-                      <li>PAN Card</li>
-                      <li>Passport Size Photo -1</li>
-                      <li>Property Tax Copy</li>
-                      <li>Bank Passbook</li>
-                      <li>Cancelled Cheque</li>
-                    </ol>
-                    <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded">
-                      <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
-                        *All Required Documents should be in the same name as mention EB Service Number
-                      </p>
+                {/* Documents Required - Hidden for service-only quotations */}
+                {!isServiceOnlyQuotation && (
+                  <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <h4 className="font-medium text-base">Documents Required for PM Surya Ghar</h4>
+                    <div className="space-y-2 text-sm">
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>EB Number</li>
+                        <li>EB Register Mobile Number</li>
+                        <li>Email ID</li>
+                        <li>Aadhar Card</li>
+                        <li>PAN Card</li>
+                        <li>Passport Size Photo -1</li>
+                        <li>Property Tax Copy</li>
+                        <li>Bank Passbook</li>
+                        <li>Cancelled Cheque</li>
+                      </ol>
+                      <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded">
+                        <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
+                          *All Required Documents should be in the same name as mention EB Service Number
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Warnings and Recommendations */}
                 {quotationSource === "site_visit" && siteVisitMapping && (
