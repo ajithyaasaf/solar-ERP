@@ -8,7 +8,7 @@
 
 ## 📋 EXECUTIVE SUMMARY
 
-This document provides a comprehensive understanding of the requested changes to the quotation-making process in the solar energy management application. The changes focus on modifying auto-generated descriptions in the "Quotation Pricing Details" table across five project types: **On-Grid, Off-Grid, Hybrid, Water Heater, and Water Pump**.
+This document provides a comprehensive understanding of the requested changes to the quotation-making process in the solar energy management application. The changes focus on modifying auto-generated descriptions in the "Quotation Pricing Details" table across five project types: **On-Grid, Off-Grid, Hybrid, Water Heater, and Water Pump**. Additionally, it covers UI/UX modifications to the quotation creation workflow and PDF template changes for Water Heater and Water Pump project types.
 
 ---
 
@@ -20,6 +20,7 @@ The application has a quotation system that:
 2. Auto-generates descriptions based on project configuration
 3. Generates Bill of Materials (BOM) tables
 4. Creates PDF templates for customer quotations
+5. Manages quotation workflow with multiple steps
 
 ### Project Types
 - **On-Grid Solar System** - Grid-tied solar power
@@ -36,7 +37,7 @@ The application has a quotation system that:
 2. **Frontend:**
    - `client/src/components/site-visit/marketing-site-visit-form.tsx` - Marketing site visit form
    - `client/src/components/site-visit/site-visit-details-modal.tsx` - Site visit details display
-   - `client/src/pages/quotation-creation.tsx` - Quotation creation page
+   - `client/src/pages/quotation-creation.tsx` - Quotation creation page (Pricing & Terms step)
 
 3. **Schema:**
    - `shared/schema.ts` - Data models and validation schemas
@@ -88,11 +89,6 @@ Example: "Supply and Installation of 5HP Solar Water Pump with 10 Solar Panels"
 
 ### 1. ON-GRID CHANGES
 
-**Current Description Format:**
-```
-"Supply and Installation of 3 kW Solar Grid Tie 1 Phase On GRID Solar System"
-```
-
 **Required Description Format:**
 ```
 "Supply and Installation of 3 kW Solar Grid Tie {inverterKW} KW Inverter {phase} On GRID Solar System"
@@ -112,12 +108,7 @@ Example: "Supply and Installation of 5HP Solar Water Pump with 10 Solar Panels"
 
 ### 2. OFF-GRID CHANGES
 
-**Current Description (Line 1314):**
-```
-"Supply and Installation of 340W X 2 Nos Panel, 1KVA/24v 1PH MPPT Inverter, 100AH X 2, 1-Phase Offgrid Solar System"
-```
-
-**Required Description Format (based on images):**
+**Required Description Format (based on Image 1):**
 ```
 "Supply and Installation of {panelWatts}W X {panelCount} Nos Panel, {inverterKVA}KVA/{inverterVolt}V {inverterMake} {batteryAH}AH X {batteryCount}, {phase}-Phase Offgrid Solar System"
 ```
@@ -182,11 +173,6 @@ Example: "Supply and Installation of 5HP Solar Water Pump with 10 Solar Panels"
 
 ### 4. WATER HEATER CHANGES
 
-**Current Description:**
-```
-"Supply and Installation of 500L Solar Water Heater - Venus Brand"
-```
-
 **Required Description (based on Image 3):**
 ```
 "Supply and installation of {waterHeaterBrand} make solar water heater {capacityLitres} commercial {waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank {heatingCoilType} And Transport Including GST"
@@ -208,7 +194,6 @@ Example: "Supply and Installation of 5HP Solar Water Pump with 10 Solar Panels"
    - New field in schema
    - Type: Enum/Select
    - Options: "Pressurized", "Non-Pressurized"
-   - Replaces current brand field logic
 
 3. **Labour and Transport** (Checkbox)
    - New boolean field
@@ -225,19 +210,16 @@ Example: "Supply and Installation of 5HP Solar Water Pump with 10 Solar Panels"
 **PDF TEMPLATE CHANGES FOR WATER HEATER:**
 - ❌ REMOVE: "Quotation Pricing Details" table
 - ❌ REMOVE: Single row table above BOM
-- ✅ KEEP: Simplified BOM table (as shown in Image 5)
-  - Columns: SINo, Image, Description, Price, Qty, Amount
+- ❌ REMOVE: Image column from BOM table
+- ✅ KEEP: Simplified BOM table
+  - Columns: SINo, Description, Price, Qty, Amount (NO Image column)
   - No complex calculations
   - Simple display format
+- ➕ ADD: After BOM table, display "Installation on {floor}" where {floor} comes from `project.floor` field
 
 ---
 
 ### 5. WATER PUMP CHANGES
-
-**Current Description:**
-```
-"Supply and Installation of 5HP Solar Water Pump with 10 Solar Panels"
-```
 
 **Required Description Format (based on Image 4):**
 ```
@@ -295,12 +277,18 @@ Labour and Transport"
 **FIELD CHANGES FOR WATER PUMP:**
 
 1. **RENAME:** "Motor HP" → "Drive HP"
-   - Update in schema
+   - Update in schema: `hp` field to `driveHP`
    - Update in all forms
    - Update in site visit forms
    - Update in site visit details modal
 
-2. **NEW CHECKBOXES:**
+2. **REPLACE:** "Plumbing Work" field with "Earth Work"
+   - Current field: `plumbingWorkScope` with options "Customer scope" / "Company scope"
+   - Replace this field with "Earth Work" field
+   - Update all references in forms, modals, and backend
+   - Ensure backward compatibility with existing data
+
+3. **NEW CHECKBOXES:**
    - Lightening Arrest (same as On-Grid implementation)
    - Electrical Accessories (same as On-Grid implementation)
    - Earth Connection (same as On-Grid implementation)
@@ -313,6 +301,50 @@ Labour and Transport"
   - Columns: Sl No, Description, QTY, Rate/Qty, Amount
   - No complex calculations
   - Simple display format
+
+---
+
+## 🖼️ QUOTATION CREATION UI/UX CHANGES
+
+### File: `client/src/pages/quotation-creation.tsx`
+
+### Changes for WATER HEATER Project Type in "Pricing & Terms" Step:
+
+**REMOVE the following sections:**
+1. ❌ Warranty details part
+2. ❌ Delivery period part
+3. ❌ Quotation summary part
+4. ❌ "Document required for PM Surya Ghar" part
+
+**MODIFY the following:**
+- ✏️ Editable BOM table - Simplify to show only basic columns without complex calculations
+  - Columns: SINo, Description, Price, Qty, Amount (NO Image column)
+  - Remove all complex calculation logic specific to other project types
+
+**Implementation:**
+- Add conditional rendering based on `projectType === 'water_heater'`
+- Hide the above sections when creating Water Heater quotations
+- Display simplified BOM editor
+
+---
+
+### Changes for WATER PUMP Project Type in "Pricing & Terms" Step:
+
+**REMOVE the following sections:**
+1. ❌ Warranty details part
+2. ❌ Delivery period part
+3. ❌ Quotation summary part
+4. ❌ "Document required for PM Surya Ghar" part
+
+**MODIFY the following:**
+- ✏️ Editable BOM table - Simplify to show only basic columns without complex calculations
+  - Columns: Sl No, Description, QTY, Rate/Qty, Amount
+  - Remove all complex calculation logic specific to other project types
+
+**Implementation:**
+- Add conditional rendering based on `projectType === 'water_pump'`
+- Hide the above sections when creating Water Pump quotations
+- Display simplified BOM editor
 
 ---
 
@@ -362,7 +394,9 @@ export const waterPumpConfigSchema = z.object({
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
   }).optional(),
-  plumbingWorkScope: z.enum(workScopeOptions).optional(),
+  
+  // REPLACED FIELD: plumbingWorkScope renamed to earthWork
+  earthWork: z.enum(workScopeOptions).optional(), // Replaces plumbingWorkScope
   civilWorkScope: z.enum(workScopeOptions).optional(),
   
   // NEW FIELDS
@@ -382,7 +416,7 @@ export const waterPumpConfigSchema = z.object({
 
 **NEW FIELDS TO ADD:**
 
-1. **Qty Field** (around line 320-329)
+1. **Qty Field**
 ```typescript
 <div>
   <Label>Quantity</Label>
@@ -434,11 +468,18 @@ export const waterPumpConfigSchema = z.object({
 </div>
 ```
 
+---
+
 ### Water Pump Form (marketing-site-visit-form.tsx)
 
 **FIELD RENAME:**
 - Change all `hp` references to `driveHP`
 - Update labels from "Motor HP" to "Drive HP"
+
+**FIELD REPLACEMENT:**
+- Replace "Plumbing Work" field with "Earth Work" field
+- Change field name from `plumbingWorkScope` to `earthWork`
+- Keep same options: "Customer scope" / "Company scope"
 
 **NEW CHECKBOXES TO ADD:**
 
@@ -535,6 +576,7 @@ export const waterPumpConfigSchema = z.object({
 
 **Water Pump Display Updates:**
 - Change "Motor HP" label to "Drive HP"
+- Change "Plumbing Work" label to "Earth Work"
 - Add Lightening Arrest indicator
 - Add Electrical Accessories indicator
 - Add Earth Connection display
@@ -550,10 +592,6 @@ export const waterPumpConfigSchema = z.object({
 
 #### 1. ON-GRID Description Update (Line 1281)
 ```typescript
-// BEFORE:
-description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase'} On GRID Solar System`;
-
-// AFTER:
 const inverterKW_onGrid = project.inverterKW || calculatedKW;
 const phase_onGrid = project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase';
 description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${inverterKW_onGrid} KW Inverter ${phase_onGrid} On GRID Solar System`;
@@ -561,10 +599,6 @@ description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${
 
 #### 2. OFF-GRID Description Update (Line 1314)
 ```typescript
-// BEFORE:
-description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${batteryVolt_offGrid}v ${phase_offGrid}PH MPPT Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
-
-// AFTER:
 const panelWatts_offGrid = project.panelWatts || '530';
 const panelCount_offGrid = project.panelCount || 1;
 const inverterKVA_offGrid = (project as any).inverterKVA || project.inverterKW || '1';
@@ -579,10 +613,6 @@ description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_
 
 #### 3. HYBRID Description Update (Line 1347)
 ```typescript
-// BEFORE:
-description = `Supply and Installation of ${panelWatts_hybrid}W X ${panelCount_hybrid} Nos Panel, ${inverterKVA_hybrid}KVA/${batteryVolt_hybrid}v ${phase_hybrid}PH MPPT Inverter, ${batteryAH_hybrid}AH X ${batteryCount_hybrid}, ${phase_hybrid}-Phase Hybrid Solar System`;
-
-// AFTER:
 const totalKW_hybrid = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
 const inverterKVA_hybrid = (project as any).inverterKVA || project.inverterKW || '1';
 const inverterVolt_hybrid = project.inverterVolt || (project.voltage * project.batteryCount);
@@ -601,10 +631,6 @@ description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverter
 
 #### 4. WATER HEATER Description Update (Line 1368)
 ```typescript
-// BEFORE:
-description = `Supply and Installation of ${litres}L Solar Water Heater - ${project.brand || 'Standard'} Brand`;
-
-// AFTER:
 const waterHeaterBrand = project.brand || 'Standard';
 const capacityLitres = project.litre || 100;
 const waterHeaterModel = project.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
@@ -615,10 +641,6 @@ description = `Supply and installation of ${waterHeaterBrand} make solar water h
 
 #### 5. WATER PUMP Description Update (Line 1389)
 ```typescript
-// BEFORE:
-description = `Supply and Installation of ${hp}HP Solar Water Pump with ${project.panelCount || 4} Solar Panels`;
-
-// AFTER:
 const driveHP_pump = project.driveHP || project.hp || '1'; // Fallback for old data
 const panelWatts_pump = project.panelWatts || '540';
 const panelCount_pump = project.panelCount || 10;
@@ -664,21 +686,30 @@ description = descriptionParts.join('\n');
 
 ### Water Heater PDF Updates
 1. **Remove Quotation Pricing Details table**
-   - Add conditional logic to skip this table for water_heater project type
+   - Add conditional logic: `if (projectType !== 'water_heater')`
+   - Skip this table for water_heater project type
    
 2. **Remove single row table above BOM**
-   - Add conditional logic to skip this table for water_heater project type
+   - Add conditional logic: `if (projectType !== 'water_heater')`
+   - Skip this table for water_heater project type
 
 3. **Simplify BOM table structure**
-   - Use simplified columns: SINo, Image, Description, Price, Qty, Amount
+   - Use simplified columns: SINo, Description, Price, Qty, Amount
+   - Remove Image column (as per client requirement: "Image (no needed)")
    - Remove complex calculation columns
+
+4. **Add floor installation text after BOM table**
+   - Add text: `Installation on ${project.floor}` after BOM table
+   - This should be dynamic based on the floor field from project configuration
 
 ### Water Pump PDF Updates
 1. **Remove Quotation Pricing Details table**
-   - Add conditional logic to skip this table for water_pump project type
+   - Add conditional logic: `if (projectType !== 'water_pump')`
+   - Skip this table for water_pump project type
    
 2. **Remove single row table above BOM**
-   - Add conditional logic to skip this table for water_pump project type
+   - Add conditional logic: `if (projectType !== 'water_pump')`
+   - Skip this table for water_pump project type
 
 3. **Simplify BOM table structure**
    - Use simplified columns: Sl No, Description, QTY, Rate/Qty, Amount
@@ -695,6 +726,7 @@ description = descriptionParts.join('\n');
   - [ ] Add `labourAndTransport` boolean field
 - [ ] Update `waterPumpConfigSchema` in `shared/schema.ts`
   - [ ] Rename `hp` to `driveHP`
+  - [ ] Replace `plumbingWorkScope` with `earthWork`
   - [ ] Add `lightningArrest` boolean field
   - [ ] Add `electricalAccessories` boolean field
   - [ ] Add `electricalCount` number field
@@ -735,6 +767,7 @@ description = descriptionParts.join('\n');
 - [ ] Update Water Pump form in `marketing-site-visit-form.tsx`
   - [ ] Rename "Motor HP" label to "Drive HP"
   - [ ] Change `hp` field to `driveHP` in all references
+  - [ ] Replace "Plumbing Work" field with "Earth Work"
   - [ ] Add Lightening Arrest checkbox
   - [ ] Add Electrical Accessories checkbox with auto-count
   - [ ] Add Earth Connection multi-checkbox
@@ -742,26 +775,44 @@ description = descriptionParts.join('\n');
   - [ ] Update interface definition
   - [ ] Update default values in `handleProjectTypeChange()`
 
-### Phase 4: Site Visit Details Modal Updates
+### Phase 4: Quotation Creation UI Updates
+- [ ] Update `quotation-creation.tsx` for Water Heater
+  - [ ] Add conditional rendering for "Pricing & Terms" step
+  - [ ] Hide Warranty details section
+  - [ ] Hide Delivery period section
+  - [ ] Hide Quotation summary section
+  - [ ] Hide "Document required for PM Surya Ghar" section
+  - [ ] Simplify editable BOM table (basic columns only)
+- [ ] Update `quotation-creation.tsx` for Water Pump
+  - [ ] Add conditional rendering for "Pricing & Terms" step
+  - [ ] Hide Warranty details section
+  - [ ] Hide Delivery period section
+  - [ ] Hide Quotation summary section
+  - [ ] Hide "Document required for PM Surya Ghar" section
+  - [ ] Simplify editable BOM table (basic columns only)
+
+### Phase 5: Site Visit Details Modal Updates
 - [ ] Update `site-visit-details-modal.tsx` for Water Heater
   - [ ] Add Qty display
   - [ ] Add Water Heater Model display
   - [ ] Add Labour and Transport indicator
 - [ ] Update `site-visit-details-modal.tsx` for Water Pump
   - [ ] Change "Motor HP" to "Drive HP"
+  - [ ] Change "Plumbing Work" to "Earth Work"
   - [ ] Add Lightening Arrest indicator
   - [ ] Add Electrical Accessories indicator
   - [ ] Add Earth Connection display
   - [ ] Add Labour and Transport indicator
 
-### Phase 5: PDF Template Updates
+### Phase 6: PDF Template Updates
 - [ ] Update `quotation-pdf-service.ts`
   - [ ] Add conditional logic to skip "Quotation Pricing Details" table for water_heater and water_pump
   - [ ] Add conditional logic to skip single row table above BOM for water_heater and water_pump
-  - [ ] Create simplified BOM table template for water_heater
+  - [ ] Create simplified BOM table template for water_heater (NO Image column)
   - [ ] Create simplified BOM table template for water_pump
+  - [ ] Add "Installation on {floor}" text after BOM table for water_heater
 
-### Phase 6: Testing
+### Phase 7: Testing
 - [ ] Test On-Grid quotation generation
   - [ ] Verify description includes inverter KW
   - [ ] Verify phase is displayed correctly
@@ -777,20 +828,24 @@ description = descriptionParts.join('\n');
 - [ ] Test Water Heater quotation generation
   - [ ] Verify new fields appear in form
   - [ ] Verify description generation
-  - [ ] Verify PDF template (no pricing table, simplified BOM)
+  - [ ] Verify PDF template (no pricing table, simplified BOM, floor installation text)
   - [ ] Test site visit form submission
   - [ ] Test site visit details modal display
+  - [ ] Test quotation creation UI (hidden sections)
 - [ ] Test Water Pump quotation generation
   - [ ] Verify "Drive HP" labeling
+  - [ ] Verify "Earth Work" field replacement
   - [ ] Verify new checkboxes appear
   - [ ] Verify description generation with dynamic items
   - [ ] Verify PDF template (no pricing table, simplified BOM)
   - [ ] Test site visit form submission
   - [ ] Test site visit details modal display
+  - [ ] Test quotation creation UI (hidden sections)
 
-### Phase 7: Data Migration (if needed)
+### Phase 8: Data Migration (if needed)
 - [ ] Create migration script for existing water_pump data
   - [ ] Rename `hp` field to `driveHP` in existing records
+  - [ ] Rename `plumbingWorkScope` field to `earthWork` in existing records
   - [ ] Add default values for new fields
 
 ---
@@ -799,6 +854,7 @@ description = descriptionParts.join('\n');
 
 1. **Backward Compatibility:**
    - For water pump, include fallback: `project.driveHP || project.hp` to support old data
+   - For water pump, include fallback: `project.earthWork || project.plumbingWorkScope` to support old data
    - Ensure default values for new fields don't break existing quotations
 
 2. **Validation:**
@@ -812,12 +868,18 @@ description = descriptionParts.join('\n');
 
 4. **PDF Template:**
    - Water Heater and Water Pump use simplified BOM without complex calculations
-   - Image column is present in Water Heater BOM (as per requirement)
+   - Image column is REMOVED from Water Heater BOM (as per client requirement: "Image (no needed)")
    - QTY and Rate/Qty columns important for water heater and water pump
+   - Water Heater PDF should include floor installation text after BOM table
 
 5. **Conditional Display:**
    - Labour and Transport checkbox should affect both description and pricing
    - All optional items should be conditionally displayed in description
+   - UI sections should be conditionally hidden based on project type
+
+6. **Field Replacement Clarification:**
+   - Water Pump: "Plumbing Work" field is being REPLACED (not added alongside), change field name from `plumbingWorkScope` to `earthWork`
+   - This affects schema, forms, modal, and backend references
 
 ---
 
@@ -830,7 +892,7 @@ Site Visit Form (Marketing)
     ↓
   Save to Database
     ↓
-  Quotation Creation
+  Quotation Creation (with conditional UI for Water Heater/Water Pump)
     ↓
   calculatePricingBreakdown()
     ↓
@@ -838,7 +900,7 @@ Site Visit Form (Marketing)
     ↓
   Generate BOM
     ↓
-  Generate PDF Template
+  Generate PDF Template (with conditional sections)
     ↓
   Final Quotation PDF
 ```
@@ -853,8 +915,12 @@ Site Visit Form (Marketing)
 4. ✅ Site visit details modal shows updated information
 5. ✅ PDF templates render correctly for all project types
 6. ✅ Water Heater and Water Pump PDFs use simplified BOM
-7. ✅ No breaking changes to existing quotations
-8. ✅ All descriptions match the format shown in provided images
+7. ✅ Water Heater PDF includes floor installation text after BOM
+8. ✅ Water Heater and Water Pump quotation creation UI hides specified sections
+9. ✅ No breaking changes to existing quotations
+10. ✅ All descriptions match the format shown in provided images
+11. ✅ Water Pump "Plumbing Work" field successfully replaced with "Earth Work"
+12. ✅ Backward compatibility maintained with proper fallbacks
 
 ---
 
