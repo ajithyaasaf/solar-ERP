@@ -198,6 +198,98 @@ const calculateSubsidy = (kw: number, propertyType: string, projectType: string)
   }
 };
 
+// Helper function to generate project description based on project type and configuration
+const generateProjectDescription = (project: QuotationProject): string => {
+  const projectType = project.projectType;
+  
+  switch (projectType) {
+    case 'on_grid': {
+      const kw = Math.floor((project as any).systemKW || 0);
+      const inverterKW = (project as any).inverterKW || kw;
+      const phase = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
+      return `Supply and Installation of ${kw} kw Solar Panel ${inverterKW} KW Inverter ${phase} ON-GRID Solar System`;
+    }
+    
+    case 'off_grid': {
+      const panelWatts = project.panelWatts || 530;
+      const panelCount = project.panelCount || 1;
+      const inverterKVA = (project as any).inverterKVA || (project as any).inverterKW || 1;
+      const voltage = project.voltage || 24;
+      const batteryCount = project.batteryCount || 1;
+      const inverterVolt = (project as any).inverterVolt || (voltage * batteryCount);
+      const inverterMake = project.inverterMake && project.inverterMake.length > 0 
+        ? project.inverterMake[0].toUpperCase() 
+        : 'MPPT';
+      const batteryAH = project.batteryAH || 100;
+      const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
+      return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA\\${inverterVolt}v ${phase}PH ${inverterMake}Inverter, ${batteryAH}AH X ${batteryCount}, ${phase}-Phase Offgrid Solar System`;
+    }
+    
+    case 'hybrid': {
+      const totalKW = (project as any).systemKW || 0;
+      const inverterKVA = (project as any).inverterKVA || (project as any).inverterKW || 1;
+      const voltage = project.voltage || 24;
+      const batteryCount = project.batteryCount || 1;
+      const inverterVolt = (project as any).inverterVolt || (voltage * batteryCount);
+      const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
+      const batteryBrand = (project as any).batteryBrand || 'Exide';
+      const batteryAH = project.batteryAH || 100;
+      const batteryType = (project as any).batteryType === 'lithium' ? 'Lithium Battery' : 'Lead Acid Battery';
+      return `Supply and Installation of ${totalKW} KW PANEL, ${inverterKVA}Kva/${inverterVolt} V ${phase} Phase Hybrid Inverter, ${batteryBrand} ${batteryAH}ah ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
+    }
+    
+    case 'water_heater': {
+      const brand = (project as any).brand || 'Standard';
+      const litres = project.litre || 100;
+      const model = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
+      const heatingCoil = (project as any).heatingCoil || 'Heating Coil';
+      const labourTransport = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '';
+      return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoil}${labourTransport}`;
+    }
+    
+    case 'water_pump': {
+      const driveHP = (project as any).driveHP || (project as any).hp || 1;
+      const panelWattsNum = Number(project.panelWatts) || 540;
+      const panelCount = project.panelCount || 10;
+      const totalKW = (panelWattsNum * panelCount) / 1000;
+      const panelBrand = (project as any).panelBrand && (project as any).panelBrand.length > 0 
+        ? (project as any).panelBrand[0].toUpperCase() 
+        : 'UTL';
+      const phase = (project as any).inverterPhase === 'three_phase' ? '3' : '1';
+      const lowerHeight = (project as any).gpStructure?.lowerEndHeight || 3;
+      const higherHeight = (project as any).gpStructure?.higherEndHeight || 4;
+      
+      let description = `Supply and Installation solar power System Includes: ${driveHP} hp Drive ${totalKW} kw ${panelWattsNum}Wp x ${panelCount} Nos ${panelBrand} Panel, ${driveHP} hp Drive ${phase} phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+      
+      const conditionalItems = [];
+      if ((project as any).earth && (project as any).earth.length > 0) {
+        conditionalItems.push('Earth kit');
+      }
+      if ((project as any).lightningArrest) {
+        conditionalItems.push('Lighting Arrester');
+      }
+      if ((project as any).dcCable) {
+        conditionalItems.push('DC Cable');
+      }
+      if ((project as any).electricalAccessories) {
+        conditionalItems.push('Electrical Accessories');
+      }
+      if ((project as any).labourAndTransport) {
+        conditionalItems.push('Labour and Transport');
+      }
+      
+      if (conditionalItems.length > 0) {
+        description += ' ' + conditionalItems.join(', ');
+      }
+      
+      return description;
+    }
+    
+    default:
+      return `Supply and Installation of ${(project as any).projectType || 'Solar'} Solar System`;
+  }
+};
+
 // Helper function to format structure type labels
 const formatStructureTypeLabel = (type: string): string => {
   const labels: Record<string, string> = {
@@ -4711,7 +4803,7 @@ export default function QuotationCreation() {
                             : 0;
                           
                           // Generate default description if custom one doesn't exist
-                          const defaultDescription = `Supply and Installation of ${systemKW}kw ${project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System`;
+                          const defaultDescription = generateProjectDescription(project);
                           const description = project.customDescription || defaultDescription;
                           
                           return (
@@ -4749,8 +4841,8 @@ export default function QuotationCreation() {
                                     
                                     // Update description if user hasn't customized it
                                     if (!project.customDescription) {
-                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
-                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
+                                      const updatedProject = { ...project, systemKW: newKW };
+                                      const newDescription = generateProjectDescription(updatedProject);
                                       form.setValue(`projects.${index}.customDescription`, newDescription);
                                     }
                                     
@@ -4883,7 +4975,7 @@ export default function QuotationCreation() {
                         ? Math.round(gstAmount / roundedSystemKW)
                         : 0;
                       
-                      const defaultDescription = `Supply and Installation of ${systemKW}kw ${project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType} Solar System`;
+                      const defaultDescription = generateProjectDescription(project);
                       const description = project.customDescription || defaultDescription;
                       
                       return (
@@ -4926,8 +5018,8 @@ export default function QuotationCreation() {
                                     const newCustomerPayment = newProjectValue - newSubsidy;
                                     
                                     if (!project.customDescription) {
-                                      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : project.projectType === 'off_grid' ? 'Off-Grid' : project.projectType === 'hybrid' ? 'Hybrid' : project.projectType;
-                                      const newDescription = `Supply and Installation of ${newKW}kw ${projectTypeName} Solar System`;
+                                      const updatedProject = { ...project, systemKW: newKW };
+                                      const newDescription = generateProjectDescription(updatedProject);
                                       form.setValue(`projects.${index}.customDescription`, newDescription);
                                     }
                                     

@@ -1286,8 +1286,8 @@ export class QuotationTemplateService {
         
         // NEW: Include inverter KW in description
         const inverterKW_onGrid = project.inverterKW || kw;
-        const phase_onGrid = project.inverterPhase === 'three_phase' ? '3 Phase' : '1 Phase';
-        description = `Supply and Installation of ${Math.floor(kw)} kW Solar Grid Tie ${inverterKW_onGrid} KW Inverter ${phase_onGrid} On GRID Solar System`;
+        const phase_onGrid = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
+        description = `Supply and Installation of ${Math.floor(kw)} kw Solar Panel ${inverterKW_onGrid} KW Inverter ${phase_onGrid} ON-GRID Solar System`;
         break;
 
       case 'off_grid':
@@ -1323,7 +1323,7 @@ export class QuotationTemplateService {
         const batteryCount_offGrid = project.batteryCount || 1;
         const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
         
-        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA\\${inverterVolt_offGrid}v ${phase_offGrid}PH ${inverterMake_offGrid}Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
         break;
 
       case 'hybrid':
@@ -1361,7 +1361,7 @@ export class QuotationTemplateService {
         const batteryType_hybrid = (project as any).batteryType ? batteryTypeMap[(project as any).batteryType] : 'Lead Acid Battery';
         const batteryCount_hybrid = project.batteryCount || 1;
         
-        description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverterKVA_hybrid}KVA/${inverterVolt_hybrid}V ${phase_hybrid} Phase Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}AH ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
+        description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverterKVA_hybrid}Kva/${inverterVolt_hybrid} V ${phase_hybrid} Phase Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}ah ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
         break;
 
       case 'water_heater':
@@ -1388,9 +1388,9 @@ export class QuotationTemplateService {
         const capacityLitres = litres;
         const waterHeaterModel = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
         const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
-        const labourTransport = (project as any).labourAndTransport ? ' And Transport Including GST' : '';
+        const labourTransport = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '';
         
-        description = `Supply and installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion-resistant epoxy-coated inner tank and powder-coated outer tank. ${heatingCoilType}${labourTransport}`;
+        description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoilType}${labourTransport}`;
         break;
 
       case 'water_pump':
@@ -1412,7 +1412,7 @@ export class QuotationTemplateService {
         ratePerKw = basePrice;
         kw = 1; // Set kw to 1 for water pump to avoid division by zero
         
-        // NEW: Updated multi-line description format based on specification
+        // NEW: Updated description format based on specification
         const panelWatts_pump = project.panelWatts || '540';
         const panelCount_pump = project.panelCount || 10;
         const totalKW_pump = (parseInt(panelWatts_pump) * panelCount_pump) / 1000;
@@ -1423,11 +1423,8 @@ export class QuotationTemplateService {
         const lowerHeight = (project as any).gpStructure?.lowerEndHeight || '3';
         const higherHeight = (project as any).gpStructure?.higherEndHeight || '4';
         
-        // Build description with dynamic sections
-        let pumpDescription = `Supply and Installation solar power\n\nSystem Includes: ${driveHP_pump} hp Drive\n\n`;
-        pumpDescription += `${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${driveHP_pump} hp Drive\n\n`;
-        pumpDescription += `${phase_pump} phase, ${totalKW_pump} kw Structure\n\n`;
-        pumpDescription += `Structure ${lowerHeight} feet lower to ${higherHeight} feet higher\n\n`;
+        // Build description in single line format with conditional items
+        let pumpDescription = `Supply and Installation solar power System Includes:${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${driveHP_pump} hp Drive ${phase_pump} phase, ${totalKW_pump} kw Structure Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
         
         // Add conditional items based on checkboxes
         const conditionalItems = [];
@@ -1447,7 +1444,9 @@ export class QuotationTemplateService {
           conditionalItems.push('Labour and Transport');
         }
         
-        pumpDescription += conditionalItems.join(',\n\n');
+        if (conditionalItems.length > 0) {
+          pumpDescription += ' ' + conditionalItems.join(', ');
+        }
         
         description = pumpDescription;
         break;
