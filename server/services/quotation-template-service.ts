@@ -1388,8 +1388,9 @@ export class QuotationTemplateService {
         const capacityLitres = litres;
         const waterHeaterModel = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
         const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
+        const labourTransport = (project as any).labourAndTransport ? ' And Transport Including GST' : '';
         
-        description = `Supply and installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType} And Transport Including GST`;
+        description = `Supply and installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
         break;
 
       case 'water_pump':
@@ -1436,7 +1437,9 @@ export class QuotationTemplateService {
         if ((project as any).lightningArrest) {
           conditionalItems.push('Lighting Arrester');
         }
-        conditionalItems.push('DC Cable');
+        if ((project as any).dcCable) {
+          conditionalItems.push('DC Cable');
+        }
         if ((project as any).electricalAccessories) {
           conditionalItems.push('Electrical Accessories');
         }
