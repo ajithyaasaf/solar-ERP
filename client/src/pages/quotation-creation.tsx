@@ -840,6 +840,9 @@ function ManualProjectConfiguration({ form }: { form: any }) {
           floor: "0",
           plumbingWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
+          qty: 1,
+          waterHeaterModel: "non_pressurized",
+          labourAndTransport: false,
           others: ""
         };
         break;
@@ -847,6 +850,7 @@ function ManualProjectConfiguration({ form }: { form: any }) {
         newProject = {
           ...newProject,
           hp: "1",
+          driveHP: "1",
           drive: "vfd",
           panelWatts: "530",
           panelType: "bifacial",
@@ -863,7 +867,13 @@ function ManualProjectConfiguration({ form }: { form: any }) {
             type: "mini_rail"
           },
           plumbingWorkScope: "customer_scope",
+          earthWork: "customer_scope",
           civilWorkScope: "customer_scope",
+          lightningArrest: false,
+          electricalAccessories: false,
+          electricalCount: 0,
+          earth: [],
+          labourAndTransport: false,
           others: ""
         };
         break;
@@ -2514,6 +2524,51 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               data-testid={`input-gst-percentage-${projectIndex}`}
             />
           </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Quantity *</label>
+            <Input
+              type="number"
+              min="1"
+              value={project.qty ?? 1}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('qty', value === '' ? 1 : parseInt(value) || 1);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '' || parseInt(e.target.value) < 1) {
+                  handleFieldChange('qty', 1);
+                }
+              }}
+              placeholder="Number of units"
+              data-testid={`input-heater-qty-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Water Heater Model *</label>
+            <Select value={project.waterHeaterModel || 'non_pressurized'} onValueChange={(value) => handleFieldChange('waterHeaterModel', value)}>
+              <SelectTrigger data-testid={`select-heater-model-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pressurized">Pressurized</SelectItem>
+                <SelectItem value="non_pressurized">Non-Pressurized</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Checkbox
+                id={`labour-transport-heater-${projectIndex}`}
+                checked={project.labourAndTransport || false}
+                onCheckedChange={(checked) => handleFieldChange('labourAndTransport', checked)}
+                data-testid={`checkbox-labour-transport-heater-${projectIndex}`}
+              />
+              <span>Labour and Transport</span>
+            </label>
+          </div>
         </div>
 
         {/* Work Scope Section for Water Heater */}
@@ -2573,9 +2628,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Motor HP *</label>
-            <Select value={project.hp || "1"} onValueChange={(value) => handleFieldChange('hp', value)}>
-              <SelectTrigger data-testid={`select-hp-${projectIndex}`}>
+            <label className="text-sm font-medium">Drive HP *</label>
+            <Select value={project.driveHP || project.hp || "1"} onValueChange={(value) => {
+              handleFieldChange('driveHP', value);
+              handleFieldChange('hp', value);
+            }}>
+              <SelectTrigger data-testid={`select-drivehp-${projectIndex}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -2890,9 +2948,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Plumbing Work Scope</label>
-              <Select value={project.plumbingWorkScope || 'customer_scope'} onValueChange={(value) => handleFieldChange('plumbingWorkScope', value)}>
-                <SelectTrigger data-testid={`select-plumbing-work-pump-${projectIndex}`}>
+              <label className="text-sm font-medium">Earth Work Scope</label>
+              <Select value={project.earthWork || project.plumbingWorkScope || 'customer_scope'} onValueChange={(value) => {
+                handleFieldChange('earthWork', value);
+                handleFieldChange('plumbingWorkScope', value);
+              }}>
+                <SelectTrigger data-testid={`select-earth-work-pump-${projectIndex}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -2919,6 +2980,94 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Options Section for Water Pump */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700">Additional Options</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Checkbox
+                  id={`lightning-arrest-pump-${projectIndex}`}
+                  checked={project.lightningArrest || false}
+                  onCheckedChange={(checked) => handleFieldChange('lightningArrest', checked)}
+                  data-testid={`checkbox-lightning-arrest-pump-${projectIndex}`}
+                />
+                <span>Lightning Arrestor</span>
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Checkbox
+                  id={`electrical-accessories-pump-${projectIndex}`}
+                  checked={project.electricalAccessories || false}
+                  onCheckedChange={(checked) => {
+                    handleFieldChange('electricalAccessories', checked);
+                    if (checked && project.driveHP) {
+                      handleFieldChange('electricalCount', parseFloat(project.driveHP) || 1);
+                    } else if (!checked) {
+                      handleFieldChange('electricalCount', 0);
+                    }
+                  }}
+                  data-testid={`checkbox-electrical-accessories-pump-${projectIndex}`}
+                />
+                <span>Electrical Accessories</span>
+              </label>
+              {project.electricalAccessories && (
+                <Input
+                  type="number"
+                  value={project.electricalCount ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleFieldChange('electricalCount', value === '' ? '' : parseInt(value) || 0);
+                  }}
+                  min="0"
+                  placeholder="Electrical count (auto-filled from Drive HP)"
+                  data-testid={`input-electrical-count-pump-${projectIndex}`}
+                  className="mt-2"
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Earth Connection (Multiple Selection)</label>
+              <div className="space-y-2 border rounded p-2">
+                {earthingTypes.map((type) => (
+                  <div key={type} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`earth-${type}-pump-${projectIndex}`}
+                      checked={Array.isArray(project.earth) ? project.earth.includes(type) : false}
+                      onCheckedChange={(checked) => {
+                        const currentEarth = Array.isArray(project.earth) ? project.earth : [];
+                        const newEarth = checked 
+                          ? [...currentEarth, type]
+                          : currentEarth.filter((e: string) => e !== type);
+                        handleFieldChange('earth', newEarth);
+                      }}
+                      data-testid={`checkbox-earth-${type}-pump-${projectIndex}`}
+                    />
+                    <label htmlFor={`earth-${type}-pump-${projectIndex}`} className="text-sm cursor-pointer">
+                      {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Checkbox
+                  id={`labour-transport-pump-${projectIndex}`}
+                  checked={project.labourAndTransport || false}
+                  onCheckedChange={(checked) => handleFieldChange('labourAndTransport', checked)}
+                  data-testid={`checkbox-labour-transport-pump-${projectIndex}`}
+                />
+                <span>Labour and Transport</span>
+              </label>
             </div>
           </div>
         </div>

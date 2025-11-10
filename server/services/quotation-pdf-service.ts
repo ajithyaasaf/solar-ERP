@@ -534,6 +534,16 @@ export class QuotationPDFService {
             `).join('')}
           </tbody>
         </table>
+        ${template.projectType === 'water_heater' && template.floor !== undefined ? `
+        <div style="margin-top: 10px; padding: 8px; font-weight: bold; text-align: left;">
+          Installation on ${(() => {
+            const floor = template.floor || '0';
+            if (floor === '0') return 'Ground Floor';
+            const suffix = floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th';
+            return `${floor}${suffix} Floor`;
+          })()}
+        </div>
+        ` : ''}
         ` : `
         <!-- Standard BOM Table -->
         <table class="bom-table">
