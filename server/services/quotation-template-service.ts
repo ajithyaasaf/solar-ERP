@@ -1361,7 +1361,7 @@ export class QuotationTemplateService {
         const batteryType_hybrid = (project as any).batteryType ? batteryTypeMap[(project as any).batteryType] : 'Lead Acid Battery';
         const batteryCount_hybrid = project.batteryCount || 1;
         
-        description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverterKVA_hybrid}Kva/${inverterVolt_hybrid}V ${phase_hybrid} Phase Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}ah ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
+        description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverterKVA_hybrid}KVA/${inverterVolt_hybrid}V ${phase_hybrid} Phase Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}AH ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
         break;
 
       case 'water_heater':
@@ -1390,7 +1390,7 @@ export class QuotationTemplateService {
         const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
         const labourTransport = (project as any).labourAndTransport ? ' And Transport Including GST' : '';
         
-        description = `Supply and installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
+        description = `Supply and installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion-resistant epoxy-coated inner tank and powder-coated outer tank. ${heatingCoilType}${labourTransport}`;
         break;
 
       case 'water_pump':
