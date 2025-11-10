@@ -854,6 +854,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           dcrPanelCount: 6,
           nonDcrPanelCount: 0,
           panelCount: 6,
+          qty: 1,
           gpStructure: {
             lowerEndHeight: "0",
             higherEndHeight: "0"
@@ -2655,6 +2656,20 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 <SelectItem value="submersible">Submersible</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Quantity *</label>
+            <Input
+              type="number"
+              min="1"
+              value={project.qty || 1}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 1;
+                handleFieldChange('qty', value);
+              }}
+              data-testid={`input-pump-qty-${projectIndex}`}
+            />
           </div>
           
           <div className="space-y-2">

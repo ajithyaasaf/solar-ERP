@@ -142,6 +142,8 @@ interface WaterPumpConfig extends BaseConfig {
   dcrPanelCount: number;
   nonDcrPanelCount: number;
   panelCount: number;
+  // Quantity field for BOM generation
+  qty?: number;
   // New fields from client specification
   structureType?: string;
   gpStructure?: {
@@ -354,6 +356,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         dcrPanelCount: 1,
         nonDcrPanelCount: 0,
         panelCount: 1,
+        qty: 1,
         projectValue: 0,
         others: '',
         structureType: 'gp_structure',
@@ -2512,6 +2515,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <SelectItem value="submersible">Submersible</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <Label>Quantity *</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={formData.waterPumpConfig.qty || 1}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateConfig('waterPumpConfig', { qty: '' as any });
+                        } else {
+                          updateConfig('waterPumpConfig', { qty: parseInt(value) || 1 });
+                        }
+                      }}
+                      data-testid="input-water-pump-qty"
+                    />
                   </div>
 
                   <div>

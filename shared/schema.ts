@@ -415,7 +415,7 @@ export const waterHeaterConfigSchema = z.object({
   civilWorkScope: z.enum(workScopeOptions).optional(),
   // New fields for quotation description changes
   qty: z.number().min(1).default(1),
-  waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).optional(),
+  waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).default('non_pressurized'),
   labourAndTransport: z.boolean().default(false)
 });
 
@@ -432,6 +432,8 @@ export const waterPumpConfigSchema = z.object({
   panelCount: z.number().min(1),
   projectValue: z.number().min(0),
   others: z.string().optional(),
+  // Quantity field for BOM generation
+  qty: z.number().min(1).default(1),
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({

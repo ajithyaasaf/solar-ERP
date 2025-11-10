@@ -1465,6 +1465,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.waterPumpConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
+                      {siteVisit.marketingData.waterPumpConfig.qty && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Quantity</p>
+                          <p className="font-medium">{siteVisit.marketingData.waterPumpConfig.qty}</p>
+                        </div>
+                      )}
                       {siteVisit.marketingData.waterPumpConfig.lightningArrest && (
                         <div>
                           <p className="text-sm text-muted-foreground">Lightening Arrest</p>

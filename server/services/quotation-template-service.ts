@@ -1161,6 +1161,10 @@ export class QuotationTemplateService {
   private static generateWaterPumpBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
+    
+    // Support both new driveHP and legacy hp field
+    const driveHP = project.driveHP || project.hp || '1';
+    const quantity = project.qty || 1;
 
     // Solar Water Pump
     items.push({
@@ -1168,9 +1172,9 @@ export class QuotationTemplateService {
       description: `Solar Water Pump`,
       type: project.drive || "DC Drive",
       volt: "DC",
-      rating: `${project.hp || '1'} HP`,
+      rating: `${driveHP} HP`,
       make: "Standard",
-      qty: 1,
+      qty: quantity,
       unit: "Nos"
     });
 
@@ -1183,7 +1187,7 @@ export class QuotationTemplateService {
         volt: "24V",
         rating: project.solarPanel || "540 WATTS",
         make: project.panelBrand?.length > 0 ? project.panelBrand.join(' / ') : "Standard",
-        qty: project.panelCount,
+        qty: project.panelCount * quantity,
         unit: "Nos"
       });
     }
@@ -1194,9 +1198,9 @@ export class QuotationTemplateService {
       description: "Pump Controller",
       type: "MPPT Controller",
       volt: "DC",
-      rating: `For ${project.hp || '1'} HP Pump`,
+      rating: `For ${driveHP} HP Pump`,
       make: "Standard",
-      qty: 1,
+      qty: quantity,
       unit: "Nos"
     });
 
@@ -1229,9 +1233,9 @@ export class QuotationTemplateService {
       description: "Installation & Commissioning",
       type: "Pump System Installation",
       volt: "Service",
-      rating: `${project.hp || '1'}HP Pump System`,
+      rating: `${driveHP}HP Pump System`,
       make: "Standard",
-      qty: 1,
+      qty: quantity,
       unit: "Nos"
     });
 
