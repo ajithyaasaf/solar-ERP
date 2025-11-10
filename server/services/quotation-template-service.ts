@@ -1326,7 +1326,7 @@ export class QuotationTemplateService {
         const batteryCount_offGrid = project.batteryCount || 1;
         const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
         
-        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA\\${inverterVolt_offGrid}v ${phase_offGrid}PH ${inverterMake_offGrid}Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA\\${inverterVolt_offGrid}v ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
         break;
 
       case 'hybrid':
@@ -1427,7 +1427,7 @@ export class QuotationTemplateService {
         const higherHeight = (project as any).gpStructure?.higherEndHeight || '4';
         
         // Build description in single line format with conditional items
-        let pumpDescription = `Supply and Installation solar power System Includes:${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${driveHP_pump} hp Drive ${phase_pump} phase, ${totalKW_pump} kw Structure Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+        let pumpDescription = `Supply and Installation solar power System Includes: ${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${driveHP_pump} hp Drive ${phase_pump}-Phase, ${totalKW_pump} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
         
         // Add conditional items based on checkboxes
         const conditionalItems = [];

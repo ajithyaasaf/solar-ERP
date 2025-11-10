@@ -222,7 +222,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
         : 'MPPT';
       const batteryAH = project.batteryAH || 100;
       const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
-      return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA\\${inverterVolt}v ${phase}PH ${inverterMake}Inverter, ${batteryAH}AH X ${batteryCount}, ${phase}-Phase Offgrid Solar System`;
+      return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA\\${inverterVolt}v ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount}, ${phase}-Phase Offgrid Solar System`;
     }
     
     case 'hybrid': {
@@ -259,7 +259,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const lowerHeight = (project as any).gpStructure?.lowerEndHeight || 3;
       const higherHeight = (project as any).gpStructure?.higherEndHeight || 4;
       
-      let description = `Supply and Installation solar power System Includes: ${driveHP} hp Drive ${totalKW} kw ${panelWattsNum}Wp x ${panelCount} Nos ${panelBrand} Panel, ${driveHP} hp Drive ${phase} phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+      let description = `Supply and Installation solar power System Includes: ${driveHP} hp Drive ${totalKW} kw ${panelWattsNum}Wp x ${panelCount} Nos ${panelBrand} Panel, ${driveHP} hp Drive ${phase}-Phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
       
       const conditionalItems = [];
       if ((project as any).earth && (project as any).earth.length > 0) {

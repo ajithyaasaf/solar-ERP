@@ -469,7 +469,7 @@ export class QuotationPDFService {
       <div class="page-break">
         <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${this.formatNumber(template.pricingBreakdown.kw)} kw On-grid Solar NPG System</h3>
         
-        ${template.bomSummary ? `
+        ${!isWaterUtility && template.bomSummary ? `
         <table style="width: 100%; margin: 10px 0; border-collapse: collapse; background-color: #90EE90;">
           <tr style="font-weight: bold; text-align: center;">
             <td style="border: 1px solid #000; padding: 5px;">Phase</td>
