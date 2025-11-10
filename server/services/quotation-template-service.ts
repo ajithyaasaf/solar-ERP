@@ -1101,6 +1101,9 @@ export class QuotationTemplateService {
   private static generateWaterHeaterBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
+    
+    // Get quantity from project (defaults to 1)
+    const quantity = project.qty || 1;
 
     // Water Heater
     items.push({
@@ -1110,7 +1113,7 @@ export class QuotationTemplateService {
       volt: "NA",
       rating: `${project.litre || 100} Litres`,
       make: project.brand || "Standard",
-      qty: 1,
+      qty: quantity,
       unit: "Nos"
     });
 
@@ -1123,7 +1126,7 @@ export class QuotationTemplateService {
         volt: "230V",
         rating: project.heatingCoil,
         make: "Standard",
-        qty: 1,
+        qty: quantity,
         unit: "Nos"
       });
     }
@@ -1136,7 +1139,7 @@ export class QuotationTemplateService {
       volt: "NA",
       rating: "Standard",
       make: "Standard",
-      qty: 1,
+      qty: quantity,
       unit: "Set"
     });
 
@@ -1148,7 +1151,7 @@ export class QuotationTemplateService {
       volt: "Service",
       rating: `${project.litre || 100}L System`,
       make: "Standard",
-      qty: 1,
+      qty: quantity,
       unit: "Nos"
     });
 

@@ -874,6 +874,9 @@ export class SiteVisitDataMapper {
       floor: config.floor,
       plumbingWorkScope: config.plumbingWorkScope,
       civilWorkScope: config.civilWorkScope,
+      qty: config.qty || 1,
+      waterHeaterModel: config.waterHeaterModel || 'non_pressurized',
+      labourAndTransport: config.labourAndTransport || false,
       projectValue: totalValue,
       gstPercentage,
       gstAmount,
@@ -899,9 +902,14 @@ export class SiteVisitDataMapper {
     const subsidyAmount = 0; // Water pump doesn't get subsidy
     const customerPayment = totalValue;
 
+    // Determine inverter phase based on Drive HP (similar to off-grid logic)
+    const driveHPValue = parseFloat(config.driveHP || config.hp || '1');
+    const autoPhase = driveHPValue < 6 ? "single_phase" : "three_phase";
+
     return {
       projectType: 'water_pump',
-      hp: config.hp || "1HP",
+      driveHP: config.driveHP || config.hp || "1",
+      hp: config.hp || config.driveHP || "1",
       drive: config.drive || "AC Drive",
       solarPanel: config.solarPanel,
       panelWatts: config.panelWatts,
@@ -913,8 +921,16 @@ export class SiteVisitDataMapper {
       structureType: config.structureType,
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
-      plumbingWorkScope: config.plumbingWorkScope,
+      earthWork: config.earthWork || config.plumbingWorkScope,
+      plumbingWorkScope: config.plumbingWorkScope || config.earthWork,
       civilWorkScope: config.civilWorkScope,
+      lightningArrest: config.lightningArrest || false,
+      electricalAccessories: config.electricalAccessories || false,
+      electricalCount: config.electricalCount,
+      earth: config.earth || [],
+      labourAndTransport: config.labourAndTransport || false,
+      inverterPhase: config.inverterPhase || autoPhase,
+      qty: config.qty || 1,
       projectValue: totalValue,
       gstPercentage,
       gstAmount,

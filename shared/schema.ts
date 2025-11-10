@@ -1688,6 +1688,8 @@ export const quotationWaterPumpProjectSchema = z.object({
   electricalCount: z.number().min(0).optional(),
   earth: z.array(z.enum(earthingTypes)).default([]),
   labourAndTransport: z.boolean().default(false),
+  inverterPhase: z.enum(inverterPhases).optional(), // Added for phase calculation in description
+  qty: z.number().min(1).default(1), // Added quantity field for BOM
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),
