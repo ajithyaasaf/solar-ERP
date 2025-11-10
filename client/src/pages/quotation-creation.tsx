@@ -703,16 +703,11 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
 }
 
 // Manual Project Configuration Component
-function ManualProjectConfiguration({ form }: { form: any }) {
+function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: any; isServiceOnlyQuotation: boolean }) {
   const [selectedProjectType, setSelectedProjectType] = useState<string | null>(null);
   const [activeProjectIndex, setActiveProjectIndex] = useState<number | null>(null);
 
   const projects = form.watch("projects") || [];
-  
-  // Check if all projects are water heater or water pump (service-only types)
-  const isServiceOnlyQuotation = projects.length > 0 && projects.every((p: any) => 
-    ['water_heater', 'water_pump'].includes(p.projectType)
-  );
 
   const addProject = (projectType: string) => {
     const currentProjects = form.getValues("projects") || [];
@@ -3316,6 +3311,15 @@ export default function QuotationCreation() {
     }
   });
 
+  // Check if all projects are water heater or water pump (service-only types)
+  const projects = form.watch("projects") || [];
+  const isServiceOnlyQuotation = useMemo(() => 
+    projects.length > 0 && projects.every((p: any) => 
+      ['water_heater', 'water_pump'].includes(p.projectType)
+    ),
+    [projects]
+  );
+
   // Fetch customers for manual entry
   const { data: customers, isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["/api/customers"],
@@ -4632,7 +4636,7 @@ export default function QuotationCreation() {
                 )}
                 
                 {/* Always show the full editable configuration for both manual and site visit projects */}
-                <ManualProjectConfiguration form={form} />
+                <ManualProjectConfiguration form={form} isServiceOnlyQuotation={isServiceOnlyQuotation} />
               </CardContent>
             </Card>
           )}
