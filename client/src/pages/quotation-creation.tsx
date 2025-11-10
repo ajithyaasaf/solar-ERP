@@ -2519,9 +2519,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="venus">Venus</SelectItem>
-                <SelectItem value="pressurised">Pressurised</SelectItem>
-                <SelectItem value="non_pressurised">Non Pressurised</SelectItem>
                 <SelectItem value="hykon">Hykon</SelectItem>
+                <SelectItem value="supreme">Supreme</SelectItem>
               </SelectContent>
             </Select>
           </div>

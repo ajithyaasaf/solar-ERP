@@ -277,7 +277,7 @@ export const inverterVoltOptions = [
 ] as const;
 
 export const waterHeaterBrands = [
-  "venus", "pressurised", "non_pressurised", "hykon"
+  "venus", "hykon", "supreme"
 ] as const;
 
 // New schema additions for enhanced project specifications
