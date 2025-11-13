@@ -32,6 +32,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -3248,6 +3258,7 @@ export default function QuotationCreation() {
   const [bomItems, setBomItems] = useState<any[]>([]);
   const [isFetchingBom, setIsFetchingBom] = useState(false);
   const [editingBomItem, setEditingBomItem] = useState<number | null>(null);
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
   // State for editable scope of work sections
   const [companyScopeItems, setCompanyScopeItems] = useState<{[projectIndex: number]: string[]}>({});
@@ -4126,6 +4137,22 @@ export default function QuotationCreation() {
     fetchBomPreview();
   }, [currentStep, form, isEditMode, existingQuotation, toast]);
 
+  // Handle back button navigation with smart step-back behavior
+  const handleBack = () => {
+    if (currentStep > 0) {
+      // If not on first step, use the existing prevStep helper
+      prevStep();
+    } else {
+      // If on first step, check if form is dirty before exiting
+      if (form.formState.isDirty) {
+        setShowExitConfirmation(true);
+      } else {
+        // Form is clean, exit immediately
+        setLocation("/quotations");
+      }
+    }
+  };
+
   const onSubmit = (data: QuotationFormData) => {
     console.log("═══════════════════════════════════════════");
     console.log("🚀🚀🚀 FORM SUBMIT - onSubmit triggered 🚀🚀🚀");
@@ -4216,12 +4243,12 @@ export default function QuotationCreation() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation("/quotations")}
+            onClick={handleBack}
             data-testid="button-back"
             className="mb-4 -ml-2 hover:bg-muted"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Quotations
+            {currentStep > 0 ? "Previous Step" : "Back to Quotations"}
           </Button>
           
           <div className="flex items-start gap-4">
@@ -6015,6 +6042,33 @@ export default function QuotationCreation() {
           </form>
         </Form>
       </div>
+
+      {/* Exit Confirmation Dialog */}
+      <AlertDialog open={showExitConfirmation} onOpenChange={setShowExitConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Quotation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. If you leave now, all your progress will be lost. Are you sure you want to exit?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-exit">
+              Continue Editing
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowExitConfirmation(false);
+                setLocation("/quotations");
+              }}
+              data-testid="button-confirm-exit"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Discard & Exit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
