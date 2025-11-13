@@ -1573,7 +1573,7 @@ export class QuotationTemplateService {
       quoteValidity: `${validityDays} Days`,
       preparedBy: preparedByName || quotation.preparedBy || "SM",
       projectType: project.projectType,
-      floor: project.projectType === 'water_heater' ? (project as any).floor : undefined,
+      floor: (project as any).floor,
       customer: {
         name: customer.name,
         address: customer.address,

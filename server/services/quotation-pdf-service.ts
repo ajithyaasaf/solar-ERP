@@ -385,8 +385,8 @@ export class QuotationPDFService {
       <div class="reference">
         <strong>Dear Sir,</strong><br>
         <strong>Sub: Requirement of ${template.reference}</strong><br>
-        <strong>Ref: Discussion with ${template.preparedBy}, President</strong><br>
-        <strong>Prakash Green Energy.</strong>
+        <strong>Ref: Discussion with ${template.preparedBy}</strong><br>
+        <strong>Prakash Green Energy, Madurai</strong>
       </div>
       
       <!-- Description -->
@@ -622,6 +622,16 @@ export class QuotationPDFService {
         
         <div>
           ${(template.scopeOfWork.structure || []).map(item => `<div>${item}</div>`).join('')}
+          ${template.floor !== undefined && template.floor !== null ? `
+          <div style="margin-top: 8px; font-weight: bold;">
+            ${(() => {
+              const floor = template.floor.toString();
+              if (floor === '0') return '   • Installation on Ground Floor';
+              const suffix = floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th';
+              return `   • Installation on ${floor}${suffix} Floor`;
+            })()}
+          </div>
+          ` : ''}
         </div>
         
         ${template.scopeOfWork.netBiDirectionalMeter && template.scopeOfWork.netBiDirectionalMeter.length > 0 ? `
