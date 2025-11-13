@@ -4243,7 +4243,7 @@ export default function QuotationCreation() {
   }
 
   return (
-    <div className="bg-gradient-to-b from-background to-muted/20 pb-8" data-testid="quotation-creation-page">
+    <div className="bg-gradient-to-b from-background to-muted/20" data-testid="quotation-creation-page">
       {/* Header Section */}
       <div className="bg-background border-b">
         <div className="container mx-auto px-4 py-6 md:py-8">
@@ -4274,7 +4274,7 @@ export default function QuotationCreation() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 md:py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8 pb-8">
         {/* Progress indicator - Mobile: Simplified, Desktop: Full */}
         <div className="mb-6 md:mb-8">
           {/* Mobile Progress - Compact horizontal dots */}
@@ -4710,7 +4710,7 @@ export default function QuotationCreation() {
 
           {/* Step 1: Customer Details */}
           {currentStep === 1 && (
-            <Card data-testid="card-customer-details">
+            <Card data-testid="card-customer-details" className="h-fit">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
