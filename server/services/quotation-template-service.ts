@@ -666,180 +666,157 @@ export class QuotationTemplateService {
   }
 
   /**
-   * Generate BOM for Off-Grid solar systems
+   * Generate BOM for Off-Grid solar systems (following ongrid pattern)
    */
   private static generateOffGridBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
+    // Calculate actual kW from panel data
     const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-    const inverterKW = project.inverterKW || calculatedKW;
+    const inverterKVA = (project as any).inverterKVA || project.inverterKW || calculatedKW;
 
-    // Solar Panel
+    // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
                       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    
     items.push({
       slNo: slNo++,
-      description: "Solar Panel",
+      description: "Solar Panel (D)",
       type: panelType,
-      volt: "24V",
+      volt: "24",
       rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Topsun / Rayzon",
+      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
       qty: project.panelCount || 1,
       unit: "Nos"
     });
 
-    // Structure
-    const structureTypeMap: Record<string, string> = {
-      'gp_structure': 'GP Structure',
-      'mono_rail': 'Mono Rail',
-      'gi_structure': 'GI Structure',
-      'gi_round_pipe': 'GI Round Pipe',
-      'ms_square_pipe': 'MS Square Pipe'
-    };
-    const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'Module Mounting Structure';
-    
+    // 2. Solar Offgrid Inverter - Voltage based on inverterVolt or calculated from battery
+    const inverterVoltage = project.inverterVolt || (project.voltage * project.batteryCount) || '230';
     items.push({
       slNo: slNo++,
-      description: `Structure Aluminium - ${structureType}`,
-      type: "Module Mounting Structure",
-      volt: "NA",
-      rating: "Standard Height",
-      make: "Standard",
-      qty: 1,
-      unit: "Set"
-    });
-
-    // DC Cable
-    const dcCableQty = inverterKW > 10 ? 40 : 20;
-    items.push({
-      slNo: slNo++,
-      description: "DC CABLE",
-      type: "DC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: dcCableQty,
-      unit: "MTR"
-    });
-
-    // AC Cable
-    const acCableQty = inverterKW > 10 ? 30 : 15;
-    items.push({
-      slNo: slNo++,
-      description: "AC CABLE", 
-      type: "AC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: acCableQty,
-      unit: "MTR"
-    });
-
-    // Off-Grid Inverter
-    const inverterVoltage = project.inverterVolt 
-      ? `${project.inverterVolt}V` 
-      : (project.inverterPhase === 'three_phase' ? '415V' : '230V');
-    const inverterKVA = (project as any).inverterKVA || inverterKW;
-    items.push({
-      slNo: slNo++,
-      description: "Off-Grid Inverter (PCU)",
-      type: "Pure Sine Wave",
+      description: "Solar Offgrid Inverter",
+      type: "MPPT",
       volt: inverterVoltage,
-      rating: `${inverterKVA} KVA`,
-      make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "As per MNRE LIST",
+      rating: `${inverterKVA}`,
+      make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "Growatt/Eastman/polycab",
       qty: project.inverterQty || 1,
       unit: "Nos"
     });
 
-    // Battery - Map battery type to short code
-    const batteryTypeMap: Record<string, string> = {
-      'lead_acid': 'LA',
-      'lithium': 'Li-ion'
-    };
-    const batteryTypeCode = project.batteryType ? batteryTypeMap[project.batteryType] || project.batteryType : 'LA';
+    // 3. Battery - Brand and specifications from form
     items.push({
       slNo: slNo++,
       description: `${project.batteryBrand || 'Exide'} Battery`,
-      type: batteryTypeCode,
-      volt: `${project.voltage || 12}V`,
+      type: project.batteryType === 'lithium' ? 'Li-ion' : project.batteryType === 'lead_acid' ? 'LA' : 'Battery',
+      volt: `${project.voltage || 12}`,
       rating: `${project.batteryAH || '100'} AH`,
       make: project.batteryBrand || 'Exide',
       qty: project.batteryCount || 1,
       unit: "Nos"
     });
 
-    // Battery Stand
-    if (project.batteryStands) {
-      const standQty = typeof project.batteryStands === 'string' ? parseInt(project.batteryStands) : project.batteryStands;
-      items.push({
-        slNo: slNo++,
-        description: "Battery Stand",
-        type: "Metal Stand",
-        volt: "NA",
-        rating: `For ${project.batteryCount || 1} Batteries`,
-        make: "Standard",
-        qty: standQty || 1,
-        unit: "Nos"
-      });
-    }
+    // 4. Panel Mounting Structure - Type from structureType field
+    const structureTypeMap: Record<string, string> = {
+      'gp_structure': 'GI',
+      'mono_rail': 'Aluminium',
+      'gi_structure': 'GI',
+      'gi_round_pipe': 'GI',
+      'ms_square_pipe': 'MS'
+    };
+    const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'GI';
+    
+    items.push({
+      slNo: slNo++,
+      description: "Panel Mounting Structure",
+      type: structureType,
+      volt: "NA",
+      rating: `${inverterKVA}`,
+      make: "Reputed",
+      qty: project.inverterQty || 1,
+      unit: "Set"
+    });
 
-    // Lightning Arrestor
-    if (project.lightningArrest) {
-      items.push({
-        slNo: slNo++,
-        description: "Lightning Arrestor",
-        type: "LA",
-        volt: "1000V",
-        rating: "40KA",
-        make: "As per MNRE LIST",
-        qty: 1,
-        unit: "Set"
-      });
-    }
+    // 5. DCDB with MCB - Always 600V
+    items.push({
+      slNo: slNo++,
+      description: "DCDB with MCB",
+      type: "DC",
+      volt: "600",
+      rating: `${inverterKVA}`,
+      make: "Reputed",
+      qty: 1,
+      unit: "Set"
+    });
 
-    // Earthing
+    // 6. DC Cable - Qty: 20m (40m if inverter >10 kW)
+    const dcCableQty = parseFloat(inverterKVA) > 10 ? 40 : 20;
+    items.push({
+      slNo: slNo++,
+      description: "DC CABLE",
+      type: "DC",
+      volt: "NA",
+      rating: "4 SQ.MM",
+      make: "Mardia/Polycab",
+      qty: dcCableQty,
+      unit: "Mtr"
+    });
+
+    // 7. AC Cable - Qty: 15m (30m if inverter >10 kW)
+    const acCableQty = parseFloat(inverterKVA) > 10 ? 30 : 15;
+    items.push({
+      slNo: slNo++,
+      description: "AC CABLE",
+      type: "AC",
+      volt: "NA",
+      rating: "4 SQ.MM",
+      make: "Mardia/Polycab",
+      qty: acCableQty,
+      unit: "Mtr"
+    });
+
+    // 8. Earthing - Add if earthing is selected
     if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
-      // Determine earthing type and quantity
-      let earthingType = 'Complete Earthing';
-      let earthQty = 1;
+      const earthType = structureType; // Use same type as structure
       
+      // Determine earthing quantity based on AC/DC cable selection
+      let earthQty = 1;
       if (Array.isArray(project.earth)) {
-        // Array format: check if 'ac_dc' is present OR both 'ac' and 'dc' are present
         if (project.earth.includes('ac_dc') || 
             (project.earth.includes('ac') && project.earth.includes('dc'))) {
-          earthingType = 'Complete Earthing (AC/DC)';
           earthQty = 2;
-        } else if (project.earth.includes('dc')) {
-          earthingType = 'DC Earthing';
-        } else if (project.earth.includes('ac')) {
-          earthingType = 'AC Earthing';
         }
       } else if (typeof project.earth === 'string') {
-        // Legacy string format
-        if (project.earth === 'ac_dc') {
-          earthingType = 'Complete Earthing (AC/DC)';
-          earthQty = 2;
-        } else if (project.earth === 'dc') {
-          earthingType = 'DC Earthing';
-        } else if (project.earth === 'ac') {
-          earthingType = 'AC Earthing';
-        }
+        earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
       
       items.push({
         slNo: slNo++,
-        description: `Earthing - ${earthingType}`,
-        type: "Complete",
+        description: "Earthing",
+        type: earthType,
         volt: "NA",
-        rating: "1 Set",
-        make: "As per MNRE LIST",
+        rating: "3 Feet",
+        make: "As per MNRE App",
         qty: earthQty,
         unit: "Set"
       });
     }
 
-    // Electrical Accessories - Add only if selected in form
+    // 9. Lightning Arrestor - Add only if selected in form
+    if (project.lightningArrest) {
+      items.push({
+        slNo: slNo++,
+        description: "Lighting Arrestor",
+        type: structureType,
+        volt: "NA",
+        rating: "3",
+        make: "As per MNRE App",
+        qty: 1,
+        unit: "Feet"
+      });
+    }
+
+    // 10. Electrical Accessories - Add only if selected in form
     if (project.electricalAccessories) {
       items.push({
         slNo: slNo++,
@@ -848,31 +825,31 @@ export class QuotationTemplateService {
         volt: "NA",
         rating: "3",
         make: "As per MNRE App",
-        qty: project.electricalCount || project.inverterKW || 1,
+        qty: project.electricalCount || inverterKVA || 1,
         unit: "KW"
       });
     }
 
-    // Charge Controller
+    // 11. BOS (PVC pipe/Hose/etc) - Always included
     items.push({
       slNo: slNo++,
-      description: "Charge Controller",
-      type: "MPPT",
-      volt: `${project.voltage || 12}V`,
-      rating: `${Math.ceil(calculatedKW * 1000 / (project.voltage || 12))}A`,
-      make: "As per MNRE LIST",
+      description: "BOS (PVC pipe/Hose/etc)",
+      type: "As Site Requirement",
+      volt: "-",
+      rating: "-",
+      make: "As per MNRE App",
       qty: 1,
-      unit: "Nos"
+      unit: "Set"
     });
 
-    // Installation & Commissioning
+    // 12. Installation & Commissioning - Always included
     items.push({
       slNo: slNo++,
       description: "Installation & Commissioning",
-      type: "MNRE Hand Manual and Specification",
-      volt: "Service",
-      rating: `${calculatedKW}KW Off-Grid System`,
-      make: "As per MNRE LIST",
+      type: "With Well trained and Experienced Persons",
+      volt: "-",
+      rating: "-",
+      make: "As per MNRE App",
       qty: 1,
       unit: "Nos"
     });
@@ -881,180 +858,169 @@ export class QuotationTemplateService {
   }
 
   /**
-   * Generate BOM for Hybrid solar systems
+   * Generate BOM for Hybrid solar systems (following ongrid pattern with battery additions)
    */
   private static generateHybridBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
+    // Calculate actual kW from panel data
     const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-    const inverterKW = project.inverterKW || calculatedKW;
+    const inverterKVA = (project as any).inverterKVA || project.inverterKW || calculatedKW;
 
-    // Solar Panel
+    // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
                       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    
     items.push({
       slNo: slNo++,
-      description: "Solar Panel",
+      description: "Solar Panel (D)",
       type: panelType,
-      volt: "24V",
+      volt: "24",
       rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Topsun / Rayzon",
+      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
       qty: project.panelCount || 1,
       unit: "Nos"
     });
 
-    // Structure
-    const structureTypeMap: Record<string, string> = {
-      'gp_structure': 'GP Structure',
-      'mono_rail': 'Mono Rail',
-      'gi_structure': 'GI Structure',
-      'gi_round_pipe': 'GI Round Pipe',
-      'ms_square_pipe': 'MS Square Pipe'
-    };
-    const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'Module Mounting Structure';
-    
+    // 2. Solar Hybrid Inverter - Voltage based on inverterVolt or phase
+    const inverterVoltage = project.inverterVolt || (project.inverterPhase === 'three_phase' ? '415' : '230');
     items.push({
       slNo: slNo++,
-      description: `Structure Aluminium - ${structureType}`,
-      type: "Module Mounting Structure",
-      volt: "NA",
-      rating: "Standard Height",
-      make: "Standard",
-      qty: 1,
-      unit: "Set"
-    });
-
-    // DC Cable
-    const dcCableQty = inverterKW > 10 ? 40 : 20;
-    items.push({
-      slNo: slNo++,
-      description: "DC CABLE",
-      type: "DC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: dcCableQty,
-      unit: "MTR"
-    });
-
-    // AC Cable
-    const acCableQty = inverterKW > 10 ? 30 : 15;
-    items.push({
-      slNo: slNo++,
-      description: "AC CABLE", 
-      type: "AC",
-      volt: "1000V",
-      rating: "4SQMM",
-      make: "Polycab",
-      qty: acCableQty,
-      unit: "MTR"
-    });
-
-    // Hybrid Inverter
-    const inverterVoltage = project.inverterVolt 
-      ? `${project.inverterVolt}V` 
-      : (project.inverterPhase === 'three_phase' ? '415V' : '230V');
-    const inverterKVA = (project as any).inverterKVA || inverterKW;
-    items.push({
-      slNo: slNo++,
-      description: "Hybrid Inverter",
-      type: "Grid-Interactive with Battery Backup",
+      description: "Solar Hybrid Inverter",
+      type: "MPPT",
       volt: inverterVoltage,
-      rating: `${inverterKVA} KVA`,
-      make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "As per MNRE LIST",
+      rating: `${inverterKVA}`,
+      make: project.inverterMake?.length > 0 ? project.inverterMake.join(' / ') : "Growatt/Eastman/polycab",
       qty: project.inverterQty || 1,
       unit: "Nos"
     });
 
-    // Battery - Map battery type to short code
-    const batteryTypeMap: Record<string, string> = {
-      'lead_acid': 'LA',
-      'lithium': 'Li-ion'
-    };
-    const batteryTypeCode = project.batteryType ? batteryTypeMap[project.batteryType] || project.batteryType : 'LA';
+    // 3. Battery - Brand and specifications from form
     items.push({
       slNo: slNo++,
       description: `${project.batteryBrand || 'Exide'} Battery`,
-      type: batteryTypeCode,
-      volt: `${project.voltage || 12}V`,
+      type: project.batteryType === 'lithium' ? 'Li-ion' : project.batteryType === 'lead_acid' ? 'LA' : 'Battery',
+      volt: `${project.voltage || 12}`,
       rating: `${project.batteryAH || '100'} AH`,
       make: project.batteryBrand || 'Exide',
       qty: project.batteryCount || 1,
       unit: "Nos"
     });
 
-    // Battery Stand
-    if (project.batteryStands) {
-      const standQty = typeof project.batteryStands === 'string' ? parseInt(project.batteryStands) : project.batteryStands;
-      items.push({
-        slNo: slNo++,
-        description: "Battery Stand",
-        type: "Metal Stand",
-        volt: "NA",
-        rating: `For ${project.batteryCount || 1} Batteries`,
-        make: "Standard",
-        qty: standQty || 1,
-        unit: "Nos"
-      });
-    }
+    // 4. Panel Mounting Structure - Type from structureType field
+    const structureTypeMap: Record<string, string> = {
+      'gp_structure': 'GI',
+      'mono_rail': 'Aluminium',
+      'gi_structure': 'GI',
+      'gi_round_pipe': 'GI',
+      'ms_square_pipe': 'MS'
+    };
+    const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'GI';
+    
+    items.push({
+      slNo: slNo++,
+      description: "Panel Mounting Structure",
+      type: structureType,
+      volt: "NA",
+      rating: `${inverterKVA}`,
+      make: "Reputed",
+      qty: project.inverterQty || 1,
+      unit: "Set"
+    });
 
-    // Lightning Arrestor
-    if (project.lightningArrest) {
-      items.push({
-        slNo: slNo++,
-        description: "Lightning Arrestor",
-        type: "LA",
-        volt: "1000V",
-        rating: "40KA",
-        make: "As per MNRE LIST",
-        qty: 1,
-        unit: "Set"
-      });
-    }
+    // 5. ACDB with MCB - Voltage based on inverter (hybrid connects to grid)
+    items.push({
+      slNo: slNo++,
+      description: "ACDB with MCB",
+      type: "AC",
+      volt: inverterVoltage,
+      rating: `${inverterKVA}`,
+      make: "Reputed",
+      qty: project.inverterQty || 1,
+      unit: "Set"
+    });
 
-    // Earthing
+    // 6. DCDB with MCB - Always 600V
+    items.push({
+      slNo: slNo++,
+      description: "DCDB with MCB",
+      type: "DC",
+      volt: "600",
+      rating: `${inverterKVA}`,
+      make: "Reputed",
+      qty: 1,
+      unit: "Set"
+    });
+
+    // 7. DC Cable - Qty: 20m (40m if inverter >10 kW)
+    const dcCableQty = parseFloat(inverterKVA) > 10 ? 40 : 20;
+    items.push({
+      slNo: slNo++,
+      description: "DC CABLE",
+      type: "DC",
+      volt: "NA",
+      rating: "4 SQ.MM",
+      make: "Mardia/Polycab",
+      qty: dcCableQty,
+      unit: "Mtr"
+    });
+
+    // 8. AC Cable - Qty: 15m (30m if inverter >10 kW)
+    const acCableQty = parseFloat(inverterKVA) > 10 ? 30 : 15;
+    items.push({
+      slNo: slNo++,
+      description: "AC CABLE",
+      type: "AC",
+      volt: "NA",
+      rating: "4 SQ.MM",
+      make: "Mardia/Polycab",
+      qty: acCableQty,
+      unit: "Mtr"
+    });
+
+    // 9. Earthing - Add if earthing is selected
     if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
-      // Determine earthing type and quantity
-      let earthingType = 'Complete Earthing';
-      let earthQty = 1;
+      const earthType = structureType; // Use same type as structure
       
+      // Determine earthing quantity based on AC/DC cable selection
+      let earthQty = 1;
       if (Array.isArray(project.earth)) {
-        // Array format: check if 'ac_dc' is present OR both 'ac' and 'dc' are present
         if (project.earth.includes('ac_dc') || 
             (project.earth.includes('ac') && project.earth.includes('dc'))) {
-          earthingType = 'Complete Earthing (AC/DC)';
           earthQty = 2;
-        } else if (project.earth.includes('dc')) {
-          earthingType = 'DC Earthing';
-        } else if (project.earth.includes('ac')) {
-          earthingType = 'AC Earthing';
         }
       } else if (typeof project.earth === 'string') {
-        // Legacy string format
-        if (project.earth === 'ac_dc') {
-          earthingType = 'Complete Earthing (AC/DC)';
-          earthQty = 2;
-        } else if (project.earth === 'dc') {
-          earthingType = 'DC Earthing';
-        } else if (project.earth === 'ac') {
-          earthingType = 'AC Earthing';
-        }
+        earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
       
       items.push({
         slNo: slNo++,
-        description: `Earthing - ${earthingType}`,
-        type: "Complete",
+        description: "Earthing",
+        type: earthType,
         volt: "NA",
-        rating: "1 Set",
-        make: "As per MNRE LIST",
+        rating: "3 Feet",
+        make: "As per MNRE App",
         qty: earthQty,
         unit: "Set"
       });
     }
 
-    // Electrical Accessories - Add only if selected in form
+    // 10. Lightning Arrestor - Add only if selected in form
+    if (project.lightningArrest) {
+      items.push({
+        slNo: slNo++,
+        description: "Lighting Arrestor",
+        type: structureType,
+        volt: "NA",
+        rating: "3",
+        make: "As per MNRE App",
+        qty: 1,
+        unit: "Feet"
+      });
+    }
+
+    // 11. Electrical Accessories - Add only if selected in form
     if (project.electricalAccessories) {
       items.push({
         slNo: slNo++,
@@ -1063,31 +1029,31 @@ export class QuotationTemplateService {
         volt: "NA",
         rating: "3",
         make: "As per MNRE App",
-        qty: project.electricalCount || project.inverterKW || 1,
+        qty: project.electricalCount || inverterKVA || 1,
         unit: "KW"
       });
     }
 
-    // Net Meter
+    // 12. BOS (PVC pipe/Hose/etc) - Always included
     items.push({
       slNo: slNo++,
-      description: "Net Meter",
-      type: "Bi-directional Meter",
-      volt: project.inverterPhase === 'three_phase' ? 'Three Phase' : 'Single Phase',
-      rating: "As per MNRE LIST",
-      make: "As per MNRE LIST",
+      description: "BOS (PVC pipe/Hose/etc)",
+      type: "As Site Requirement",
+      volt: "-",
+      rating: "-",
+      make: "As per MNRE App",
       qty: 1,
-      unit: "Nos"
+      unit: "Set"
     });
 
-    // Installation & Commissioning
+    // 13. Installation & Commissioning - Always included
     items.push({
       slNo: slNo++,
       description: "Installation & Commissioning",
-      type: "MNRE Hand Manual and Specification",
-      volt: "Service",
-      rating: `${calculatedKW}KW Hybrid System`,
-      make: "As per MNRE LIST",
+      type: "With Well trained and Experienced Persons",
+      volt: "-",
+      rating: "-",
+      make: "As per MNRE App",
       qty: 1,
       unit: "Nos"
     });
