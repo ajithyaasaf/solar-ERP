@@ -2542,14 +2542,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="50"
               value={project.litre ?? ''}
               onChange={(e) => {
-                handleFieldChange('litre', e.target.value);
+                const value = e.target.value;
+                handleFieldChange('litre', value === '' ? '' : parseInt(value) || 0);
               }}
               onBlur={(e) => {
-                const value = e.target.value;
-                if (value === '') {
+                if (e.target.value === '') {
                   handleFieldChange('litre', 100);
-                } else {
-                  handleFieldChange('litre', parseInt(value) || 100);
                 }
               }}
               placeholder="100, 150, 200, 300..."
@@ -2590,11 +2588,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="0"
               value={project.projectValue ?? ''}
               onChange={(e) => {
-                handleFieldChange('projectValue', e.target.value);
+                const value = e.target.value;
+                handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
               }}
               onBlur={(e) => {
-                const value = e.target.value;
-                handleFieldChange('projectValue', value === '' ? 0 : parseFloat(value) || 0);
+                if (e.target.value === '') {
+                  handleFieldChange('projectValue', 0);
+                }
               }}
               data-testid={`input-project-value-${projectIndex}`}
             />
@@ -2606,9 +2606,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               type="number"
               value={project.gstPercentage ?? ''}
               onChange={(e) => {
-                handleFieldChange('gstPercentage', e.target.value);
-              }}
-              onBlur={(e) => {
                 const value = e.target.value;
                 if (value === '') {
                   handleFieldChange('gstPercentage', '');
@@ -2632,14 +2629,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="1"
               value={project.qty ?? 1}
               onChange={(e) => {
-                handleFieldChange('qty', e.target.value);
+                const value = e.target.value;
+                handleFieldChange('qty', value === '' ? 1 : parseInt(value) || 1);
               }}
               onBlur={(e) => {
-                const value = e.target.value;
-                if (value === '' || parseInt(value) < 1) {
+                if (e.target.value === '' || parseInt(e.target.value) < 1) {
                   handleFieldChange('qty', 1);
-                } else {
-                  handleFieldChange('qty', parseInt(value) || 1);
                 }
               }}
               placeholder="Number of units"
@@ -2771,15 +2766,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="1"
               value={project.qty || 1}
               onChange={(e) => {
-                handleFieldChange('qty', e.target.value);
-              }}
-              onBlur={(e) => {
-                const value = e.target.value;
-                if (value === '' || parseInt(value) < 1) {
-                  handleFieldChange('qty', 1);
-                } else {
-                  handleFieldChange('qty', parseInt(value) || 1);
-                }
+                const value = parseInt(e.target.value) || 1;
+                handleFieldChange('qty', value);
               }}
               data-testid={`input-pump-qty-${projectIndex}`}
             />
@@ -2852,17 +2840,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="0"
               value={project.panelCount ?? ''}
               onChange={(e) => {
-                handleFieldChange('panelCount', e.target.value);
-              }}
-              onBlur={(e) => {
                 const value = e.target.value;
-                if (value === '') {
-                  handleFieldChange('panelCount', 0);
-                  handleFieldChange('dcrPanelCount', 0);
-                  handleFieldChange('nonDcrPanelCount', 0);
-                } else {
-                  const totalCount = parseInt(value) || 0;
-                  handleFieldChange('panelCount', totalCount);
+                const totalCount = value === '' ? '' : parseInt(value) || 0;
+                handleFieldChange('panelCount', totalCount);
+                if (totalCount !== '') {
                   const currentNonDcr = project.nonDcrPanelCount || 0;
                   if (totalCount < currentNonDcr) {
                     handleFieldChange('nonDcrPanelCount', totalCount);
@@ -2870,6 +2851,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   } else {
                     handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
                   }
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('panelCount', 0);
+                  handleFieldChange('dcrPanelCount', 0);
+                  handleFieldChange('nonDcrPanelCount', 0);
                 }
               }}
               data-testid={`input-pump-panel-count-${projectIndex}`}
@@ -2883,18 +2871,18 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="0"
               value={project.dcrPanelCount ?? ''}
               onChange={(e) => {
-                handleFieldChange('dcrPanelCount', e.target.value);
+                const value = e.target.value;
+                const dcrCount = value === '' ? '' : parseInt(value) || 0;
+                handleFieldChange('dcrPanelCount', dcrCount);
+                if (dcrCount !== '') {
+                  const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+                  handleFieldChange('panelCount', totalCount);
+                }
               }}
               onBlur={(e) => {
-                const value = e.target.value;
-                if (value === '') {
+                if (e.target.value === '') {
                   handleFieldChange('dcrPanelCount', 0);
                   const totalCount = 0 + (project.nonDcrPanelCount || 0);
-                  handleFieldChange('panelCount', totalCount);
-                } else {
-                  const dcrCount = parseInt(value) || 0;
-                  handleFieldChange('dcrPanelCount', dcrCount);
-                  const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
                   handleFieldChange('panelCount', totalCount);
                 }
               }}
@@ -2909,18 +2897,18 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="0"
               value={project.nonDcrPanelCount ?? ''}
               onChange={(e) => {
-                handleFieldChange('nonDcrPanelCount', e.target.value);
+                const value = e.target.value;
+                const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
+                handleFieldChange('nonDcrPanelCount', nonDcrCount);
+                if (nonDcrCount !== '') {
+                  const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+                  handleFieldChange('panelCount', totalCount);
+                }
               }}
               onBlur={(e) => {
-                const value = e.target.value;
-                if (value === '') {
+                if (e.target.value === '') {
                   handleFieldChange('nonDcrPanelCount', 0);
                   const totalCount = (project.dcrPanelCount || 0) + 0;
-                  handleFieldChange('panelCount', totalCount);
-                } else {
-                  const nonDcrCount = parseInt(value) || 0;
-                  handleFieldChange('nonDcrPanelCount', nonDcrCount);
-                  const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
                   handleFieldChange('panelCount', totalCount);
                 }
               }}
@@ -2935,11 +2923,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="0"
               value={project.projectValue ?? ''}
               onChange={(e) => {
-                handleFieldChange('projectValue', e.target.value);
+                const value = e.target.value;
+                handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
               }}
               onBlur={(e) => {
-                const value = e.target.value;
-                handleFieldChange('projectValue', value === '' ? 0 : parseFloat(value) || 0);
+                if (e.target.value === '') {
+                  handleFieldChange('projectValue', 0);
+                }
               }}
               data-testid={`input-pump-project-value-${projectIndex}`}
             />
@@ -2951,9 +2941,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               type="number"
               value={project.gstPercentage ?? ''}
               onChange={(e) => {
-                handleFieldChange('gstPercentage', e.target.value);
-              }}
-              onBlur={(e) => {
                 const value = e.target.value;
                 if (value === '') {
                   handleFieldChange('gstPercentage', '');
@@ -3146,11 +3133,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   type="number"
                   value={project.electricalCount ?? ''}
                   onChange={(e) => {
-                    handleFieldChange('electricalCount', e.target.value);
-                  }}
-                  onBlur={(e) => {
                     const value = e.target.value;
-                    handleFieldChange('electricalCount', value === '' ? 0 : parseInt(value) || 0);
+                    handleFieldChange('electricalCount', value === '' ? '' : parseInt(value) || 0);
                   }}
                   min="0"
                   placeholder="Electrical count (auto-filled from Drive HP)"
