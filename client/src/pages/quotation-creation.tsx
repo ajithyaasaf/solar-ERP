@@ -4243,7 +4243,7 @@ export default function QuotationCreation() {
   }
 
   return (
-    <div className="bg-gradient-to-b from-background to-muted/20 pb-8" data-testid="quotation-creation-page">
+    <div className="bg-gradient-to-b from-background to-muted/20 min-h-screen pb-8" data-testid="quotation-creation-page">
       {/* Header Section */}
       <div className="bg-background border-b">
         <div className="container mx-auto px-4 py-6 md:py-8">
@@ -4274,7 +4274,7 @@ export default function QuotationCreation() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 md:py-8 overflow-x-hidden">
+      <div className="container mx-auto px-4 py-6 md:py-8">
         {/* Progress indicator - Mobile: Simplified, Desktop: Full */}
         <div className="mb-6 md:mb-8">
           {/* Mobile Progress - Compact horizontal dots */}
@@ -4491,7 +4491,7 @@ export default function QuotationCreation() {
 
                 {/* Site Visit Selection */}
                 {quotationSource === "site_visit" && (
-                  <div className="space-y-4">
+                  <div className="space-y-3 -mt-2">
                     <Separator />
                     <div>
                       <div className="flex items-center justify-between mb-3">
@@ -4618,7 +4618,7 @@ export default function QuotationCreation() {
 
                           {/* Site Visit List */}
                           <div 
-                            className="max-h-[400px] overflow-y-auto pr-2 space-y-3"
+                            className="max-h-[300px] overflow-y-auto pr-2 space-y-2"
                             role="list"
                             aria-label="Site visits list"
                           >
