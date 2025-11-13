@@ -134,7 +134,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Validate request body
       const quotationData = insertQuotationSchema.parse({
         ...req.body,
-        createdBy: user.uid,
+        preparedBy: user.displayName || user.email || user.uid,
         quotationNumber: QuotationTemplateService.generateQuotationNumber()
       });
 
