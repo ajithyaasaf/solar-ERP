@@ -3437,6 +3437,13 @@ export default function QuotationCreation() {
     [projects]
   );
 
+  // Set default "Prepared By" to current user's name (only in create mode)
+  useEffect(() => {
+    if (!isEditMode && user?.displayName && !form.getValues("preparedBy")) {
+      form.setValue("preparedBy", user.displayName);
+    }
+  }, [user, isEditMode, form]);
+
   // Fetch customers for manual entry
   const { data: customers, isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["/api/customers"],
@@ -5506,11 +5513,36 @@ export default function QuotationCreation() {
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-muted-foreground">Delivery:</span>
                           <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || 'TBD'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
                 )}
+
+                {/* Prepared By - Editable Field */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm sm:text-base">Quotation Details</h4>
+                  <FormField
+                    control={form.control}
+                    name="preparedBy"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prepared By</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter name of person preparing quotation" 
+                            data-testid="input-prepared-by"
+                            {...field}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          This name will appear in the quotation PDF. Defaults to your name but can be changed if preparing on behalf of someone else.
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 {/* Scope of Work */}
                 <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
