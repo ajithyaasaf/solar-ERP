@@ -25,6 +25,8 @@ export interface BillOfMaterialsItem {
   make: string;
   qty: number;
   unit: string;
+  rate?: number;
+  amount?: number;
 }
 
 export interface QuotationTemplate {
@@ -1062,150 +1064,112 @@ export class QuotationTemplateService {
   }
 
   /**
-   * Generate BOM for Water Heater systems
+   * Generate BOM for Water Heater systems (simplified single-row format)
    */
   private static generateWaterHeaterBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
-    let slNo = startSlNo;
     
     // Get quantity from project (defaults to 1)
     const quantity = project.qty || 1;
-
-    // Water Heater
+    
+    // Build description from project details
+    const waterHeaterBrand = project.brand || 'Standard';
+    const capacityLitres = project.litre || 100;
+    const waterHeaterModel = project.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
+    const heatingCoilType = project.heatingCoil || 'Heating Coil';
+    const labourTransport = project.labourAndTransport ? ' And Transport Including GST' : '';
+    
+    const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
+    
+    // Calculate rate and amount from project values
+    const totalWithGST = project.projectValue || 0;
+    const gstPercentage = project.gstPercentage || 18;
+    const basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
+    const rate = quantity > 0 ? Math.round(basePrice / quantity) : basePrice;
+    const amount = basePrice;
+    
+    // Single row with full description and pricing
     items.push({
-      slNo: slNo++,
-      description: `Solar Water Heater`,
-      type: "FPC/ETC Type",
+      slNo: startSlNo,
+      description: fullDescription,
+      type: "Water Heater System",
       volt: "NA",
-      rating: `${project.litre || 100} Litres`,
-      make: project.brand || "Standard",
+      rating: `${capacityLitres} LPD`,
+      make: waterHeaterBrand,
       qty: quantity,
-      unit: "Nos"
-    });
-
-    // Heating Coil
-    if (project.heatingCoil) {
-      items.push({
-        slNo: slNo++,
-        description: "Heating Coil",
-        type: "Electric Backup",
-        volt: "230V",
-        rating: project.heatingCoil,
-        make: "Standard",
-        qty: quantity,
-        unit: "Nos"
-      });
-    }
-
-    // Plumbing Materials
-    items.push({
-      slNo: slNo++,
-      description: "Plumbing Materials",
-      type: "Complete Kit",
-      volt: "NA",
-      rating: "Standard",
-      make: "Standard",
-      qty: quantity,
-      unit: "Set"
-    });
-
-    // Installation
-    items.push({
-      slNo: slNo++,
-      description: "Installation & Commissioning",
-      type: "Water Heater Installation",
-      volt: "Service",
-      rating: `${project.litre || 100}L System`,
-      make: "Standard",
-      qty: quantity,
-      unit: "Nos"
+      unit: "Nos",
+      rate: rate,
+      amount: amount
     });
 
     return items;
   }
 
   /**
-   * Generate BOM for Water Pump systems
+   * Generate BOM for Water Pump systems (simplified single-row format)
    */
   private static generateWaterPumpBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     const items: BillOfMaterialsItem[] = [];
-    let slNo = startSlNo;
     
     // Support both new driveHP and legacy hp field
     const driveHP = project.driveHP || project.hp || '1';
     const quantity = project.qty || 1;
-
-    // Solar Water Pump
+    
+    // Build description from project details
+    const panelWatts = project.panelWatts || '540';
+    const panelCount = project.panelCount || 10;
+    const totalKW = (parseInt(panelWatts) * panelCount) / 1000;
+    const panelBrand = project.panelBrand && project.panelBrand.length > 0 
+      ? project.panelBrand[0].toUpperCase() 
+      : 'UTL';
+    const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
+    const lowerHeight = project.gpStructure?.lowerEndHeight || '3';
+    const higherHeight = project.gpStructure?.higherEndHeight || '4';
+    
+    // Build full description
+    let fullDescription = `Supply and Installation solar power System Includes:${driveHP} hp Drive ${totalKW} kw ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase} phase, ${totalKW} kw Structure Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+    
+    // Add conditional items based on checkboxes
+    const conditionalItems = [];
+    if (project.earth && project.earth.length > 0) {
+      conditionalItems.push('Earth kit');
+    }
+    if (project.lightningArrest) {
+      conditionalItems.push('Lighting Arrester');
+    }
+    if (project.dcCable) {
+      conditionalItems.push('DC Cable');
+    }
+    if (project.electricalAccessories) {
+      conditionalItems.push('Electrical Accessories');
+    }
+    if (project.labourAndTransport) {
+      conditionalItems.push('Labour and Transport');
+    }
+    
+    if (conditionalItems.length > 0) {
+      fullDescription += ', ' + conditionalItems.join(', ');
+    }
+    
+    // Calculate rate and amount from project values
+    const totalWithGST = project.projectValue || 0;
+    const gstPercentage = project.gstPercentage || 18;
+    const basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
+    const rate = quantity > 0 ? Math.round(basePrice / quantity) : basePrice;
+    const amount = basePrice;
+    
+    // Single row with full description and pricing
     items.push({
-      slNo: slNo++,
-      description: `Solar Water Pump`,
-      type: project.drive || "DC Drive",
+      slNo: startSlNo,
+      description: fullDescription,
+      type: "Water Pump System",
       volt: "DC",
       rating: `${driveHP} HP`,
       make: "Standard",
       qty: quantity,
-      unit: "Nos"
-    });
-
-    // Solar Panels for pump
-    if (project.panelCount && project.panelCount > 0) {
-      items.push({
-        slNo: slNo++,
-        description: "Solar Panel for Pump",
-        type: "Monocrystalline",
-        volt: "24V",
-        rating: project.solarPanel || "540 WATTS",
-        make: project.panelBrand?.length > 0 ? project.panelBrand.join(' / ') : "Standard",
-        qty: project.panelCount * quantity,
-        unit: "Nos"
-      });
-    }
-
-    // Pump Controller
-    items.push({
-      slNo: slNo++,
-      description: "Pump Controller",
-      type: "MPPT Controller",
-      volt: "DC",
-      rating: `For ${driveHP} HP Pump`,
-      make: "Standard",
-      qty: quantity,
-      unit: "Nos"
-    });
-
-    // Structure for panels
-    if (project.panelCount && project.panelCount > 0) {
-      const structureTypeMap: Record<string, string> = {
-        'gp_structure': 'GP Structure',
-        'mono_rail': 'Mono Rail',
-        'gi_structure': 'GI Structure',
-        'gi_round_pipe': 'GI Round Pipe',
-        'ms_square_pipe': 'MS Square Pipe'
-      };
-      const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'Module Mounting Structure';
-      
-      items.push({
-        slNo: slNo++,
-        description: `Structure for Panels - ${structureType}`,
-        type: "Panel Mounting Structure",
-        volt: "NA",
-        rating: "Standard Height",
-        make: "Standard",
-        qty: 1,
-        unit: "Set"
-      });
-    }
-
-    // Installation & Commissioning
-    items.push({
-      slNo: slNo++,
-      description: "Installation & Commissioning",
-      type: "Pump System Installation",
-      volt: "Service",
-      rating: `${driveHP}HP Pump System`,
-      make: "Standard",
-      qty: quantity,
-      unit: "Nos"
+      unit: "Nos",
+      rate: rate,
+      amount: amount
     });
 
     return items;
@@ -1292,7 +1256,7 @@ export class QuotationTemplateService {
         const batteryCount_offGrid = project.batteryCount || 1;
         const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
         
-        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA\\${inverterVolt_offGrid}v ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
         break;
 
       case 'hybrid':
@@ -1321,7 +1285,7 @@ export class QuotationTemplateService {
         const inverterKVA_hybrid = (project as any).inverterKVA || project.inverterKW || '1';
         const inverterVolt_hybrid = (project as any).inverterVolt || (project.voltage * project.batteryCount);
         const phase_hybrid = project.inverterPhase === 'three_phase' ? '3' : '1';
-        const batteryBrand_hybrid = (project as any).batteryBrand || 'Exide';
+        const batteryBrand_hybrid = ((project as any).batteryBrand || 'Exide').toUpperCase();
         const batteryAH_hybrid = project.batteryAH || '100';
         const batteryTypeMap: Record<string, string> = {
           'lead_acid': 'Lead Acid Battery',
@@ -1330,7 +1294,7 @@ export class QuotationTemplateService {
         const batteryType_hybrid = (project as any).batteryType ? batteryTypeMap[(project as any).batteryType] : 'Lead Acid Battery';
         const batteryCount_hybrid = project.batteryCount || 1;
         
-        description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverterKVA_hybrid}Kva/${inverterVolt_hybrid} V ${phase_hybrid} Phase Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}ah ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
+        description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverterKVA_hybrid}KVA/${inverterVolt_hybrid}V ${phase_hybrid} Phase Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}AH ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
         break;
 
       case 'water_heater':
@@ -1357,9 +1321,9 @@ export class QuotationTemplateService {
         const capacityLitres = litres;
         const waterHeaterModel = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
         const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
-        const labourTransport = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '';
+        const labourTransport = (project as any).labourAndTransport ? ' And Transport Including GST' : '';
         
-        description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoilType}${labourTransport}`;
+        description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
         break;
 
       case 'water_pump':
@@ -1393,7 +1357,7 @@ export class QuotationTemplateService {
         const higherHeight = (project as any).gpStructure?.higherEndHeight || '4';
         
         // Build description in single line format with conditional items
-        let pumpDescription = `Supply and Installation solar power System Includes: ${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${driveHP_pump} hp Drive ${phase_pump}-Phase, ${totalKW_pump} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+        let pumpDescription = `Supply and Installation solar power System Includes:${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${phase_pump} phase, ${totalKW_pump} kw Structure Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
         
         // Add conditional items based on checkboxes
         const conditionalItems = [];
@@ -1414,7 +1378,7 @@ export class QuotationTemplateService {
         }
         
         if (conditionalItems.length > 0) {
-          pumpDescription += ' ' + conditionalItems.join(', ');
+          pumpDescription += ', ' + conditionalItems.join(', ');
         }
         
         description = pumpDescription;
