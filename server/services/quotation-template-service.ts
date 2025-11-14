@@ -1077,7 +1077,7 @@ export class QuotationTemplateService {
     const capacityLitres = project.litre || 100;
     const waterHeaterModel = project.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
     const heatingCoilType = project.heatingCoil || 'Heating Coil';
-    const labourTransport = project.labourAndTransport ? ' And Transport Including GST' : '';
+    const labourTransport = project.labourAndTransport ? ' Labour and Transport' : '';
     
     const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
     
@@ -1321,7 +1321,7 @@ export class QuotationTemplateService {
         const capacityLitres = litres;
         const waterHeaterModel = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
         const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
-        const labourTransport = (project as any).labourAndTransport ? ' And Transport Including GST' : '';
+        const labourTransport = (project as any).labourAndTransport ? ' Labour and Transport' : '';
         
         description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
         break;

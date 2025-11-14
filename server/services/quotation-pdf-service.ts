@@ -467,7 +467,7 @@ export class QuotationPDFService {
       
       <!-- Bill of Materials -->
       <div class="page-break">
-        <h3 style="color: #228B22; text-align: center;">Bill of Materials for ${this.formatNumber(template.pricingBreakdown.kw)} kw On-grid Solar NPG System</h3>
+        <h3 style="color: #228B22; text-align: center;">${isWaterUtility ? 'Bill of Materials' : `Bill of Materials for ${this.formatNumber(template.pricingBreakdown.kw)} kw On-grid Solar NPG System`}</h3>
         
         ${!isWaterUtility && template.bomSummary ? `
         <table style="width: 100%; margin: 10px 0; border-collapse: collapse; background-color: #90EE90;">
@@ -528,8 +528,8 @@ export class QuotationPDFService {
                 <td>${item.slNo}</td>
                 <td style="text-align: left;">${item.description}</td>
                 <td>${item.qty}</td>
-                <td>${(item as any).rate || ''}</td>
-                <td>${(item as any).amount || ''}</td>
+                <td>${(item as any).rate ? '₹' + ((item as any).rate as number).toLocaleString() : ''}</td>
+                <td>${(item as any).amount ? '₹' + ((item as any).amount as number).toLocaleString() : ''}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -593,6 +593,7 @@ export class QuotationPDFService {
           ${template.termsAndConditions.solarInverterWarranty.map(item => `<div>${item}</div>`).join('')}
         </div>` : ''}
         
+        ${!isWaterUtility ? `
         <div class="warranty-item">
           <strong>✓ Payment Details:</strong><br>
           • ${template.termsAndConditions.paymentDetails.advancePercentage}% Advance along with Purchase Order<br>
@@ -614,6 +615,7 @@ export class QuotationPDFService {
           <strong>✓ Delivery Period:</strong><br>
           • ${template.termsAndConditions.deliveryPeriod}
         </div>
+        ` : ''}
       </div>
       
       <!-- Scope of Work -->
