@@ -159,6 +159,7 @@ interface WaterPumpConfig extends BaseConfig {
   civilWorkScope?: string;
   // New checkbox fields
   lightningArrest?: boolean;
+  dcCable?: boolean;
   electricalAccessories?: boolean;
   electricalCount?: number;
   earth?: string[];
@@ -371,6 +372,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         plumbingWorkScope: 'customer_scope', // Keep for backward compatibility
         civilWorkScope: 'customer_scope',
         lightningArrest: false,
+        dcCable: false,
         electricalAccessories: false,
         electricalCount: 0,
         earth: [],
@@ -2847,6 +2849,18 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       />
                       <Label htmlFor="water-pump-electrical" className="font-normal cursor-pointer">
                         Electrical Accessories
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="water-pump-dc-cable"
+                        checked={formData.waterPumpConfig?.dcCable || false}
+                        onCheckedChange={(checked) => updateConfig('waterPumpConfig', { dcCable: checked as boolean })}
+                        data-testid="checkbox-water-pump-dc-cable"
+                      />
+                      <Label htmlFor="water-pump-dc-cable" className="font-normal cursor-pointer">
+                        DC Cable
                       </Label>
                     </div>
 

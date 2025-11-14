@@ -581,6 +581,7 @@ export class QuotationPDFService {
       <div class="terms-section page-break">
         <h3>Terms & Conditions</h3>
         
+        ${!isWaterUtility ? `
         <div class="warranty-item">
           <strong>✓ Warranty Details:</strong><br>
           ${(template.termsAndConditions.warrantyDetails || []).map(item => 
@@ -592,6 +593,7 @@ export class QuotationPDFService {
         <div class="warranty-item">
           ${template.termsAndConditions.solarInverterWarranty.map(item => `<div>${item}</div>`).join('')}
         </div>` : ''}
+        ` : ''}
         
         ${!isWaterUtility ? `
         <div class="warranty-item">
@@ -618,6 +620,7 @@ export class QuotationPDFService {
         ` : ''}
       </div>
       
+      ${!isWaterUtility ? `
       <!-- Scope of Work -->
       <div class="scope-section">
         <h3 style="color: #228B22;">Scope of Work</h3>
@@ -665,7 +668,9 @@ export class QuotationPDFService {
           </div>
         </div>` : ''}
       </div>
+      ` : ''}
       
+      ${!isWaterUtility ? `
       <!-- Documents Required -->
       <div class="documents-section">
         <h3 style="color: #228B22; margin-top: 0;">Documents Required for PM Surya Ghar</h3>
@@ -673,6 +678,7 @@ export class QuotationPDFService {
         <br>
         <div class="highlight">${template.documentsRequiredForSubsidy.note}</div>
       </div>
+      ` : ''}
       
       <!-- Footer -->
       <div style="text-align: center; margin-top: 40px; font-style: italic; color: #666;">

@@ -232,7 +232,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
         : 'MPPT';
       const batteryAH = project.batteryAH || 100;
       const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
-      return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA\\${inverterVolt}v ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount}, ${phase}-Phase Offgrid Solar System`;
+      return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}v ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount}, ${phase}-Phase Offgrid Solar System`;
     }
     
     case 'hybrid': {
@@ -242,10 +242,10 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const batteryCount = project.batteryCount || 1;
       const inverterVolt = (project as any).inverterVolt || (voltage * batteryCount);
       const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
-      const batteryBrand = (project as any).batteryBrand || 'Exide';
+      const batteryBrand = ((project as any).batteryBrand || 'Exide').toUpperCase();
       const batteryAH = project.batteryAH || 100;
       const batteryType = (project as any).batteryType === 'lithium' ? 'Lithium Battery' : 'Lead Acid Battery';
-      return `Supply and Installation of ${totalKW} KW PANEL, ${inverterKVA}Kva/${inverterVolt} V ${phase} Phase Hybrid Inverter, ${batteryBrand} ${batteryAH}ah ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
+      return `Supply and Installation of ${totalKW} KW PANEL, ${inverterKVA}KVA/${inverterVolt}V ${phase} Phase Hybrid Inverter, ${batteryBrand} ${batteryAH}AH ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
     }
     
     case 'water_heater': {
@@ -269,7 +269,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const lowerHeight = (project as any).gpStructure?.lowerEndHeight || 3;
       const higherHeight = (project as any).gpStructure?.higherEndHeight || 4;
       
-      let description = `Supply and Installation solar power System Includes: ${driveHP} hp Drive ${totalKW} kw ${panelWattsNum}Wp x ${panelCount} Nos ${panelBrand} Panel, ${driveHP} hp Drive ${phase}-Phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+      let description = `Supply and Installation solar power System Includes: ${driveHP} hp Drive ${totalKW} kw ${panelWattsNum}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase}-Phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
       
       const conditionalItems = [];
       if ((project as any).earth && (project as any).earth.length > 0) {
@@ -3108,6 +3108,18 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   data-testid={`checkbox-lightning-arrest-pump-${projectIndex}`}
                 />
                 <span>Lightning Arrestor</span>
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Checkbox
+                  id={`dc-cable-pump-${projectIndex}`}
+                  checked={project.dcCable || false}
+                  onCheckedChange={(checked) => handleFieldChange('dcCable', checked)}
+                  data-testid={`checkbox-dc-cable-pump-${projectIndex}`}
+                />
+                <span>DC Cable</span>
               </label>
             </div>
 

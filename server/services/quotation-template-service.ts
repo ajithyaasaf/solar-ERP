@@ -1131,7 +1131,7 @@ export class QuotationTemplateService {
     const higherHeight = project.gpStructure?.higherEndHeight || '4';
     
     // Build full description
-    let fullDescription = `Supply and Installation solar power System Includes:${driveHP} hp Drive ${totalKW} kw ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase} phase, ${totalKW} kw Structure Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+    let fullDescription = `Supply and Installation solar power System Includes:${driveHP} hp Drive ${totalKW} kw ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase} phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
     
     // Add conditional items based on checkboxes
     const conditionalItems = [];
@@ -1365,7 +1365,7 @@ export class QuotationTemplateService {
         const higherHeight = (project as any).gpStructure?.higherEndHeight || '4';
         
         // Build description in single line format with conditional items
-        let pumpDescription = `Supply and Installation solar power System Includes:${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${phase_pump} phase, ${totalKW_pump} kw Structure Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
+        let pumpDescription = `Supply and Installation solar power System Includes:${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${phase_pump} phase, ${totalKW_pump} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
         
         // Add conditional items based on checkboxes
         const conditionalItems = [];

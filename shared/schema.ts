@@ -1642,7 +1642,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
   civilWorkScope: z.enum(workScopeOptions).optional(),
   // New fields for quotation description changes
   qty: z.number().min(1).default(1),
-  waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).optional(),
+  waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).default('non_pressurized'),
   labourAndTransport: z.boolean().default(false),
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
@@ -1684,6 +1684,7 @@ export const quotationWaterPumpProjectSchema = z.object({
   civilWorkScope: z.enum(workScopeOptions).optional(),
   // New checkbox fields
   lightningArrest: z.boolean().default(false),
+  dcCable: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
   electricalCount: z.number().min(0).optional(),
   earth: z.array(z.enum(earthingTypes)).default([]),
