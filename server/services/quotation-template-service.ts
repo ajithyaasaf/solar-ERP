@@ -1082,13 +1082,19 @@ export class QuotationTemplateService {
     const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${gstSuffix}`;
     
     // Calculate rate and amount from project values
-    // Sanitize projectValue by removing commas and rupee symbols
-    const projectValueRaw = project.projectValue || 0;
-    const totalWithGST = typeof projectValueRaw === 'string' 
-      ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
-      : projectValueRaw;
-    const gstPercentage = project.gstPercentage || 18;
-    const basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
+    // Use pre-calculated basePrice from frontend if available, otherwise calculate from projectValue
+    let basePrice = project.basePrice || 0;
+    
+    // If basePrice not available, calculate from projectValue
+    if (!basePrice || basePrice === 0) {
+      const projectValueRaw = project.projectValue || 0;
+      const totalWithGST = typeof projectValueRaw === 'string' 
+        ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
+        : projectValueRaw;
+      const gstPercentage = project.gstPercentage || 18;
+      basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
+    }
+    
     const rate = quantity > 0 ? Math.round(basePrice / quantity) : basePrice;
     const amount = basePrice;
     
@@ -1156,13 +1162,19 @@ export class QuotationTemplateService {
     }
     
     // Calculate rate and amount from project values
-    // Sanitize projectValue by removing commas and rupee symbols
-    const projectValueRaw = project.projectValue || 0;
-    const totalWithGST = typeof projectValueRaw === 'string' 
-      ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
-      : projectValueRaw;
-    const gstPercentage = project.gstPercentage || 18;
-    const basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
+    // Use pre-calculated basePrice from frontend if available, otherwise calculate from projectValue
+    let basePrice = project.basePrice || 0;
+    
+    // If basePrice not available, calculate from projectValue
+    if (!basePrice || basePrice === 0) {
+      const projectValueRaw = project.projectValue || 0;
+      const totalWithGST = typeof projectValueRaw === 'string' 
+        ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
+        : projectValueRaw;
+      const gstPercentage = project.gstPercentage || 18;
+      basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
+    }
+    
     const rate = quantity > 0 ? Math.round(basePrice / quantity) : basePrice;
     const amount = basePrice;
     
