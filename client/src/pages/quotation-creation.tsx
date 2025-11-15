@@ -1123,37 +1123,18 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       project.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, project.projectType);
       project.customerPayment = project.projectValue - project.subsidyAmount;
     } else if (project.projectType === "water_heater") {
-      // Ensure gstPercentage is set (only if undefined/null, allow 0 or empty string)
+      // Ensure gstPercentage is set to 0% for water heater (only if undefined/null)
       if (project.gstPercentage === undefined || project.gstPercentage === null) {
-        project.gstPercentage = BUSINESS_RULES.gst.percentage;
+        project.gstPercentage = 0;
       }
       
-      // Recalculate pricing for water heater
+      // Water heater pricing: Only recalculate when projectValue or gstPercentage is manually changed
+      // Do NOT auto-calculate based on qty or litre - projectValue should be manually set
       if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
-        // If project value or GST percentage is directly updated, recalculate base, GST and payment
-        // Use default GST if field is empty/invalid, otherwise use the entered value
+        // Use 0% as default GST for water heater
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-          ? BUSINESS_RULES.gst.percentage 
+          ? 0 
           : parseFloat(project.gstPercentage) || 0;
-        const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
-        const gstAmount = project.projectValue - basePrice;
-        
-        project.basePrice = basePrice;
-        project.gstAmount = gstAmount;
-        
-        // No subsidy for water heater
-        project.subsidyAmount = 0;
-        project.customerPayment = project.projectValue;
-      } else if (updatedData.hasOwnProperty('litre') || updatedData.hasOwnProperty('qty')) {
-        // If litre or qty is updated, recalculate based on capacity and quantity
-        const qty = project.qty || 1;
-        const baseValue = project.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre * qty;
-        const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-          ? BUSINESS_RULES.gst.percentage 
-          : parseFloat(project.gstPercentage) || 0;
-        const totalWithGST = baseValue * (1 + effectiveGST / 100);
-        project.projectValue = Math.round(totalWithGST);
-        
         const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
         const gstAmount = project.projectValue - basePrice;
         
@@ -1165,38 +1146,18 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.customerPayment = project.projectValue;
       }
     } else if (project.projectType === "water_pump") {
-      // Ensure gstPercentage is set (only if undefined/null, allow 0 or empty string)
+      // Ensure gstPercentage is set to 0% for water pump (only if undefined/null)
       if (project.gstPercentage === undefined || project.gstPercentage === null) {
-        project.gstPercentage = BUSINESS_RULES.gst.percentage;
+        project.gstPercentage = 0;
       }
       
-      // Recalculate pricing for water pump
+      // Water pump pricing: Only recalculate when projectValue or gstPercentage is manually changed
+      // Do NOT auto-calculate based on qty or hp - projectValue should be manually set
       if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
-        // If project value or GST percentage is directly updated, recalculate base, GST and payment
-        // Use default GST if field is empty/invalid, otherwise use the entered value
+        // Use 0% as default GST for water pump
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-          ? BUSINESS_RULES.gst.percentage 
+          ? 0 
           : parseFloat(project.gstPercentage) || 0;
-        const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
-        const gstAmount = project.projectValue - basePrice;
-        
-        project.basePrice = basePrice;
-        project.gstAmount = gstAmount;
-        
-        // No subsidy for water pump
-        project.subsidyAmount = 0;
-        project.customerPayment = project.projectValue;
-      } else if (updatedData.hasOwnProperty('hp') || updatedData.hasOwnProperty('qty')) {
-        // If HP or qty is updated, recalculate based on HP and quantity
-        const hpValue = parseFloat(project.hp) || 1;
-        const qty = project.qty || 1;
-        const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP * qty;
-        const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-          ? BUSINESS_RULES.gst.percentage 
-          : parseFloat(project.gstPercentage) || 0;
-        const totalWithGST = baseValue * (1 + effectiveGST / 100);
-        project.projectValue = Math.round(totalWithGST);
-        
         const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
         const gstAmount = project.projectValue - basePrice;
         
