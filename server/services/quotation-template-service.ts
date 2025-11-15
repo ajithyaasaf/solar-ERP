@@ -1083,10 +1083,37 @@ export class QuotationTemplateService {
     
     // Calculate rate and amount from project values
     // projectValue is per-unit price (including GST)
-    const projectValueRaw = project.projectValue || 0;
+    console.log('🔍 Water Heater BOM - Project data:', JSON.stringify({
+      projectValue: project.projectValue,
+      customerPayment: project.customerPayment,
+      basePrice: project.basePrice,
+      qty: project.qty
+    }, null, 2));
+    
+    // Try multiple sources for the price value (with fallback chain)
+    let projectValueRaw = project.projectValue;
+    
+    // Fallback 1: If projectValue is not available, try customerPayment / qty
+    if (!projectValueRaw && project.customerPayment && quantity > 0) {
+      projectValueRaw = Math.round(project.customerPayment / quantity);
+      console.log('🔍 Water Heater BOM - Using customerPayment as fallback:', projectValueRaw);
+    }
+    
+    // Fallback 2: If still not available, calculate from basePrice + gstAmount
+    if (!projectValueRaw && project.basePrice) {
+      projectValueRaw = project.basePrice + (project.gstAmount || 0);
+      if (quantity > 1) {
+        projectValueRaw = Math.round(projectValueRaw / quantity);
+      }
+      console.log('🔍 Water Heater BOM - Using basePrice + gstAmount as fallback:', projectValueRaw);
+    }
+    
+    // Parse the value (handle string format)
     const perUnitPrice = typeof projectValueRaw === 'string' 
       ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
-      : projectValueRaw;
+      : projectValueRaw || 0;
+    
+    console.log('🔍 Water Heater BOM - Final perUnitPrice:', perUnitPrice);
     
     // For Water Heater: projectValue is per-unit price (incl. GST), so rate and amount use this directly
     const rate = Math.round(perUnitPrice);
@@ -1157,10 +1184,37 @@ export class QuotationTemplateService {
     
     // Calculate rate and amount from project values
     // projectValue is per-unit price (including GST)
-    const projectValueRaw = project.projectValue || 0;
+    console.log('🔍 Water Pump BOM - Project data:', JSON.stringify({
+      projectValue: project.projectValue,
+      customerPayment: project.customerPayment,
+      basePrice: project.basePrice,
+      qty: project.qty
+    }, null, 2));
+    
+    // Try multiple sources for the price value (with fallback chain)
+    let projectValueRaw = project.projectValue;
+    
+    // Fallback 1: If projectValue is not available, try customerPayment / qty
+    if (!projectValueRaw && project.customerPayment && quantity > 0) {
+      projectValueRaw = Math.round(project.customerPayment / quantity);
+      console.log('🔍 Water Pump BOM - Using customerPayment as fallback:', projectValueRaw);
+    }
+    
+    // Fallback 2: If still not available, calculate from basePrice + gstAmount
+    if (!projectValueRaw && project.basePrice) {
+      projectValueRaw = project.basePrice + (project.gstAmount || 0);
+      if (quantity > 1) {
+        projectValueRaw = Math.round(projectValueRaw / quantity);
+      }
+      console.log('🔍 Water Pump BOM - Using basePrice + gstAmount as fallback:', projectValueRaw);
+    }
+    
+    // Parse the value (handle string format)
     const perUnitPrice = typeof projectValueRaw === 'string' 
       ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
-      : projectValueRaw;
+      : projectValueRaw || 0;
+    
+    console.log('🔍 Water Pump BOM - Final perUnitPrice:', perUnitPrice);
     
     // For Water Pump: projectValue is per-unit price (incl. GST), so rate and amount use this directly
     const rate = Math.round(perUnitPrice);

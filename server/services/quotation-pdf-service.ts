@@ -713,6 +713,18 @@ export class QuotationPDFService {
     customer: any
   ): Promise<{ html: string; template: QuotationTemplate }> {
     try {
+      // Debug logging for water heater and water pump projects
+      if (project.projectType === 'water_heater' || project.projectType === 'water_pump') {
+        console.log(`🔍 PDF Preview - ${project.projectType} Project Data:`, JSON.stringify({
+          projectType: project.projectType,
+          projectValue: (project as any).projectValue,
+          basePrice: (project as any).basePrice,
+          customerPayment: (project as any).customerPayment,
+          qty: (project as any).qty,
+          gstPercentage: (project as any).gstPercentage
+        }, null, 2));
+      }
+      
       // Resolve user name if preparedBy contains a user ID
       const preparedByName = await this.resolveUserName(quotation.preparedBy);
       
