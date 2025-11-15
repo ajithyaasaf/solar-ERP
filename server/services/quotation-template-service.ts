@@ -1095,13 +1095,13 @@ export class QuotationTemplateService {
     let projectValueRaw = project.projectValue;
     
     // Fallback 1: If projectValue is not available, try customerPayment / qty
-    if (!projectValueRaw && project.customerPayment && quantity > 0) {
+    if ((!projectValueRaw || projectValueRaw === 0) && project.customerPayment && quantity > 0) {
       projectValueRaw = Math.round(project.customerPayment / quantity);
       console.log('🔍 Water Heater BOM - Using customerPayment as fallback:', projectValueRaw);
     }
     
-    // Fallback 2: If still not available, calculate from basePrice + gstAmount
-    if (!projectValueRaw && project.basePrice) {
+    // Fallback 2: If still not available, calculate from basePrice + gstAmount (only if basePrice > 0)
+    if ((!projectValueRaw || projectValueRaw === 0) && project.basePrice && project.basePrice > 0) {
       projectValueRaw = project.basePrice + (project.gstAmount || 0);
       if (quantity > 1) {
         projectValueRaw = Math.round(projectValueRaw / quantity);
@@ -1197,13 +1197,13 @@ export class QuotationTemplateService {
     let projectValueRaw = project.projectValue;
     
     // Fallback 1: If projectValue is not available, try customerPayment / qty
-    if (!projectValueRaw && project.customerPayment && quantity > 0) {
+    if ((!projectValueRaw || projectValueRaw === 0) && project.customerPayment && quantity > 0) {
       projectValueRaw = Math.round(project.customerPayment / quantity);
       console.log('🔍 Water Pump BOM - Using customerPayment as fallback:', projectValueRaw);
     }
     
-    // Fallback 2: If still not available, calculate from basePrice + gstAmount
-    if (!projectValueRaw && project.basePrice) {
+    // Fallback 2: If still not available, calculate from basePrice + gstAmount (only if basePrice > 0)
+    if ((!projectValueRaw || projectValueRaw === 0) && project.basePrice && project.basePrice > 0) {
       projectValueRaw = project.basePrice + (project.gstAmount || 0);
       if (quantity > 1) {
         projectValueRaw = Math.round(projectValueRaw / quantity);
