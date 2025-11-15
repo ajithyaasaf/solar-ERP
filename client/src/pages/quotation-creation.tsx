@@ -253,8 +253,8 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const litres = project.litre || 100;
       const model = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
       const heatingCoil = (project as any).heatingCoil || 'Heating Coil';
-      const labourTransport = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '';
-      return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoil}${labourTransport}`;
+      const gstSuffix = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '\nIncluding GST';
+      return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoil}${gstSuffix}`;
     }
     
     case 'water_pump': {
@@ -4806,11 +4806,22 @@ export default function QuotationCreation() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Editable Pricing Table */}
-                <div className="space-y-4">
-                  <h4 className="font-medium text-base">Quotation Pricing Details</h4>
+                {/* Editable Pricing Table - Hidden for water heater and water pump */}
+                {(() => {
+                  const projects = form.watch("projects");
+                  const isWaterUtility = projects && projects.length > 0 && projects.every((p: any) => 
+                    p.projectType === 'water_heater' || p.projectType === 'water_pump'
+                  );
                   
-                  {/* Desktop Table View (hidden on mobile) */}
+                  if (isWaterUtility) {
+                    return null;
+                  }
+                  
+                  return (
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-base">Quotation Pricing Details</h4>
+                      
+                      {/* Desktop Table View (hidden on mobile) */}
                   <div className="hidden lg:block border rounded-lg overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-muted">
@@ -5231,7 +5242,9 @@ export default function QuotationCreation() {
                       return result.trim() + " Only";
                     })()}</span>
                   </div>
-                </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Warranty Details - Hidden for service-only quotations (water heater and water pump) */}
                 {!isServiceOnlyQuotation && (
