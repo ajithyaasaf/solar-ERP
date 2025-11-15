@@ -1122,24 +1122,22 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       }
       
       // Water heater pricing: projectValue is per-unit price
-      // Recalculate when projectValue, gstPercentage, or qty changes
-      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage') || updatedData.hasOwnProperty('qty')) {
-        // Use 0% as default GST for water heater
-        const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-          ? 0 
-          : parseFloat(project.gstPercentage) || 0;
-        const quantity = project.qty || 1;
-        const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
-        const gstAmount = project.projectValue - basePrice;
-        
-        project.basePrice = basePrice;
-        project.gstAmount = gstAmount;
-        
-        // No subsidy for water heater
-        project.subsidyAmount = 0;
-        // customerPayment is total: projectValue (per unit) × quantity
-        project.customerPayment = project.projectValue * quantity;
-      }
+      // Always recalculate to ensure values are available for PDF generation
+      // Use 0% as default GST for water heater
+      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
+        ? 0 
+        : parseFloat(project.gstPercentage) || 0;
+      const quantity = project.qty || 1;
+      const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
+      const gstAmount = project.projectValue - basePrice;
+      
+      project.basePrice = basePrice;
+      project.gstAmount = gstAmount;
+      
+      // No subsidy for water heater
+      project.subsidyAmount = 0;
+      // customerPayment is total: projectValue (per unit) × quantity
+      project.customerPayment = project.projectValue * quantity;
     } else if (project.projectType === "water_pump") {
       // Ensure gstPercentage is set to 0% for water pump (only if undefined/null)
       if (project.gstPercentage === undefined || project.gstPercentage === null) {
@@ -1147,24 +1145,22 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       }
       
       // Water pump pricing: projectValue is per-unit price
-      // Recalculate when projectValue, gstPercentage, or qty changes
-      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage') || updatedData.hasOwnProperty('qty')) {
-        // Use 0% as default GST for water pump
-        const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-          ? 0 
-          : parseFloat(project.gstPercentage) || 0;
-        const quantity = project.qty || 1;
-        const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
-        const gstAmount = project.projectValue - basePrice;
-        
-        project.basePrice = basePrice;
-        project.gstAmount = gstAmount;
-        
-        // No subsidy for water pump
-        project.subsidyAmount = 0;
-        // customerPayment is total: projectValue (per unit) × quantity
-        project.customerPayment = project.projectValue * quantity;
-      }
+      // Always recalculate to ensure values are available for PDF generation
+      // Use 0% as default GST for water pump
+      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
+        ? 0 
+        : parseFloat(project.gstPercentage) || 0;
+      const quantity = project.qty || 1;
+      const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
+      const gstAmount = project.projectValue - basePrice;
+      
+      project.basePrice = basePrice;
+      project.gstAmount = gstAmount;
+      
+      // No subsidy for water pump
+      project.subsidyAmount = 0;
+      // customerPayment is total: projectValue (per unit) × quantity
+      project.customerPayment = project.projectValue * quantity;
     } else {
       // Fallback for unknown project types
       console.error(`Unknown project type during update: ${project.projectType}`);
