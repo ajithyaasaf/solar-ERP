@@ -1012,38 +1012,31 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       newProject.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, projectType);
       newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else if (projectType === "water_heater") {
-      // Set default pricing for water heater based on capacity (total including GST)
+      // Set default pricing for water heater - GST is 0% by default for service-only quotations
+      // Default projectValue calculation (user can override this manually)
       const qty = newProject.qty || 1;
-      const baseValue = newProject.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre * qty;
-      const totalWithGST = baseValue * (1 + BUSINESS_RULES.gst.percentage / 100);
-      newProject.projectValue = Math.round(totalWithGST);
-      newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
+      const defaultBaseValue = newProject.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
+      newProject.projectValue = Math.round(defaultBaseValue);
+      newProject.gstPercentage = 0; // Water heater has 0% GST by default
       
-      // Calculate base price and GST from total
-      const basePrice = Math.round(newProject.projectValue / (1 + newProject.gstPercentage / 100));
-      const gstAmount = newProject.projectValue - basePrice;
-      
-      newProject.basePrice = basePrice;
-      newProject.gstAmount = gstAmount;
+      // For water heater, projectValue = basePrice (since GST is 0%)
+      newProject.basePrice = newProject.projectValue;
+      newProject.gstAmount = 0;
       
       // No subsidy for water heater
       newProject.subsidyAmount = 0;
       newProject.customerPayment = newProject.projectValue;
     } else if (projectType === "water_pump") {
-      // Set default pricing for water pump based on HP (total including GST)
+      // Set default pricing for water pump - GST is 0% by default for service-only quotations
+      // Default projectValue calculation (user can override this manually)
       const hpValue = parseFloat(newProject.hp) || 1;
-      const qty = newProject.qty || 1;
-      const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP * qty;
-      const totalWithGST = baseValue * (1 + BUSINESS_RULES.gst.percentage / 100);
-      newProject.projectValue = Math.round(totalWithGST);
-      newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
+      const defaultBaseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
+      newProject.projectValue = Math.round(defaultBaseValue);
+      newProject.gstPercentage = 0; // Water pump has 0% GST by default
       
-      // Calculate base price and GST from total
-      const basePrice = Math.round(newProject.projectValue / (1 + newProject.gstPercentage / 100));
-      const gstAmount = newProject.projectValue - basePrice;
-      
-      newProject.basePrice = basePrice;
-      newProject.gstAmount = gstAmount;
+      // For water pump, projectValue = basePrice (since GST is 0%)
+      newProject.basePrice = newProject.projectValue;
+      newProject.gstAmount = 0;
       
       // No subsidy for water pump
       newProject.subsidyAmount = 0;
