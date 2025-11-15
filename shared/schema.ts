@@ -1759,7 +1759,9 @@ export const insertQuotationSchema = z.object({
     rating: z.string(),
     make: z.string(),
     qty: z.number(),
-    unit: z.string()
+    unit: z.string(),
+    rate: z.number().optional(),
+    amount: z.number().optional()
   })).optional(),
   
   // Custom Scope of Work items (optional override)
