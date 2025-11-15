@@ -1067,6 +1067,7 @@ export class QuotationTemplateService {
    * Generate BOM for Water Heater systems (simplified single-row format)
    */
   private static generateWaterHeaterBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
+    console.log('🟢 generateWaterHeaterBOM called with project:', JSON.stringify(project, null, 2));
     const items: BillOfMaterialsItem[] = [];
     
     // Get quantity from project (defaults to 1)
@@ -1140,6 +1141,7 @@ export class QuotationTemplateService {
    * Generate BOM for Water Pump systems (simplified single-row format)
    */
   private static generateWaterPumpBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
+    console.log('🟢 generateWaterPumpBOM called with project:', JSON.stringify(project, null, 2));
     const items: BillOfMaterialsItem[] = [];
     
     // Support both new driveHP and legacy hp field
