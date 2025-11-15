@@ -1077,9 +1077,8 @@ export class QuotationTemplateService {
     const capacityLitres = project.litre || 100;
     const waterHeaterModel = project.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
     const heatingCoilType = project.heatingCoil || 'Heating Coil';
-    const labourTransport = project.labourAndTransport ? ' And Transport Including GST' : '';
     
-    const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
+    const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType} And Transport Including GST`;
     
     // Calculate rate and amount from project values
     // Sanitize projectValue by removing commas and rupee symbols
@@ -1331,7 +1330,7 @@ export class QuotationTemplateService {
         const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
         const labourTransport = (project as any).labourAndTransport ? ' And Transport Including GST' : '';
         
-        description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${labourTransport}`;
+        description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType} And Transport Including GST`;
         break;
 
       case 'water_pump':
