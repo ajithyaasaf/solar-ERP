@@ -166,8 +166,8 @@ const BUSINESS_RULES = {
     waterHeaterPerLitre: 350 // Water heater pricing per litre
   },
   subsidy: {
-    waterHeater: 0.3,     // 30% subsidy up to max ₹20,000
-    waterPump: 0.4        // 40% subsidy for agricultural use
+    waterHeater: 0,       // No subsidy for water heater
+    waterPump: 0          // No subsidy for water pump
   },
   payment: {
     advancePercentage: 90,
@@ -1026,10 +1026,9 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       newProject.basePrice = basePrice;
       newProject.gstAmount = gstAmount;
       
-      // Calculate subsidy: 30% up to max ₹20,000 (applied on base price)
-      const maxSubsidy = Math.min(basePrice * BUSINESS_RULES.subsidy.waterHeater, 20000);
-      newProject.subsidyAmount = maxSubsidy;
-      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
+      // No subsidy for water heater
+      newProject.subsidyAmount = 0;
+      newProject.customerPayment = newProject.projectValue;
     } else if (projectType === "water_pump") {
       // Set default pricing for water pump based on HP (total including GST)
       const hpValue = parseFloat(newProject.hp) || 1;
@@ -1046,9 +1045,9 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       newProject.basePrice = basePrice;
       newProject.gstAmount = gstAmount;
       
-      // Calculate subsidy: 40% for agricultural use (applied on base price)
-      newProject.subsidyAmount = Math.round(basePrice * BUSINESS_RULES.subsidy.waterPump);
-      newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
+      // No subsidy for water pump
+      newProject.subsidyAmount = 0;
+      newProject.customerPayment = newProject.projectValue;
     } else {
       // Fallback for unknown project types
       console.error(`Unknown project type: ${projectType}`);
@@ -1131,7 +1130,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       
       // Recalculate pricing for water heater
       if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
-        // If project value or GST percentage is directly updated, recalculate base, GST, subsidy and payment
+        // If project value or GST percentage is directly updated, recalculate base, GST and payment
         // Use default GST if field is empty/invalid, otherwise use the entered value
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
           ? BUSINESS_RULES.gst.percentage 
@@ -1142,9 +1141,9 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.basePrice = basePrice;
         project.gstAmount = gstAmount;
         
-        const maxSubsidy = Math.min(basePrice * BUSINESS_RULES.subsidy.waterHeater, 20000);
-        project.subsidyAmount = maxSubsidy;
-        project.customerPayment = project.projectValue - project.subsidyAmount;
+        // No subsidy for water heater
+        project.subsidyAmount = 0;
+        project.customerPayment = project.projectValue;
       } else if (updatedData.hasOwnProperty('litre') || updatedData.hasOwnProperty('qty')) {
         // If litre or qty is updated, recalculate based on capacity and quantity
         const qty = project.qty || 1;
@@ -1161,9 +1160,9 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.basePrice = basePrice;
         project.gstAmount = gstAmount;
         
-        const maxSubsidy = Math.min(basePrice * BUSINESS_RULES.subsidy.waterHeater, 20000);
-        project.subsidyAmount = maxSubsidy;
-        project.customerPayment = project.projectValue - project.subsidyAmount;
+        // No subsidy for water heater
+        project.subsidyAmount = 0;
+        project.customerPayment = project.projectValue;
       }
     } else if (project.projectType === "water_pump") {
       // Ensure gstPercentage is set (only if undefined/null, allow 0 or empty string)
@@ -1173,7 +1172,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       
       // Recalculate pricing for water pump
       if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
-        // If project value or GST percentage is directly updated, recalculate base, GST, subsidy and payment
+        // If project value or GST percentage is directly updated, recalculate base, GST and payment
         // Use default GST if field is empty/invalid, otherwise use the entered value
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
           ? BUSINESS_RULES.gst.percentage 
@@ -1184,8 +1183,9 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.basePrice = basePrice;
         project.gstAmount = gstAmount;
         
-        project.subsidyAmount = Math.round(basePrice * BUSINESS_RULES.subsidy.waterPump);
-        project.customerPayment = project.projectValue - project.subsidyAmount;
+        // No subsidy for water pump
+        project.subsidyAmount = 0;
+        project.customerPayment = project.projectValue;
       } else if (updatedData.hasOwnProperty('hp') || updatedData.hasOwnProperty('qty')) {
         // If HP or qty is updated, recalculate based on HP and quantity
         const hpValue = parseFloat(project.hp) || 1;
@@ -1203,8 +1203,9 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.basePrice = basePrice;
         project.gstAmount = gstAmount;
         
-        project.subsidyAmount = Math.round(basePrice * BUSINESS_RULES.subsidy.waterPump);
-        project.customerPayment = project.projectValue - project.subsidyAmount;
+        // No subsidy for water pump
+        project.subsidyAmount = 0;
+        project.customerPayment = project.projectValue;
       }
     } else {
       // Fallback for unknown project types
@@ -4810,14 +4811,16 @@ export default function QuotationCreation() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Editable Pricing Table - Hidden for water heater and water pump */}
+                {/* Editable Pricing Table - Only shows solar projects (on-grid, off-grid, hybrid) */}
                 {(() => {
                   const projects = form.watch("projects");
-                  const isWaterUtility = projects && projects.length > 0 && projects.every((p: any) => 
-                    p.projectType === 'water_heater' || p.projectType === 'water_pump'
-                  );
+                  // Filter to get only solar projects (exclude water heater and water pump)
+                  const solarProjects = projects ? projects.filter((p: any) => 
+                    ['on_grid', 'off_grid', 'hybrid'].includes(p.projectType)
+                  ) : [];
                   
-                  if (isWaterUtility) {
+                  // Hide entire table if there are no solar projects
+                  if (!solarProjects || solarProjects.length === 0) {
                     return null;
                   }
                   
@@ -4841,7 +4844,9 @@ export default function QuotationCreation() {
                         </tr>
                       </thead>
                       <tbody>
-                        {form.watch("projects").map((project: any, index: number) => {
+                        {solarProjects.map((project: any, originalIndex: number) => {
+                          // Get the actual index in the full projects array
+                          const index = projects.indexOf(project);
                           const systemKW = project.systemKW || 0;
                           const basePrice = project.basePrice || 0;
                           const gstAmount = project.gstAmount || 0;
@@ -5016,7 +5021,9 @@ export default function QuotationCreation() {
 
                   {/* Mobile/Tablet Card View (hidden on desktop) */}
                   <div className="lg:hidden space-y-4">
-                    {form.watch("projects").map((project: any, index: number) => {
+                    {solarProjects.map((project: any, originalIndex: number) => {
+                      // Get the actual index in the full projects array
+                      const index = projects.indexOf(project);
                       const systemKW = project.systemKW || 0;
                       const basePrice = project.basePrice || 0;
                       const gstAmount = project.gstAmount || 0;
@@ -5784,21 +5791,42 @@ export default function QuotationCreation() {
                       <span className="ml-2 text-sm">Loading BOM...</span>
                     </div>
                   ) : bomItems.length > 0 ? (
-                    <div className="overflow-x-auto border rounded-lg">
-                      <table className="w-full text-xs sm:text-sm">
-                        <thead className="bg-green-100 dark:bg-green-900/30">
-                          <tr>
-                            <th className="p-2 text-left border-r">Sl.No</th>
-                            <th className="p-2 text-left border-r">Description</th>
-                            <th className="p-2 text-left border-r">Type</th>
-                            <th className="p-2 text-left border-r">Volt</th>
-                            <th className="p-2 text-left border-r">Rating</th>
-                            <th className="p-2 text-left border-r">Make</th>
-                            <th className="p-2 text-left border-r">Qty</th>
-                            <th className="p-2 text-left border-r">Unit</th>
-                            <th className="p-2 text-left">Actions</th>
-                          </tr>
-                        </thead>
+                    (() => {
+                      // Check if all projects are water utilities (water heater/pump)
+                      const projects = form.watch("projects");
+                      const isWaterUtilityOnly = projects && projects.length > 0 && projects.every((p: any) => 
+                        p.projectType === 'water_heater' || p.projectType === 'water_pump'
+                      );
+                      
+                      return (
+                        <div className="overflow-x-auto border rounded-lg">
+                          <table className="w-full text-xs sm:text-sm">
+                            <thead className="bg-green-100 dark:bg-green-900/30">
+                              {isWaterUtilityOnly ? (
+                                // Simplified header for water utilities
+                                <tr>
+                                  <th className="p-2 text-left border-r">Sl.No</th>
+                                  <th className="p-2 text-left border-r">Description</th>
+                                  <th className="p-2 text-right border-r">Price (₹)</th>
+                                  <th className="p-2 text-center border-r">Qty</th>
+                                  <th className="p-2 text-right border-r">Amount (₹)</th>
+                                  <th className="p-2 text-left">Actions</th>
+                                </tr>
+                              ) : (
+                                // Full header for solar projects
+                                <tr>
+                                  <th className="p-2 text-left border-r">Sl.No</th>
+                                  <th className="p-2 text-left border-r">Description</th>
+                                  <th className="p-2 text-left border-r">Type</th>
+                                  <th className="p-2 text-left border-r">Volt</th>
+                                  <th className="p-2 text-left border-r">Rating</th>
+                                  <th className="p-2 text-left border-r">Make</th>
+                                  <th className="p-2 text-left border-r">Qty</th>
+                                  <th className="p-2 text-left border-r">Unit</th>
+                                  <th className="p-2 text-left">Actions</th>
+                                </tr>
+                              )}
+                            </thead>
                         <tbody>
                           {bomItems.map((item, index) => (
                             <tr key={index} className="border-t hover:bg-green-50/50 dark:hover:bg-green-900/10">
@@ -5824,133 +5852,194 @@ export default function QuotationCreation() {
                                   item.description
                                 )}
                               </td>
-                              <td className="p-2 border-r">
-                                {editingBomItem === index ? (
-                                  <Input
-                                    value={item.type}
-                                    onChange={(e) => {
-                                      const updated = [...bomItems];
-                                      updated[index].type = e.target.value;
-                                      setBomItems(updated);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingBomItem(null);
-                                      }
-                                    }}
-                                    className="min-w-[100px]"
-                                  />
-                                ) : (
-                                  item.type
-                                )}
-                              </td>
-                              <td className="p-2 border-r">
-                                {editingBomItem === index ? (
-                                  <Input
-                                    value={item.volt}
-                                    onChange={(e) => {
-                                      const updated = [...bomItems];
-                                      updated[index].volt = e.target.value;
-                                      setBomItems(updated);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingBomItem(null);
-                                      }
-                                    }}
-                                    className="min-w-[80px]"
-                                  />
-                                ) : (
-                                  item.volt
-                                )}
-                              </td>
-                              <td className="p-2 border-r">
-                                {editingBomItem === index ? (
-                                  <Input
-                                    value={item.rating}
-                                    onChange={(e) => {
-                                      const updated = [...bomItems];
-                                      updated[index].rating = e.target.value;
-                                      setBomItems(updated);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingBomItem(null);
-                                      }
-                                    }}
-                                    className="min-w-[100px]"
-                                  />
-                                ) : (
-                                  item.rating
-                                )}
-                              </td>
-                              <td className="p-2 border-r">
-                                {editingBomItem === index ? (
-                                  <Input
-                                    value={item.make}
-                                    onChange={(e) => {
-                                      const updated = [...bomItems];
-                                      updated[index].make = e.target.value;
-                                      setBomItems(updated);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingBomItem(null);
-                                      }
-                                    }}
-                                    className="min-w-[120px]"
-                                  />
-                                ) : (
-                                  item.make
-                                )}
-                              </td>
-                              <td className="p-2 border-r">
-                                {editingBomItem === index ? (
-                                  <Input
-                                    type="number"
-                                    value={item.qty}
-                                    onChange={(e) => {
-                                      const updated = [...bomItems];
-                                      updated[index].qty = parseInt(e.target.value) || 0;
-                                      setBomItems(updated);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingBomItem(null);
-                                      }
-                                    }}
-                                    className="min-w-[80px]"
-                                  />
-                                ) : (
-                                  item.qty
-                                )}
-                              </td>
-                              <td className="p-2 border-r">
-                                {editingBomItem === index ? (
-                                  <Input
-                                    value={item.unit}
-                                    onChange={(e) => {
-                                      const updated = [...bomItems];
-                                      updated[index].unit = e.target.value;
-                                      setBomItems(updated);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingBomItem(null);
-                                      }
-                                    }}
-                                    className="min-w-[80px]"
-                                  />
-                                ) : (
-                                  item.unit
-                                )}
-                              </td>
+                              
+                              {isWaterUtilityOnly ? (
+                                // Simplified columns for water utilities
+                                <>
+                                  <td className="p-2 border-r text-right">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        type="number"
+                                        value={(item as any).rate || 0}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          (updated[index] as any).rate = parseFloat(e.target.value) || 0;
+                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[100px] text-right"
+                                      />
+                                    ) : (
+                                      ((item as any).rate || 0).toLocaleString()
+                                    )}
+                                  </td>
+                                  <td className="p-2 border-r text-center">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        type="number"
+                                        value={item.qty}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          updated[index].qty = parseInt(e.target.value) || 0;
+                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[80px] text-center"
+                                      />
+                                    ) : (
+                                      item.qty
+                                    )}
+                                  </td>
+                                  <td className="p-2 border-r text-right font-medium">
+                                    ₹{((item as any).amount || 0).toLocaleString()}
+                                  </td>
+                                </>
+                              ) : (
+                                // Full columns for solar projects
+                                <>
+                                  <td className="p-2 border-r">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        value={item.type}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          updated[index].type = e.target.value;
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[100px]"
+                                      />
+                                    ) : (
+                                      item.type
+                                    )}
+                                  </td>
+                                  <td className="p-2 border-r">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        value={item.volt}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          updated[index].volt = e.target.value;
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[80px]"
+                                      />
+                                    ) : (
+                                      item.volt
+                                    )}
+                                  </td>
+                                  <td className="p-2 border-r">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        value={item.rating}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          updated[index].rating = e.target.value;
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[100px]"
+                                      />
+                                    ) : (
+                                      item.rating
+                                    )}
+                                  </td>
+                                  <td className="p-2 border-r">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        value={item.make}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          updated[index].make = e.target.value;
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[120px]"
+                                      />
+                                    ) : (
+                                      item.make
+                                    )}
+                                  </td>
+                                  <td className="p-2 border-r">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        type="number"
+                                        value={item.qty}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          updated[index].qty = parseInt(e.target.value) || 0;
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[80px]"
+                                      />
+                                    ) : (
+                                      item.qty
+                                    )}
+                                  </td>
+                                  <td className="p-2 border-r">
+                                    {editingBomItem === index ? (
+                                      <Input
+                                        value={item.unit}
+                                        onChange={(e) => {
+                                          const updated = [...bomItems];
+                                          updated[index].unit = e.target.value;
+                                          setBomItems(updated);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            setEditingBomItem(null);
+                                          }
+                                        }}
+                                        className="min-w-[80px]"
+                                      />
+                                    ) : (
+                                      item.unit
+                                    )}
+                                  </td>
+                                </>
+                              )}
+                              
+                              {/* Actions column - common for both */}
                               <td className="p-2">
                                 <div className="flex gap-1">
                                   {editingBomItem === index ? (
@@ -5995,6 +6084,8 @@ export default function QuotationCreation() {
                         </tbody>
                       </table>
                     </div>
+                      );
+                    })()
                   ) : (
                     <div className="text-center p-8 text-muted-foreground">
                       <Table className="h-12 w-12 mx-auto mb-2 opacity-50" />

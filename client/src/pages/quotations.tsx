@@ -185,6 +185,13 @@ export default function Quotations() {
     }, 0);
   };
 
+  const hasSolarProjects = (projects: QuotationProject[] | undefined) => {
+    if (!projects || !Array.isArray(projects) || projects.length === 0) {
+      return false;
+    }
+    return projects.some(p => ['on_grid', 'off_grid', 'hybrid'].includes(p.projectType));
+  };
+
   const getSourceBadgeStyle = (source: string) => {
     return source === 'site_visit' 
       ? "bg-purple-100 text-purple-800 border-purple-200"
@@ -489,7 +496,7 @@ export default function Quotations() {
                     <TableCell>
                       <div className="text-right">
                         <div className="font-medium">{formatCurrency(quotation.totalCustomerPayment)}</div>
-                        {quotation.totalSubsidyAmount > 0 && (
+                        {quotation.totalSubsidyAmount > 0 && hasSolarProjects(quotation.projects) && (
                           <div className="text-xs text-green-600">
                             Subsidy: {formatCurrency(quotation.totalSubsidyAmount)}
                           </div>
@@ -747,10 +754,12 @@ export default function Quotations() {
                       <span className="text-gray-600">System Cost</span>
                       <span className="font-semibold">{formatCurrency(selectedQuotation?.totalSystemCost || 0)}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-gray-600">Subsidy Amount</span>
-                      <span className="font-semibold text-green-600">-{formatCurrency(selectedQuotation?.totalSubsidyAmount || 0)}</span>
-                    </div>
+                    {hasSolarProjects(selectedQuotation?.projects) && (
+                      <div className="flex justify-between items-center py-2 border-b">
+                        <span className="text-gray-600">Subsidy Amount</span>
+                        <span className="font-semibold text-green-600">-{formatCurrency(selectedQuotation?.totalSubsidyAmount || 0)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center py-2 border-b font-bold">
                       <span className="text-gray-900">Customer Payment</span>
                       <span className="text-blue-600 text-lg">{formatCurrency(selectedQuotation?.totalCustomerPayment || 0)}</span>
@@ -1028,10 +1037,12 @@ export default function Quotations() {
                                   <span className="text-gray-600">Project Value:</span>
                                   <span className="font-medium">{formatCurrency(project.projectValue || 0)}</span>
                                 </div>
-                                <div className="flex justify-between p-2 bg-green-50 rounded">
-                                  <span className="text-gray-600">Subsidy:</span>
-                                  <span className="font-medium text-green-600">-{formatCurrency(project.subsidyAmount || 0)}</span>
-                                </div>
+                                {['on_grid', 'off_grid', 'hybrid'].includes(project.projectType) && (
+                                  <div className="flex justify-between p-2 bg-green-50 rounded">
+                                    <span className="text-gray-600">Subsidy:</span>
+                                    <span className="font-medium text-green-600">-{formatCurrency(project.subsidyAmount || 0)}</span>
+                                  </div>
+                                )}
                                 <div className="flex justify-between p-2 bg-blue-50 rounded font-semibold">
                                   <span className="text-gray-900">Customer Payment:</span>
                                   <span className="text-blue-600">{formatCurrency(project.customerPayment || 0)}</span>
@@ -1124,10 +1135,12 @@ export default function Quotations() {
                           <p className="text-sm text-gray-600 mb-1">Total System Cost</p>
                           <p className="text-2xl font-bold text-blue-600">{formatCurrency(selectedQuotation?.totalSystemCost || 0)}</p>
                         </div>
-                        <div className="p-4 bg-green-50 rounded-lg">
-                          <p className="text-sm text-gray-600 mb-1">Total Subsidy</p>
-                          <p className="text-2xl font-bold text-green-600">{formatCurrency(selectedQuotation?.totalSubsidyAmount || 0)}</p>
-                        </div>
+                        {hasSolarProjects(selectedQuotation?.projects) && (
+                          <div className="p-4 bg-green-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-1">Total Subsidy</p>
+                            <p className="text-2xl font-bold text-green-600">{formatCurrency(selectedQuotation?.totalSubsidyAmount || 0)}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-3">
                         <div className="p-4 bg-purple-50 rounded-lg">
@@ -1295,8 +1308,8 @@ export default function Quotations() {
                   </Card>
                 )}
 
-                {/* Document Requirements */}
-                {selectedQuotation?.documentRequirements && (
+                {/* Document Requirements - Only show for solar projects */}
+                {selectedQuotation?.documentRequirements && hasSolarProjects(selectedQuotation?.projects) && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
