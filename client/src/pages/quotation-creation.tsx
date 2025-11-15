@@ -1013,7 +1013,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
     } else if (projectType === "water_heater") {
       // Set default pricing for water heater based on capacity (total including GST)
-      const baseValue = newProject.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
+      const qty = newProject.qty || 1;
+      const baseValue = newProject.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre * qty;
       const totalWithGST = baseValue * (1 + BUSINESS_RULES.gst.percentage / 100);
       newProject.projectValue = Math.round(totalWithGST);
       newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
@@ -1032,7 +1033,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
     } else if (projectType === "water_pump") {
       // Set default pricing for water pump based on HP (total including GST)
       const hpValue = parseFloat(newProject.hp) || 1;
-      const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
+      const qty = newProject.qty || 1;
+      const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP * qty;
       const totalWithGST = baseValue * (1 + BUSINESS_RULES.gst.percentage / 100);
       newProject.projectValue = Math.round(totalWithGST);
       newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
@@ -1143,9 +1145,10 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         const maxSubsidy = Math.min(basePrice * BUSINESS_RULES.subsidy.waterHeater, 20000);
         project.subsidyAmount = maxSubsidy;
         project.customerPayment = project.projectValue - project.subsidyAmount;
-      } else if (updatedData.hasOwnProperty('litre')) {
-        // If litre is updated, recalculate based on capacity
-        const baseValue = project.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
+      } else if (updatedData.hasOwnProperty('litre') || updatedData.hasOwnProperty('qty')) {
+        // If litre or qty is updated, recalculate based on capacity and quantity
+        const qty = project.qty || 1;
+        const baseValue = project.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre * qty;
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
           ? BUSINESS_RULES.gst.percentage 
           : parseFloat(project.gstPercentage) || 0;
@@ -1183,10 +1186,11 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         
         project.subsidyAmount = Math.round(basePrice * BUSINESS_RULES.subsidy.waterPump);
         project.customerPayment = project.projectValue - project.subsidyAmount;
-      } else if (updatedData.hasOwnProperty('hp')) {
-        // If HP is updated, recalculate based on HP
+      } else if (updatedData.hasOwnProperty('hp') || updatedData.hasOwnProperty('qty')) {
+        // If HP or qty is updated, recalculate based on HP and quantity
         const hpValue = parseFloat(project.hp) || 1;
-        const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
+        const qty = project.qty || 1;
+        const baseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP * qty;
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
           ? BUSINESS_RULES.gst.percentage 
           : parseFloat(project.gstPercentage) || 0;
