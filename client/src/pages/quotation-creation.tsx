@@ -1121,13 +1121,14 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.gstPercentage = 0;
       }
       
-      // Water heater pricing: Only recalculate when projectValue or gstPercentage is manually changed
-      // Do NOT auto-calculate based on qty or litre - projectValue should be manually set
-      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
+      // Water heater pricing: projectValue is per-unit price
+      // Recalculate when projectValue, gstPercentage, or qty changes
+      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage') || updatedData.hasOwnProperty('qty')) {
         // Use 0% as default GST for water heater
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
           ? 0 
           : parseFloat(project.gstPercentage) || 0;
+        const quantity = project.qty || 1;
         const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
         const gstAmount = project.projectValue - basePrice;
         
@@ -1136,7 +1137,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         
         // No subsidy for water heater
         project.subsidyAmount = 0;
-        project.customerPayment = project.projectValue;
+        // customerPayment is total: projectValue (per unit) × quantity
+        project.customerPayment = project.projectValue * quantity;
       }
     } else if (project.projectType === "water_pump") {
       // Ensure gstPercentage is set to 0% for water pump (only if undefined/null)
@@ -1144,13 +1146,14 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.gstPercentage = 0;
       }
       
-      // Water pump pricing: Only recalculate when projectValue or gstPercentage is manually changed
-      // Do NOT auto-calculate based on qty or hp - projectValue should be manually set
-      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage')) {
+      // Water pump pricing: projectValue is per-unit price
+      // Recalculate when projectValue, gstPercentage, or qty changes
+      if (updatedData.hasOwnProperty('projectValue') || updatedData.hasOwnProperty('gstPercentage') || updatedData.hasOwnProperty('qty')) {
         // Use 0% as default GST for water pump
         const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
           ? 0 
           : parseFloat(project.gstPercentage) || 0;
+        const quantity = project.qty || 1;
         const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
         const gstAmount = project.projectValue - basePrice;
         
@@ -1159,7 +1162,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         
         // No subsidy for water pump
         project.subsidyAmount = 0;
-        project.customerPayment = project.projectValue;
+        // customerPayment is total: projectValue (per unit) × quantity
+        project.customerPayment = project.projectValue * quantity;
       }
     } else {
       // Fallback for unknown project types
@@ -1854,7 +1858,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Total incl. GST)</span></label>
+          <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
           <Input
             type="number"
             value={project.projectValue ?? ''}
@@ -2541,7 +2545,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Total incl. GST)</span></label>
+            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
             <Input
               type="number"
               min="0"
@@ -2876,7 +2880,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Total incl. GST)</span></label>
+            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
             <Input
               type="number"
               min="0"

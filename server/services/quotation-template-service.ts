@@ -1082,21 +1082,15 @@ export class QuotationTemplateService {
     const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${gstSuffix}`;
     
     // Calculate rate and amount from project values
-    // Use pre-calculated basePrice from frontend if available, otherwise calculate from projectValue
-    let basePrice = project.basePrice || 0;
+    // projectValue is per-unit price (including GST)
+    const projectValueRaw = project.projectValue || 0;
+    const perUnitPrice = typeof projectValueRaw === 'string' 
+      ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
+      : projectValueRaw;
     
-    // If basePrice not available, calculate from projectValue
-    if (!basePrice || basePrice === 0) {
-      const projectValueRaw = project.projectValue || 0;
-      const totalWithGST = typeof projectValueRaw === 'string' 
-        ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
-        : projectValueRaw;
-      const gstPercentage = project.gstPercentage || 18;
-      basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
-    }
-    
-    const rate = quantity > 0 ? Math.round(basePrice / quantity) : basePrice;
-    const amount = basePrice;
+    // For Water Heater: projectValue is per-unit price (incl. GST), so rate and amount use this directly
+    const rate = Math.round(perUnitPrice);
+    const amount = Math.round(perUnitPrice * quantity);
     
     // Single row with full description and pricing
     items.push({
@@ -1162,21 +1156,15 @@ export class QuotationTemplateService {
     }
     
     // Calculate rate and amount from project values
-    // Use pre-calculated basePrice from frontend if available, otherwise calculate from projectValue
-    let basePrice = project.basePrice || 0;
+    // projectValue is per-unit price (including GST)
+    const projectValueRaw = project.projectValue || 0;
+    const perUnitPrice = typeof projectValueRaw === 'string' 
+      ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
+      : projectValueRaw;
     
-    // If basePrice not available, calculate from projectValue
-    if (!basePrice || basePrice === 0) {
-      const projectValueRaw = project.projectValue || 0;
-      const totalWithGST = typeof projectValueRaw === 'string' 
-        ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
-        : projectValueRaw;
-      const gstPercentage = project.gstPercentage || 18;
-      basePrice = Math.round(totalWithGST / (1 + gstPercentage / 100));
-    }
-    
-    const rate = quantity > 0 ? Math.round(basePrice / quantity) : basePrice;
-    const amount = basePrice;
+    // For Water Pump: projectValue is per-unit price (incl. GST), so rate and amount use this directly
+    const rate = Math.round(perUnitPrice);
+    const amount = Math.round(perUnitPrice * quantity);
     
     // Single row with full description and pricing
     items.push({
@@ -1319,22 +1307,21 @@ export class QuotationTemplateService {
 
       case 'water_heater':
         const litres = project.litre || 100;
+        const quantity_heater = (project as any).qty || 1;
         
-        // Use project values if available (from frontend calculation)
-        if ((project as any).basePrice && (project as any).gstAmount) {
-          basePrice = (project as any).basePrice;
-          gstAmount = (project as any).gstAmount;
-          totalWithGST = project.projectValue;
-        } else {
-          // Fallback: projectValue is total including GST
-          totalWithGST = project.projectValue || (litres * 350 * (1 + actualGstPercentage / 100));
-          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
-          gstAmount = totalWithGST - basePrice;
-        }
+        // projectValue is per-unit price (including GST)
+        const perUnitPrice_heater = project.projectValue || (litres * 350 * (1 + actualGstPercentage / 100));
+        const perUnitBasePrice_heater = Math.round(perUnitPrice_heater / (1 + actualGstPercentage / 100));
+        const perUnitGstAmount_heater = perUnitPrice_heater - perUnitBasePrice_heater;
         
-        // For water heater, rate per kW is same as base price (no kW calculation)
-        ratePerKw = basePrice;
-        kw = 1; // Set kw to 1 for water heater to avoid division by zero
+        // Calculate totals for all units
+        basePrice = Math.round(perUnitBasePrice_heater * quantity_heater);
+        gstAmount = Math.round(perUnitGstAmount_heater * quantity_heater);
+        totalWithGST = Math.round(perUnitPrice_heater * quantity_heater);
+        
+        // For water heater, rate per kW is per-unit base price
+        ratePerKw = perUnitBasePrice_heater;
+        kw = quantity_heater; // Use quantity as kw for proper calculation
         
         // NEW: Updated description format based on specification
         const waterHeaterBrand = (project as any).brand || 'Standard';
@@ -1348,22 +1335,21 @@ export class QuotationTemplateService {
 
       case 'water_pump':
         const driveHP_pump = (project as any).driveHP || project.hp || '1'; // Support both new and old field names
+        const quantity_pump = (project as any).qty || 1;
         
-        // Use project values if available (from frontend calculation)
-        if ((project as any).basePrice && (project as any).gstAmount) {
-          basePrice = (project as any).basePrice;
-          gstAmount = (project as any).gstAmount;
-          totalWithGST = project.projectValue;
-        } else {
-          // Fallback: projectValue is total including GST
-          totalWithGST = project.projectValue || (parseInt(driveHP_pump) * 45000 * (1 + actualGstPercentage / 100));
-          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
-          gstAmount = totalWithGST - basePrice;
-        }
+        // projectValue is per-unit price (including GST)
+        const perUnitPrice_pump = project.projectValue || (parseInt(driveHP_pump) * 45000 * (1 + actualGstPercentage / 100));
+        const perUnitBasePrice_pump = Math.round(perUnitPrice_pump / (1 + actualGstPercentage / 100));
+        const perUnitGstAmount_pump = perUnitPrice_pump - perUnitBasePrice_pump;
         
-        // For water pump, rate per kW is same as base price (no kW calculation)
-        ratePerKw = basePrice;
-        kw = 1; // Set kw to 1 for water pump to avoid division by zero
+        // Calculate totals for all units
+        basePrice = Math.round(perUnitBasePrice_pump * quantity_pump);
+        gstAmount = Math.round(perUnitGstAmount_pump * quantity_pump);
+        totalWithGST = Math.round(perUnitPrice_pump * quantity_pump);
+        
+        // For water pump, rate per kW is per-unit base price
+        ratePerKw = perUnitBasePrice_pump;
+        kw = quantity_pump; // Use quantity as kw for proper calculation
         
         // NEW: Updated description format based on specification
         const panelWatts_pump = project.panelWatts || '540';
