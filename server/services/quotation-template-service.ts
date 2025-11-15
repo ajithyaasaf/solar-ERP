@@ -1121,7 +1121,7 @@ export class QuotationTemplateService {
     const amount = Math.round(perUnitPrice * quantity);
     
     // Single row with full description and pricing
-    items.push({
+    const bomItem = {
       slNo: startSlNo,
       description: fullDescription,
       type: "Water Heater System",
@@ -1132,7 +1132,10 @@ export class QuotationTemplateService {
       unit: "Nos",
       rate: rate,
       amount: amount
-    });
+    };
+    
+    console.log('🔍 Water Heater BOM - Final BOM Item:', JSON.stringify(bomItem, null, 2));
+    items.push(bomItem);
 
     return items;
   }
@@ -1223,7 +1226,7 @@ export class QuotationTemplateService {
     const amount = Math.round(perUnitPrice * quantity);
     
     // Single row with full description and pricing
-    items.push({
+    const bomItem = {
       slNo: startSlNo,
       description: fullDescription,
       type: "Water Pump System",
@@ -1234,7 +1237,10 @@ export class QuotationTemplateService {
       unit: "Nos",
       rate: rate,
       amount: amount
-    });
+    };
+    
+    console.log('🔍 Water Pump BOM - Final BOM Item:', JSON.stringify(bomItem, null, 2));
+    items.push(bomItem);
 
     return items;
   }
@@ -1493,7 +1499,13 @@ export class QuotationTemplateService {
     const pricingBreakdown = this.calculatePricingBreakdown(project, customer.propertyType);
     
     // Use custom BOM if provided, otherwise generate default BOM
-    const billOfMaterials = (quotation as any).customBillOfMaterials && (quotation as any).customBillOfMaterials.length > 0
+    const hasCustomBOM = (quotation as any).customBillOfMaterials && (quotation as any).customBillOfMaterials.length > 0;
+    console.log(`🔍 BOM Source for ${project.projectType}: ${hasCustomBOM ? 'Using stored customBillOfMaterials' : 'Generating fresh BOM'}`);
+    if (hasCustomBOM) {
+      console.log('🔍 Custom BOM Data:', JSON.stringify((quotation as any).customBillOfMaterials, null, 2));
+    }
+    
+    const billOfMaterials = hasCustomBOM
       ? (quotation as any).customBillOfMaterials
       : this.generateBillOfMaterials(project, customer.propertyType);
     
