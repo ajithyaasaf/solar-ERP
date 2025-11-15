@@ -518,7 +518,7 @@ export class QuotationPDFService {
               <th>Sl No</th>
               <th>Description</th>
               <th>QTY</th>
-              <th>Rate/Qty</th>
+              <th>Rate</th>
               <th>Amount</th>
             </tr>
           </thead>
