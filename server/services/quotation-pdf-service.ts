@@ -527,9 +527,9 @@ export class QuotationPDFService {
               <tr>
                 <td>${item.slNo}</td>
                 <td style="text-align: left;">${item.description}</td>
-                <td>${item.qty}</td>
-                <td>${(item as any).rate ? '₹' + ((item as any).rate as number).toLocaleString() : ''}</td>
-                <td>${(item as any).amount ? '₹' + ((item as any).amount as number).toLocaleString() : ''}</td>
+                <td>${item.qty || 0}</td>
+                <td>${(item as any).rate != null ? '₹' + ((item as any).rate as number).toLocaleString() : '₹0'}</td>
+                <td>${(item as any).amount != null ? '₹' + ((item as any).amount as number).toLocaleString() : '₹0'}</td>
               </tr>
             `).join('')}
           </tbody>
