@@ -1093,14 +1093,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.offGridConfig.dcrPanelCount || 0}
+                      value={formData.offGridConfig.dcrPanelCount ?? 0}
                       onChange={(e) => {
-                        const dcrCount = parseInt(e.target.value) || 0;
-                        const nonDcrCount = formData.offGridConfig?.nonDcrPanelCount || 0;
+                        const value = e.target.value;
+                        const dcrCount = value === '' ? null : parseInt(value);
+                        const nonDcrCount = formData.offGridConfig?.nonDcrPanelCount ?? 0;
                         updateConfig('offGridConfig', {
                           dcrPanelCount: dcrCount,
-                          panelCount: dcrCount + nonDcrCount
+                          panelCount: (dcrCount ?? 0) + nonDcrCount
                         });
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const nonDcrCount = formData.offGridConfig?.nonDcrPanelCount ?? 0;
+                          updateConfig('offGridConfig', {
+                            dcrPanelCount: 0,
+                            panelCount: nonDcrCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter DCR panel count"
@@ -1111,14 +1121,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>NON-DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.offGridConfig.nonDcrPanelCount || 0}
+                      value={formData.offGridConfig.nonDcrPanelCount ?? 0}
                       onChange={(e) => {
-                        const nonDcrCount = parseInt(e.target.value) || 0;
-                        const dcrCount = formData.offGridConfig?.dcrPanelCount || 0;
+                        const value = e.target.value;
+                        const nonDcrCount = value === '' ? null : parseInt(value);
+                        const dcrCount = formData.offGridConfig?.dcrPanelCount ?? 0;
                         updateConfig('offGridConfig', {
                           nonDcrPanelCount: nonDcrCount,
-                          panelCount: dcrCount + nonDcrCount
+                          panelCount: dcrCount + (nonDcrCount ?? 0)
                         });
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const dcrCount = formData.offGridConfig?.dcrPanelCount ?? 0;
+                          updateConfig('offGridConfig', {
+                            nonDcrPanelCount: 0,
+                            panelCount: dcrCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter NON-DCR panel count"
@@ -1692,14 +1712,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.hybridConfig.dcrPanelCount || 0}
+                      value={formData.hybridConfig.dcrPanelCount ?? 0}
                       onChange={(e) => {
-                        const dcrCount = parseInt(e.target.value) || 0;
-                        const nonDcrCount = formData.hybridConfig?.nonDcrPanelCount || 0;
+                        const value = e.target.value;
+                        const dcrCount = value === '' ? null : parseInt(value);
+                        const nonDcrCount = formData.hybridConfig?.nonDcrPanelCount ?? 0;
                         updateConfig('hybridConfig', {
                           dcrPanelCount: dcrCount,
-                          panelCount: dcrCount + nonDcrCount
+                          panelCount: (dcrCount ?? 0) + nonDcrCount
                         });
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const nonDcrCount = formData.hybridConfig?.nonDcrPanelCount ?? 0;
+                          updateConfig('hybridConfig', {
+                            dcrPanelCount: 0,
+                            panelCount: nonDcrCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter DCR panel count"
@@ -1710,14 +1740,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>NON-DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.hybridConfig.nonDcrPanelCount || 0}
+                      value={formData.hybridConfig.nonDcrPanelCount ?? 0}
                       onChange={(e) => {
-                        const nonDcrCount = parseInt(e.target.value) || 0;
-                        const dcrCount = formData.hybridConfig?.dcrPanelCount || 0;
+                        const value = e.target.value;
+                        const nonDcrCount = value === '' ? null : parseInt(value);
+                        const dcrCount = formData.hybridConfig?.dcrPanelCount ?? 0;
                         updateConfig('hybridConfig', {
                           nonDcrPanelCount: nonDcrCount,
-                          panelCount: dcrCount + nonDcrCount
+                          panelCount: dcrCount + (nonDcrCount ?? 0)
                         });
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const dcrCount = formData.hybridConfig?.dcrPanelCount ?? 0;
+                          updateConfig('hybridConfig', {
+                            nonDcrPanelCount: 0,
+                            panelCount: dcrCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter NON-DCR panel count"
@@ -2600,14 +2640,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.waterPumpConfig.dcrPanelCount || 0}
+                      value={formData.waterPumpConfig.dcrPanelCount ?? 0}
                       onChange={(e) => {
-                        const dcrCount = parseInt(e.target.value) || 0;
-                        const nonDcrCount = formData.waterPumpConfig?.nonDcrPanelCount || 0;
+                        const value = e.target.value;
+                        const dcrCount = value === '' ? null : parseInt(value);
+                        const nonDcrCount = formData.waterPumpConfig?.nonDcrPanelCount ?? 0;
                         updateConfig('waterPumpConfig', {
                           dcrPanelCount: dcrCount,
-                          panelCount: dcrCount + nonDcrCount
+                          panelCount: (dcrCount ?? 0) + nonDcrCount
                         });
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const nonDcrCount = formData.waterPumpConfig?.nonDcrPanelCount ?? 0;
+                          updateConfig('waterPumpConfig', {
+                            dcrPanelCount: 0,
+                            panelCount: nonDcrCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter DCR panel count"
@@ -2618,14 +2668,24 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>NON-DCR Panel Count</Label>
                     <Input
                       type="number"
-                      value={formData.waterPumpConfig.nonDcrPanelCount || 0}
+                      value={formData.waterPumpConfig.nonDcrPanelCount ?? 0}
                       onChange={(e) => {
-                        const nonDcrCount = parseInt(e.target.value) || 0;
-                        const dcrCount = formData.waterPumpConfig?.dcrPanelCount || 0;
+                        const value = e.target.value;
+                        const nonDcrCount = value === '' ? null : parseInt(value);
+                        const dcrCount = formData.waterPumpConfig?.dcrPanelCount ?? 0;
                         updateConfig('waterPumpConfig', {
                           nonDcrPanelCount: nonDcrCount,
-                          panelCount: dcrCount + nonDcrCount
+                          panelCount: dcrCount + (nonDcrCount ?? 0)
                         });
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value === '') {
+                          const dcrCount = formData.waterPumpConfig?.dcrPanelCount ?? 0;
+                          updateConfig('waterPumpConfig', {
+                            nonDcrPanelCount: 0,
+                            panelCount: dcrCount
+                          });
+                        }
                       }}
                       min="0"
                       placeholder="Enter NON-DCR panel count"
