@@ -258,7 +258,8 @@ const generateProjectDescription = (project: QuotationProject): string => {
     }
     
     case 'water_pump': {
-      const driveHP = (project as any).driveHP || (project as any).hp || 1;
+      const driveHPRaw = (project as any).driveHP || (project as any).hp || 1;
+      const driveHP = Math.floor(parseFloat(driveHPRaw));
       const panelWattsNum = Number(project.panelWatts) || 540;
       const panelCount = project.panelCount || 10;
       const totalKW = (panelWattsNum * panelCount) / 1000;
@@ -277,9 +278,6 @@ const generateProjectDescription = (project: QuotationProject): string => {
       }
       if ((project as any).lightningArrest) {
         conditionalItems.push('Lighting Arrester');
-      }
-      if ((project as any).dcCable) {
-        conditionalItems.push('DC Cable');
       }
       if ((project as any).electricalAccessories) {
         conditionalItems.push('Electrical Accessories');
@@ -3067,18 +3065,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                   data-testid={`checkbox-lightning-arrest-pump-${projectIndex}`}
                 />
                 <span>Lightning Arrestor</span>
-              </label>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Checkbox
-                  id={`dc-cable-pump-${projectIndex}`}
-                  checked={project.dcCable || false}
-                  onCheckedChange={(checked) => handleFieldChange('dcCable', checked)}
-                  data-testid={`checkbox-dc-cable-pump-${projectIndex}`}
-                />
-                <span>DC Cable</span>
               </label>
             </div>
 

@@ -1147,8 +1147,9 @@ export class QuotationTemplateService {
     console.log('🟢 generateWaterPumpBOM called with project:', JSON.stringify(project, null, 2));
     const items: BillOfMaterialsItem[] = [];
     
-    // Support both new driveHP and legacy hp field
-    const driveHP = project.driveHP || project.hp || '1';
+    // Support both new driveHP and legacy hp field - convert to integer to avoid decimals
+    const driveHPRaw = project.driveHP || project.hp || '1';
+    const driveHP = Math.floor(parseFloat(driveHPRaw));
     const quantity = project.qty || 1;
     
     // Build description from project details
