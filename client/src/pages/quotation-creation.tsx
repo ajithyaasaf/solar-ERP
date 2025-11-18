@@ -947,6 +947,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           hp: "1",
           driveHP: "1",
           drive: "vfd",
+          inverterPhase: "single_phase",
           panelWatts: "530",
           panelType: "bifacial",
           structureType: "gp_structure",
@@ -2712,6 +2713,19 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 <SelectItem value="vfd">VFD (Variable Frequency Drive)</SelectItem>
                 <SelectItem value="direct">Direct Drive</SelectItem>
                 <SelectItem value="submersible">Submersible</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Phase *</label>
+            <Select value={project.inverterPhase || "single_phase"} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
+              <SelectTrigger data-testid={`select-pump-phase-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single_phase">1 Phase (Single Phase)</SelectItem>
+                <SelectItem value="three_phase">3 Phase (Three Phase)</SelectItem>
               </SelectContent>
             </Select>
           </div>

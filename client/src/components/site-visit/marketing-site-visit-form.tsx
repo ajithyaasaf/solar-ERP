@@ -144,6 +144,8 @@ interface WaterPumpConfig extends BaseConfig {
   panelCount: number;
   // Quantity field for BOM generation
   qty?: number;
+  // Phase selection for inverter
+  inverterPhase?: string;
   // New fields from client specification
   structureType?: string;
   gpStructure?: {
@@ -2552,6 +2554,22 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                         <SelectItem value="vfd">VFD (Variable Frequency Drive)</SelectItem>
                         <SelectItem value="direct">Direct Drive</SelectItem>
                         <SelectItem value="submersible">Submersible</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Phase *</Label>
+                    <Select 
+                      value={formData.waterPumpConfig.inverterPhase || 'single_phase'}
+                      onValueChange={(value) => updateConfig('waterPumpConfig', { inverterPhase: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select phase" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single_phase">1 Phase (Single Phase)</SelectItem>
+                        <SelectItem value="three_phase">3 Phase (Three Phase)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

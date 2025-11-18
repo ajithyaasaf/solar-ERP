@@ -434,6 +434,8 @@ export const waterPumpConfigSchema = z.object({
   others: z.string().optional(),
   // Quantity field for BOM generation
   qty: z.number().min(1).default(1),
+  // Phase selection for inverter
+  inverterPhase: z.enum(inverterPhases).optional(),
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
