@@ -1173,9 +1173,6 @@ export class QuotationTemplateService {
     if (project.lightningArrest) {
       conditionalItems.push('Lighting Arrester');
     }
-    if (project.dcCable) {
-      conditionalItems.push('DC Cable');
-    }
     if (project.electricalAccessories) {
       conditionalItems.push('Electrical Accessories');
     }

@@ -1477,12 +1477,6 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           <p className="font-medium text-green-600">✓ Included</p>
                         </div>
                       )}
-                      {siteVisit.marketingData.waterPumpConfig.dcCable && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">DC Cable</p>
-                          <p className="font-medium text-green-600">✓ Included</p>
-                        </div>
-                      )}
                       {siteVisit.marketingData.waterPumpConfig.electricalAccessories && (
                         <div>
                           <p className="text-sm text-muted-foreground">Electrical Accessories</p>

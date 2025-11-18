@@ -2913,18 +2913,6 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       </Label>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="water-pump-dc-cable"
-                        checked={formData.waterPumpConfig?.dcCable || false}
-                        onCheckedChange={(checked) => updateConfig('waterPumpConfig', { dcCable: checked as boolean })}
-                        data-testid="checkbox-water-pump-dc-cable"
-                      />
-                      <Label htmlFor="water-pump-dc-cable" className="font-normal cursor-pointer">
-                        DC Cable
-                      </Label>
-                    </div>
-
                     <div className="col-span-full">
                       <Label>Earth Connection</Label>
                       <div className="grid grid-cols-3 gap-4 mt-2">
