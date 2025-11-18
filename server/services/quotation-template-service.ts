@@ -1155,7 +1155,8 @@ export class QuotationTemplateService {
     // Build description from project details
     const panelWatts = project.panelWatts || '540';
     const panelCount = project.panelCount || 10;
-    const totalKW = (parseInt(panelWatts) * panelCount) / 1000;
+    // Round totalKW to avoid decimals (e.g., 5 instead of 5.3)
+    const totalKW = Math.round((parseInt(panelWatts) * panelCount) / 1000);
     const panelBrand = project.panelBrand && project.panelBrand.length > 0 
       ? project.panelBrand[0].toUpperCase() 
       : 'UTL';
@@ -1173,6 +1174,11 @@ export class QuotationTemplateService {
     }
     if (project.lightningArrest) {
       conditionalItems.push('Lighting Arrester');
+    }
+    // Check if DC is selected in earth connection to add DC Cable
+    if (project.earth && Array.isArray(project.earth) && 
+        (project.earth.includes('dc') || project.earth.includes('ac_dc'))) {
+      conditionalItems.push('DC Cable');
     }
     if (project.electricalAccessories) {
       conditionalItems.push('Electrical Accessories');
