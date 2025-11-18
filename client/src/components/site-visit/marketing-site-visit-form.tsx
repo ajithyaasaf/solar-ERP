@@ -2365,14 +2365,11 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Label>Quantity *</Label>
                     <Input
                       type="number"
-                      value={formData.waterHeaterConfig.qty || 1}
+                      value={formData.waterHeaterConfig.qty ?? 1}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('waterHeaterConfig', { qty: '' as any });
-                        } else {
-                          updateConfig('waterHeaterConfig', { qty: parseInt(value) || 1 });
-                        }
+                        const parsedValue = value === '' ? null : parseInt(value);
+                        updateConfig('waterHeaterConfig', { qty: parsedValue });
                       }}
                       onBlur={(e) => {
                         const value = e.target.value;
@@ -2524,15 +2521,19 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     <Input
                       type="number"
                       min="1"
-                      value={formData.waterPumpConfig.qty || 1}
+                      value={formData.waterPumpConfig.qty ?? 1}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          updateConfig('waterPumpConfig', { qty: '' as any });
-                        } else {
-                          updateConfig('waterPumpConfig', { qty: parseInt(value) || 1 });
+                        const parsedValue = value === '' ? null : parseInt(value);
+                        updateConfig('waterPumpConfig', { qty: parsedValue });
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || parseInt(value) < 1) {
+                          updateConfig('waterPumpConfig', { qty: 1 });
                         }
                       }}
+                      placeholder="1"
                       data-testid="input-water-pump-qty"
                     />
                   </div>
