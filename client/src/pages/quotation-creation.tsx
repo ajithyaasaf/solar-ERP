@@ -1486,418 +1486,409 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
   const renderSolarSystemFields = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">System Capacity (kW) <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
-          <Input
-            type="text"
-            value={`${calculatedSystemKW} (Rounded: ${roundedSystemKW} kW)`}
-            disabled
-            className="bg-muted cursor-not-allowed"
-            data-testid={`input-system-kw-${projectIndex}`}
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Rate per kW (₹) <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
-          <Input
-            type="text"
-            value={calculatedRatePerKW.toLocaleString()}
-            disabled
-            className="bg-muted cursor-not-allowed"
-            data-testid={`input-price-per-kw-${projectIndex}`}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Solar Panel Make * (Multiple Selection)</label>
-          <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-            {solarPanelBrands.map((brand) => (
-              <div key={brand} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`panel-${brand}-${projectIndex}`}
-                  checked={project.solarPanelMake?.includes(brand) || false}
-                  onCheckedChange={(checked) => {
-                    const currentMakes = project.solarPanelMake || [];
-                    const newMakes = checked 
-                      ? [...currentMakes, brand]
-                      : currentMakes.filter((m: string) => m !== brand);
-                    handleFieldChange('solarPanelMake', newMakes);
-                  }}
-                />
-                <label htmlFor={`panel-${brand}-${projectIndex}`} className="text-sm">
-                  {brand.replace('_', ' ').toUpperCase()}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Panel Type *</label>
-          <Select value={project.panelType || "bifacial"} onValueChange={(value) => handleFieldChange('panelType', value)}>
-            <SelectTrigger data-testid={`select-panel-type-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {panelTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type === 'bifacial' ? 'Bifacial' : type === 'topcon' ? 'Topcon' : 'Mono-PERC'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Panel Watts <span className="text-xs text-muted-foreground">(Type or select)</span></label>
-          <Input
-            type="text"
-            list={`panel-watts-list-${projectIndex}`}
-            value={project.panelWatts || ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              handleFieldChange('panelWatts', value);
-            }}
-            placeholder="Enter or select panel wattage"
-            data-testid={`input-panel-watts-${projectIndex}`}
-          />
-          <datalist id={`panel-watts-list-${projectIndex}`}>
-            {panelWatts.map((watts) => (
-              <option key={watts} value={watts}>{watts}W</option>
-            ))}
-          </datalist>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Inverter Make * (Multiple Selection)</label>
-          <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-            {inverterMakes.map((make) => (
-              <div key={make} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`inverter-${make}-${projectIndex}`}
-                  checked={project.inverterMake?.includes(make) || false}
-                  onCheckedChange={(checked) => {
-                    const currentMakes = project.inverterMake || [];
-                    const newMakes = checked 
-                      ? [...currentMakes, make]
-                      : currentMakes.filter((m: string) => m !== make);
-                    handleFieldChange('inverterMake', newMakes);
-                  }}
-                />
-                <label htmlFor={`inverter-${make}-${projectIndex}`} className="text-sm">
-                  {make.toUpperCase()}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            {(project.projectType === 'off_grid' || project.projectType === 'hybrid') ? 'Inverter KVA *' : 'Inverter KW *'}
-            {roundedSystemKW > 0 && (
-              <span className="text-xs text-muted-foreground ml-2">(Auto: {roundedSystemKW} KW)</span>
-            )}
-          </label>
-          <Input
-            type="number"
-            value={project.inverterKW ?? ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              const kw = parseFloat(value) || 0;
-              handleFieldChange('inverterKW', value === '' ? undefined : kw);
-              
-              if (kw > 0) {
-                const autoPhase = kw < 6 ? 'single_phase' : 'three_phase';
-                handleFieldChange('inverterPhase', autoPhase);
-              }
-            }}
-            min="0"
-            step="0.1"
-            placeholder={
-              (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
-                ? 'Enter inverter KVA rating' 
-                : 'Enter inverter KW rating'
-            }
-            data-testid={`input-inverter-kw-${projectIndex}`}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Inverter Qty</label>
-          <Input
-            type="number"
-            value={project.inverterQty ?? ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value === '') {
-                handleFieldChange('inverterQty', '');
-              } else {
-                const qty = parseInt(value) || 1;
-                handleFieldChange('inverterQty', qty);
-                
-                if (project.electricalAccessories && qty > 0) {
-                  handleFieldChange('electricalCount', qty);
-                }
-              }
-            }}
-            min="1"
-            placeholder="Enter inverter quantity"
-            data-testid={`input-inverter-qty-${projectIndex}`}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Inverter Phase <span className="text-xs text-muted-foreground">(Auto-selected based on KW)</span></label>
-          <Select 
-            value={project.inverterPhase || "single_phase"} 
-            onValueChange={(value) => handleFieldChange('inverterPhase', value)}
-          >
-            <SelectTrigger data-testid={`select-inverter-phase-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {inverterPhases.map((phase) => (
-                <SelectItem key={phase} value={phase}>
-                  {phase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && (
+      {/* System Capacity & Calculations */}
+      <div className="space-y-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
+          <span className="text-lg">📊</span> System Capacity & Calculations
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Inverter Volt <span className="text-xs text-muted-foreground">(Type or select)</span></label>
+            <label className="text-sm font-medium">System Capacity (kW) <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
             <Input
               type="text"
-              value={project.inverterVolt || ''}
-              onChange={(e) => handleFieldChange('inverterVolt', e.target.value)}
-              placeholder="Enter inverter voltage (e.g., 24V, 48V)"
-              data-testid={`input-inverter-volt-${projectIndex}`}
+              value={`${calculatedSystemKW} (Rounded: ${roundedSystemKW} kW)`}
+              disabled
+              className="bg-muted cursor-not-allowed"
+              data-testid={`input-system-kw-${projectIndex}`}
             />
           </div>
-        )}
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Checkbox
-              id={`lightning-arrest-${projectIndex}`}
-              checked={project.lightningArrest || false}
-              onCheckedChange={(checked) => handleFieldChange('lightningArrest', checked)}
-              data-testid={`checkbox-lightning-arrest-${projectIndex}`}
-            />
-            <span>Lightning Arrestor</span>
-          </label>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Checkbox
-              id={`electrical-accessories-${projectIndex}`}
-              checked={project.electricalAccessories || false}
-              onCheckedChange={(checked) => {
-                handleFieldChange('electricalAccessories', checked);
-                if (checked && project.inverterQty) {
-                  handleFieldChange('electricalCount', project.inverterQty);
-                } else if (!checked) {
-                  handleFieldChange('electricalCount', undefined);
-                }
-              }}
-              data-testid={`checkbox-electrical-accessories-${projectIndex}`}
-            />
-            <span>Electrical Accessories</span>
-          </label>
-          {project.electricalAccessories && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Rate per kW (₹) <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
             <Input
-              type="number"
-              value={project.electricalCount ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFieldChange('electricalCount', value === '' ? '' : parseInt(value) || 0);
-              }}
-              min="0"
-              placeholder="Electrical count (auto-filled from Inverter Qty)"
-              data-testid={`input-electrical-count-${projectIndex}`}
-              className="mt-2"
+              type="text"
+              value={calculatedRatePerKW.toLocaleString()}
+              disabled
+              className="bg-muted cursor-not-allowed"
+              data-testid={`input-price-per-kw-${projectIndex}`}
             />
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Earth Connection (Multiple Selection)</label>
-          <div className="space-y-2 border rounded p-2">
-            {earthingTypes.map((type) => (
-              <div key={type} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`earth-${type}-${projectIndex}`}
-                  checked={Array.isArray(project.earth) ? project.earth.includes(type) : project.earth === type}
-                  onCheckedChange={(checked) => {
-                    const currentEarth = Array.isArray(project.earth) ? project.earth : (project.earth ? [project.earth] : []);
-                    const newEarth = checked 
-                      ? [...currentEarth, type]
-                      : currentEarth.filter((e: string) => e !== type);
-                    handleFieldChange('earth', newEarth);
-                  }}
-                  data-testid={`checkbox-earth-${type}-${projectIndex}`}
-                />
-                <label htmlFor={`earth-${type}-${projectIndex}`} className="text-sm cursor-pointer">
-                  {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
-                </label>
-              </div>
-            ))}
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Total Panel Count *</label>
-          <Input
-            type="number"
-            min="1"
-            value={project.panelCount ?? ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              const totalCount = value === '' ? '' : parseInt(value) || 0;
-              handleFieldChange('panelCount', totalCount);
-              if (totalCount !== '') {
-                const currentNonDcr = project.nonDcrPanelCount || 0;
-                if (totalCount < currentNonDcr) {
-                  handleFieldChange('nonDcrPanelCount', totalCount);
-                  handleFieldChange('dcrPanelCount', 0);
-                } else {
-                  handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
-                }
-              }
-            }}
-            onBlur={(e) => {
-              if (e.target.value === '') {
-                handleFieldChange('panelCount', 0);
-                handleFieldChange('dcrPanelCount', 0);
-                handleFieldChange('nonDcrPanelCount', 0);
-              }
-            }}
-            className={project.panelCount === 0 || project.panelCount === '' ? "border-red-500" : ""}
-            data-testid={`input-panel-count-${projectIndex}`}
-          />
-          {(project.panelCount === 0 || project.panelCount === '') && (
-            <p className="text-xs text-red-600">Panel count is required for calculations</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">DCR Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
-          <Input
-            type="number"
-            min="0"
-            value={project.dcrPanelCount ?? ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              const dcrCount = value === '' ? '' : parseInt(value) || 0;
-              handleFieldChange('dcrPanelCount', dcrCount);
-              if (dcrCount !== '') {
-                const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
-                handleFieldChange('panelCount', totalCount);
-              }
-            }}
-            onBlur={(e) => {
-              if (e.target.value === '') {
-                handleFieldChange('dcrPanelCount', 0);
-                const totalCount = 0 + (project.nonDcrPanelCount || 0);
-                handleFieldChange('panelCount', totalCount);
-              }
-            }}
-            data-testid={`input-dcr-panel-count-${projectIndex}`}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">NON-DCR Panel Count</label>
-          <Input
-            type="number"
-            min="0"
-            value={project.nonDcrPanelCount ?? ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
-              handleFieldChange('nonDcrPanelCount', nonDcrCount);
-              if (nonDcrCount !== '') {
-                const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
-                handleFieldChange('panelCount', totalCount);
-              }
-            }}
-            onBlur={(e) => {
-              if (e.target.value === '') {
-                handleFieldChange('nonDcrPanelCount', 0);
-                const totalCount = (project.dcrPanelCount || 0) + 0;
-                handleFieldChange('panelCount', totalCount);
-              }
-            }}
-            data-testid={`input-non-dcr-panel-count-${projectIndex}`}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Floor Level *</label>
-          <Select value={project.floor || '0'} onValueChange={(value) => handleFieldChange('floor', value)}>
-            <SelectTrigger data-testid={`select-floor-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {floorLevels.map((floor) => (
-                <SelectItem key={floor} value={floor}>
-                  {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
-          <Input
-            type="number"
-            value={project.projectValue ?? ''}
-            onChange={(e) => {
-              const value = e.target.value;
-              handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
-            }}
-            onBlur={(e) => {
-              if (e.target.value === '') {
-                handleFieldChange('projectValue', 0);
-              }
-            }}
-            min="0"
-            data-testid={`input-project-value-${projectIndex}`}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">GST Percentage (%)</label>
-          <Input
-            type="number"
-            value={project.gstPercentage ?? ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '') {
-                handleFieldChange('gstPercentage', '');
-              } else {
-                const parsed = parseFloat(val);
-                handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
-              }
-            }}
-            placeholder={`Default: ${BUSINESS_RULES.gst.percentage}%`}
-            min="0"
-            max="100"
-            step="0.1"
-            data-testid={`input-gst-percentage-${projectIndex}`}
-          />
         </div>
       </div>
 
-      {/* Structure Details Section */}
-      <div className="space-y-4">
-        <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+      {/* Panel Configuration */}
+      <div className="space-y-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <h4 className="font-medium text-sm text-amber-900 dark:text-amber-100 flex items-center gap-2">
+          <span className="text-lg">☀️</span> Panel Configuration
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Solar Panel Make * (Multiple Selection)</label>
+            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+              {solarPanelBrands.map((brand) => (
+                <div key={brand} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`panel-${brand}-${projectIndex}`}
+                    checked={project.solarPanelMake?.includes(brand) || false}
+                    onCheckedChange={(checked) => {
+                      const currentMakes = project.solarPanelMake || [];
+                      const newMakes = checked 
+                        ? [...currentMakes, brand]
+                        : currentMakes.filter((m: string) => m !== brand);
+                      handleFieldChange('solarPanelMake', newMakes);
+                    }}
+                  />
+                  <label htmlFor={`panel-${brand}-${projectIndex}`} className="text-sm">
+                    {brand.replace('_', ' ').toUpperCase()}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Panel Type *</label>
+            <Select value={project.panelType || "bifacial"} onValueChange={(value) => handleFieldChange('panelType', value)}>
+              <SelectTrigger data-testid={`select-panel-type-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {panelTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type === 'bifacial' ? 'Bifacial' : type === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Panel Watts <span className="text-xs text-muted-foreground">(Type or select)</span></label>
+            <Input
+              type="text"
+              list={`panel-watts-list-${projectIndex}`}
+              value={project.panelWatts || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('panelWatts', value);
+              }}
+              placeholder="Enter or select panel wattage"
+              data-testid={`input-panel-watts-${projectIndex}`}
+            />
+            <datalist id={`panel-watts-list-${projectIndex}`}>
+              {panelWatts.map((watts) => (
+                <option key={watts} value={watts}>{watts}W</option>
+              ))}
+            </datalist>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Total Panel Count *</label>
+            <Input
+              type="number"
+              min="1"
+              value={project.panelCount ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                const totalCount = value === '' ? '' : parseInt(value) || 0;
+                handleFieldChange('panelCount', totalCount);
+                if (totalCount !== '') {
+                  const currentNonDcr = project.nonDcrPanelCount || 0;
+                  if (totalCount < currentNonDcr) {
+                    handleFieldChange('nonDcrPanelCount', totalCount);
+                    handleFieldChange('dcrPanelCount', 0);
+                  } else {
+                    handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('panelCount', 0);
+                  handleFieldChange('dcrPanelCount', 0);
+                  handleFieldChange('nonDcrPanelCount', 0);
+                }
+              }}
+              className={project.panelCount === 0 || project.panelCount === '' ? "border-red-500" : ""}
+              data-testid={`input-panel-count-${projectIndex}`}
+            />
+            {(project.panelCount === 0 || project.panelCount === '') && (
+              <p className="text-xs text-red-600">Panel count is required for calculations</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">DCR Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
+            <Input
+              type="number"
+              min="0"
+              value={project.dcrPanelCount ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                const dcrCount = value === '' ? '' : parseInt(value) || 0;
+                handleFieldChange('dcrPanelCount', dcrCount);
+                if (dcrCount !== '') {
+                  const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+                  handleFieldChange('panelCount', totalCount);
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('dcrPanelCount', 0);
+                  const totalCount = 0 + (project.nonDcrPanelCount || 0);
+                  handleFieldChange('panelCount', totalCount);
+                }
+              }}
+              data-testid={`input-dcr-panel-count-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">NON-DCR Panel Count</label>
+            <Input
+              type="number"
+              min="0"
+              value={project.nonDcrPanelCount ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
+                handleFieldChange('nonDcrPanelCount', nonDcrCount);
+                if (nonDcrCount !== '') {
+                  const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+                  handleFieldChange('panelCount', totalCount);
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('nonDcrPanelCount', 0);
+                  const totalCount = (project.dcrPanelCount || 0) + 0;
+                  handleFieldChange('panelCount', totalCount);
+                }
+              }}
+              data-testid={`input-non-dcr-panel-count-${projectIndex}`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Inverter Configuration */}
+      <div className="space-y-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+        <h4 className="font-medium text-sm text-purple-900 dark:text-purple-100 flex items-center gap-2">
+          <span className="text-lg">⚡</span> Inverter Configuration
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Inverter Make * (Multiple Selection)</label>
+            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+              {inverterMakes.map((make) => (
+                <div key={make} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`inverter-${make}-${projectIndex}`}
+                    checked={project.inverterMake?.includes(make) || false}
+                    onCheckedChange={(checked) => {
+                      const currentMakes = project.inverterMake || [];
+                      const newMakes = checked 
+                        ? [...currentMakes, make]
+                        : currentMakes.filter((m: string) => m !== make);
+                      handleFieldChange('inverterMake', newMakes);
+                    }}
+                  />
+                  <label htmlFor={`inverter-${make}-${projectIndex}`} className="text-sm">
+                    {make.toUpperCase()}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              {(project.projectType === 'off_grid' || project.projectType === 'hybrid') ? 'Inverter KVA *' : 'Inverter KW *'}
+              {roundedSystemKW > 0 && (
+                <span className="text-xs text-muted-foreground ml-2">(Auto: {roundedSystemKW} KW)</span>
+              )}
+            </label>
+            <Input
+              type="number"
+              value={project.inverterKW ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                const kw = parseFloat(value) || 0;
+                handleFieldChange('inverterKW', value === '' ? undefined : kw);
+                
+                if (kw > 0) {
+                  const autoPhase = kw < 6 ? 'single_phase' : 'three_phase';
+                  handleFieldChange('inverterPhase', autoPhase);
+                }
+              }}
+              min="0"
+              step="0.1"
+              placeholder={
+                (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
+                  ? 'Enter inverter KVA rating' 
+                  : 'Enter inverter KW rating'
+              }
+              data-testid={`input-inverter-kw-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Inverter Qty</label>
+            <Input
+              type="number"
+              value={project.inverterQty ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  handleFieldChange('inverterQty', '');
+                } else {
+                  const qty = parseInt(value) || 1;
+                  handleFieldChange('inverterQty', qty);
+                  
+                  if (project.electricalAccessories && qty > 0) {
+                    handleFieldChange('electricalCount', qty);
+                  }
+                }
+              }}
+              min="1"
+              placeholder="Enter inverter quantity"
+              data-testid={`input-inverter-qty-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Inverter Phase <span className="text-xs text-muted-foreground">(Auto-selected based on KW)</span></label>
+            <Select 
+              value={project.inverterPhase || "single_phase"} 
+              onValueChange={(value) => handleFieldChange('inverterPhase', value)}
+            >
+              <SelectTrigger data-testid={`select-inverter-phase-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {inverterPhases.map((phase) => (
+                  <SelectItem key={phase} value={phase}>
+                    {phase === 'single_phase' ? 'Single Phase' : 'Three Phase'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Inverter Volt <span className="text-xs text-muted-foreground">(Type or select)</span></label>
+              <Input
+                type="text"
+                value={project.inverterVolt || ''}
+                onChange={(e) => handleFieldChange('inverterVolt', e.target.value)}
+                placeholder="Enter inverter voltage (e.g., 24V, 48V)"
+                data-testid={`input-inverter-volt-${projectIndex}`}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Additional Components */}
+      <div className="space-y-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <h4 className="font-medium text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
+          <span className="text-lg">🔧</span> Additional Components
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Checkbox
+                id={`lightning-arrest-${projectIndex}`}
+                checked={project.lightningArrest || false}
+                onCheckedChange={(checked) => handleFieldChange('lightningArrest', checked)}
+                data-testid={`checkbox-lightning-arrest-${projectIndex}`}
+              />
+              <span>Lightning Arrestor</span>
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Checkbox
+                id={`electrical-accessories-${projectIndex}`}
+                checked={project.electricalAccessories || false}
+                onCheckedChange={(checked) => {
+                  handleFieldChange('electricalAccessories', checked);
+                  if (checked && project.inverterQty) {
+                    handleFieldChange('electricalCount', project.inverterQty);
+                  } else if (!checked) {
+                    handleFieldChange('electricalCount', undefined);
+                  }
+                }}
+                data-testid={`checkbox-electrical-accessories-${projectIndex}`}
+              />
+              <span>Electrical Accessories</span>
+            </label>
+            {project.electricalAccessories && (
+              <Input
+                type="number"
+                value={project.electricalCount ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleFieldChange('electricalCount', value === '' ? '' : parseInt(value) || 0);
+                }}
+                min="0"
+                placeholder="Electrical count (auto-filled from Inverter Qty)"
+                data-testid={`input-electrical-count-${projectIndex}`}
+                className="mt-2"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-sm font-medium">Earth Connection (Multiple Selection)</label>
+            <div className="space-y-2 border rounded p-2">
+              {earthingTypes.map((type) => (
+                <div key={type} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`earth-${type}-${projectIndex}`}
+                    checked={Array.isArray(project.earth) ? project.earth.includes(type) : project.earth === type}
+                    onCheckedChange={(checked) => {
+                      const currentEarth = Array.isArray(project.earth) ? project.earth : (project.earth ? [project.earth] : []);
+                      const newEarth = checked 
+                        ? [...currentEarth, type]
+                        : currentEarth.filter((e: string) => e !== type);
+                      handleFieldChange('earth', newEarth);
+                    }}
+                    data-testid={`checkbox-earth-${type}-${projectIndex}`}
+                  />
+                  <label htmlFor={`earth-${type}-${projectIndex}`} className="text-sm cursor-pointer">
+                    {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Installation Details */}
+      <div className="space-y-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+        <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span className="text-lg">🏗️</span> Installation Details
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Floor Level *</label>
+            <Select value={project.floor || '0'} onValueChange={(value) => handleFieldChange('floor', value)}>
+              <SelectTrigger data-testid={`select-floor-${projectIndex}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {floorLevels.map((floor) => (
+                  <SelectItem key={floor} value={floor}>
+                    {floor === '0' ? 'Ground Floor' : `${floor}${floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th'} Floor`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Structure Type *</label>
             <Select value={project.structureType || 'gp_structure'} onValueChange={(value) => handleFieldChange('structureType', value)}>
@@ -1992,8 +1983,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
       {/* Work Scope Section */}
       {project.projectType === 'on_grid' && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+        <div className="space-y-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+            <span className="text-lg">📋</span> Work Scope
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Civil Work Scope</label>
@@ -2032,8 +2025,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
       {/* Hybrid specific scope */}
       {project.projectType === 'hybrid' && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+        <div className="space-y-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+            <span className="text-lg">📋</span> Work Scope
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Electrical Work Scope</label>
@@ -2072,8 +2067,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
       {/* Off-Grid Work Scope Section */}
       {project.projectType === 'off_grid' && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+        <div className="space-y-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+            <span className="text-lg">📋</span> Work Scope
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Electrical Work Scope</label>
@@ -2110,14 +2107,66 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
       )}
 
+      {/* Pricing */}
+      <div className="space-y-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+        <h4 className="font-medium text-sm text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+          <span className="text-lg">💰</span> Pricing
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
+            <Input
+              type="number"
+              value={project.projectValue ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '') {
+                  handleFieldChange('projectValue', 0);
+                }
+              }}
+              min="0"
+              data-testid={`input-project-value-${projectIndex}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">GST Percentage (%)</label>
+            <Input
+              type="number"
+              value={project.gstPercentage ?? ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '') {
+                  handleFieldChange('gstPercentage', '');
+                } else {
+                  const parsed = parseFloat(val);
+                  handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
+                }
+              }}
+              placeholder={`Default: ${BUSINESS_RULES.gst.percentage}%`}
+              min="0"
+              max="100"
+              step="0.1"
+              data-testid={`input-gst-percentage-${projectIndex}`}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Additional Notes */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Additional Notes</label>
+      <div className="space-y-4">
+        <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+          <span className="text-lg">📝</span> Additional Notes
+        </h4>
         <Textarea
           value={project.others || ''}
           onChange={(e) => handleFieldChange('others', e.target.value)}
           placeholder="Any additional specifications or notes..."
           data-testid={`textarea-notes-${projectIndex}`}
+          className="min-h-[100px]"
         />
       </div>
     </div>
@@ -2681,257 +2730,232 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   if (project.projectType === 'water_pump') {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Drive HP *</label>
-            <Select value={project.driveHP || project.hp || "1"} onValueChange={(value) => {
-              handleFieldChange('driveHP', value);
-              handleFieldChange('hp', value);
-            }}>
-              <SelectTrigger data-testid={`select-drivehp-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0.5">0.5 HP</SelectItem>
-                <SelectItem value="1">1 HP</SelectItem>
-                <SelectItem value="2">2 HP</SelectItem>
-                <SelectItem value="3">3 HP</SelectItem>
-                <SelectItem value="5">5 HP</SelectItem>
-                <SelectItem value="7.5">7.5 HP</SelectItem>
-                <SelectItem value="10">10 HP</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Drive Type</label>
-            <Select value={project.drive || "vfd"} onValueChange={(value) => handleFieldChange('drive', value)}>
-              <SelectTrigger data-testid={`select-drive-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="vfd">VFD (Variable Frequency Drive)</SelectItem>
-                <SelectItem value="direct">Direct Drive</SelectItem>
-                <SelectItem value="submersible">Submersible</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Pump Specification */}
+        <div className="space-y-4 bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-cyan-900 dark:text-cyan-100 flex items-center gap-2">
+            <span className="text-lg">⚙️</span> Pump Specification
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Drive HP *</label>
+              <Select value={project.driveHP || project.hp || "1"} onValueChange={(value) => {
+                handleFieldChange('driveHP', value);
+                handleFieldChange('hp', value);
+              }}>
+                <SelectTrigger data-testid={`select-drivehp-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.5">0.5 HP</SelectItem>
+                  <SelectItem value="1">1 HP</SelectItem>
+                  <SelectItem value="2">2 HP</SelectItem>
+                  <SelectItem value="3">3 HP</SelectItem>
+                  <SelectItem value="5">5 HP</SelectItem>
+                  <SelectItem value="7.5">7.5 HP</SelectItem>
+                  <SelectItem value="10">10 HP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Drive Type</label>
+              <Select value={project.drive || "vfd"} onValueChange={(value) => handleFieldChange('drive', value)}>
+                <SelectTrigger data-testid={`select-drive-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vfd">VFD (Variable Frequency Drive)</SelectItem>
+                  <SelectItem value="direct">Direct Drive</SelectItem>
+                  <SelectItem value="submersible">Submersible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Phase *</label>
-            <Select value={project.inverterPhase || "single_phase"} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
-              <SelectTrigger data-testid={`select-pump-phase-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="single_phase">1 Phase (Single Phase)</SelectItem>
-                <SelectItem value="three_phase">3 Phase (Three Phase)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Quantity *</label>
-            <Input
-              type="number"
-              min="1"
-              value={project.qty || 1}
-              onChange={(e) => {
-                const value = parseInt(e.target.value) || 1;
-                handleFieldChange('qty', value);
-              }}
-              data-testid={`input-pump-qty-${projectIndex}`}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Panel Brand * (Multiple Selection)</label>
-            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-              {solarPanelBrands.map((brand) => (
-                <div key={brand} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`pump-panel-${brand}-${projectIndex}`}
-                    checked={project.panelBrand?.includes(brand) || false}
-                    onCheckedChange={(checked) => {
-                      const currentMakes = project.panelBrand || [];
-                      const newMakes = checked 
-                        ? [...currentMakes, brand]
-                        : currentMakes.filter((m: string) => m !== brand);
-                      handleFieldChange('panelBrand', newMakes);
-                    }}
-                  />
-                  <label htmlFor={`pump-panel-${brand}-${projectIndex}`} className="text-sm">
-                    {brand.replace('_', ' ').toUpperCase()}
-                  </label>
-                </div>
-              ))}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Phase *</label>
+              <Select value={project.inverterPhase || "single_phase"} onValueChange={(value) => handleFieldChange('inverterPhase', value)}>
+                <SelectTrigger data-testid={`select-pump-phase-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single_phase">1 Phase (Single Phase)</SelectItem>
+                  <SelectItem value="three_phase">3 Phase (Three Phase)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Quantity *</label>
+              <Input
+                type="number"
+                min="1"
+                value={project.qty || 1}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1;
+                  handleFieldChange('qty', value);
+                }}
+                data-testid={`input-pump-qty-${projectIndex}`}
+              />
             </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Panel Type *</label>
-            <Select value={project.panelType || "bifacial"} onValueChange={(value) => handleFieldChange('panelType', value)}>
-              <SelectTrigger data-testid={`select-pump-panel-type-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {panelTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type === 'bifacial' ? 'Bifacial' : type === 'topcon' ? 'Topcon' : 'Mono-PERC'}
-                  </SelectItem>
+        {/* Panel Configuration */}
+        <div className="space-y-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-amber-900 dark:text-amber-100 flex items-center gap-2">
+            <span className="text-lg">☀️</span> Panel Configuration
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Panel Brand * (Multiple Selection)</label>
+              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+                {solarPanelBrands.map((brand) => (
+                  <div key={brand} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`pump-panel-${brand}-${projectIndex}`}
+                      checked={project.panelBrand?.includes(brand) || false}
+                      onCheckedChange={(checked) => {
+                        const currentMakes = project.panelBrand || [];
+                        const newMakes = checked 
+                          ? [...currentMakes, brand]
+                          : currentMakes.filter((m: string) => m !== brand);
+                        handleFieldChange('panelBrand', newMakes);
+                      }}
+                    />
+                    <label htmlFor={`pump-panel-${brand}-${projectIndex}`} className="text-sm">
+                      {brand.replace('_', ' ').toUpperCase()}
+                    </label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Panel Watts <span className="text-xs text-muted-foreground">(Type or select)</span></label>
-            <Input
-              type="text"
-              list={`pump-panel-watts-list-${projectIndex}`}
-              value={project.panelWatts || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFieldChange('panelWatts', value);
-              }}
-              placeholder="Enter or select panel wattage"
-              data-testid={`input-pump-panel-watts-${projectIndex}`}
-            />
-            <datalist id={`pump-panel-watts-list-${projectIndex}`}>
-              {panelWatts.map((watts) => (
-                <option key={watts} value={watts}>{watts}W</option>
-              ))}
-            </datalist>
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Panel Type *</label>
+              <Select value={project.panelType || "bifacial"} onValueChange={(value) => handleFieldChange('panelType', value)}>
+                <SelectTrigger data-testid={`select-pump-panel-type-${projectIndex}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {panelTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type === 'bifacial' ? 'Bifacial' : type === 'topcon' ? 'Topcon' : 'Mono-PERC'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Total Panel Count *</label>
-            <Input
-              type="number"
-              min="0"
-              value={project.panelCount ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                const totalCount = value === '' ? '' : parseInt(value) || 0;
-                handleFieldChange('panelCount', totalCount);
-                if (totalCount !== '') {
-                  const currentNonDcr = project.nonDcrPanelCount || 0;
-                  if (totalCount < currentNonDcr) {
-                    handleFieldChange('nonDcrPanelCount', totalCount);
-                    handleFieldChange('dcrPanelCount', 0);
-                  } else {
-                    handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Panel Watts <span className="text-xs text-muted-foreground">(Type or select)</span></label>
+              <Input
+                type="text"
+                list={`pump-panel-watts-list-${projectIndex}`}
+                value={project.panelWatts || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleFieldChange('panelWatts', value);
+                }}
+                placeholder="Enter or select panel wattage"
+                data-testid={`input-pump-panel-watts-${projectIndex}`}
+              />
+              <datalist id={`pump-panel-watts-list-${projectIndex}`}>
+                {panelWatts.map((watts) => (
+                  <option key={watts} value={watts}>{watts}W</option>
+                ))}
+              </datalist>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Total Panel Count *</label>
+              <Input
+                type="number"
+                min="0"
+                value={project.panelCount ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const totalCount = value === '' ? '' : parseInt(value) || 0;
+                  handleFieldChange('panelCount', totalCount);
+                  if (totalCount !== '') {
+                    const currentNonDcr = project.nonDcrPanelCount || 0;
+                    if (totalCount < currentNonDcr) {
+                      handleFieldChange('nonDcrPanelCount', totalCount);
+                      handleFieldChange('dcrPanelCount', 0);
+                    } else {
+                      handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
+                    }
                   }
-                }
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('panelCount', 0);
-                  handleFieldChange('dcrPanelCount', 0);
-                  handleFieldChange('nonDcrPanelCount', 0);
-                }
-              }}
-              data-testid={`input-pump-panel-count-${projectIndex}`}
-            />
-          </div>
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '') {
+                    handleFieldChange('panelCount', 0);
+                    handleFieldChange('dcrPanelCount', 0);
+                    handleFieldChange('nonDcrPanelCount', 0);
+                  }
+                }}
+                data-testid={`input-pump-panel-count-${projectIndex}`}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">DCR Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
-            <Input
-              type="number"
-              min="0"
-              value={project.dcrPanelCount ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                const dcrCount = value === '' ? '' : parseInt(value) || 0;
-                handleFieldChange('dcrPanelCount', dcrCount);
-                if (dcrCount !== '') {
-                  const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
-                  handleFieldChange('panelCount', totalCount);
-                }
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('dcrPanelCount', 0);
-                  const totalCount = 0 + (project.nonDcrPanelCount || 0);
-                  handleFieldChange('panelCount', totalCount);
-                }
-              }}
-              data-testid={`input-pump-dcr-panel-count-${projectIndex}`}
-            />
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">DCR Panel Count <span className="text-xs text-muted-foreground">(Auto-calculated)</span></label>
+              <Input
+                type="number"
+                min="0"
+                value={project.dcrPanelCount ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const dcrCount = value === '' ? '' : parseInt(value) || 0;
+                  handleFieldChange('dcrPanelCount', dcrCount);
+                  if (dcrCount !== '') {
+                    const totalCount = dcrCount + (project.nonDcrPanelCount || 0);
+                    handleFieldChange('panelCount', totalCount);
+                  }
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '') {
+                    handleFieldChange('dcrPanelCount', 0);
+                    const totalCount = 0 + (project.nonDcrPanelCount || 0);
+                    handleFieldChange('panelCount', totalCount);
+                  }
+                }}
+                data-testid={`input-pump-dcr-panel-count-${projectIndex}`}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">NON-DCR Panel Count</label>
-            <Input
-              type="number"
-              min="0"
-              value={project.nonDcrPanelCount ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
-                handleFieldChange('nonDcrPanelCount', nonDcrCount);
-                if (nonDcrCount !== '') {
-                  const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
-                  handleFieldChange('panelCount', totalCount);
-                }
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('nonDcrPanelCount', 0);
-                  const totalCount = (project.dcrPanelCount || 0) + 0;
-                  handleFieldChange('panelCount', totalCount);
-                }
-              }}
-              data-testid={`input-pump-non-dcr-panel-count-${projectIndex}`}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
-            <Input
-              type="number"
-              min="0"
-              value={project.projectValue ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('projectValue', 0);
-                }
-              }}
-              data-testid={`input-pump-project-value-${projectIndex}`}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">GST Percentage (%)</label>
-            <Input
-              type="number"
-              value={project.gstPercentage ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  handleFieldChange('gstPercentage', '');
-                } else {
-                  const parsed = parseFloat(value);
-                  handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
-                }
-              }}
-              placeholder={`Default: ${BUSINESS_RULES.gst.percentage}%`}
-              min="0"
-              max="100"
-              step="0.1"
-              data-testid={`input-pump-gst-percentage-${projectIndex}`}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">NON-DCR Panel Count</label>
+              <Input
+                type="number"
+                min="0"
+                value={project.nonDcrPanelCount ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const nonDcrCount = value === '' ? '' : parseInt(value) || 0;
+                  handleFieldChange('nonDcrPanelCount', nonDcrCount);
+                  if (nonDcrCount !== '') {
+                    const totalCount = (project.dcrPanelCount || 0) + nonDcrCount;
+                    handleFieldChange('panelCount', totalCount);
+                  }
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '') {
+                    handleFieldChange('nonDcrPanelCount', 0);
+                    const totalCount = (project.dcrPanelCount || 0) + 0;
+                    handleFieldChange('panelCount', totalCount);
+                  }
+                }}
+                data-testid={`input-pump-non-dcr-panel-count-${projectIndex}`}
+              />
+            </div>
           </div>
         </div>
 
         {/* Structure Details Section for Water Pump */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Structure Details</h4>
+        <div className="space-y-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <span className="text-lg">🏗️</span> Structure Details
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Structure Type *</label>
@@ -3026,8 +3050,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         {/* Work Scope Section for Water Pump */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Work Scope</h4>
+        <div className="space-y-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+            <span className="text-lg">📋</span> Work Scope
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Earth Work Scope</label>
@@ -3067,8 +3093,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         </div>
 
         {/* Additional Options Section for Water Pump */}
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-gray-700">Additional Options</h4>
+        <div className="space-y-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-green-900 dark:text-green-100 flex items-center gap-2">
+            <span className="text-lg">🔧</span> Additional Options
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
@@ -3115,7 +3143,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Earth Connection (Multiple Selection)</label>
               <div className="space-y-2 border rounded p-2">
                 {earthingTypes.map((type) => (
@@ -3154,14 +3182,66 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
         </div>
 
+        {/* Pricing */}
+        <div className="space-y-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+          <h4 className="font-medium text-sm text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+            <span className="text-lg">💰</span> Pricing
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
+              <Input
+                type="number"
+                min="0"
+                value={project.projectValue ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleFieldChange('projectValue', value === '' ? '' : parseFloat(value) || 0);
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '') {
+                    handleFieldChange('projectValue', 0);
+                  }
+                }}
+                data-testid={`input-pump-project-value-${projectIndex}`}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">GST Percentage (%)</label>
+              <Input
+                type="number"
+                value={project.gstPercentage ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    handleFieldChange('gstPercentage', '');
+                  } else {
+                    const parsed = parseFloat(value);
+                    handleFieldChange('gstPercentage', isNaN(parsed) ? '' : parsed);
+                  }
+                }}
+                placeholder={`Default: ${BUSINESS_RULES.gst.percentage}%`}
+                min="0"
+                max="100"
+                step="0.1"
+                data-testid={`input-pump-gst-percentage-${projectIndex}`}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Additional Notes */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Additional Notes</label>
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-gray-700 flex items-center gap-2">
+            <span className="text-lg">📝</span> Additional Notes
+          </h4>
           <Textarea
             value={project.others || ''}
             onChange={(e) => handleFieldChange('others', e.target.value)}
             placeholder="Any additional specifications or notes..."
             data-testid={`textarea-pump-notes-${projectIndex}`}
+            className="min-h-[100px]"
           />
         </div>
       </div>
