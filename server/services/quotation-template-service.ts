@@ -364,15 +364,15 @@ export class QuotationTemplateService {
   /**
    * Format kW for display in quotation
    * <1 kW → show decimal (e.g., 0.68)
-   * >= 1 kW → round to whole (e.g., 3.24 → 3)
+   * >= 1 kW → round to nearest whole (e.g., 3.24 → 3, 9.90 → 10)
    */
   static formatKWForDisplay(kw: number): string {
     if (kw < 1) {
       // For sub-1kW systems, show up to 2 decimal places, remove trailing zeros
       return kw.toFixed(2).replace(/\.?0+$/, '');
     }
-    // For >= 1kW systems, round to whole number
-    return Math.floor(kw).toString();
+    // For >= 1kW systems, round to nearest whole number
+    return Math.round(kw).toString();
   }
 
   /**
