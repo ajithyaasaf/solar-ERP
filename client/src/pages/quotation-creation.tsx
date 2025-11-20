@@ -214,7 +214,8 @@ const generateProjectDescription = (project: QuotationProject): string => {
   
   switch (projectType) {
     case 'on_grid': {
-      const kw = Math.floor((project as any).systemKW || 0);
+      const systemKW = (project as any).systemKW || 0;
+      const kw = systemKW < 1 ? systemKW.toFixed(2).replace(/\.?0+$/, '') : Math.floor(systemKW).toString();
       const inverterKW = (project as any).inverterKW || kw;
       const phase = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
       return `Supply and Installation of ${kw} kw Solar Panel ${inverterKW} KW Inverter ${phase} ON-GRID Solar System`;
@@ -236,7 +237,8 @@ const generateProjectDescription = (project: QuotationProject): string => {
     }
     
     case 'hybrid': {
-      const totalKW = (project as any).systemKW || 0;
+      const systemKW = (project as any).systemKW || 0;
+      const totalKW = systemKW < 1 ? systemKW.toFixed(2).replace(/\.?0+$/, '') : Math.floor(systemKW).toString();
       const inverterKVA = (project as any).inverterKVA || (project as any).inverterKW || 1;
       const voltage = project.voltage || 24;
       const batteryCount = project.batteryCount || 1;
@@ -262,7 +264,8 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const driveHP = Math.floor(parseFloat(driveHPRaw));
       const panelWattsNum = Number(project.panelWatts) || 540;
       const panelCount = project.panelCount || 10;
-      const totalKW = (panelWattsNum * panelCount) / 1000;
+      const calculatedKW = (panelWattsNum * panelCount) / 1000;
+      const totalKW = calculatedKW < 1 ? calculatedKW.toFixed(2).replace(/\.?0+$/, '') : Math.floor(calculatedKW).toString();
       const panelBrand = (project as any).panelBrand && (project as any).panelBrand.length > 0 
         ? (project as any).panelBrand[0].toUpperCase() 
         : 'UTL';

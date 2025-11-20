@@ -1294,7 +1294,7 @@ export class QuotationTemplateService {
         // NEW: Include inverter KW in description
         const inverterKW_onGrid = project.inverterKW || kw;
         const phase_onGrid = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
-        description = `Supply and Installation of ${Math.floor(kw)} kw Solar Panel ${inverterKW_onGrid} KW Inverter ${phase_onGrid} ON-GRID Solar System`;
+        description = `Supply and Installation of ${QuotationTemplateService.formatKWForDisplay(kw)} kw Solar Panel ${inverterKW_onGrid} KW Inverter ${phase_onGrid} ON-GRID Solar System`;
         break;
 
       case 'off_grid':
@@ -1355,7 +1355,8 @@ export class QuotationTemplateService {
         ratePerKw = roundedKW_hybrid > 0 ? basePrice / roundedKW_hybrid : 0;
         
         // NEW: Updated description format based on specification
-        const totalKW_hybrid = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+        const calculatedKW_hybrid = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+        const totalKW_hybrid = QuotationTemplateService.formatKWForDisplay(calculatedKW_hybrid);
         const inverterKVA_hybrid = (project as any).inverterKVA || project.inverterKW || '1';
         const inverterVolt_hybrid = (project as any).inverterVolt || (project.voltage * project.batteryCount);
         const phase_hybrid = project.inverterPhase === 'three_phase' ? '3' : '1';
@@ -1420,7 +1421,8 @@ export class QuotationTemplateService {
         // NEW: Updated description format based on specification
         const panelWatts_pump = project.panelWatts || '540';
         const panelCount_pump = project.panelCount || 10;
-        const totalKW_pump = (parseInt(panelWatts_pump) * panelCount_pump) / 1000;
+        const calculatedKW_pump = (parseInt(panelWatts_pump) * panelCount_pump) / 1000;
+        const totalKW_pump = QuotationTemplateService.formatKWForDisplay(calculatedKW_pump);
         const panelBrand_pump = (project as any).panelBrand && (project as any).panelBrand.length > 0 
           ? (project as any).panelBrand[0].toUpperCase() 
           : 'UTL';
