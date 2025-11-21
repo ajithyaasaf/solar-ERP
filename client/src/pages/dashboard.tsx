@@ -16,6 +16,7 @@ import { CheckInModal } from "@/components/dashboard/check-in-modal";
 import { LeaveBalanceWidget } from "@/components/leave/leave-balance-widget";
 import { Loader2, Users, Zap, Home, BarChart3 } from "lucide-react";
 import { useLocation } from "wouter";
+import { UserPlus, FileText, Receipt, MapPin, Calendar, Package, BarChart3 as BarChart } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuthContext();
@@ -164,8 +165,7 @@ export default function Dashboard() {
       {
         id: "qa1",
         label: "Add Customer",
-        icon: "ri-user-add-line",
-        iconBgColor: "bg-success bg-opacity-20",
+        icon: <UserPlus className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9" />,
         iconColor: "text-success",
         href: "/customers/new",
         category: "primary" as const
@@ -173,8 +173,7 @@ export default function Dashboard() {
       {
         id: "qa2",
         label: "New Quotation",
-        icon: "ri-file-list-3-line",
-        iconBgColor: "bg-info bg-opacity-20",
+        icon: <FileText className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9" />,
         iconColor: "text-info",
         href: "/quotations/new",
         category: "primary" as const
@@ -182,8 +181,7 @@ export default function Dashboard() {
       {
         id: "qa3",
         label: "New Invoice",
-        icon: "ri-bill-line",
-        iconBgColor: "bg-primary bg-opacity-20",
+        icon: <Receipt className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9" />,
         iconColor: "text-primary",
         href: "/invoices/new",
         category: "primary" as const
@@ -197,8 +195,7 @@ export default function Dashboard() {
       secondaryActions.push({
         id: "qa4",
         label: "Site Visit",
-        icon: "ri-map-pin-line",
-        iconBgColor: "bg-warning bg-opacity-20",
+        icon: <MapPin className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />,
         iconColor: "text-warning",
         href: "/site-visits/new",
         category: "secondary" as const
@@ -209,8 +206,7 @@ export default function Dashboard() {
       secondaryActions.push({
         id: "qa5",
         label: "Apply Leave",
-        icon: "ri-calendar-check-line",
-        iconBgColor: "bg-warning bg-opacity-20",
+        icon: <Calendar className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />,
         iconColor: "text-warning",
         href: "/leave/new",
         category: "secondary" as const
@@ -221,8 +217,7 @@ export default function Dashboard() {
       secondaryActions.push({
         id: "qa6",
         label: "Add Product",
-        icon: "ri-store-2-line",
-        iconBgColor: "bg-primary bg-opacity-20",
+        icon: <Package className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />,
         iconColor: "text-primary",
         href: "/products/new",
         category: "secondary" as const
@@ -230,8 +225,7 @@ export default function Dashboard() {
       secondaryActions.push({
         id: "qa7",
         label: "Reports",
-        icon: "ri-file-chart-line",
-        iconBgColor: "bg-secondary bg-opacity-20",
+        icon: <BarChart className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />,
         iconColor: "text-secondary",
         href: "/reports",
         category: "secondary" as const

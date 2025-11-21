@@ -1,12 +1,12 @@
 import { Link } from "wouter";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ReactNode } from "react";
 
 interface QuickAction {
   id: string;
   label: string;
-  icon: string;
-  iconBgColor: string;
+  icon: ReactNode;
   iconColor: string;
   href: string;
   onClick?: () => void;
@@ -38,8 +38,8 @@ export function QuickActions({ actions, title = "Quick Actions" }: QuickActionsP
                 onClick={action.onClick}
               >
                 <div className="flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 bg-white hover:bg-gray-50 rounded-lg sm:rounded-xl transition-colors cursor-pointer active:scale-95 touch-manipulation border border-gray-200 hover:border-gray-300 hover:shadow-sm">
-                  <div className="mb-2 sm:mb-3">
-                    <i className={cn(action.icon, "text-2xl sm:text-3xl md:text-4xl", action.iconColor)}></i>
+                  <div className={cn("mb-2 sm:mb-3", action.iconColor)}>
+                    {action.icon}
                   </div>
                   <span className="text-xs sm:text-sm font-medium text-gray-900 text-center leading-tight">{action.label}</span>
                 </div>
@@ -60,8 +60,8 @@ export function QuickActions({ actions, title = "Quick Actions" }: QuickActionsP
                   onClick={action.onClick}
                 >
                   <div className="flex flex-col items-center justify-center p-3 sm:p-4 md:p-5 bg-white hover:bg-gray-50 rounded-lg sm:rounded-xl transition-colors cursor-pointer active:scale-95 touch-manipulation border border-gray-200 hover:border-gray-300 hover:shadow-sm">
-                    <div className="mb-2">
-                      <i className={cn(action.icon, "text-xl sm:text-2xl md:text-3xl", action.iconColor)}></i>
+                    <div className={cn("mb-2", action.iconColor)}>
+                      {action.icon}
                     </div>
                     <span className="text-xs sm:text-sm text-gray-700 text-center leading-tight">{action.label}</span>
                   </div>
