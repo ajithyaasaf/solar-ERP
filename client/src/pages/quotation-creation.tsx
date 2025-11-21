@@ -4278,7 +4278,7 @@ export default function QuotationCreation() {
   // Show loading state while fetching data in edit mode
   if (isEditMode && (isLoadingQuotation || isLoadingCustomer)) {
     return (
-      <div className="min-h-full bg-gradient-to-b from-background to-muted/20 pb-8 flex items-center justify-center">
+      <div className="bg-gradient-to-b from-background to-muted/20 pb-8 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center gap-4 text-center">
@@ -4297,7 +4297,7 @@ export default function QuotationCreation() {
   }
 
   return (
-    <div className="min-h-full bg-gradient-to-b from-background to-muted/20" data-testid="quotation-creation-page">
+    <div className="bg-gradient-to-b from-background to-muted/20" data-testid="quotation-creation-page">
       {/* Header Section */}
       <div className="bg-background border-b">
         <div className="container mx-auto px-4 py-6 md:py-8">

@@ -73,7 +73,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }} />
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto px-3 py-4 sm:p-4 md:p-6 bg-gray-50">
+        <main className="flex-1 overflow-y-auto px-3 py-4 sm:p-4 md:p-6 bg-gray-50" style={{ overscrollBehavior: 'contain' }}>
           <div className="max-w-[1600px] mx-auto">
             {children}
           </div>
