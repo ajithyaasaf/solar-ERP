@@ -139,7 +139,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 {getNewEntryOptions().map((option, index) => (
                   <DropdownMenuItem 
                     key={index} 
-                    className="cursor-pointer px-3 py-3 hover:bg-gray-50 flex items-start gap-3"
+                    className="cursor-pointer px-3 py-3 hover:bg-gray-100 focus:bg-gray-100 focus:text-gray-900 flex items-start gap-3"
                     onClick={() => {
                       if ('onClick' in option && option.onClick) {
                         option.onClick();
