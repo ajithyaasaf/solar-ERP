@@ -1526,7 +1526,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Solar Panel Make * (Multiple Selection)</label>
-            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2" style={{ overscrollBehavior: 'contain' }}>
               {solarPanelBrands.map((brand) => (
                 <div key={brand} className="flex items-center space-x-2">
                   <Checkbox
@@ -1681,7 +1681,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Inverter Make * (Multiple Selection)</label>
-            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2" style={{ overscrollBehavior: 'contain' }}>
               {inverterMakes.map((make) => (
                 <div key={make} className="flex items-center space-x-2">
                   <Checkbox
@@ -2811,7 +2811,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Panel Brand * (Multiple Selection)</label>
-              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+              <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2" style={{ overscrollBehavior: 'contain' }}>
                 {solarPanelBrands.map((brand) => (
                   <div key={brand} className="flex items-center space-x-2">
                     <Checkbox
@@ -4673,6 +4673,7 @@ export default function QuotationCreation() {
                           {/* Site Visit List */}
                           <div 
                             className="max-h-[300px] overflow-y-auto pr-2 space-y-2"
+                            style={{ overscrollBehavior: 'contain' }}
                             role="list"
                             aria-label="Site visits list"
                           >
