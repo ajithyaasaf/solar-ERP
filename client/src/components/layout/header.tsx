@@ -10,12 +10,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { PlusCircle, Bell, Search, Menu } from "lucide-react";
+import { PlusCircle, Bell, Search, Menu, UserPlus, Package, FileText, Receipt, Clock, Calendar } from "lucide-react";
 import { CheckInModal } from "@/components/dashboard/check-in-modal";
 import { useAuthContext } from "@/contexts/auth-context";
 
 interface HeaderProps {
   onMenuClick: (e: React.MouseEvent) => void;
+}
+
+interface MenuEntryOption {
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
@@ -39,33 +47,28 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   // Determine the current page title
   const pageTitle = routeTitles[location] || "Dashboard";
-  
-  // Define option types
-  type MenuOptionWithHref = { label: string; href: string; onClick?: undefined };
-  type MenuOptionWithAction = { label: string; onClick: () => void; href?: undefined };
-  type MenuOption = MenuOptionWithHref | MenuOptionWithAction;
 
   // New entry options based on current page
-  const getNewEntryOptions = (): MenuOption[] => {
+  const getNewEntryOptions = (): MenuEntryOption[] => {
     switch (location) {
       case "/customers":
-        return [{ label: "New Customer", href: "/customers/new" }];
+        return [{ label: "New Customer", description: "Add a new customer", icon: <UserPlus className="h-4 w-4" />, href: "/customers/new" }];
       case "/products":
-        return [{ label: "New Product", href: "/products/new" }];
+        return [{ label: "New Product", description: "Add a new product", icon: <Package className="h-4 w-4" />, href: "/products/new" }];
       case "/quotations":
-        return [{ label: "New Quotation", href: "/quotations/new" }];
+        return [{ label: "New Quotation", description: "Create a quotation", icon: <FileText className="h-4 w-4" />, href: "/quotations/new" }];
       case "/invoices":
-        return [{ label: "New Invoice", href: "/invoices/new" }];
+        return [{ label: "New Invoice", description: "Create an invoice", icon: <Receipt className="h-4 w-4" />, href: "/invoices/new" }];
       case "/attendance":
-        return [{ label: "Check In/Out", onClick: () => setShowCheckInModal(true) }];
+        return [{ label: "Check In/Out", description: "Mark your attendance", icon: <Clock className="h-4 w-4" />, onClick: () => setShowCheckInModal(true) }];
       case "/leave":
-        return [{ label: "Apply Leave", href: "/leave/new" }];
+        return [{ label: "Apply Leave", description: "Request leave", icon: <Calendar className="h-4 w-4" />, href: "/leave/new" }];
       default:
         return [
-          { label: "New Customer", href: "/customers/new" },
-          { label: "New Product", href: "/products/new" },
-          { label: "New Quotation", href: "/quotations/new" },
-          { label: "New Invoice", href: "/invoices/new" }
+          { label: "New Customer", description: "Add a new customer", icon: <UserPlus className="h-4 w-4" />, href: "/customers/new" },
+          { label: "New Product", description: "Add a product", icon: <Package className="h-4 w-4" />, href: "/products/new" },
+          { label: "New Quotation", description: "Create a quotation", icon: <FileText className="h-4 w-4" />, href: "/quotations/new" },
+          { label: "New Invoice", description: "Create an invoice", icon: <Receipt className="h-4 w-4" />, href: "/invoices/new" }
         ];
     }
   };
@@ -130,13 +133,13 @@ export function Header({ onMenuClick }: HeaderProps) {
                   <span className="hidden md:inline">New Entry</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Create New</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-sm font-semibold px-2 py-2">Create New</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {getNewEntryOptions().map((option, index) => (
                   <DropdownMenuItem 
                     key={index} 
-                    className="cursor-pointer py-2"
+                    className="cursor-pointer px-3 py-3 hover:bg-gray-50 flex items-start gap-3"
                     onClick={() => {
                       if ('onClick' in option && option.onClick) {
                         option.onClick();
@@ -145,7 +148,11 @@ export function Header({ onMenuClick }: HeaderProps) {
                       }
                     }}
                   >
-                    {option.label}
+                    <div className="text-primary mt-0.5">{option.icon}</div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">{option.label}</span>
+                      <span className="text-xs text-gray-500">{option.description}</span>
+                    </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
