@@ -6649,6 +6649,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get site visit statistics - MOVED BEFORE :id ROUTE
+  app.get("/api/site-visits/stats", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || !(await checkSiteVisitPermission(user, 'view_own'))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { siteVisitService } = await import("./services/site-visit-service");
+      
+      const filters: any = {};
+      
+      // Apply department filter based on permissions
+      if (user.role !== 'master_admin' && !(await checkSiteVisitPermission(user, 'view_all'))) {
+        filters.department = user.department;
+      }
+
+      if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
+      if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
+
+      const stats = await siteVisitService.getSiteVisitStats(filters);
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching site visit stats:", error);
+      res.status(500).json({ message: "Failed to fetch site visit statistics" });
+    }
+  });
+
   // Get active site visits (in progress)
   app.get("/api/site-visits/active", verifyAuth, async (req, res) => {
     try {
@@ -6718,35 +6747,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error adding site photos:", error);
       res.status(500).json({ message: "Failed to add site photos" });
-    }
-  });
-
-  // Get site visit statistics
-  app.get("/api/site-visits/stats", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || !(await checkSiteVisitPermission(user, 'view_own'))) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      const { siteVisitService } = await import("./services/site-visit-service");
-      
-      const filters: any = {};
-      
-      // Apply department filter based on permissions
-      if (user.role !== 'master_admin' && !(await checkSiteVisitPermission(user, 'view_all'))) {
-        filters.department = user.department;
-      }
-
-      if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
-      if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
-
-      const stats = await siteVisitService.getSiteVisitStats(filters);
-      
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching site visit stats:", error);
-      res.status(500).json({ message: "Failed to fetch site visit statistics" });
     }
   });
 
