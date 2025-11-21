@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
 import { formatCurrency } from "@/lib/utils";
-import { WelcomeHero } from "@/components/dashboard/welcome-hero";
 import { SolarKPICard } from "@/components/dashboard/solar-kpi-card";
 import { UrgencyBadge } from "@/components/dashboard/urgency-badge";
 import { StatsCard } from "@/components/dashboard/stats-card";
@@ -254,14 +253,6 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Welcome Hero Section */}
-      <div className="mb-6">
-        <WelcomeHero 
-          userName={user?.displayName?.split(' ')[0] || 'User'} 
-          department={user?.department || undefined}
-        />
-      </div>
-
       {/* KPI Row - Solar-Specific Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 mb-6">
         <SolarKPICard
