@@ -13,28 +13,36 @@
   --card-foreground: 20 14.3% 4.1%;
   --border: 20 5.9% 90%;
   --input: 20 5.9% 90%;
-  --primary: 84 57% 52%; /* #a7ce3b */
+  --primary: 150 40% 50%; /* Professional Green - Reduced Saturation */
   --primary-foreground: 211 100% 99%;
   --secondary: 202 78% 41%; /* #157fbe */
   --secondary-foreground: 0 0% 98%;
-  --accent: 60 4.8% 95.9%;
-  --accent-foreground: 24 9.8% 10%;
+  --accent: 35 90% 50%; /* Now properly semantic - Warning/Orange */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20 14.3% 4.1%;
   --radius: 0.5rem;
   
-  /* Chart colors */
-  --chart-1: 84 57% 52%; /* Primary */
-  --chart-2: 202 78% 41%; /* Secondary */
-  --chart-3: 130 50% 50%; /* Green */
-  --chart-4: 45 93% 47%; /* Yellow */
-  --chart-5: 0 84% 60%; /* Red */
+  /* Semantic Status Colors */
+  --success: 120 60% 50%; /* Green for successful operations */
+  --success-foreground: 0 0% 100%;
+  --warning: 35 90% 50%; /* Orange for warnings/caution */
+  --warning-foreground: 0 0% 100%;
+  --info: 200 70% 50%; /* Blue for informational messages */
+  --info-foreground: 0 0% 100%;
+  
+  /* Chart colors - Updated for semantic meaning */
+  --chart-1: 150 40% 50%; /* Success/Green */
+  --chart-2: 202 78% 41%; /* Info/Blue */
+  --chart-3: 35 90% 50%; /* Warning/Orange */
+  --chart-4: 120 60% 50%; /* Alternate Green */
+  --chart-5: 0 84% 60%; /* Destructive/Red */
   
   /* Sidebar colors */
   --sidebar-background: 0 0% 100%;
   --sidebar-foreground: 20 14.3% 4.1%;
-  --sidebar-primary: 84 57% 52%;
+  --sidebar-primary: 150 40% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 202 78% 41%;
   --sidebar-accent-foreground: 0 0% 100%;
@@ -53,16 +61,24 @@
   --card-foreground: 0 0% 98%;
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
-  --primary: 84 57% 52%;
+  --primary: 150 40% 50%;
   --primary-foreground: 0 0% 100%;
   --secondary: 202 78% 41%;
   --secondary-foreground: 0 0% 98%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
+  --accent: 35 90% 50%;
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 0 0% 98%;
   --ring: 240 4.9% 83.9%;
   --radius: 0.5rem;
+  
+  /* Semantic Status Colors - Dark Mode */
+  --success: 120 60% 50%;
+  --success-foreground: 0 0% 100%;
+  --warning: 35 90% 50%;
+  --warning-foreground: 0 0% 100%;
+  --info: 200 70% 50%;
+  --info-foreground: 0 0% 100%;
 }
 
 @layer base {
@@ -94,7 +110,7 @@
 /* Sidebar active item styling */
 .sidebar-item.active {
   border-left: 4px solid hsl(var(--primary));
-  background-color: rgba(167, 206, 59, 0.1);
+  background-color: rgba(0, 128, 0, 0.1);
 }
 
 @media (max-width: 768px) {
