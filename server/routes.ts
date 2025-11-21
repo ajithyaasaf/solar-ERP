@@ -353,10 +353,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users", verifyAuth, async (req, res) => {
     try {
       // Try to get user first, if not found, sync from Firebase Auth
-      let user = await storage.getUser(req.user.uid);
+      let user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user) {
         // Sync user from Firebase Auth if not found in storage
-        const syncResult = await userService.syncUserProfile(req.user.uid, { role: 'employee' });
+        const syncResult = await userService.syncUserProfile(req.authenticatedUser?.uid || "", { role: 'employee' });
         if (syncResult.success) {
           user = syncResult.user;
         }
@@ -536,7 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Pass any displayName from the request body to preserve user registration data
       const syncData = req.body.displayName ? { displayName: req.body.displayName } : {};
-      const result = await userService.syncUserProfile(req.user.uid, syncData);
+      const result = await userService.syncUserProfile(req.authenticatedUser?.uid || "", syncData);
       
       if (!result.success) {
         return res.status(400).json({ message: result.error });
@@ -556,13 +556,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enterprise-grade user permission routes
   app.get("/api/users/:id/permissions", verifyAuth, async (req, res) => {
     try {
-      const requestingUser = await storage.getUser(req.user.uid);
+      const requestingUser = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!requestingUser) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       // Allow users to check their own permissions or admins to check others
-      if (req.params.id !== req.user.uid && requestingUser.role !== "master_admin" && requestingUser.role !== "admin") {
+      if (req.params.id !== req.authenticatedUser?.uid || "" && requestingUser.role !== "master_admin" && requestingUser.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Allow users to check their own subordinates or admins to check others
-      if (req.params.managerId !== req.user.uid && user.role !== "master_admin" && user.role !== "admin") {
+      if (req.params.managerId !== req.authenticatedUser?.uid || "" && user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -1026,7 +1026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageUrl
       } = req.body;
       
-      if (!userId || userId !== req.user.uid) {
+      if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -1134,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For site visit and follow-up uploads, allow temporary user IDs
       const isSiteVisitUpload = userId.startsWith('site_visit') || userId.startsWith('sitevisit') || userId.startsWith('followup');
-      if (!isSiteVisitUpload && userId !== req.user.uid) {
+      if (!isSiteVisitUpload && userId !== req.authenticatedUser?.uid || "") {
         return res.status(400).json({ 
           message: "Invalid request - user ID mismatch" 
         });
@@ -1267,7 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('SERVER: Employee document uploaded successfully to:', uploadResult.url);
 
       // Log the document upload activity
-      const user = await storage.getUser(req.user.uid);
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (user) {
         await storage.createActivityLog({
           type: 'hr',
@@ -1300,7 +1300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId, latitude, longitude, imageUrl, reason, otReason } = req.body;
       
-      if (!userId || userId !== req.user.uid) {
+      if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -1463,7 +1463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
       
-      if (!userId || userId !== req.user.uid) {
+      if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -1514,7 +1514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
       
-      if (!userId || userId !== req.user.uid) {
+      if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -1558,9 +1558,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get OT status for user
   app.get("/api/attendance/ot-status", verifyAuth, async (req, res) => {
     try {
-      const userId = req.query.userId as string || req.user.uid;
+      const userId = req.query.userId as string || req.authenticatedUser?.uid || "";
       
-      if (userId !== req.user.uid) {
+      if (userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -1770,7 +1770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attendance/report", verifyAuth, async (req, res) => {
     try {
       const { userId, from, to } = req.query;
-      const requestingUser = await storage.getUser(req.user.uid);
+      const requestingUser = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !requestingUser ||
         (requestingUser.role !== "master_admin" &&
@@ -1835,7 +1835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attendance/range", verifyAuth, async (req, res) => {
     try {
       const { from, to, department, userId } = req.query;
-      const requestingUser = await storage.getUser(req.user.uid);
+      const requestingUser = await storage.getUser(req.authenticatedUser?.uid || "");
       if (
         !requestingUser ||
         (requestingUser.role !== "master_admin" &&
@@ -4001,7 +4001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaves", verifyAuth, async (req, res) => {
     try {
       const { userId, status } = req.query;
-      const requestingUser = await storage.getUser(req.user.uid);
+      const requestingUser = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!requestingUser) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -6265,7 +6265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Debug endpoint to list all users and their roles/departments
   app.get("/api/debug/users", verifyAuth, async (req, res) => {
     try {
-      const currentUser = await storage.getUser(req.user.uid);
+      const currentUser = await storage.getUser(req.authenticatedUser?.uid || "");
       
       // Only allow master_admin or admin role to access this debug info
       if (!currentUser || (currentUser.role !== 'master_admin' && currentUser.role !== 'admin')) {
@@ -7168,7 +7168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("=== FOLLOW-UP CHECKOUT REQUEST START ===");
       console.log("Follow-up ID:", req.params.id);
-      console.log("User UID:", req.user.uid);
+      console.log("User UID:", req.authenticatedUser?.uid || "");
       console.log("Request body:", JSON.stringify(req.body, null, 2));
       console.log("Request body keys:", Object.keys(req.body));
       console.log("==========================================");
