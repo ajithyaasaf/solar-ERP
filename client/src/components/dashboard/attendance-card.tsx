@@ -20,7 +20,7 @@ export function AttendanceCard({ date = new Date(), items, onCheckInOut }: Atten
   const statusColors = {
     present: "bg-success",
     leave: "bg-warning",
-    absent: "bg-error"
+    absent: "bg-destructive"
   };
 
   // Status label mapping

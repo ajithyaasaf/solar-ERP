@@ -2,12 +2,13 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 
 interface Quotation {
   id: string;
   number: string;
   amount: number;
+  status?: string;
   customer: string;
   location: string;
 }
@@ -23,6 +24,14 @@ export function RecentQuotations({
   title = "Recent Quotations", 
   period = "Last 7 days" 
 }: RecentQuotationsProps) {
+  const statusStyles = {
+    draft: "bg-info/10 text-info",
+    sent: "bg-warning/10 text-warning",
+    approved: "bg-success/10 text-success",
+    converted: "bg-success/10 text-success",
+    rejected: "bg-destructive/10 text-destructive"
+  };
+
   return (
     <Card className="border border-gray-200">
       <CardContent className="p-6">
@@ -33,13 +42,23 @@ export function RecentQuotations({
         <div className="space-y-4">
           {quotations.map((quotation) => (
             <div key={quotation.id} className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-secondary">
+              <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center text-info">
                 <i className="ri-file-list-3-line text-lg"></i>
               </div>
               <div className="ml-3 flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium">{quotation.number}</h3>
-                  <span className="text-xs text-gray-500">{formatCurrency(quotation.amount)}</span>
+                  <div className="flex items-center gap-2">
+                    {quotation.status && (
+                      <span className={cn(
+                        "px-2 py-0.5 text-xs font-medium rounded-full",
+                        statusStyles[quotation.status as keyof typeof statusStyles] || "bg-gray-100 text-gray-600"
+                      )}>
+                        {quotation.status}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-500">{formatCurrency(quotation.amount)}</span>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500">{quotation.customer}, {quotation.location}</p>
               </div>

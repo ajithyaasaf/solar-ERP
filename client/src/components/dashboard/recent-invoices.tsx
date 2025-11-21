@@ -24,11 +24,11 @@ export function RecentInvoices({
   title = "Recent Invoices", 
   period = "Last 7 days" 
 }: RecentInvoicesProps) {
-  // Status badge styles
+  // Status badge styles with semantic colors
   const statusStyles = {
-    paid: "bg-green-100 text-green-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    overdue: "bg-red-100 text-red-800"
+    paid: "bg-success/10 text-success",
+    pending: "bg-warning/10 text-warning",
+    overdue: "bg-destructive/10 text-destructive"
   };
 
   // Status display text
@@ -48,7 +48,7 @@ export function RecentInvoices({
         <div className="space-y-4">
           {invoices.map((invoice) => (
             <div key={invoice.id} className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center text-success">
                 <i className="ri-bill-line text-lg"></i>
               </div>
               <div className="ml-3 flex-1">
