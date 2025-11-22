@@ -149,13 +149,6 @@ export class QuotationTemplateService {
       details.push(`   • ${warranty.inverter.serviceWarranty}`);
     }
     
-    // Installation warranty
-    if (warranty?.installation) {
-      details.push("3. Installation");
-      details.push(`   • ${warranty.installation.warrantyPeriod}`);
-      details.push(`   • ${warranty.installation.serviceWarranty}`);
-    }
-    
     return details;
   }
   

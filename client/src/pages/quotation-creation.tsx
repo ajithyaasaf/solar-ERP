@@ -3424,10 +3424,6 @@ export default function QuotationCreation() {
         inverter: {
           replacementWarranty: "Replacement Warranty for 10 Years",
           serviceWarranty: "Service Warranty for 5 Years"
-        },
-        installation: {
-          warrantyPeriod: "2 Years Installation Warranty",
-          serviceWarranty: "Complete service support during warranty period"
         }
       },
       documentRequirements: {
