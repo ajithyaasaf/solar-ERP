@@ -622,10 +622,10 @@ export class QuotationTemplateService {
         description: "Lighting Arrestor",
         type: structureType,
         volt: "NA",
-        rating: "3",
+        rating: "3 Feet",
         make: "As per MNRE App",
         qty: 1,
-        unit: "Feet"
+        unit: "Set"
       });
     }
 
@@ -639,7 +639,7 @@ export class QuotationTemplateService {
         rating: "3",
         make: "As per MNRE App",
         qty: project.electricalCount || project.inverterKW || 1,
-        unit: "KW"
+        unit: "Set"
       });
     }
 
@@ -814,10 +814,10 @@ export class QuotationTemplateService {
         description: "Lighting Arrestor",
         type: structureType,
         volt: "NA",
-        rating: "3",
+        rating: "3 Feet",
         make: "As per MNRE App",
         qty: 1,
-        unit: "Feet"
+        unit: "Set"
       });
     }
 
@@ -831,7 +831,7 @@ export class QuotationTemplateService {
         rating: "3",
         make: "As per MNRE App",
         qty: project.electricalCount || inverterKVA || 1,
-        unit: "KW"
+        unit: "Set"
       });
     }
 
@@ -1018,10 +1018,10 @@ export class QuotationTemplateService {
         description: "Lighting Arrestor",
         type: structureType,
         volt: "NA",
-        rating: "3",
+        rating: "3 Feet",
         make: "As per MNRE App",
         qty: 1,
-        unit: "Feet"
+        unit: "Set"
       });
     }
 
@@ -1035,7 +1035,7 @@ export class QuotationTemplateService {
         rating: "3",
         make: "As per MNRE App",
         qty: project.electricalCount || inverterKVA || 1,
-        unit: "KW"
+        unit: "Set"
       });
     }
 
