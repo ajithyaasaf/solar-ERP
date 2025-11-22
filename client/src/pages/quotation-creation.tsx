@@ -333,16 +333,19 @@ interface SiteVisitMapping {
 }
 
 // Site Visit Customer Details Form Component
-function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisitData, isEditMode = false }: { form: any; siteVisitMapping: any; fallbackSiteVisitData?: any; isEditMode?: boolean }) {
+function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisitData, isEditMode = false, existingCustomer }: { form: any; siteVisitMapping: any; fallbackSiteVisitData?: any; isEditMode?: boolean; existingCustomer?: any }) {
   const [customerState, setCustomerState] = useState<any>({});
 
   // Extract customer data from site visit mapping with updated structure - be very flexible
-  const siteVisitCustomerData = siteVisitMapping?.originalSiteVisitData?.customer ?? 
+  // In edit mode, prioritize existing customer data from the database
+  const siteVisitCustomerData = (isEditMode && existingCustomer) ?
+                                existingCustomer :
+                                (siteVisitMapping?.originalSiteVisitData?.customer ?? 
                                 siteVisitMapping?.customer ?? 
                                 siteVisitMapping?.originalSiteVisitData?.customerData ??
                                 fallbackSiteVisitData?.customer ?? 
                                 fallbackSiteVisitData?.customerData ??
-                                {};
+                                {});
 
   useEffect(() => {
     // Initialize customer state with site visit data
@@ -3496,7 +3499,7 @@ export default function QuotationCreation() {
   });
 
   // Fallback: Fetch basic site visit data if mapping fails OR in edit mode with siteVisitMapping
-  const siteVisitIdForFallback = selectedSiteVisit || (isEditMode && siteVisitMapping?.siteVisitId);
+  const siteVisitIdForFallback = selectedSiteVisit || (isEditMode && (siteVisitMapping?.sourceVisitId || siteVisitMapping?.siteVisitId));
   const { data: fallbackSiteVisitData, isLoading: isLoadingFallback } = useQuery({
     queryKey: [`/api/site-visits/${siteVisitIdForFallback}`],
     enabled: !!siteVisitIdForFallback && ((quotationSource === "site_visit" && !!mappingError) || (isEditMode && !!siteVisitMapping)),
@@ -4790,6 +4793,7 @@ export default function QuotationCreation() {
                     siteVisitMapping={siteVisitMapping}
                     fallbackSiteVisitData={fallbackSiteVisitData}
                     isEditMode={isEditMode}
+                    existingCustomer={isEditMode ? existingCustomer : undefined}
                   />
                 )}
               </CardContent>
