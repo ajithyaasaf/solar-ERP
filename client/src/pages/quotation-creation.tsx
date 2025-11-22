@@ -3495,10 +3495,11 @@ export default function QuotationCreation() {
     retry: false // Don't retry on error, we'll handle it manually
   });
 
-  // Fallback: Fetch basic site visit data if mapping fails
+  // Fallback: Fetch basic site visit data if mapping fails OR in edit mode with siteVisitMapping
+  const siteVisitIdForFallback = selectedSiteVisit || (isEditMode && siteVisitMapping?.siteVisitId);
   const { data: fallbackSiteVisitData, isLoading: isLoadingFallback } = useQuery({
-    queryKey: [`/api/site-visits/${selectedSiteVisit}`],
-    enabled: !!selectedSiteVisit && quotationSource === "site_visit" && !!mappingError,
+    queryKey: [`/api/site-visits/${siteVisitIdForFallback}`],
+    enabled: !!siteVisitIdForFallback && ((quotationSource === "site_visit" && !!mappingError) || (isEditMode && !!siteVisitMapping)),
     retry: false
   });
 
@@ -3836,9 +3837,9 @@ export default function QuotationCreation() {
     }
   }, [mappingData, form]);
 
-  // Handle fallback data when mapping fails but site visit data is available
+  // Handle fallback data when mapping fails but site visit data is available, or in edit mode
   useEffect(() => {
-    if (fallbackSiteVisitData && mappingError && !mappingData) {
+    if (fallbackSiteVisitData && ((mappingError && !mappingData) || isEditMode)) {
       const siteVisit = fallbackSiteVisitData as any;
       
       // Extract customer data - be flexible with missing data
@@ -3897,7 +3898,7 @@ export default function QuotationCreation() {
         variant: "default"
       });
     }
-  }, [fallbackSiteVisitData, mappingError, mappingData, form]);
+  }, [fallbackSiteVisitData, mappingError, mappingData, form, isEditMode]);
 
   // Initialize scope items from project configuration
   useEffect(() => {
