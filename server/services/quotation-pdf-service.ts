@@ -360,7 +360,7 @@ export class QuotationPDFService {
             <tr><td>Quotation Date:</td><td>${template.quotationDate}</td></tr>
             <tr><td>Quote Revision:</td><td>${template.quoteRevision}</td></tr>
             <tr><td>Quote Validity:</td><td>${template.quoteValidity}</td></tr>
-            <tr><td>Prepared For:</td><td>${template.customer.name}</td></tr>
+            <tr><td>Prepared by:</td><td>${template.preparedBy}</td></tr>
           </table>
         </div>
       </div>
