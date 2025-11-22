@@ -89,7 +89,6 @@ import {
   floorLevels,
   structureTypes,
   monoRailOptions,
-  heightRange,
   workScopeOptions,
   propertyTypes,
   customerDetailsSchema

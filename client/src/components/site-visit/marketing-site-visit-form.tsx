@@ -44,7 +44,6 @@ import {
   floorLevels,
   structureTypes,
   monoRailOptions,
-  heightRange,
   workScopeOptions
 } from "@shared/schema";
 
