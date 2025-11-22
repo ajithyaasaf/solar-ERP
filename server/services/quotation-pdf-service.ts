@@ -376,8 +376,8 @@ export class QuotationPDFService {
         
         <div class="contact-info">
           <div class="section-title">Contact us at</div>
-          Contact Person: ${template.preparedBy}<br>
-          Contact Number: +91 - ${template.header.contact.phone[0]}
+          Contact Person: ${template.contactPerson || 'M. Selva Prakash'}<br>
+          Contact Number: ${template.contactNumber || '+91 99949 01500'}
         </div>
       </div>
       

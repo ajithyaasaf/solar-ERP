@@ -1798,6 +1798,8 @@ export const insertQuotationSchema = z.object({
   
   // Administrative fields
   preparedBy: z.string(),
+  contactPerson: z.string().default("M. Selva Prakash"),
+  contactNumber: z.string().default("+91 99949 01500"),
   approvedBy: z.string().optional(),
   approvedAt: z.date().optional(),
   sentAt: z.date().optional(),

@@ -3476,6 +3476,8 @@ export default function QuotationCreation() {
       communicationPreference: "whatsapp",
       documentVersion: 1,
       preparedBy: "",
+      contactPerson: "M. Selva Prakash",
+      contactNumber: "+91 99949 01500",
       internalNotes: "",
       customerNotes: "",
       attachments: []
@@ -3719,6 +3721,8 @@ export default function QuotationCreation() {
           ],
           note: "*All Required Documents should be in the same name as mention EB Service Number"
         },
+        contactPerson: quotation.contactPerson || "M. Selva Prakash",
+        contactNumber: quotation.contactNumber || "+91 99949 01500",
         siteVisitMapping: quotation.siteVisitMapping
       });
       
@@ -5607,7 +5611,7 @@ export default function QuotationCreation() {
                   </div>
                 )}
 
-                {/* Prepared By - Editable Field */}
+                {/* Prepared By & Contact Details - Editable Fields */}
                 <div className="space-y-3">
                   <h4 className="font-medium text-sm sm:text-base">Quotation Details</h4>
                   <FormField
@@ -5630,6 +5634,50 @@ export default function QuotationCreation() {
                       </FormItem>
                     )}
                   />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contactPerson"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Person</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="M. Selva Prakash" 
+                              data-testid="input-contact-person"
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Name of contact person. Defaults to "M. Selva Prakash" if left empty.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="contactNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Number</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="+91 99949 01500" 
+                              data-testid="input-contact-number"
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Contact number for quotation. Defaults to "+91 99949 01500" if left empty.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Scope of Work */}
