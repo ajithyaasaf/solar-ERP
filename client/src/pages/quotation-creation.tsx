@@ -3418,7 +3418,7 @@ export default function QuotationCreation() {
           serviceWarranty: "15 Years Service Warranty",
           performanceWarranty: [
             "90% Performance Warranty till the end of 15 years",
-            "80% Performance Warranty till the end of 25 years"
+            "80% Performance Warranty till the end of 15 years"
           ]
         },
         inverter: {

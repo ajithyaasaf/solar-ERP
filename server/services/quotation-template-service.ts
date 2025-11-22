@@ -134,7 +134,7 @@ export class QuotationTemplateService {
     
     // Solar panels warranty
     if (warranty?.solarPanels) {
-      details.push("1. Solar (PV)Panel Modules (25 Years)");
+      details.push("1. Solar (PV)Panel Modules (30 Years)");
       details.push(`   • ${warranty.solarPanels.manufacturingDefect}`);
       details.push(`   • ${warranty.solarPanels.serviceWarranty}`);
       warranty.solarPanels.performanceWarranty?.forEach((item: string) => {
