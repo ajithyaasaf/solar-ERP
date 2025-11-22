@@ -44,6 +44,7 @@ export interface QuotationTemplate {
     name: string;
     address: string;
     contactNumber: string;
+    ebServiceNumber?: string;
   };
   reference: string;
   pricingBreakdown: {
@@ -1612,7 +1613,8 @@ export class QuotationTemplateService {
       customer: {
         name: customer.name,
         address: customer.address,
-        contactNumber: customer.mobile
+        contactNumber: customer.mobile,
+        ebServiceNumber: customer.ebServiceNumber
       },
       reference: reference,
       pricingBreakdown,

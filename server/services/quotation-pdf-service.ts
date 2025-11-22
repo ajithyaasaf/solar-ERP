@@ -404,6 +404,7 @@ export class QuotationPDFService {
           <strong>Contact Person: Mr. ${template.customer.name}</strong><br>
           ${template.customer.address}<br>
           Contact Number: ${template.customer.contactNumber}
+          ${template.customer.ebServiceNumber ? `<br>EB NO: ${template.customer.ebServiceNumber}` : ''}
         </div>
         
         <div class="contact-info">
