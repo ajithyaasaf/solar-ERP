@@ -1385,7 +1385,7 @@ export class QuotationTemplateService {
         // Calculate totals for all units
         basePrice = Math.round(perUnitBasePrice_heater * quantity_heater);
         gstAmount = Math.round(perUnitGstAmount_heater * quantity_heater);
-        totalWithGST = Math.round(perUnitPrice_heater * quantity_heater);
+        totalWithGST = perUnitPrice_heater * quantity_heater; // Don't round yet - roundoff needs unrounded value
         
         // For water heater, rate per kW is per-unit base price
         ratePerKw = perUnitBasePrice_heater;
@@ -1413,7 +1413,7 @@ export class QuotationTemplateService {
         // Calculate totals for all units
         basePrice = Math.round(perUnitBasePrice_pump * quantity_pump);
         gstAmount = Math.round(perUnitGstAmount_pump * quantity_pump);
-        totalWithGST = Math.round(perUnitPrice_pump * quantity_pump);
+        totalWithGST = perUnitPrice_pump * quantity_pump; // Don't round yet - roundoff needs unrounded value
         
         // For water pump, rate per kW is per-unit base price
         ratePerKw = perUnitBasePrice_pump;
@@ -1482,6 +1482,8 @@ export class QuotationTemplateService {
     // Calculate roundoff to round down to nearest whole rupee
     const roundedTotalCost = Math.floor(totalWithGST);
     const roundoff = roundedTotalCost - totalWithGST;
+    
+    console.log(`[Roundoff Debug] totalWithGST: ${totalWithGST}, roundedTotalCost: ${roundedTotalCost}, roundoff: ${roundoff}`);
 
     return {
       description,
