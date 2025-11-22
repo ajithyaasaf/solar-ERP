@@ -1489,10 +1489,10 @@ export class QuotationTemplateService {
     }
 
     // Calculate roundoff to round down to nearest whole rupee
+    // Roundoff only appears when totalWithGST has decimal places (e.g., 95000.24 → -0.24)
+    // If total is already a whole number (e.g., 250000.00), roundoff will be 0
     const roundedTotalCost = Math.floor(totalWithGST);
     const roundoff = roundedTotalCost - totalWithGST;
-    
-    console.log(`[ROUNDOFF DEBUG] projectType: ${project.projectType}, projectValue: ${project.projectValue}, totalWithGST: ${totalWithGST}, basePrice: ${basePrice}, gstAmount: ${gstAmount}, roundoff: ${roundoff}`);
 
     return {
       description,
