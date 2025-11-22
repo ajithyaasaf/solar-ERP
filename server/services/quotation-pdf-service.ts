@@ -441,7 +441,7 @@ export class QuotationPDFService {
           </tr>
           <tr>
             <td colspan="6" style="text-align: right; font-weight: bold;">Roundoff:</td>
-            <td>₹0.00</td>
+            <td>${template.pricingBreakdown.roundoff ? '₹' + template.pricingBreakdown.roundoff.toLocaleString() : '₹0.00'}</td>
           </tr>
         </tbody>
       </table>
