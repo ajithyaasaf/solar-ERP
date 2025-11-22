@@ -5571,7 +5571,7 @@ export default function QuotationCreation() {
                         </div>
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-muted-foreground">Total Value:</span>
-                          <span className="font-medium">₹{form.watch("totalCustomerPayment")?.toLocaleString() || 0}</span>
+                          <span className="font-medium">₹{form.watch("totalWithGST")?.toLocaleString() || 0}</span>
                         </div>
                         <div className="flex justify-between items-center gap-2">
                           <span className="text-muted-foreground">Delivery:</span>
