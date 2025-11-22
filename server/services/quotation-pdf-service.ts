@@ -432,7 +432,7 @@ export class QuotationPDFService {
         <tbody>
           <tr>
             <td>1</td>
-            <td style="text-align: left; padding-left: 10px;">Supply and install ${this.formatNumber(template.pricingBreakdown.kw)} kW Inverter 3 Phase DC-GBD Solar Energy: Madurai</td>
+            <td style="text-align: left; padding-left: 10px;">${template.pricingBreakdown.description}</td>
             <td>${this.formatNumber(template.pricingBreakdown.kw)}</td>
             <td>₹${template.pricingBreakdown.ratePerKw.toLocaleString()}</td>
             <td>₹${template.pricingBreakdown.gstPerKw.toLocaleString()}</td>
@@ -467,7 +467,7 @@ export class QuotationPDFService {
       
       <!-- Bill of Materials -->
       <div class="page-break">
-        <h3 style="color: #228B22; text-align: center;">${isWaterUtility ? 'Bill of Materials' : `Bill of Materials for ${this.formatNumber(template.pricingBreakdown.kw)} kw On-grid Solar NPG System`}</h3>
+        <h3 style="color: #228B22; text-align: center;">Bill of Materials</h3>
         
         ${!isWaterUtility && template.bomSummary ? `
         <table style="width: 100%; margin: 10px 0; border-collapse: collapse; background-color: #90EE90;">
