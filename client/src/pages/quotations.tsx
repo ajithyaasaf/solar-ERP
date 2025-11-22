@@ -75,7 +75,8 @@ import {
   Zap,
   Battery,
   Droplet,
-  Wind
+  Wind,
+  Settings
 } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -869,6 +870,53 @@ export default function Quotations() {
 
                                 <Separator />
 
+                                {/* Installation Details */}
+                                <div>
+                                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                    <Settings className="h-4 w-4" />
+                                    Installation Details
+                                  </h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                      <span className="text-gray-600">Floor Level:</span>
+                                      <span className="font-medium">{project.floor === '0' ? 'Ground Floor' : `${project.floor}${project.floor === '1' ? 'st' : project.floor === '2' ? 'nd' : project.floor === '3' ? 'rd' : 'th'} Floor`}</span>
+                                    </div>
+                                    <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                      <span className="text-gray-600">Structure Type:</span>
+                                      <span className="font-medium">
+                                        {project.structureType === 'gp_structure' ? 'GP Structure' : 
+                                         project.structureType === 'gi_structure' ? 'GI Structure' : 
+                                         project.structureType === 'gi_round_pipe' ? 'GI Round Pipe' : 
+                                         project.structureType === 'ms_square_pipe' ? 'MS Square Pipe' : 
+                                         project.structureType === 'mono_rail' ? 'Mono Rail' : 'N/A'}
+                                      </span>
+                                    </div>
+                                    {(project.structureType === 'gp_structure' || 
+                                      project.structureType === 'gi_structure' ||
+                                      project.structureType === 'gi_round_pipe' ||
+                                      project.structureType === 'ms_square_pipe') && (
+                                      <>
+                                        <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                          <span className="text-gray-600">Lower End Height:</span>
+                                          <span className="font-medium">{project.gpStructure?.lowerEndHeight || 'N/A'} ft</span>
+                                        </div>
+                                        <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                          <span className="text-gray-600">Higher End Height:</span>
+                                          <span className="font-medium">{project.gpStructure?.higherEndHeight || 'N/A'} ft</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    {project.structureType === 'mono_rail' && (
+                                      <div className="flex justify-between p-2 bg-gray-50 rounded col-span-2">
+                                        <span className="text-gray-600">Mono Rail Type:</span>
+                                        <span className="font-medium">{project.monoRail?.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <Separator />
+
                                 {/* Solar Panel Details */}
                                 <div>
                                   <h4 className="font-semibold mb-3">Solar Panel Details</h4>
@@ -986,34 +1034,78 @@ export default function Quotations() {
 
                             {/* Water Pump Details */}
                             {project.projectType === 'water_pump' && (
-                              <div>
-                                <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                  <Wind className="h-4 w-4" />
-                                  Water Pump Specifications
-                                </h4>
-                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                  <div className="space-y-1">
-                                    <span className="text-gray-600">HP:</span>
-                                    <p className="font-medium">{project.hp}</p>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <span className="text-gray-600">Drive:</span>
-                                    <p className="font-medium">{project.drive}</p>
-                                  </div>
-                                  {project.solarPanel && (
-                                    <div className="space-y-1">
-                                      <span className="text-gray-600">Solar Panel:</span>
-                                      <p className="font-medium">{project.solarPanel}</p>
+                              <>
+                                <div>
+                                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                    <Settings className="h-4 w-4" />
+                                    Installation Details
+                                  </h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                      <span className="text-gray-600">Structure Type:</span>
+                                      <span className="font-medium">
+                                        {project.structureType === 'gp_structure' ? 'GP Structure' : 
+                                         project.structureType === 'gi_structure' ? 'GI Structure' : 
+                                         project.structureType === 'gi_round_pipe' ? 'GI Round Pipe' : 
+                                         project.structureType === 'ms_square_pipe' ? 'MS Square Pipe' : 
+                                         project.structureType === 'mono_rail' ? 'Mono Rail' : 'N/A'}
+                                      </span>
                                     </div>
-                                  )}
-                                  {project.panelCount && (
-                                    <div className="space-y-1">
-                                      <span className="text-gray-600">Panel Count:</span>
-                                      <p className="font-medium">{project.panelCount}</p>
-                                    </div>
-                                  )}
+                                    {(project.structureType === 'gp_structure' || 
+                                      project.structureType === 'gi_structure' ||
+                                      project.structureType === 'gi_round_pipe' ||
+                                      project.structureType === 'ms_square_pipe') && (
+                                      <>
+                                        <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                          <span className="text-gray-600">Lower End Height:</span>
+                                          <span className="font-medium">{project.gpStructure?.lowerEndHeight || 'N/A'} ft</span>
+                                        </div>
+                                        <div className="flex justify-between p-2 bg-gray-50 rounded">
+                                          <span className="text-gray-600">Higher End Height:</span>
+                                          <span className="font-medium">{project.gpStructure?.higherEndHeight || 'N/A'} ft</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    {project.structureType === 'mono_rail' && (
+                                      <div className="flex justify-between p-2 bg-gray-50 rounded col-span-2">
+                                        <span className="text-gray-600">Mono Rail Type:</span>
+                                        <span className="font-medium">{project.monoRail?.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail'}</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
+
+                                <Separator />
+
+                                <div>
+                                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                    <Wind className="h-4 w-4" />
+                                    Water Pump Specifications
+                                  </h4>
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">HP:</span>
+                                      <p className="font-medium">{project.hp}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-gray-600">Drive:</span>
+                                      <p className="font-medium">{project.drive}</p>
+                                    </div>
+                                    {project.solarPanel && (
+                                      <div className="space-y-1">
+                                        <span className="text-gray-600">Solar Panel:</span>
+                                        <p className="font-medium">{project.solarPanel}</p>
+                                      </div>
+                                    )}
+                                    {project.panelCount && (
+                                      <div className="space-y-1">
+                                        <span className="text-gray-600">Panel Count:</span>
+                                        <p className="font-medium">{project.panelCount}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
                             )}
 
                             <Separator />

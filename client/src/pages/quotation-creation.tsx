@@ -1915,45 +1915,31 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Lower End Height (ft)</label>
-                <Select 
-                  value={project.gpStructure?.lowerEndHeight || '0'} 
-                  onValueChange={(value) => handleFieldChange('gpStructure', { 
+                <Input
+                  type="number"
+                  placeholder="e.g., 3"
+                  value={project.gpStructure?.lowerEndHeight || ''}
+                  onChange={(e) => handleFieldChange('gpStructure', { 
                     ...project.gpStructure, 
-                    lowerEndHeight: value 
+                    lowerEndHeight: e.target.value 
                   })}
-                >
-                  <SelectTrigger data-testid={`select-lower-height-${projectIndex}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {heightRange.map((height) => (
-                      <SelectItem key={height} value={height}>
-                        {height} ft
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  data-testid={`input-lower-height-${projectIndex}`}
+                  className="text-base"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Higher End Height (ft)</label>
-                <Select 
-                  value={project.gpStructure?.higherEndHeight || '0'} 
-                  onValueChange={(value) => handleFieldChange('gpStructure', { 
+                <Input
+                  type="number"
+                  placeholder="e.g., 4"
+                  value={project.gpStructure?.higherEndHeight || ''}
+                  onChange={(e) => handleFieldChange('gpStructure', { 
                     ...project.gpStructure, 
-                    higherEndHeight: value 
+                    higherEndHeight: e.target.value 
                   })}
-                >
-                  <SelectTrigger data-testid={`select-higher-height-${projectIndex}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {heightRange.map((height) => (
-                      <SelectItem key={height} value={height}>
-                        {height} ft
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  data-testid={`input-higher-height-${projectIndex}`}
+                  className="text-base"
+                />
               </div>
             </>
           )}
@@ -2983,45 +2969,31 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Lower End Height (ft)</label>
-                  <Select 
-                    value={project.gpStructure?.lowerEndHeight || '0'} 
-                    onValueChange={(value) => handleFieldChange('gpStructure', { 
+                  <Input
+                    type="number"
+                    placeholder="e.g., 3"
+                    value={project.gpStructure?.lowerEndHeight || ''}
+                    onChange={(e) => handleFieldChange('gpStructure', { 
                       ...project.gpStructure, 
-                      lowerEndHeight: value 
+                      lowerEndHeight: e.target.value 
                     })}
-                  >
-                    <SelectTrigger data-testid={`select-pump-lower-height-${projectIndex}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {heightRange.map((height) => (
-                        <SelectItem key={height} value={height}>
-                          {height} ft
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    data-testid={`input-pump-lower-height-${projectIndex}`}
+                    className="text-base"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Higher End Height (ft)</label>
-                  <Select 
-                    value={project.gpStructure?.higherEndHeight || '0'} 
-                    onValueChange={(value) => handleFieldChange('gpStructure', { 
+                  <Input
+                    type="number"
+                    placeholder="e.g., 4"
+                    value={project.gpStructure?.higherEndHeight || ''}
+                    onChange={(e) => handleFieldChange('gpStructure', { 
                       ...project.gpStructure, 
-                      higherEndHeight: value 
+                      higherEndHeight: e.target.value 
                     })}
-                  >
-                    <SelectTrigger data-testid={`select-pump-higher-height-${projectIndex}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {heightRange.map((height) => (
-                        <SelectItem key={height} value={height}>
-                          {height} ft
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    data-testid={`input-pump-higher-height-${projectIndex}`}
+                    className="text-base"
+                  />
                 </div>
               </>
             )}
