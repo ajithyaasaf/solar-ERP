@@ -3607,6 +3607,8 @@ export default function QuotationCreation() {
       setQuotationSource(quotation.source || "manual");
       if (quotation.siteVisitMapping?.siteVisitId) {
         setSelectedSiteVisit(quotation.siteVisitMapping.siteVisitId);
+        // Important: Also set siteVisitMapping so it's available when navigating back to step 1
+        setSiteVisitMapping(quotation.siteVisitMapping);
       }
       
       // Note: currentStep is already initialized to 2 (Project Configuration) for edit mode
