@@ -3038,64 +3038,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate PDF/HTML preview for quotation
-  app.post("/api/quotations/:id/generate-pdf", verifyAuth, async (req, res) => {
-    try {
-      if (!req.authenticatedUser) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // Check permissions
-      const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
-                           req.authenticatedUser.permissions.includes("quotations.edit") ||
-                           req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
-      if (!hasPermission) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Get the quotation
-      const quotation = await storage.getQuotation(req.params.id);
-      if (!quotation) {
-        return res.status(404).json({ message: "Quotation not found" });
-      }
-
-      // Get the customer
-      const customer = await storage.getCustomer(quotation.customerId);
-      if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
-      }
-
-      // Get the first/main project
-      const projects = quotation.projects || [];
-      if (projects.length === 0) {
-        return res.status(400).json({ message: "No projects found in quotation" });
-      }
-      const mainProject = projects[0];
-
-      // Import PDF service
-      const { QuotationPDFService } = await import("./services/quotation-pdf-service");
-
-      // Generate HTML preview
-      const { html, template } = await QuotationPDFService.generateHTMLPreview(
-        quotation,
-        mainProject,
-        customer
-      );
-
-      // Return HTML for client-side PDF generation
-      res.json({
-        html,
-        quotationNumber: quotation.quotationNumber,
-        customerName: customer.name
-      });
-    } catch (error) {
-      console.error("Error generating PDF preview:", error);
-      res.status(500).json({ message: "Failed to generate PDF preview" });
-    }
-  });
-
 
   // ====== SITE VISIT INTEGRATION ROUTES FOR QUOTATION SYSTEM ======
 
