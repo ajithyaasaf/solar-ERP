@@ -3527,8 +3527,8 @@ export default function QuotationCreation() {
         finalCustomerId = (existingQuotation as any).customerId;
       }
       
-      // Prepare payload without customerData (backend doesn't accept it)
-      const { customerData, totalGSTAmount, totalWithGST, ...quotationPayload } = data;
+      // Prepare payload - customerData handling depends on quotation source
+      const { totalGSTAmount, totalWithGST, ...basePayload } = data;
       
       // Use PUT for edit mode, POST for create mode
       if (isEditMode && quotationId) {
@@ -3537,16 +3537,20 @@ export default function QuotationCreation() {
         // For edit mode: remove ALL immutable fields (customerId, source, customerData)
         // The backend will enforce these values from the existing quotation
         // This prevents any client-side tampering and ensures data integrity
-        const { customerId, source, siteVisitMapping, ...editableFields } = quotationPayload;
+        const { customerId, source, siteVisitMapping, customerData, ...editableFields } = basePayload;
         
         console.log("Sending update payload (immutable fields excluded):", editableFields);
         const response = await apiRequest(`/api/quotations/${quotationId}`, "PUT", editableFields);
         return response.json();
       } else {
-        // For create mode: include customerId
+        // For create mode: include customerId and customerData (for overrides like EB number changes)
         const payloadWithCustomerId = {
-          ...quotationPayload,
-          customerId: finalCustomerId
+          ...basePayload,
+          customerId: finalCustomerId,
+          // IMPORTANT: For site visit quotations, customerData allows user to override mapped values (e.g., EB number edits)
+          // For manual quotations, customerData is already used for customer creation above
+          // Include it in payload so backend can merge overrides: ...mappingResult.quotationData, ...req.body
+          customerData: data.customerData
         };
         const url = quotationSource === "site_visit" && selectedSiteVisit 
           ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
