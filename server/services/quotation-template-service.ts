@@ -1275,16 +1275,18 @@ export class QuotationTemplateService {
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
-        // Use project values if available (from frontend calculation)
-        if ((project as any).basePrice && (project as any).gstAmount) {
-          basePrice = (project as any).basePrice;
-          gstAmount = (project as any).gstAmount;
-          // Calculate totalWithGST from base + GST to preserve decimal places for roundoff
-          totalWithGST = basePrice + gstAmount;
+        // Use projectValue for accurate roundoff calculation
+        // projectValue is the total including GST (may have decimals from user input or calculations)
+        if (project.projectValue) {
+          totalWithGST = project.projectValue;
+          // Calculate unrounded base price for GST calculation
+          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(unroundedBasePrice);
+          gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 68000;
-          totalWithGST = project.projectValue || (fallbackRatePerKw * kw * (1 + actualGstPercentage / 100));
+          totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
@@ -1303,16 +1305,18 @@ export class QuotationTemplateService {
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
-        // Use project values if available (from frontend calculation)
-        if ((project as any).basePrice && (project as any).gstAmount) {
-          basePrice = (project as any).basePrice;
-          gstAmount = (project as any).gstAmount;
-          // Calculate totalWithGST from base + GST to preserve decimal places for roundoff
-          totalWithGST = basePrice + gstAmount;
+        // Use projectValue for accurate roundoff calculation
+        // projectValue is the total including GST (may have decimals from user input or calculations)
+        if (project.projectValue) {
+          totalWithGST = project.projectValue;
+          // Calculate unrounded base price for GST calculation
+          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(unroundedBasePrice);
+          gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 85000;
-          totalWithGST = project.projectValue || (fallbackRatePerKw * kw * (1 + actualGstPercentage / 100));
+          totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
@@ -1340,16 +1344,18 @@ export class QuotationTemplateService {
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         
-        // Use project values if available (from frontend calculation)
-        if ((project as any).basePrice && (project as any).gstAmount) {
-          basePrice = (project as any).basePrice;
-          gstAmount = (project as any).gstAmount;
-          // Calculate totalWithGST from base + GST to preserve decimal places for roundoff
-          totalWithGST = basePrice + gstAmount;
+        // Use projectValue for accurate roundoff calculation
+        // projectValue is the total including GST (may have decimals from user input or calculations)
+        if (project.projectValue) {
+          totalWithGST = project.projectValue;
+          // Calculate unrounded base price for GST calculation
+          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(unroundedBasePrice);
+          gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 95000;
-          totalWithGST = project.projectValue || (fallbackRatePerKw * kw * (1 + actualGstPercentage / 100));
+          totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
