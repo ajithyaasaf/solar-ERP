@@ -3461,17 +3461,17 @@ export default function QuotationCreation() {
       },
       documentRequirements: {
         subsidyDocuments: [
+          "EB Number",
+          "EB Register Mobile Number",
+          "Email ID",
           "Aadhar Card",
-          "EB Bill (Last 3 Months)",
-          "House Tax Receipt",
-          "Land Patta",
-          "Building Plan Approval",
-          "Fire NOC (for Commercial)",
-          "Pollution NOC (for Commercial)", 
+          "PAN Card",
+          "Passport Size Photo -1",
+          "Property Tax Copy",
           "Bank Passbook",
           "Cancelled Cheque"
         ],
-        note: "All Required Documents should be in the same name as mentioned in the EB Service Number."
+        note: "*All Required Documents should be in the same name as mention EB Service Number"
       },
       communicationPreference: "whatsapp",
       documentVersion: 1,
@@ -3704,6 +3704,20 @@ export default function QuotationCreation() {
             warrantyPeriod: "1 Year Warranty on Installation",
             serviceWarranty: "25 Years Service Warranty"
           }
+        },
+        documentRequirements: quotation.documentRequirements || {
+          subsidyDocuments: [
+            "EB Number",
+            "EB Register Mobile Number",
+            "Email ID",
+            "Aadhar Card",
+            "PAN Card",
+            "Passport Size Photo -1",
+            "Property Tax Copy",
+            "Bank Passbook",
+            "Cancelled Cheque"
+          ],
+          note: "*All Required Documents should be in the same name as mention EB Service Number"
         },
         siteVisitMapping: quotation.siteVisitMapping
       });
