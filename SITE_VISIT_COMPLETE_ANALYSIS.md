@@ -1519,17 +1519,1089 @@ Key debug fields to check:
 
 ---
 
+---
+
+## PART 19: API ENDPOINTS - COMPLETE REFERENCE
+
+### 19.1 Site Visit CRUD Endpoints
+
+```
+POST /api/site-visits
+├─ Purpose: Create new site visit
+├─ Auth: Required (verifyAuth)
+├─ Body: InsertSiteVisit (validated with Zod)
+├─ Returns: { id, ...siteVisit }
+├─ Status: 201 Created
+└─ Errors: 400 Bad Request (validation), 401 Unauthorized, 500 Server Error
+
+GET /api/site-visits
+├─ Purpose: List all site visits for user
+├─ Auth: Required
+├─ Query Params:
+│  ├─ page: number (default 1)
+│  ├─ limit: number (default 50, max 100)
+│  ├─ userId: string (optional filter)
+│  ├─ department: 'technical'|'marketing'|'admin' (optional)
+│  ├─ status: 'in_progress'|'completed'|'cancelled' (optional)
+│  └─ search: string (optional, searches customer name)
+├─ Returns: { data: SiteVisit[], pagination: {...} }
+└─ Status: 200 OK
+
+GET /api/site-visits/:id
+├─ Purpose: Get single site visit details
+├─ Auth: Required
+├─ Params: id (visit ID)
+├─ Returns: SiteVisit
+└─ Status: 200 OK or 404 Not Found
+
+PATCH /api/site-visits/:id
+├─ Purpose: Update site visit (checkout, status update)
+├─ Auth: Required
+├─ Body: Partial<InsertSiteVisit>
+├─ Returns: Updated SiteVisit
+└─ Status: 200 OK
+
+DELETE /api/site-visits/:id
+├─ Purpose: Delete site visit
+├─ Auth: Required + Role check (admin only)
+├─ Returns: Empty
+└─ Status: 204 No Content
+```
+
+### 19.2 Site Visit Query Endpoints
+
+```
+GET /api/site-visits/stats
+├─ Purpose: Get statistics dashboard
+├─ Query Params: department (optional), startDate, endDate (optional)
+├─ Returns: {
+│    total: number,
+│    inProgress: number,
+│    completed: number,
+│    cancelled: number,
+│    byDepartment: { technical, marketing, admin },
+│    byPurpose: { visit, installation, ... }
+│  }
+└─ Status: 200 OK
+
+GET /api/site-visits/active
+├─ Purpose: Get only in-progress visits
+├─ Returns: SiteVisit[]
+└─ Status: 200 OK
+
+GET /api/site-visits/monitoring
+├─ Purpose: Get all visits for monitoring (Master Admin + HR only)
+├─ Auth: Role check required
+├─ Returns: SiteVisit[] (max 500 recent)
+└─ Status: 200 OK or 403 Forbidden
+
+GET /api/site-visits/customer-history
+├─ Purpose: Get all visits for specific customer
+├─ Query Params: customerId (required)
+├─ Returns: SiteVisit[]
+└─ Status: 200 OK
+```
+
+### 19.3 Photo Endpoints
+
+```
+POST /api/site-visits/:id/photos
+├─ Purpose: Add photos to existing visit
+├─ Body: { photos: SitePhoto[] }
+├─ Returns: Updated SiteVisit
+└─ Status: 200 OK
+```
+
+### 19.4 Quick Action Endpoints
+
+```
+PATCH /api/site-visits/:id/quick-update
+├─ Purpose: Quick status changes (convert, cancel, reschedule)
+├─ Body: QuickUpdateSiteVisit
+│  ├─ action: 'convert'|'cancel'|'reschedule'
+│  ├─ scheduledFollowUpDate: Date (required for reschedule)
+│  ├─ outcomeNotes: string (optional)
+│  └─ reason: string (optional)
+├─ Returns: { success: boolean, data: {...}, message: string }
+└─ Status: 200 OK
+```
+
+### 19.5 Follow-Up Endpoints
+
+```
+POST /api/site-visits/follow-up
+├─ Purpose: Create follow-up visit
+├─ Body: InsertFollowUpSiteVisit
+├─ Key Logic:
+│  1. Validates originalVisitId exists
+│  2. Creates follow-up document
+│  3. Updates original visit:
+│     - followUpCount++
+│     - hasFollowUps = true
+│     - customerCurrentStatus = "on_process"
+│     - activeFollowUpId = newFollowUpId
+│  4. Invalidates React Query cache
+├─ Returns: { id, ...followUp }
+└─ Status: 201 Created
+
+GET /api/site-visits/follow-up/:originalVisitId
+├─ Purpose: Get all follow-ups for a visit
+├─ Returns: FollowUpSiteVisit[]
+└─ Status: 200 OK
+```
+
+### 19.6 Quotation Integration Endpoints
+
+```
+GET /api/quotations/site-visits/mappable
+├─ Purpose: Get site visits available for quotation
+├─ Permission: quotations.create or master_admin
+├─ Filter Logic:
+│  ├─ Must have customer (name + mobile)
+│  ├─ If in_progress: include regardless of outcome
+│  └─ If completed: visitOutcome must be 'converted' or 'on_process'
+├─ Returns: SiteVisit[] with completeness analysis
+└─ Status: 200 OK
+
+GET /api/quotations/site-visits/:siteVisitId/mapping-data
+├─ Purpose: Get detailed mapping data for quotation
+├─ Returns: {
+│    siteVisit: SiteVisit,
+│    customer: CustomerDetails,
+│    completenessAnalysis: { ... },
+│    mappedData: { ... }
+│  }
+└─ Status: 200 OK
+
+POST /api/quotations/from-site-visit/:siteVisitId
+├─ Purpose: Create quotation from site visit
+├─ Body: { items: QuotationItem[], ... }
+├─ Returns: { quotation: Quotation, siteVisitId: string }
+└─ Status: 201 Created
+```
+
+### 19.7 Export Endpoint
+
+```
+POST /api/site-visits/export
+├─ Purpose: Export site visits to Excel
+├─ Body: {
+│    filters: {
+│      department: string (optional),
+│      status: string (optional),
+│      startDate: Date (optional),
+│      endDate: Date (optional)
+│    }
+│  }
+├─ Returns: Excel file (XLSX binary)
+├─ Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+└─ Status: 200 OK
+```
+
+### 19.8 Customer Search Endpoint
+
+```
+GET /api/customers/search
+├─ Purpose: Search customers for autocomplete
+├─ Query Params:
+│  ├─ q: search query (min 2 chars)
+│  └─ limit: number (default 10)
+├─ Returns: [{
+│    id: string,
+│    name: string,
+│    mobile: string,
+│    email: string,
+│    address: string,
+│    displayText: string
+│  }]
+└─ Status: 200 OK
+
+GET /api/customers/check-mobile/:mobile
+├─ Purpose: Check if customer exists by mobile
+├─ Returns: {
+│    exists: boolean,
+│    customer: CustomerDetails | null
+│  }
+└─ Status: 200 OK
+```
+
+---
+
+## PART 20: FIRESTORE COLLECTION STRUCTURE
+
+### 20.1 Complete Hierarchy
+
+```
+Firestore Database Root
+├── siteVisits/ (Main collection)
+│   ├── {visitId}/ (Document)
+│   │   ├── userId: string
+│   │   ├── department: enum [technical|marketing|admin]
+│   │   ├── visitPurpose: enum
+│   │   ├── status: enum [in_progress|completed|cancelled]
+│   │   ├── siteInTime: Timestamp
+│   │   ├── siteInLocation: { latitude, longitude, address, accuracy, formattedAddress }
+│   │   ├── siteInPhotoUrl: string (optional)
+│   │   ├── siteOutTime: Timestamp (optional)
+│   │   ├── siteOutLocation: Location (optional)
+│   │   ├── siteOutPhotoUrl: string (optional)
+│   │   ├── siteOutPhotos: string[] (max 10)
+│   │   ├── customer: {
+│   │   │   ├── name: string
+│   │   │   ├── mobile: string
+│   │   │   ├── address: string
+│   │   │   ├── propertyType: enum
+│   │   │   ├── ebServiceNumber: string (optional)
+│   │   │   ├── location: string (optional)
+│   │   │   └── source: string
+│   │   ├── customerId: string (optional, reference)
+│   │   ├── technicalData: TechnicalSiteVisit (optional)
+│   │   ├── marketingData: MarketingSiteVisit (optional)
+│   │   ├── adminData: AdminSiteVisit (optional)
+│   │   ├── sitePhotos: [{
+│   │   │   ├── url: string
+│   │   │   ├── location: Location
+│   │   │   ├── timestamp: Timestamp
+│   │   │   └── description: string (optional)
+│   │   └── ... (other fields)
+│
+├── followUpVisits/ (Follow-up collection)
+│   ├── {followUpId}/ (Document)
+│   │   ├── originalVisitId: string (reference to siteVisits/{id})
+│   │   ├── userId: string
+│   │   ├── department: enum
+│   │   ├── followUpReason: enum
+│   │   ├── description: string
+│   │   ├── siteInTime: Timestamp
+│   │   ├── siteOutTime: Timestamp (optional)
+│   │   ├── siteInLocation: Location
+│   │   ├── siteOutLocation: Location (optional)
+│   │   ├── originalCustomerStatus: enum (copied from original)
+│   │   ├── newCustomerStatus: enum (updated)
+│   │   ├── affectsCustomerStatus: boolean
+│   │   ├── visitOutcome: enum [completed|on_process|cancelled] (optional)
+│   │   ├── sitePhotos: string[] (max 10, simple URLs)
+│   │   ├── siteOutPhotos: string[] (max 10)
+│   │   └── createdAt: Timestamp
+│
+├── customers/ (Customer collection)
+│   ├── {customerId}/ (Document)
+│   │   ├── name: string
+│   │   ├── mobile: string (UNIQUE INDEX)
+│   │   ├── email: string
+│   │   ├── address: string
+│   │   ├── propertyType: enum (optional)
+│   │   ├── ebServiceNumber: string (optional)
+│   │   ├── source: string
+│   │   ├── profileCompleteness: enum [partial|full]
+│   │   ├── createdFrom: enum [visit|customers_page|quotation|import]
+│   │   ├── createdAt: Timestamp
+│   │   └── updatedAt: Timestamp
+│
+└── quotations/ (Quotation collection - for reference)
+    ├── {quotationId}/ (Document)
+    │   ├── customerId: string (reference)
+    │   ├── siteVisitMapping: {
+    │   │   ├── siteVisitId: string (reference)
+    │   │   ├── mappedAt: Timestamp
+    │   │   └── dataCompleteness: number (0-100%)
+    │   ├── items: [{
+    │   │   ├── description: string
+    │   │   ├── quantity: number
+    │   │   ├── rate: number
+    │   │   └── amount: number
+    │   ├── total: number
+    │   └── status: enum
+```
+
+### 20.2 Index Strategy
+
+```
+Firestore Indexes:
+1. siteVisits collection:
+   - Single Field: userId ASC (for user queries)
+   - Single Field: department ASC (for dept queries)
+   - Single Field: status ASC (for status queries)
+   - Single Field: siteInTime DESC (for date sorting)
+   - Composite: (userId, status) for combined filtering
+   
+2. followUpVisits collection:
+   - Single Field: originalVisitId ASC (for following up)
+   - Single Field: userId ASC (for user's follow-ups)
+   - Single Field: createdAt DESC (for sorting)
+
+3. customers collection:
+   - Single Field: mobile ASC (for duplicate detection)
+   - Single Field: name ASC (for search - but done in-memory)
+
+Why In-Memory Filtering?
+- Avoids complex compound indexes
+- Firestore charges for each index
+- Most queries don't need all combinations
+- Better for small datasets (typically <5000 docs)
+```
+
+---
+
+## PART 21: FIREBASE AUTH INTEGRATION
+
+### 21.1 Authentication Flow
+
+```
+1. Frontend Auth (client/src/lib/firebase.ts):
+   ├─ loginWithEmail(email, password)
+   │  └─ firebase.auth().signInWithEmailAndPassword()
+   ├─ registerWithEmail(email, password)
+   │  └─ firebase.auth().createUserWithEmailAndPassword()
+   ├─ loginWithGoogle()
+   │  └─ firebase.auth().signInWithPopup(googleProvider)
+   └─ logoutUser()
+      └─ firebase.auth().signOut()
+
+2. Token Management:
+   ├─ getAuth() → Firebase Auth instance
+   ├─ currentUser?.getIdToken() → Get fresh token (auto-refresh)
+   ├─ currentUser?.getIdToken(true) → Force refresh token
+   └─ Token stored in Authorization header: Bearer {token}
+
+3. Backend Token Verification:
+   ├─ Extract from Authorization header
+   ├─ Verify with auth.verifyIdToken(token)
+   ├─ Extract uid from decoded token
+   └─ Load user profile from storage.getUser(uid)
+
+4. User Profile Creation:
+   ├─ On first login, sync user with backend: POST /api/sync-user
+   ├─ Creates in-memory storage record
+   ├─ Sets department, designation, role
+   └─ Calculates effective permissions
+
+5. Permission Flow:
+   ├─ Master Admin → All permissions
+   ├─ Other roles → Calculate from schema.getEffectivePermissions()
+   └─ Attach to req.authenticatedUser for route checks
+```
+
+### 21.2 useAuth Hook
+
+```typescript
+// Hook provides:
+- user: CurrentUser (from context)
+- isLoading: boolean
+- login(email, password): Promise<boolean>
+- register(email, password, displayName): Promise<boolean>
+- loginWithGoogle(): Promise<boolean>
+- logout(): Promise<boolean>
+
+// Error Handling:
+- auth/user-not-found → "Invalid email or password"
+- auth/wrong-password → "Invalid email or password"
+- auth/too-many-requests → "Too many failed attempts"
+- auth/network-request-failed → "Network error"
+- auth/email-already-in-use → "Email already in use"
+- auth/weak-password → "Password too weak"
+- auth/popup-closed-by-user → "Google login closed"
+```
+
+---
+
+## PART 22: CLOUDINARY INTEGRATION
+
+### 22.1 Photo Upload Flow
+
+```
+1. User captures photo in browser:
+   ├─ Use device camera (front/back)
+   ├─ Draw to canvas
+   ├─ Add timestamp + location overlay
+   └─ Convert to base64 data URL
+
+2. Upload to Cloudinary:
+   ├─ Endpoint: cloudinary.uploader.upload()
+   ├─ URL format: {url}?fm=auto&q=80
+   ├─ Auto-rotate: true
+   ├─ File size limit: 10MB (configurable)
+   ├─ Format conversion: Auto (WEBP for modern browsers)
+   └─ Quality: 80% (balance quality/size)
+
+3. Response:
+   ├─ url: string (Cloudinary CDN URL)
+   ├─ public_id: string (Cloudinary reference)
+   ├─ secure_url: string (HTTPS URL)
+   └─ width, height: dimensions
+
+4. Storage:
+   ├─ Store URL in Firestore
+   ├─ Reference in sitePhotos array
+   ├─ Max 20 photos per visit
+   └─ Max 10 photos per follow-up
+
+5. Retrieval:
+   ├─ Render via <img src={photoUrl} />
+   ├─ Responsive image handling
+   ├─ Lazy loading for galleries
+   └─ Cloudinary handles CDN delivery
+```
+
+### 22.2 Image Optimization Opportunities
+
+```
+Future:
+1. Before upload:
+   - Compress with image-compression library
+   - Reduce resolution (max 1920px)
+   - Convert to JPEG/WEBP
+   - Reduce file size to <2MB
+
+2. Cloudinary transformations:
+   - Thumbnail generation: ?w=200&h=200&c=thumb
+   - Responsive sizing: ?w=auto&dpr=auto
+   - Format negotiation: ?f=auto
+   - Progressive loading: ?q=auto&f=auto
+
+3. Caching:
+   - Browser caching headers
+   - Service worker for offline access
+   - Local thumbnail cache
+```
+
+---
+
+## PART 23: FRONTEND STATE MANAGEMENT
+
+### 23.1 React Query (TanStack Query v5)
+
+```
+Default Config (lib/queryClient.ts):
+├─ staleTime: Infinity (data never stale by default)
+├─ refetchInterval: false (no auto-refetch)
+├─ refetchOnWindowFocus: false (no focus refetch)
+├─ retry: false (don't auto-retry on error)
+└─ queryFn: getQueryFn (custom fetcher with auth)
+
+Cache Keys (Hierarchical):
+├─ ['/api/site-visits'] → List all
+├─ ['/api/site-visits', userId] → User's visits
+├─ ['/api/site-visits', id] → Single visit
+├─ ['/api/follow-ups', userId] → User's follow-ups
+├─ ['/api/customers/search'] → Customer search
+└─ ['/api/quotations', 'mappable'] → Mappable visits
+
+Mutations Pattern:
+├─ const mutation = useMutation({
+│    mutationFn: async (data) => apiRequest('/api/...', 'POST', data),
+│    onSuccess: () => {
+│      queryClient.invalidateQueries({ queryKey: ['/api/site-visits'] })
+│    }
+│  })
+└─ mutation.mutate(data)
+```
+
+### 23.2 Custom Hooks
+
+```
+useAuth():
+├─ login(email, password): Promise<boolean>
+├─ register(email, password, displayName): Promise<boolean>
+├─ loginWithGoogle(): Promise<boolean>
+├─ logout(): Promise<boolean>
+└─ isLoading: boolean
+
+usePermissions():
+├─ hasPermission(permissionName): boolean
+├─ canEditSiteVisits(): boolean
+├─ canViewAll(): boolean
+└─ permissions: string[]
+
+useGeolocation():
+├─ getCurrentLocation(): Promise<LocationData>
+├─ reverseGeocode(lat, lng): Promise<Address>
+├─ isValidLocation(location): boolean
+└─ getLocationStatus(): LocationStatus
+
+useToast():
+├─ toast(options): void
+└─ Options: title, description, variant (success|error|info)
+```
+
+### 23.3 Context API
+
+```
+AuthContext:
+├─ user: CurrentUser | null
+├─ isLoading: boolean
+├─ login(): Promise
+├─ logout(): Promise
+└─ createUserProfile(): Promise
+
+PermissionsContext:
+├─ permissions: string[]
+├─ hasPermission(name): boolean
+└─ updatePermissions(): void
+```
+
+---
+
+## PART 24: DATA FLOW DIAGRAMS
+
+### 24.1 Site Visit Creation Flow
+
+```
+User Input (Start Modal)
+  ↓
+Step 1: Select purpose & property
+  ↓
+Step 2: Capture GPS location
+  ├─ Detect current location (navigator.geolocation)
+  ├─ Reverse geocode (Google Maps API)
+  └─ Show accuracy indicator
+  ↓
+Step 3: Capture check-in photo
+  ├─ Access device camera
+  ├─ Draw to canvas with overlay
+  └─ Convert to base64
+  ↓
+Step 4: Enter customer details
+  ├─ Query /api/customers/search (autocomplete)
+  ├─ Check /api/customers/check-mobile/:mobile
+  └─ Show duplicate warning if exists
+  ↓
+Step 5: Fill department form
+  ├─ Technical: Service types + work type + team
+  ├─ Marketing: Project configuration (on-grid/off-grid/hybrid/etc)
+  └─ Admin: Bank/EB process info
+  ↓
+Step 6: Review & submit
+  ├─ Validate all required fields
+  ├─ POST /api/site-visits (JSON)
+  ├─ Backend validates with Zod schema
+  ├─ Creates Firestore document
+  ├─ Returns visit ID
+  ├─ Invalidate React Query cache
+  └─ Show success toast
+```
+
+### 24.2 Site Visit Checkout Flow
+
+```
+In-Progress Visit
+  ↓
+User clicks "Checkout"
+  ↓
+Checkout Modal opened
+  ↓
+Step 1: Verify Location
+  ├─ Detect current GPS
+  ├─ Compare to check-in location
+  ├─ Calculate distance
+  └─ Show accuracy/validation
+  ↓
+Step 2: Capture Photos
+  ├─ Capture selfie
+  ├─ Capture multiple site photos
+  ├─ Show each photo preview
+  └─ Allow photo deletion/retake
+  ↓
+Step 3: Select Outcome
+  ├─ User selects outcome:
+  │  ├─ "Converted" (deal done)
+  │  ├─ "On Process" (ongoing)
+  │  └─ "Cancelled"
+  ├─ If "On Process" → Optional follow-up date
+  └─ Add outcome notes
+  ↓
+Step 4: Submit
+  ├─ Upload photos to Cloudinary (parallel)
+  ├─ PATCH /api/site-visits/:id
+  │  ├─ siteOutTime = now
+  │  ├─ siteOutLocation = current GPS
+  │  ├─ siteOutPhotos = photo URLs
+  │  ├─ visitOutcome = selected
+  │  └─ status = "completed"
+  ├─ Validate all required
+  ├─ Return updated visit
+  ├─ Invalidate cache
+  └─ Show success & redirect
+```
+
+### 24.3 Follow-Up Creation Flow
+
+```
+Completed Visit with "On Process" outcome
+  ↓
+User clicks "Create Follow-Up"
+  ↓
+Follow-Up Modal opened
+  ↓
+Step 1: Select Follow-Up Reason
+  ├─ Show visit history/timeline
+  ├─ Display all previous visits
+  ├─ User selects reason:
+  │  ├─ Additional Work Required
+  │  ├─ Issue Resolution
+  │  ├─ Status Check
+  │  ├─ Customer Request
+  │  └─ Maintenance/Other
+  └─ Show reason description/color
+  ↓
+Step 2: Location Capture
+  ├─ Detect current GPS (20-sec timeout)
+  ├─ Reverse geocode address
+  ├─ Show accuracy indicator
+  └─ Allow manual override
+  ↓
+Step 3: Photo Capture
+  ├─ Capture selfie
+  ├─ Capture site photos (max 10)
+  └─ Show timestamp overlay
+  ↓
+Step 4: Description & Template
+  ├─ Enter description (min 10 chars)
+  ├─ Optional template selection
+  └─ Confirm action
+  ↓
+Step 5: Submit & Update Original Visit
+  ├─ POST /api/site-visits/follow-up
+  │  ├─ Create followUpVisits document
+  │  ├─ Set originalVisitId reference
+  │  ├─ Set originalCustomerStatus
+  │  └─ Return follow-up ID
+  ├─ Update original visit:
+  │  ├─ followUpCount++
+  │  ├─ hasFollowUps = true
+  │  ├─ customerCurrentStatus = "on_process" ← CRITICAL
+  │  ├─ activeFollowUpId = newFollowUpId
+  │  └─ lastActivityType = "follow_up"
+  ├─ Invalidate React Query caches
+  └─ Show success toast
+```
+
+### 24.4 Quotation Creation Flow
+
+```
+Site Visit Completed
+  ↓
+Sales Person: "Create Quotation"
+  ↓
+GET /api/quotations/site-visits/mappable
+  ├─ Fetch all user-accessible visits
+  ├─ Filter: has customer + valid status/outcome
+  ├─ Analyze data completeness
+  └─ Show list with completeness %
+  ↓
+User selects visit
+  ↓
+GET /api/quotations/site-visits/{id}/mapping-data
+  ├─ Extract customer details
+  ├─ Extract marketing/technical data
+  ├─ Prepare BOM from configuration
+  └─ Return enriched data
+  ↓
+Quotation Editor
+  ├─ Pre-populated from visit data
+  ├─ Edit items, quantities, rates
+  ├─ Calculate total
+  └─ Add notes/terms
+  ↓
+Submit
+  ├─ POST /api/quotations/from-site-visit/{id}
+  ├─ Create quotation with siteVisitMapping
+  ├─ Lock customer/source (immutable)
+  ├─ Create in storage
+  └─ Show success with quotation ID
+```
+
+---
+
+## PART 25: MOBILE-SPECIFIC CONSIDERATIONS
+
+### 25.1 Mobile Optimizations
+
+```
+GPS & Location:
+├─ enableHighAccuracy: true (force GPS, not WiFi)
+├─ timeout: 20000ms (longer for GPS lock)
+├─ maximumAge: 0 (never use cached)
+├─ Works on HTTPS only (secure context required)
+└─ Handles iOS/Android permission flows
+
+Camera Access:
+├─ Responsive to screen orientation
+├─ Handles front/back camera switching
+├─ Permission handling (iOS prompt vs Android)
+├─ Fallback for permission denied
+└─ Canvas-based photo capture (no server dependency)
+
+Responsive Design:
+├─ Touch-friendly buttons (min 44x44px)
+├─ Vertical layout for small screens
+├─ Swipe gestures for photo gallery
+├─ Bottom modal positioning (iOS style)
+├─ Safe area insets (notch handling)
+
+Network Considerations:
+├─ Base64 photo encoding (vs binary upload)
+├─ Image compression (client-side)
+├─ Retry logic for failed uploads
+├─ Offline indicator
+└─ Queue uploads when online
+```
+
+### 25.2 Device Detection
+
+```typescript
+// In-app device detection:
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+Used for:
+├─ Different error messages (mobile-specific)
+├─ Location permission prompts
+├─ Camera selection (front by default on mobile)
+├─ Layout adjustments
+└─ Touch event handling
+```
+
+### 25.3 Offline Support (Future)
+
+```
+Service Worker:
+├─ Cache API responses
+├─ Store photos locally
+├─ Queue POST requests
+└─ Sync when online
+
+IndexedDB:
+├─ Store visit data locally
+├─ Queue follow-ups offline
+└─ Sync on reconnect
+
+Status Indicator:
+├─ Show online/offline status
+├─ Queue pending uploads
+└─ Show sync progress
+```
+
+---
+
+## PART 26: ADVANCED FEATURES DEEP DIVE
+
+### 26.1 GPS Accuracy & Validation
+
+```
+Accuracy Thresholds:
+├─ Excellent: < 10 meters
+├─ Good: 10-30 meters
+├─ Acceptable: 30-100 meters
+├─ Poor: > 100 meters
+└─ Show visual indicator to user
+
+Validation Logic:
+├─ latitude: -90 to 90 (required)
+├─ longitude: -180 to 180 (required)
+├─ accuracy: >= 0 (number of meters)
+├─ Must have both lat/lng
+└─ Reject if accuracy > 500m (GPS error)
+
+Distance Calculation:
+├─ Haversine formula
+├─ Between check-in and check-out
+├─ Shows distance traveled
+├─ Used for geo-fencing validation
+```
+
+### 26.2 Duplicate Detection Algorithm
+
+```
+Customer Duplicate Detection:
+├─ Trigger: When entering customer in site visit
+├─ Method: Mobile number only (primary key)
+├─ Process:
+│  1. User enters mobile: "9944325858"
+│  2. Normalize: Remove country code, leading zeros
+│  3. Query customers collection: mobile === "9944325858"
+│  4. If found:
+│     ├─ Show: "Customer already exists"
+│     ├─ Display: Name, address, email
+│     └─ Ask: Use existing or create new?
+│  5. If not found:
+│     └─ Create new customer record
+│
+├─ Normalization Function:
+│  ├─ Remove all non-digits
+│  ├─ Handle +91 (country code) → remove
+│  ├─ Handle leading 0 → remove
+│  └─ Result: 10-digit Indian mobile format
+│
+└─ Advantage:
+   ├─ Single authoritative check
+   ├─ Prevents duplicate profiles
+   ├─ Enables customer follow-up history
+   └─ Simple, no false positives
+```
+
+### 26.3 Dynamic Status Management
+
+```
+Original Visit Outcome vs Follow-Up Status:
+
+Scenario 1: Visit marked "Converted" (deal done)
+├─ visitOutcome = "converted"
+├─ customerCurrentStatus = "converted"
+└─ No follow-up needed typically
+
+Scenario 2: Visit marked "On Process" (ongoing)
+├─ visitOutcome = "on_process"
+├─ customerCurrentStatus = "on_process"
+└─ Can have multiple follow-ups
+
+Follow-Up Created:
+├─ originalCustomerStatus = "on_process" (from original)
+├─ Affects: customerCurrentStatus changes
+├─ Outcome: can be completed|on_process|cancelled
+├─ When completed:
+│  ├─ newCustomerStatus = visitOutcome
+│  ├─ Update original: customerCurrentStatus = newCustomerStatus
+│  └─ Clear activeFollowUpId
+└─ Follow-up chain: Maintains history of statuses
+
+Status Transitions:
+converted ─── (no follow-up) ─→ final
+  ↓
+  converted ─── (follow-up issue) ─→ on_process ─── (resolution) ─→ converted
+  ↓
+  on_process ─── (follow-up check) ─→ on_process OR converted OR cancelled
+```
+
+---
+
+## PART 27: WORKFLOW STATE MACHINES
+
+### 27.1 Site Visit State Machine
+
+```
+   START
+     ↓
+[in_progress] ← User at site
+   ↓ ↓ ↓
+   ├─→ Capture check-in GPS + photo
+   ├─→ Enter customer details
+   ├─→ Select department form
+   ├─→ Fill department-specific data
+   └─→ Optional: Add site photos
+     ↓
+[in_progress] ← Active work
+   ├─→ Can update at any time
+   ├─→ Can add more photos
+   └─→ Can add notes
+     ↓
+[in_progress] → User ready to leave
+     ↓
+  CHECKOUT FLOW
+     ├─→ Capture check-out GPS
+     ├─→ Capture check-out photos
+     ├─→ Select OUTCOME (required):
+     │   ├─ converted ← Deal successful
+     │   ├─ on_process ← Ongoing
+     │   └─ cancelled ← Deal lost
+     ├─→ Add outcome notes
+     └─→ If on_process: Optional follow-up date
+     ↓
+[completed] ← Checkout done
+   ├─→ Read-only view
+   ├─→ Can view all details
+   ├─→ Can create follow-up
+   └─→ Can delete (admin only)
+     ↓
+   OPTIONAL: Follow-up Path
+   └─→ [follow-up created]
+       ├─→ Links to original
+       ├─→ Updates original.customerCurrentStatus
+       └─→ Starts new workflow cycle
+```
+
+### 27.2 Follow-Up State Machine
+
+```
+  Original Visit Completed (visitOutcome = "on_process")
+     ↓
+[FOLLOW-UP CREATED]
+   ├─ originalVisitId = reference to parent
+   ├─ originalCustomerStatus = "on_process"
+   ├─ affectsCustomerStatus = true
+   └─ Updates parent.customerCurrentStatus = "on_process"
+     ↓
+[in_progress] ← Follow-up work
+   ├─→ Capture GPS + photos
+   ├─→ Enter description
+   ├─→ Can add more details
+   └─→ Stores in followUpVisits collection
+     ↓
+   CHECKOUT/COMPLETION
+   ├─→ Select outcome:
+   │   ├─ completed ← Issue resolved
+   │   ├─ on_process ← Still working
+   │   └─ cancelled ← Abandoned
+   └─→ Maps to customerCurrentStatus:
+       ├─ completed → customerCurrentStatus = "converted"
+       ├─ on_process → customerCurrentStatus = "on_process"
+       └─ cancelled → customerCurrentStatus = "cancelled"
+     ↓
+[completed] ← Follow-up done
+   ├─→ Updates original visit
+   ├─→ originalVisit.customerCurrentStatus = mapped status
+   ├─→ Can create another follow-up if on_process
+   └─→ Clear activeFollowUpId
+```
+
+---
+
+## PART 28: EXCEPTION HANDLING & ERROR RECOVERY
+
+### 28.1 Network Error Recovery
+
+```
+Location Detection Failures:
+├─ Timeout (>20 seconds)
+│  ├─ Show: "Location request timed out"
+│  ├─ Cause: GPS weak signal
+│  └─ Solution: Retry or enter manually
+├─ Permission Denied
+│  ├─ Mobile: "Turn on Location Services in settings"
+│  ├─ Desktop: "Enable location in browser"
+│  └─ Solution: Check device settings
+└─ Position Unavailable
+   ├─ Mobile: "Turn on GPS"
+   ├─ Desktop: "Enable WiFi/data"
+   └─ Solution: Check connectivity
+
+API Request Failures:
+├─ Network Error
+│  ├─ Retry automatically (configurable)
+│  ├─ Show: "Checking your connection..."
+│  └─ Queue offline if enabled
+├─ 401 Unauthorized (Token expired)
+│  ├─ Try to refresh token
+│  ├─ Redirect to login if fails
+│  └─ Show: "Session expired, please login"
+├─ 403 Forbidden (Permission denied)
+│  ├─ Show: "You don't have permission"
+│  ├─ Log access attempt
+│  └─ Redirect to home
+└─ 500 Server Error
+   ├─ Log error details
+   ├─ Show: "Server error, please try again"
+   └─ Suggest contacting support
+
+Photo Upload Failures:
+├─ File too large (>10MB)
+│  ├─ Compress client-side
+│  └─ Show: "Image too large, compressing..."
+├─ Unsupported format
+│  └─ Show: "Only JPG/PNG/WEBP supported"
+├─ Network timeout
+│  ├─ Retry with exponential backoff
+│  └─ Queue if offline
+└─ Cloudinary error
+   └─ Fallback to base64 storage
+```
+
+### 28.2 Data Validation Error Recovery
+
+```
+Form Validation:
+├─ Real-time field validation
+├─ Show inline error message
+├─ Highlight invalid field (red border)
+├─ Disable submit until valid
+└─ Examples:
+   ├─ Customer name < 2 chars: "Name too short"
+   ├─ Mobile < 10 chars: "Invalid phone number"
+   ├─ Missing required field: "{Field} is required"
+   └─ Date validation: "Date cannot be in past"
+
+Schema Validation (Backend):
+├─ Zod schema parse all requests
+├─ Return 400 Bad Request with error details:
+│  {
+│    "message": "Validation error",
+│    "errors": [
+│      {
+│        "path": ["customer", "name"],
+│        "code": "too_small",
+│        "message": "Name too short"
+│      }
+│    ]
+│  }
+├─ Frontend shows first error
+└─ User can correct and resubmit
+
+Firestore Data Issues:
+├─ Duplicate key violation
+│  ├─ Retry with different value
+│  └─ Warn user if persistent
+├─ Data type mismatch
+│  ├─ Convert types in service layer
+│  └─ Log for debugging
+└─ Missing reference
+   ├─ Validate reference exists
+   └─ Show user-friendly error
+```
+
+### 28.3 Error Logging & Monitoring
+
+```
+Log Levels:
+├─ Error: "SITE_VISIT_SERVICE: Error creating site visit"
+│  ├─ Also logs stack trace
+│  └─ Includes context data
+├─ Warning: "Failed to parse timestamp, using current time"
+│  └─ Non-blocking issues
+├─ Info: "SITE_VISIT_SERVICE: Document created with ID: abc123"
+│  └─ Normal operations
+└─ Debug: "Customer search query: 'john'"
+   └─ Only in development
+
+Log Examples:
+```
+console.error('SITE_VISIT_SERVICE: Error creating site visit:', error);
+console.log('SITE_VISIT_SERVICE: Retrieved ${results.length} documents');
+console.warn('Failed to parse timestamp:', error);
+console.log('CHECKOUT MUTATION STARTED:', { visitId });
+```
+
+Debug Keywords for Searching:
+├─ "SITE_VISIT_SERVICE:" → Service layer operations
+├─ "FOLLOW_UP_SERVICE:" → Follow-up operations
+├─ "SITE VISIT PERMISSION DEBUG" → Permission checks
+├─ "=== ERROR ===" → Error sections
+├─ "CLOUDINARY" → Photo upload
+├─ "LOCATION" → GPS detection
+└─ "FIRESTORE" → Database operations
+```
+
+---
+
 ## CONCLUSION
 
 The Site Visit Management System is a **comprehensive, production-ready enterprise application** with:
 
 - ✅ 12,361 lines of UI components
+- ✅ 13 API endpoints for site visits
 - ✅ Complex multi-step workflows
-- ✅ Dynamic status management
-- ✅ Robust error handling
+- ✅ Dynamic status management system
+- ✅ Robust error handling with recovery
 - ✅ Permission-based access control
-- ✅ Integration with multiple systems
-- ✅ Advanced photo + location capture
-- ✅ Flexible quotation mapping
+- ✅ Integration with multiple systems (Firestore, Cloudinary, Google Maps)
+- ✅ Advanced photo + GPS location capture
+- ✅ Flexible quotation mapping system
+- ✅ Complete Firebase auth integration
+- ✅ Mobile-optimized responsive design
+- ✅ State machine workflow management
+- ✅ Comprehensive exception handling
 
-All components work together seamlessly to provide a complete field operations management solution for Prakash Green Energy's Technical, Marketing, and Admin departments.
+All 28 sections of analysis cover every technical aspect needed for:
+- ✨ Onboarding new developers
+- ✨ System maintenance and debugging
+- ✨ Feature extensions
+- ✨ Performance optimization
+- ✨ Integration development
