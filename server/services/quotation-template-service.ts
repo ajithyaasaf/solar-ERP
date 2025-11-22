@@ -76,7 +76,6 @@ export interface QuotationTemplate {
   billOfMaterials: BillOfMaterialsItem[];
   termsAndConditions: {
     warrantyDetails: string[];
-    solarInverterWarranty: string[];
     paymentDetails: {
       advancePercentage: number;
       balancePercentage: number;
@@ -1622,11 +1621,6 @@ export class QuotationTemplateService {
       billOfMaterials,
       termsAndConditions: {
         warrantyDetails: warrantyDetails,
-        solarInverterWarranty: [
-          "2. Solar On grid Inverter (15 Years)",
-          "   • Replacement Warranty for 10 Years", 
-          "   • Service Warranty for 5 Years"
-        ],
         paymentDetails: {
           advancePercentage: quotation.advancePaymentPercentage || 90,
           balancePercentage: 100 - (quotation.advancePaymentPercentage || 90),

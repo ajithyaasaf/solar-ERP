@@ -588,11 +588,6 @@ export class QuotationPDFService {
             item.includes('***') ? `<div class="highlight">${item}</div>` : `<div>${item}</div>`
           ).join('')}
         </div>
-        
-        ${template.termsAndConditions.solarInverterWarranty && template.termsAndConditions.solarInverterWarranty.length > 0 ? `
-        <div class="warranty-item">
-          ${template.termsAndConditions.solarInverterWarranty.map(item => `<div>${item}</div>`).join('')}
-        </div>` : ''}
         ` : ''}
         
         ${!isWaterUtility ? `
