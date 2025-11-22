@@ -375,8 +375,8 @@ export const onGridConfigSchema = z.object({
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
-    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+    lowerEndHeight: z.string().optional(),
+    higherEndHeight: z.string().optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -439,8 +439,8 @@ export const waterPumpConfigSchema = z.object({
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
-    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+    lowerEndHeight: z.string().optional(),
+    higherEndHeight: z.string().optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -1502,8 +1502,8 @@ export const quotationOnGridProjectSchema = z.object({
   floor: z.enum(floorLevels).optional(),
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
-    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+    lowerEndHeight: z.string().optional(),
+    higherEndHeight: z.string().optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -1554,8 +1554,8 @@ export const quotationOffGridProjectSchema = z.object({
   floor: z.enum(floorLevels).optional(),
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
-    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+    lowerEndHeight: z.string().optional(),
+    higherEndHeight: z.string().optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -1607,8 +1607,8 @@ export const quotationHybridProjectSchema = z.object({
   floor: z.enum(floorLevels).optional(),
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
-    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+    lowerEndHeight: z.string().optional(),
+    higherEndHeight: z.string().optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -1674,8 +1674,8 @@ export const quotationWaterPumpProjectSchema = z.object({
   panelCount: z.number().min(1),
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.enum(heightRange as [string, ...string[]]).optional(),
-    higherEndHeight: z.enum(heightRange as [string, ...string[]]).optional()
+    lowerEndHeight: z.string().optional(),
+    higherEndHeight: z.string().optional()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()

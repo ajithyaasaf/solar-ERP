@@ -854,49 +854,31 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
-                          <Select 
-                            value={formData.onGridConfig?.gpStructure?.lowerEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('onGridConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 3"
+                            value={formData.onGridConfig?.gpStructure?.lowerEndHeight || ''}
+                            onChange={(e) => updateConfig('onGridConfig', { 
                               gpStructure: { 
                                 ...formData.onGridConfig?.gpStructure, 
-                                lowerEndHeight: value 
+                                lowerEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                         <div>
                           <Label>Higher End Height (ft)</Label>
-                          <Select 
-                            value={formData.onGridConfig?.gpStructure?.higherEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('onGridConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 4"
+                            value={formData.onGridConfig?.gpStructure?.higherEndHeight || ''}
+                            onChange={(e) => updateConfig('onGridConfig', { 
                               gpStructure: { 
                                 ...formData.onGridConfig?.gpStructure, 
-                                higherEndHeight: value 
+                                higherEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                       </>
                     )}
@@ -1492,49 +1474,31 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
-                          <Select 
-                            value={formData.offGridConfig?.gpStructure?.lowerEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('offGridConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 3"
+                            value={formData.offGridConfig?.gpStructure?.lowerEndHeight || ''}
+                            onChange={(e) => updateConfig('offGridConfig', { 
                               gpStructure: { 
                                 ...formData.offGridConfig?.gpStructure, 
-                                lowerEndHeight: value 
+                                lowerEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                         <div>
                           <Label>Higher End Height (ft)</Label>
-                          <Select 
-                            value={formData.offGridConfig?.gpStructure?.higherEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('offGridConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 4"
+                            value={formData.offGridConfig?.gpStructure?.higherEndHeight || ''}
+                            onChange={(e) => updateConfig('offGridConfig', { 
                               gpStructure: { 
                                 ...formData.offGridConfig?.gpStructure, 
-                                higherEndHeight: value 
+                                higherEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                       </>
                     )}
@@ -2111,49 +2075,31 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
-                          <Select 
-                            value={formData.hybridConfig?.gpStructure?.lowerEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('hybridConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 3"
+                            value={formData.hybridConfig?.gpStructure?.lowerEndHeight || ''}
+                            onChange={(e) => updateConfig('hybridConfig', { 
                               gpStructure: { 
                                 ...formData.hybridConfig?.gpStructure, 
-                                lowerEndHeight: value 
+                                lowerEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                         <div>
                           <Label>Higher End Height (ft)</Label>
-                          <Select 
-                            value={formData.hybridConfig?.gpStructure?.higherEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('hybridConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 4"
+                            value={formData.hybridConfig?.gpStructure?.higherEndHeight || ''}
+                            onChange={(e) => updateConfig('hybridConfig', { 
                               gpStructure: { 
                                 ...formData.hybridConfig?.gpStructure, 
-                                higherEndHeight: value 
+                                higherEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                       </>
                     )}
@@ -2778,49 +2724,31 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       <>
                         <div>
                           <Label>Lower End Height (ft)</Label>
-                          <Select 
-                            value={formData.waterPumpConfig?.gpStructure?.lowerEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('waterPumpConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 3"
+                            value={formData.waterPumpConfig?.gpStructure?.lowerEndHeight || ''}
+                            onChange={(e) => updateConfig('waterPumpConfig', { 
                               gpStructure: { 
                                 ...formData.waterPumpConfig?.gpStructure, 
-                                lowerEndHeight: value 
+                                lowerEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                         <div>
                           <Label>Higher End Height (ft)</Label>
-                          <Select 
-                            value={formData.waterPumpConfig?.gpStructure?.higherEndHeight || '0'}
-                            onValueChange={(value) => updateConfig('waterPumpConfig', { 
+                          <Input
+                            type="number"
+                            placeholder="e.g., 4"
+                            value={formData.waterPumpConfig?.gpStructure?.higherEndHeight || ''}
+                            onChange={(e) => updateConfig('waterPumpConfig', { 
                               gpStructure: { 
                                 ...formData.waterPumpConfig?.gpStructure, 
-                                higherEndHeight: value 
+                                higherEndHeight: e.target.value 
                               } 
                             })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select height" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {heightRange.map((height) => (
-                                <SelectItem key={height} value={height}>
-                                  {height} ft
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                       </>
                     )}
