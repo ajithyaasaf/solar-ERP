@@ -1279,7 +1279,8 @@ export class QuotationTemplateService {
         if ((project as any).basePrice && (project as any).gstAmount) {
           basePrice = (project as any).basePrice;
           gstAmount = (project as any).gstAmount;
-          totalWithGST = project.projectValue;
+          // Calculate totalWithGST from base + GST to preserve decimal places for roundoff
+          totalWithGST = basePrice + gstAmount;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 68000;
@@ -1306,7 +1307,8 @@ export class QuotationTemplateService {
         if ((project as any).basePrice && (project as any).gstAmount) {
           basePrice = (project as any).basePrice;
           gstAmount = (project as any).gstAmount;
-          totalWithGST = project.projectValue;
+          // Calculate totalWithGST from base + GST to preserve decimal places for roundoff
+          totalWithGST = basePrice + gstAmount;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 85000;
@@ -1342,7 +1344,8 @@ export class QuotationTemplateService {
         if ((project as any).basePrice && (project as any).gstAmount) {
           basePrice = (project as any).basePrice;
           gstAmount = (project as any).gstAmount;
-          totalWithGST = project.projectValue;
+          // Calculate totalWithGST from base + GST to preserve decimal places for roundoff
+          totalWithGST = basePrice + gstAmount;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 95000;
