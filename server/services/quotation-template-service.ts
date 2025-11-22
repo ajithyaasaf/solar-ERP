@@ -56,6 +56,7 @@ export interface QuotationTemplate {
     totalCost: number;
     subsidyAmount: number;
     customerPayment: number;
+    roundoff?: number;
   };
   bomSummary?: {
     phase: string;
@@ -1478,6 +1479,10 @@ export class QuotationTemplateService {
       gstPerKw = kw > 0 ? Math.round(gstAmount / kw) : 0;
     }
 
+    // Calculate roundoff to round down to nearest whole rupee
+    const roundedTotalCost = Math.floor(totalWithGST);
+    const roundoff = roundedTotalCost - totalWithGST;
+
     return {
       description,
       kw,
@@ -1487,9 +1492,10 @@ export class QuotationTemplateService {
       basePrice: Math.round(basePrice),
       gstAmount: Math.round(gstAmount),
       valueWithGST: Math.round(totalWithGST),
-      totalCost: Math.round(totalWithGST),
+      totalCost: roundedTotalCost,
       subsidyAmount: Math.round(subsidyAmount),
-      customerPayment: Math.round(customerPayment)
+      customerPayment: Math.round(customerPayment),
+      roundoff: Math.round(roundoff * 100) / 100
     };
   }
 
