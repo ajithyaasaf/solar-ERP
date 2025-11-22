@@ -23,12 +23,10 @@ export async function apiRequest(
   const currentUser = auth.currentUser;
   
   if (!currentUser) {
-    console.log("FRONTEND AUTH: No current user, cannot get token");
     throw new Error("User not authenticated");
   }
   
   const token = await currentUser.getIdToken();
-  console.log("FRONTEND AUTH: Token obtained for user", currentUser.uid, "token length:", token.length);
   
   // For GET requests, append data as query parameters if provided
   let finalUrl = url;
@@ -91,13 +89,16 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
+      // Caching strategy: Keep data fresh with smart timing
+      staleTime: 5 * 60 * 1000, // 5 minutes - balance between freshness and server load
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep unused queries in cache for reuse
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      refetchOnWindowFocus: false, // Don't spam server when window refocuses
+      retry: 1, // Retry failed requests once (handles transient errors)
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     },
     mutations: {
-      retry: false,
+      retry: 0, // Don't retry mutations - user should retry intentionally
     },
   },
 });

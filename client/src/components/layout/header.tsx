@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ interface MenuEntryOption {
   onClick?: () => void;
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+function HeaderComponent({ onMenuClick }: HeaderProps) {
   const [location] = useLocation();
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const { user } = useAuthContext();
@@ -172,3 +172,6 @@ export function Header({ onMenuClick }: HeaderProps) {
     </>
   );
 }
+
+// Memoize to prevent re-renders from parent layout updates
+export const Header = memo(HeaderComponent);

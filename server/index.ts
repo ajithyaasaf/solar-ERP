@@ -1,8 +1,24 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Enable GZIP compression for all responses
+// Compresses responses >1KB automatically, reducing bandwidth by 60-70%
+app.use(compression({
+  filter: (req, res) => {
+    // Skip compression for images and videos - already compressed
+    if (req.headers['content-type']?.includes('image') || 
+        req.headers['content-type']?.includes('video')) {
+      return false;
+    }
+    // Use compression by default
+    return compression.filter(req, res);
+  },
+  level: 6, // Balance between compression ratio and speed
+}));
 
 // Increase payload size limits for photo uploads
 // Set to 50MB to handle multiple high-resolution photos
