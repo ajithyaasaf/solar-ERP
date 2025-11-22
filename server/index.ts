@@ -1,24 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
-import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { responseCache } from "./cache";
 
 const app = express();
-
-// Enable GZIP compression for all responses
-// Compresses responses >1KB automatically, reducing bandwidth by 60-70%
-app.use(compression({
-  filter: (req, res) => {
-    // Skip compression for images and videos - already compressed
-    if (req.headers['content-type']?.includes('image') || 
-        req.headers['content-type']?.includes('video')) {
-      return false;
-    }
-    // Use compression by default
-    return compression.filter(req, res);
-  },
-  level: 6, // Balance between compression ratio and speed
-}));
 
 // Increase payload size limits for photo uploads
 // Set to 50MB to handle multiple high-resolution photos
@@ -33,32 +18,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Response logging and caching middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
+    const duration = Date.now() - start;
+    
+    // Log slow requests only
+    if (duration > 200 && path.startsWith("/api")) {
+      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms (slow)`);
+    }
+    
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
 
   next();
 });

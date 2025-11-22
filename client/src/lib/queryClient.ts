@@ -18,7 +18,6 @@ export async function apiRequest(
   method: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Get the Firebase auth token
   const auth = getAuth();
   const currentUser = auth.currentUser;
   
@@ -89,16 +88,13 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      // Caching strategy: Keep data fresh with smart timing
-      staleTime: 5 * 60 * 1000, // 5 minutes - balance between freshness and server load
-      gcTime: 10 * 60 * 1000, // 10 minutes - keep unused queries in cache for reuse
       refetchInterval: false,
-      refetchOnWindowFocus: false, // Don't spam server when window refocuses
-      retry: 1, // Retry failed requests once (handles transient errors)
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+      refetchOnWindowFocus: false,
+      staleTime: Infinity, // Keep data indefinitely - user will refresh manually
+      retry: false, // No retries to avoid delays
     },
     mutations: {
-      retry: 0, // Don't retry mutations - user should retry intentionally
+      retry: false,
     },
   },
 });
