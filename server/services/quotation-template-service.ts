@@ -1491,6 +1491,8 @@ export class QuotationTemplateService {
     // Calculate roundoff to round down to nearest whole rupee
     const roundedTotalCost = Math.floor(totalWithGST);
     const roundoff = roundedTotalCost - totalWithGST;
+    
+    console.log(`[ROUNDOFF DEBUG] projectType: ${project.projectType}, projectValue: ${project.projectValue}, totalWithGST: ${totalWithGST}, basePrice: ${basePrice}, gstAmount: ${gstAmount}, roundoff: ${roundoff}`);
 
     return {
       description,
