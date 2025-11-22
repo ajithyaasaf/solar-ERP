@@ -298,6 +298,38 @@ export class QuotationPDFService {
           margin: 10px 0;
         }
         
+        .warranty-header {
+          font-weight: bold;
+          font-size: 14px;
+          margin-top: 12px;
+          margin-bottom: 6px;
+          color: #003366;
+        }
+        
+        .warranty-category {
+          font-weight: bold;
+          font-size: 12px;
+          margin-top: 8px;
+          margin-bottom: 4px;
+          color: #003366;
+          margin-left: 10px;
+        }
+        
+        .warranty-detail {
+          font-size: 11px;
+          margin-left: 25px;
+          margin-bottom: 2px;
+          line-height: 1.4;
+        }
+        
+        .warranty-disclaimer {
+          background: #ffff99;
+          font-weight: bold;
+          padding: 3px 6px;
+          margin-bottom: 8px;
+          display: inline-block;
+        }
+        
         .highlight {
           background: #ffff99;
           font-weight: bold;
@@ -584,9 +616,17 @@ export class QuotationPDFService {
         ${!isWaterUtility ? `
         <div class="warranty-item">
           <strong>✓ Warranty Details:</strong><br>
-          ${(template.termsAndConditions.warrantyDetails || []).map(item => 
-            item.includes('***') ? `<div class="highlight">${item}</div>` : `<div>${item}</div>`
-          ).join('')}
+          ${(template.termsAndConditions.warrantyDetails || []).map(item => {
+            if (item.includes('***')) {
+              return `<div class="warranty-disclaimer">${item}</div>`;
+            } else if (/^\d+\. /.test(item)) {
+              // Category header (1. Solar..., 2. Inverter...)
+              return `<div class="warranty-category">${item}</div>`;
+            } else {
+              // Detail item (   • ...)
+              return `<div class="warranty-detail">${item}</div>`;
+            }
+          }).join('')}
         </div>
         ` : ''}
         
