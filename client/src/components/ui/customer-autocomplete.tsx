@@ -92,10 +92,13 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       if (response.ok) {
         const data = await response.json();
         setSuggestions(data);
+        console.log('Found customers:', data.length);
       } else {
+        console.error('Customer search failed:', response.status, response.statusText);
         setSuggestions([]);
       }
     } catch (error) {
+      console.error('Error searching customers:', error);
       setSuggestions([]);
     } finally {
       setIsLoading(false);
@@ -152,17 +155,21 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       if (response.ok) {
         const data = await response.json();
         if (data.exists) {
+          console.log('Duplicate customer found:', data.customer.name);
           setDuplicateCustomer(data.customer);
           onDuplicateDetected?.(data.customer);
         } else {
+          console.log('No duplicate customer found');
           setDuplicateCustomer(null);
           onDuplicateDetected?.(null);
         }
       } else {
+        console.error('Duplicate check failed:', response.status, response.statusText);
         setDuplicateCustomer(null);
         onDuplicateDetected?.(null);
       }
     } catch (error) {
+      console.error('Error checking duplicate mobile:', error);
       setDuplicateCustomer(null);
       onDuplicateDetected?.(null);
     } finally {

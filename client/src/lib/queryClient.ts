@@ -18,14 +18,17 @@ export async function apiRequest(
   method: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Get the Firebase auth token
   const auth = getAuth();
   const currentUser = auth.currentUser;
   
   if (!currentUser) {
+    console.log("FRONTEND AUTH: No current user, cannot get token");
     throw new Error("User not authenticated");
   }
   
   const token = await currentUser.getIdToken();
+  console.log("FRONTEND AUTH: Token obtained for user", currentUser.uid, "token length:", token.length);
   
   // For GET requests, append data as query parameters if provided
   let finalUrl = url;
@@ -90,8 +93,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity, // Keep data indefinitely - user will refresh manually
-      retry: false, // No retries to avoid delays
+      staleTime: Infinity,
+      retry: false,
     },
     mutations: {
       retry: false,

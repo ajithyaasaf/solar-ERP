@@ -66,6 +66,16 @@ export function ProtectedRoute({
 
   // Check enterprise permissions using the sophisticated permission system
   if (requiredPermissions) {
+    console.log("=== PROTECTED ROUTE DEBUG ===");
+    console.log("Route:", window.location.pathname);
+    console.log("Required permissions:", requiredPermissions);
+    console.log("User:", user?.uid);
+    console.log("User role:", user?.role);
+    console.log("User department:", user?.department);
+    console.log("User designation:", user?.designation);
+    console.log("Permission check result:", hasPermission(requiredPermissions));
+    console.log("===========================");
+    
     if (!hasPermission(requiredPermissions)) {
       return renderAccessDenied(setLocation, fallbackUrl);
     }

@@ -1,6 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
-import { memo } from "react";
 
 interface SolarKPIProps {
   title: string;
@@ -28,7 +27,7 @@ const badgeClasses = {
   primary: "bg-primary/10 text-primary"
 };
 
-function SolarKPICardComponent({ 
+export function SolarKPICard({ 
   title, 
   value, 
   unit, 
@@ -62,6 +61,3 @@ function SolarKPICardComponent({
     </Card>
   );
 }
-
-// Memoize to prevent unnecessary re-renders when parent updates
-export const SolarKPICard = memo(SolarKPICardComponent);
