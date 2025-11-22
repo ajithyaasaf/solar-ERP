@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Table,
   TableBody,
@@ -207,37 +209,95 @@ export default function Quotations() {
       if (response.ok) {
         const data = await response.json();
         
-        // Create a temporary iframe to render the HTML
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'absolute';
-        iframe.style.left = '-10000px';
-        iframe.style.top = '-10000px';
-        iframe.style.width = '210mm';
-        iframe.style.height = '297mm';
-        document.body.appendChild(iframe);
+        // Create a temporary container to render the HTML
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-10000px';
+        container.style.top = '-10000px';
+        container.style.width = '210mm';
+        container.innerHTML = data.html;
+        document.body.appendChild(container);
         
-        // Write the HTML content to the iframe
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (iframeDoc) {
-          iframeDoc.open();
-          iframeDoc.write(data.html);
-          iframeDoc.close();
-          
-          // Wait for content to load then trigger print
-          setTimeout(() => {
-            iframe.contentWindow?.print();
-            
-            toast({
-              title: "PDF Generated",
-              description: "Please save or print the quotation from the print dialog.",
+        // Wait for content to render
+        setTimeout(async () => {
+          try {
+            // Convert HTML to canvas
+            const canvas = await html2canvas(container, {
+              scale: 2,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: '#ffffff'
             });
             
-            // Clean up after a delay
-            setTimeout(() => {
-              document.body.removeChild(iframe);
-            }, 1000);
-          }, 500);
-        }
+            // Create PDF from canvas
+            const pdf = new jsPDF({
+              orientation: 'portrait',
+              unit: 'mm',
+              format: 'a4'
+            });
+            
+            // Calculate dimensions to fit on A4
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = pdfWidth - 10;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            const imgData = canvas.toDataURL('image/png');
+            let yPosition = 5;
+            let remainingHeight = imgHeight;
+            
+            // Add image, creating new pages if needed
+            while (remainingHeight > 0) {
+              const pageHeight = pdfHeight - 10;
+              const heightToAdd = Math.min(remainingHeight, pageHeight);
+              const cropHeight = (heightToAdd * canvas.height) / imgHeight;
+              
+              if (yPosition === 5) {
+                // First page - use full image
+                pdf.addImage(imgData, 'PNG', 5, yPosition, imgWidth, heightToAdd);
+              } else {
+                // Subsequent pages - crop the image
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = cropHeight;
+                const ctx = tempCanvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(
+                    canvas,
+                    0,
+                    (imgHeight - remainingHeight) * (canvas.height / imgHeight),
+                    canvas.width,
+                    cropHeight,
+                    0,
+                    0,
+                    canvas.width,
+                    cropHeight
+                  );
+                  const croppedData = tempCanvas.toDataURL('image/png');
+                  pdf.addImage(croppedData, 'PNG', 5, 5, imgWidth, heightToAdd);
+                }
+                pdf.addPage();
+              }
+              
+              remainingHeight -= heightToAdd;
+              yPosition = 5;
+            }
+            
+            // Download PDF with quotation number as filename
+            pdf.save(`Quotation-${quotationNumber}.pdf`);
+            
+            toast({
+              title: "PDF Downloaded",
+              description: `Quotation ${quotationNumber} has been downloaded successfully.`,
+            });
+          } catch (err) {
+            console.error("Error converting to PDF:", err);
+            throw err;
+          } finally {
+            // Clean up
+            document.body.removeChild(container);
+          }
+        }, 500);
       } else {
         throw new Error('Failed to generate PDF');
       }
