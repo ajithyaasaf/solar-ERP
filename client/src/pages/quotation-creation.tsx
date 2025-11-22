@@ -3431,11 +3431,11 @@ export default function QuotationCreation() {
       followUps: [],
       // Initialize critical business fields with defaults
       accountDetails: {
-        bankName: "State Bank of India",
-        accountNumber: "31746205818",
-        ifscCode: "SBIN0001766",
+        bankName: "ICICI",
+        accountNumber: "601305021400",
+        ifscCode: "ICIC0006013",
         accountHolderName: "Prakash Green Energy",
-        branch: "Madurai Main Branch"
+        branch: "Subramanipuram, Madurai"
       },
       physicalDamageExclusions: {
         enabled: true,
@@ -3677,11 +3677,11 @@ export default function QuotationCreation() {
         preparedBy: quotation.preparedBy || "",
         validUntil: quotation.validUntil ? new Date(quotation.validUntil) : undefined,
         accountDetails: quotation.accountDetails || {
-          bankName: "State Bank of India",
-          accountNumber: "31746205818",
-          ifscCode: "SBIN0001766",
+          bankName: "ICICI",
+          accountNumber: "601305021400",
+          ifscCode: "ICIC0006013",
           accountHolderName: "Prakash Green Energy",
-          branch: "Madurai Main Branch"
+          branch: "Subramanipuram, Madurai"
         },
         physicalDamageExclusions: quotation.physicalDamageExclusions || {
           enabled: true,
@@ -5415,13 +5415,13 @@ export default function QuotationCreation() {
                               onValueChange={(value) => {
                                 field.onChange(value);
                                 if (value === "ICICI") {
-                                  form.setValue("accountDetails.branch", "Subramaniapuram,Madurai");
-                                  form.setValue("accountDetails.accountNumber", "60130521400");
+                                  form.setValue("accountDetails.branch", "Subramanipuram, Madurai");
+                                  form.setValue("accountDetails.accountNumber", "601305021400");
                                   form.setValue("accountDetails.ifscCode", "ICIC0006013");
-                                } else if (value === "State Bank of India") {
-                                  form.setValue("accountDetails.branch", "Madurai Main Branch");
-                                  form.setValue("accountDetails.accountNumber", "31746205818");
-                                  form.setValue("accountDetails.ifscCode", "SBIN0001766");
+                                } else if (value === "Axis Bank") {
+                                  form.setValue("accountDetails.branch", "Madurai Main");
+                                  form.setValue("accountDetails.accountNumber", "924020033201767");
+                                  form.setValue("accountDetails.ifscCode", "UTIB0000109");
                                 }
                               }} 
                               value={field.value}
@@ -5433,7 +5433,7 @@ export default function QuotationCreation() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="ICICI">ICICI</SelectItem>
-                                <SelectItem value="State Bank of India">SBI</SelectItem>
+                                <SelectItem value="Axis Bank">Axis Bank</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
