@@ -1562,6 +1562,7 @@ export const quotationOffGridProjectSchema = z.object({
     type: z.enum(monoRailOptions).optional()
   }).optional(),
   civilWorkScope: z.enum(workScopeOptions).optional(),
+  amc: z.boolean().default(false), // Annual Maintenance Contract
   backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for off-grid systems
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),

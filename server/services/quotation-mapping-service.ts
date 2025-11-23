@@ -764,6 +764,7 @@ export class SiteVisitDataMapper {
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
       civilWorkScope: config.civilWorkScope,
+      amc: config.amc || false,
       projectValue,
       gstPercentage,
       gstAmount,
