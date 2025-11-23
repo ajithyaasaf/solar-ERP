@@ -410,7 +410,8 @@ export class QuotationPDFService {
         <div class="contact-info">
           <div class="section-title">Contact us at</div>
           Contact Person: ${template.contactPerson || 'M. Selva Prakash'}<br>
-          Contact Number: ${template.contactNumber || '+91 99949 01500'}
+          Contact Number: ${template.contactNumber || '+91 99949 01500'}<br>
+          GST Number: 33BFOPS2085D2ZB
         </div>
       </div>
       
