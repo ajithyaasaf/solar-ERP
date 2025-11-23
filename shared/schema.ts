@@ -1618,6 +1618,7 @@ export const quotationHybridProjectSchema = z.object({
   civilWorkScope: z.enum(workScopeOptions).optional(),
   electricalWorkScope: z.enum(workScopeOptions).optional(),
   netMeterScope: z.enum(workScopeOptions).optional(),
+  amc: z.boolean().default(false), // Annual Maintenance Contract
   backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for hybrid systems
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
