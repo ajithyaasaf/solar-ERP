@@ -925,6 +925,7 @@ export class SiteVisitDataMapper {
       plumbingWorkScope: config.plumbingWorkScope || config.earthWork,
       civilWorkScope: config.civilWorkScope,
       lightningArrest: config.lightningArrest || false,
+      dcCable: config.dcCable || false,
       electricalAccessories: config.electricalAccessories || false,
       electricalCount: config.electricalCount,
       earth: config.earth || [],
