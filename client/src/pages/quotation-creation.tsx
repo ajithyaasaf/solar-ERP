@@ -3582,7 +3582,10 @@ export default function QuotationCreation() {
       setLocation("/quotations");
     },
     onError: (error: any) => {
-      console.error("Error creating quotation:", error);
+      console.error("🔴 FULL ERROR OBJECT:", error);
+      console.error("🔴 Error message:", error.message);
+      console.error("🔴 Error status:", error.status);
+      console.error("🔴 Error response:", error.response);
       
       // Handle structured validation errors
       if (error.status === 422 && error.completenessAnalysis) {
@@ -3595,7 +3598,7 @@ export default function QuotationCreation() {
       } else {
         toast({
           title: "Error Creating Quotation",
-          description: "Please check all required fields and try again.",
+          description: error.message || "Please check all required fields and try again.",
           variant: "destructive"
         });
       }
