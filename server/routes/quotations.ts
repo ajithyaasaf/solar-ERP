@@ -295,6 +295,8 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(403).json({ message: "Access denied" });
       }
 
+      console.log("🚀 START: Creating quotation from site visit:", req.params.siteVisitId);
+      
       const { DataCompletenessAnalyzer, SiteVisitDataMapper } = await import("../services/quotation-mapping-service");
       
       // Get site visit data
@@ -302,18 +304,31 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
       
       if (!siteVisit) {
+        console.log("❌ Site visit not found");
         return res.status(404).json({ message: "Site visit not found" });
       }
 
+      console.log("✅ Site visit found, checking completeness...");
+      
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
+      console.log("📊 COMPLETENESS CHECK:", {
+        canCreateQuotation: completenessAnalysis.canCreateQuotation,
+        score: completenessAnalysis.completenessScore,
+        missingCritical: completenessAnalysis.missingCriticalFields,
+        qualityGrade: completenessAnalysis.qualityGrade
+      });
+      
       if (!completenessAnalysis.canCreateQuotation) {
+        console.log("❌ Site visit data incomplete. Cannot create quotation.");
         return res.status(400).json({ 
           message: "Site visit data incomplete for quotation creation",
           analysis: completenessAnalysis
         });
       }
+      
+      console.log("✅ Completeness check passed. Proceeding to map...");
 
       // Map site visit data to quotation
       let mappingResult;
