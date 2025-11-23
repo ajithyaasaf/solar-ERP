@@ -336,9 +336,16 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         mappingAnalysis: completenessAnalysis,
         warnings: mappingResult.businessRuleWarnings
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating quotation from site visit:", error);
-      res.status(500).json({ message: "Failed to create quotation from site visit" });
+      console.error("Error details:", error?.message || JSON.stringify(error));
+      if (error?.errors) {
+        console.error("Validation errors:", error.errors);
+      }
+      res.status(500).json({ 
+        message: "Failed to create quotation from site visit",
+        error: error?.message || "Unknown error"
+      });
     }
   });
 
