@@ -1784,15 +1784,6 @@ export const insertQuotationSchema = z.object({
   termsTemplate: z.enum(termsTemplates).default("standard"),
   customTerms: z.string().optional(),
   
-  // Annual Maintenance Contract (AMC)
-  includeAMC: z.boolean().default(false),
-  amcDurationYears: z.number().min(1).max(10).optional(),
-  amcCostPerYear: z.number().min(0).optional(),
-  amcTotalCost: z.number().min(0).optional(),
-  amcCoverage: z.array(z.string()).default(["Parts replacement", "Labor", "Annual service visits", "Emergency support"]),
-  amcStartDate: z.date().optional(),
-  amcTermsNotes: z.string().optional(),
-  
   // Status and approval workflow
   status: z.enum(quotationStatuses).default("draft"),
   

@@ -656,7 +656,7 @@ export class QuotationTemplateService {
       volt: "-",
       rating: "-",
       make: "As per MNRE App",
-      qty: 1,
+      qty: "-",
       unit: "Job"
     });
 
@@ -848,7 +848,7 @@ export class QuotationTemplateService {
       volt: "-",
       rating: "-",
       make: "As per MNRE App",
-      qty: 1,
+      qty: "-",
       unit: "Job"
     });
 
@@ -1052,7 +1052,7 @@ export class QuotationTemplateService {
       volt: "-",
       rating: "-",
       make: "As per MNRE App",
-      qty: 1,
+      qty: "-",
       unit: "Job"
     });
 
@@ -1680,37 +1680,5 @@ export class QuotationTemplateService {
       case '2_months': return '2 Months from the date of confirmation of order';
       default: return '2-3 Weeks from the date of confirmation of order';
     }
-  }
-
-  /**
-   * Add AMC (Annual Maintenance Contract) item to BOM if needed
-   */
-  static addAMCItemToBOM(items: BillOfMaterialsItem[], amcData?: { durationYears: number; costPerYear: number }): BillOfMaterialsItem[] {
-    if (!amcData) return items;
-
-    let slNo = Math.max(...items.map(i => i.slNo || 0)) + 1;
-
-    items.push({
-      slNo,
-      description: `Annual Maintenance Contract (${amcData.durationYears} Year${amcData.durationYears > 1 ? 's' : ''})`,
-      type: "Comprehensive Maintenance",
-      volt: "-",
-      rating: "-",
-      make: "Prakash Green Energy",
-      qty: amcData.durationYears,
-      unit: "Year",
-      rate: amcData.costPerYear
-    });
-
-    return items;
-  }
-
-  /**
-   * Calculate AMC pricing
-   */
-  static calculateAMCPricing(amcData?: { durationYears: number; costPerYear: number }): { amcTotalCost: number; amcTotalPayment: number } {
-    if (!amcData) return { amcTotalCost: 0, amcTotalPayment: 0 };
-    const amcTotalCost = amcData.durationYears * amcData.costPerYear;
-    return { amcTotalCost, amcTotalPayment: amcTotalCost };
   }
 }

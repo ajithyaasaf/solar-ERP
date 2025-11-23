@@ -166,7 +166,11 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Quotation not found" });
       }
 
-      const updatedQuotation = await storage.updateQuotation(req.params.id, req.body, user.uid);
+      const updatedQuotation = await storage.updateQuotation(req.params.id, {
+        ...req.body,
+        updatedBy: user.uid,
+        updatedAt: new Date()
+      });
 
       res.json(updatedQuotation);
     } catch (error) {
@@ -291,8 +295,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      console.log("🚀 START: Creating quotation from site visit:", req.params.siteVisitId);
-      
       const { DataCompletenessAnalyzer, SiteVisitDataMapper } = await import("../services/quotation-mapping-service");
       
       // Get site visit data
@@ -300,84 +302,43 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
       
       if (!siteVisit) {
-        console.log("❌ Site visit not found");
         return res.status(404).json({ message: "Site visit not found" });
       }
 
-      console.log("✅ Site visit found, checking completeness...");
-      
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
-      console.log("📊 COMPLETENESS CHECK:", {
-        canCreateQuotation: completenessAnalysis.canCreateQuotation,
-        score: completenessAnalysis.completenessScore,
-        missingCritical: completenessAnalysis.missingCriticalFields,
-        qualityGrade: completenessAnalysis.qualityGrade
-      });
-      
       if (!completenessAnalysis.canCreateQuotation) {
-        console.log("❌ Site visit data incomplete. Cannot create quotation.");
         return res.status(400).json({ 
           message: "Site visit data incomplete for quotation creation",
           analysis: completenessAnalysis
         });
       }
-      
-      console.log("Completeness check passed. Proceeding to map...");
 
       // Map site visit data to quotation
-      let mappingResult;
-      try {
-        console.log("About to call mapToQuotation...");
-        mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
-        console.log("mapToQuotation succeeded");
-      } catch (mappingError: any) {
-        console.error("MAPPING_ERROR_CAUGHT:", mappingError.message);
-        console.error("Error type:", mappingError.constructor.name);
-        console.error("Full error:", mappingError);
-        return res.status(400).json({
-          message: mappingError.message || "Mapping failed",
-          error: mappingError.projectValidationError ? "project_validation_error" : "mapping_error",
-          completenessAnalysis: mappingError.completenessAnalysis,
-          recommendedAction: mappingError.recommendedAction
-        });
-      }
+      const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
       
       // Create quotation with mapped data
-      let quotationData;
-      try {
-        quotationData = {
-          ...mappingResult.quotationData,
-          quotationNumber: QuotationTemplateService.generateQuotationNumber(),
-          source: 'site_visit' as const,
-          status: mappingResult.quotationData.status || 'draft' as const,
-          customerId: mappingResult.quotationData.customerId || '',
-          siteVisitMapping: mappingResult.mappingMetadata
-        };
+      const quotationData = {
+        ...mappingResult.quotationData,
+        createdBy: user.uid,
+        quotationNumber: QuotationTemplateService.generateQuotationNumber(),
+        source: 'site_visit' as const,
+        status: mappingResult.quotationData.status || 'draft' as const,
+        customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || '',
+        siteVisitMapping: mappingResult.mappingMetadata
+      };
 
-        console.log("QUOTATION_DATA_PREPARED: customerId=" + quotationData.customerId + " projects=" + quotationData.projects?.length);
-        
-        const quotation = await storage.createQuotation(quotationData);
-        
-        console.log("Quotation created successfully:", quotation.id);
-        res.status(201).json({
-          quotation,
-          mappingAnalysis: completenessAnalysis,
-          warnings: mappingResult.businessRuleWarnings
-        });
-      } catch (storageError: any) {
-        console.error("STORAGE_VALIDATION_ERROR:", storageError.message);
-        console.error("Storage error type:", storageError.constructor.name);
-        res.status(400).json({ 
-          message: `Failed to create quotation: ${storageError.message}`,
-          error: "validation_or_storage_error"
-        });
-      }
-    } catch (error: any) {
-      console.error("GENERAL_ERROR_CAUGHT:", error.message);
-      console.error("General error type:", error.constructor.name);
-      res.status(500).json({ message: `Failed to create quotation from site visit: ${error.message}` });
+      const quotation = await storage.createQuotation(quotationData);
+      
+      res.status(201).json({
+        quotation,
+        mappingAnalysis: completenessAnalysis,
+        warnings: mappingResult.businessRuleWarnings
+      });
+    } catch (error) {
+      console.error("Error creating quotation from site visit:", error);
+      res.status(500).json({ message: "Failed to create quotation from site visit" });
     }
   });
 
