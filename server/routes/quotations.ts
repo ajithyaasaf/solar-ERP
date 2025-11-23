@@ -291,41 +291,37 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Check if user provided form data (modified projects)
+      // Check if user provided form data (modified projects and/or customerData)
       const formData = req.body;
-      console.log("ENDPOINT_DEBUG: req.body keys:", Object.keys(formData || {}));
-      console.log("ENDPOINT_DEBUG: Has projects?", !!formData?.projects);
-      console.log("ENDPOINT_DEBUG: Projects length:", formData?.projects?.length || 0);
-      
       const hasFormData = formData && formData.projects && formData.projects.length > 0;
       
       if (hasFormData) {
         // User has provided modified form data - use it directly instead of re-mapping from site visit
         // This allows users to change project types and configurations during quotation creation
         
+        // Handle customer data override if provided (e.g., EB number edits from form)
+        if (formData.customerData && formData.customerId) {
+          try {
+            // Merge customer data with overrides
+            await storage.updateCustomer(formData.customerId, formData.customerData);
+          } catch (customerError) {
+            console.error("Error updating customer with overrides:", customerError);
+            // Continue anyway - quotation still needs to be created
+          }
+        }
+        
         // Validate and create quotation with form data
         try {
-          console.log("FORM_DATA_RECEIVED:", JSON.stringify({
-            hasProjects: !!formData.projects,
-            projectsLength: formData.projects?.length,
-            hasCustomerId: !!formData.customerId,
-            hasSource: !!formData.source,
-            hasStatus: !!formData.status,
-            hasTotalSystemCost: formData.totalSystemCost !== undefined,
-            hasTotalCustomerPayment: formData.totalCustomerPayment !== undefined,
-            hasAdvanceAmount: formData.advanceAmount !== undefined,
-            hasBalanceAmount: formData.balanceAmount !== undefined
-          }, null, 2));
-          
           const quotationToCreate = {
             ...formData,
             quotationNumber: QuotationTemplateService.generateQuotationNumber(),
             source: formData.source || 'site_visit' as const,
             status: formData.status || 'draft' as const,
-            createdAt: undefined // Remove createdAt - storage adds it
+            createdAt: undefined, // Remove createdAt - storage adds it
+            customerData: undefined // Remove customerData - not part of quotation schema
           };
           
-          const { createdAt, ...cleanQuotationData } = quotationToCreate;
+          const { createdAt, customerData, ...cleanQuotationData } = quotationToCreate;
           const quotation = await storage.createQuotation(cleanQuotationData);
           
           res.status(201).json({
@@ -335,10 +331,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           return;
         } catch (error) {
           console.error("Error creating quotation with form data:", error);
-          console.error("Error details:", (error as any).message || String(error));
-          if ((error as any).errors) {
-            console.error("Validation errors:", JSON.stringify((error as any).errors, null, 2));
-          }
           res.status(500).json({ message: "Failed to create quotation from form data", error: String(error) });
           return;
         }
