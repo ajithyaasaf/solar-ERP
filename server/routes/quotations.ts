@@ -291,47 +291,48 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Check if user provided form data (modified projects and/or customerData)
+      // ALWAYS use formData if provided (req.body) - frontend sends all modified data
+      // This allows users to change project types and configurations during quotation creation
       const formData = req.body;
-      const hasFormData = formData && formData.projects && formData.projects.length > 0;
       
-      if (hasFormData) {
-        // User has provided modified form data - use it directly instead of re-mapping from site visit
-        // This allows users to change project types and configurations during quotation creation
-        
-        // Handle customer data override if provided (e.g., EB number edits from form)
-        if (formData.customerData && formData.customerId) {
-          try {
-            // Merge customer data with overrides
-            await storage.updateCustomer(formData.customerId, formData.customerData);
-          } catch (customerError) {
-            console.error("Error updating customer with overrides:", customerError);
-            // Continue anyway - quotation still needs to be created
-          }
-        }
-        
-        // Validate and create quotation with form data
+      // If form data has projects (user modified them), use form data directly
+      if (formData && Object.keys(formData).length > 0) {
         try {
-          const quotationToCreate = {
-            ...formData,
+          // Handle customer data override if provided (e.g., EB number edits from form)
+          if (formData.customerData && formData.customerId) {
+            try {
+              await storage.updateCustomer(formData.customerId, formData.customerData);
+            } catch (customerError) {
+              console.error("Warning - error updating customer:", customerError);
+            }
+          }
+          
+          // Prepare quotation data - remove fields that shouldn't be persisted
+          const { customerData, createdAt, ...quotationToCreate } = formData;
+          
+          // Ensure required fields
+          const quotationData = {
+            ...quotationToCreate,
             quotationNumber: QuotationTemplateService.generateQuotationNumber(),
-            source: formData.source || 'site_visit' as const,
-            status: formData.status || 'draft' as const,
-            createdAt: undefined, // Remove createdAt - storage adds it
-            customerData: undefined // Remove customerData - not part of quotation schema
+            source: quotationToCreate.source || 'site_visit' as const,
+            status: quotationToCreate.status || 'draft' as const
           };
           
-          const { createdAt, customerData, ...cleanQuotationData } = quotationToCreate;
-          const quotation = await storage.createQuotation(cleanQuotationData);
+          const quotation = await storage.createQuotation(quotationData);
           
           res.status(201).json({
             quotation,
-            message: "Quotation created successfully from site visit with modified projects"
+            message: "Quotation created successfully"
           });
           return;
         } catch (error) {
-          console.error("Error creating quotation with form data:", error);
-          res.status(500).json({ message: "Failed to create quotation from form data", error: String(error) });
+          console.error("Error creating quotation from form data:", error);
+          console.error("Form data keys:", Object.keys(formData));
+          console.error("Error details:", (error as any).message || String(error));
+          res.status(500).json({ 
+            message: "Failed to create quotation",
+            error: (error as any).message || String(error)
+          });
           return;
         }
       }
