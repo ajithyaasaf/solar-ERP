@@ -328,23 +328,20 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         });
       }
       
-      console.log("✅ Completeness check passed. Proceeding to map...");
+      console.log("Completeness check passed. Proceeding to map...");
 
       // Map site visit data to quotation
       let mappingResult;
       try {
+        console.log("About to call mapToQuotation...");
         mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
+        console.log("mapToQuotation succeeded");
       } catch (mappingError: any) {
-        console.error("🔴 MAPPING ERROR:", {
-          message: mappingError.message,
-          validationError: mappingError.validationError,
-          projectValidationError: mappingError.projectValidationError,
-          completenessAnalysis: mappingError.completenessAnalysis,
-          missingData: mappingError.missingData,
-          recommendedAction: mappingError.recommendedAction
-        });
+        console.error("MAPPING_ERROR_CAUGHT:", mappingError.message);
+        console.error("Error type:", mappingError.constructor.name);
+        console.error("Full error:", mappingError);
         return res.status(400).json({
-          message: mappingError.message,
+          message: mappingError.message || "Mapping failed",
           error: mappingError.projectValidationError ? "project_validation_error" : "mapping_error",
           completenessAnalysis: mappingError.completenessAnalysis,
           recommendedAction: mappingError.recommendedAction
@@ -364,35 +361,28 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           siteVisitMapping: mappingResult.mappingMetadata
         };
 
-        console.log("📝 QUOTATION DATA PREPARED:");
-        console.log("- customerId:", quotationData.customerId);
-        console.log("- projects count:", quotationData.projects?.length);
-        console.log("- quotationNumber:", quotationData.quotationNumber);
+        console.log("QUOTATION_DATA_PREPARED: customerId=" + quotationData.customerId + " projects=" + quotationData.projects?.length);
         
         const quotation = await storage.createQuotation(quotationData);
         
+        console.log("Quotation created successfully:", quotation.id);
         res.status(201).json({
           quotation,
           mappingAnalysis: completenessAnalysis,
           warnings: mappingResult.businessRuleWarnings
         });
       } catch (storageError: any) {
-        console.error("🔴 STORAGE/VALIDATION ERROR:", {
-          message: storageError.message,
-          cause: storageError.cause,
-          stack: storageError.stack?.split('\n')[0]
-        });
+        console.error("STORAGE_VALIDATION_ERROR:", storageError.message);
+        console.error("Storage error type:", storageError.constructor.name);
         res.status(400).json({ 
           message: `Failed to create quotation: ${storageError.message}`,
           error: "validation_or_storage_error"
         });
       }
     } catch (error: any) {
-      console.error("🔴 GENERAL ERROR:", {
-        message: error.message,
-        stack: error.stack?.split('\n')[0]
-      });
-      res.status(500).json({ message: "Failed to create quotation from site visit" });
+      console.error("GENERAL_ERROR_CAUGHT:", error.message);
+      console.error("General error type:", error.constructor.name);
+      res.status(500).json({ message: `Failed to create quotation from site visit: ${error.message}` });
     }
   });
 
