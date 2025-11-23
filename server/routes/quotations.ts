@@ -305,6 +305,17 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
+      console.log("📍 SITE VISIT DATA:");
+      console.log("Department:", siteVisit.department);
+      console.log("Marketing data projectType:", siteVisit.marketingData?.projectType);
+      console.log("Customer name:", siteVisit.customer?.name);
+      console.log("Customer mobile:", siteVisit.customer?.mobile);
+      console.log("Customer address:", siteVisit.customer?.address);
+      console.log("OnGridConfig present:", !!siteVisit.marketingData?.onGridConfig);
+      console.log("OffGridConfig present:", !!siteVisit.marketingData?.offGridConfig);
+      console.log("HybridConfig present:", !!siteVisit.marketingData?.hybridConfig);
+      console.log("=============================");
+
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
