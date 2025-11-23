@@ -329,6 +329,12 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         siteVisitMapping: mappingResult.mappingMetadata
       };
 
+      console.log("=== QUOTATION DATA TO VALIDATE ===");
+      console.log("QuotationData keys:", Object.keys(quotationData));
+      console.log("Projects:", JSON.stringify(quotationData.projects, null, 2));
+      console.log("CustomerId:", quotationData.customerId);
+      console.log("====================================");
+
       const quotation = await storage.createQuotation(quotationData);
       
       res.status(201).json({
