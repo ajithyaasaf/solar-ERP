@@ -3288,6 +3288,7 @@ export default function QuotationCreation() {
   const [isFetchingBom, setIsFetchingBom] = useState(false);
   const [editingBomItem, setEditingBomItem] = useState<number | null>(null);
   const [originalBomItem, setOriginalBomItem] = useState<any | null>(null);
+  const [deletingBomIndex, setDeletingBomIndex] = useState<number | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
   // State for editable scope of work sections
@@ -5940,11 +5941,13 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-right">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="number"
-                                        value={(item as any).rate || 0}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={(item as any).rate === 0 ? '' : (item as any).rate}
                                         onChange={(e) => {
+                                          const val = e.target.value;
                                           const updated = [...bomItems];
-                                          (updated[index] as any).rate = parseFloat(e.target.value) || 0;
+                                          (updated[index] as any).rate = val === '' ? 0 : parseFloat(val) || 0;
                                           (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
                                           setBomItems(updated);
                                         }}
@@ -5963,11 +5966,13 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-center">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="number"
-                                        value={item.qty}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={item.qty === 0 ? '' : item.qty}
                                         onChange={(e) => {
+                                          const val = e.target.value;
                                           const updated = [...bomItems];
-                                          updated[index].qty = parseInt(e.target.value) || 0;
+                                          updated[index].qty = val === '' ? 0 : parseInt(val) || 0;
                                           (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
                                           setBomItems(updated);
                                         }}
@@ -6077,11 +6082,13 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="number"
-                                        value={item.qty}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={item.qty === 0 ? '' : item.qty}
                                         onChange={(e) => {
+                                          const val = e.target.value;
                                           const updated = [...bomItems];
-                                          updated[index].qty = parseInt(e.target.value) || 0;
+                                          updated[index].qty = val === '' ? 0 : parseInt(val) || 0;
                                           setBomItems(updated);
                                         }}
                                         onKeyDown={(e) => {
@@ -6164,10 +6171,7 @@ export default function QuotationCreation() {
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => {
-                                          const updated = bomItems.filter((_, i) => i !== index);
-                                          setBomItems(updated);
-                                          setEditingBomItem(null);
-                                          setOriginalBomItem(null);
+                                          setDeletingBomIndex(index);
                                         }}
                                         className="h-7 w-7 p-0"
                                         title="Delete row"
@@ -6197,8 +6201,7 @@ export default function QuotationCreation() {
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => {
-                                          const updated = bomItems.filter((_, i) => i !== index);
-                                          setBomItems(updated);
+                                          setDeletingBomIndex(index);
                                         }}
                                         className="h-7 w-7 p-0"
                                         title="Delete row"
@@ -6325,6 +6328,40 @@ export default function QuotationCreation() {
           </form>
         </Form>
       </div>
+
+      {/* BOM Delete Confirmation Dialog */}
+      <AlertDialog open={deletingBomIndex !== null} onOpenChange={(open) => {
+        if (!open) setDeletingBomIndex(null);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete BOM Row?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this BOM item? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-bom">
+              Keep Item
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingBomIndex !== null) {
+                  const updated = bomItems.filter((_, i) => i !== deletingBomIndex);
+                  setBomItems(updated);
+                  setEditingBomItem(null);
+                  setOriginalBomItem(null);
+                  setDeletingBomIndex(null);
+                }
+              }}
+              data-testid="button-confirm-delete-bom"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Row
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Exit Confirmation Dialog */}
       <AlertDialog open={showExitConfirmation} onOpenChange={setShowExitConfirmation}>
