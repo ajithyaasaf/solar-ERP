@@ -657,7 +657,7 @@ export class QuotationTemplateService {
       rating: "-",
       make: "As per MNRE App",
       qty: 1,
-      unit: "Job"
+      unit: "Nos"
     });
 
     return items;
@@ -849,7 +849,7 @@ export class QuotationTemplateService {
       rating: "-",
       make: "As per MNRE App",
       qty: 1,
-      unit: "Job"
+      unit: "Nos"
     });
 
     return items;
@@ -1053,7 +1053,7 @@ export class QuotationTemplateService {
       rating: "-",
       make: "As per MNRE App",
       qty: 1,
-      unit: "Job"
+      unit: "Nos"
     });
 
     return items;

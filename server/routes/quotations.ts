@@ -166,7 +166,11 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Quotation not found" });
       }
 
-      const updatedQuotation = await storage.updateQuotation(req.params.id, req.body, user.uid);
+      const updatedQuotation = await storage.updateQuotation(req.params.id, {
+        ...req.body,
+        updatedBy: user.uid,
+        updatedAt: new Date()
+      });
 
       res.json(updatedQuotation);
     } catch (error) {
@@ -291,53 +295,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // ALWAYS use formData if provided (req.body) - frontend sends all modified data
-      // This allows users to change project types and configurations during quotation creation
-      const formData = req.body;
-      
-      // If form data has projects (user modified them), use form data directly
-      if (formData && Object.keys(formData).length > 0) {
-        try {
-          // Handle customer data override if provided (e.g., EB number edits from form)
-          if (formData.customerData && formData.customerId) {
-            try {
-              await storage.updateCustomer(formData.customerId, formData.customerData);
-            } catch (customerError) {
-              console.error("Warning - error updating customer:", customerError);
-            }
-          }
-          
-          // Prepare quotation data - remove fields that shouldn't be persisted
-          const { customerData, createdAt, ...quotationToCreate } = formData;
-          
-          // Ensure required fields
-          const quotationData = {
-            ...quotationToCreate,
-            quotationNumber: QuotationTemplateService.generateQuotationNumber(),
-            source: quotationToCreate.source || 'site_visit' as const,
-            status: quotationToCreate.status || 'draft' as const
-          };
-          
-          const quotation = await storage.createQuotation(quotationData);
-          
-          res.status(201).json({
-            quotation,
-            message: "Quotation created successfully"
-          });
-          return;
-        } catch (error) {
-          console.error("Error creating quotation from form data:", error);
-          console.error("Form data keys:", Object.keys(formData));
-          console.error("Error details:", (error as any).message || String(error));
-          res.status(500).json({ 
-            message: "Failed to create quotation",
-            error: (error as any).message || String(error)
-          });
-          return;
-        }
-      }
-
-      // If no form data provided, use the original site visit mapping flow
       const { DataCompletenessAnalyzer, SiteVisitDataMapper } = await import("../services/quotation-mapping-service");
       
       // Get site visit data
@@ -361,40 +318,27 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Map site visit data to quotation
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
       
-      // Create quotation with mapped data - ensure all required fields are present
-      // Note: createdAt is added automatically by storage.createQuotation, so don't include it here
+      // Create quotation with mapped data
       const quotationData = {
         ...mappingResult.quotationData,
-        customerId: mappingResult.quotationData.customerId || 'temp_customer_' + Date.now(),
+        createdBy: user.uid,
         quotationNumber: QuotationTemplateService.generateQuotationNumber(),
         source: 'site_visit' as const,
         status: mappingResult.quotationData.status || 'draft' as const,
-        projects: mappingResult.quotationData.projects || [],
-        totalSystemCost: mappingResult.quotationData.totalSystemCost || 0,
-        totalCustomerPayment: mappingResult.quotationData.totalCustomerPayment || 0,
-        advanceAmount: mappingResult.quotationData.advanceAmount || 0,
-        balanceAmount: mappingResult.quotationData.balanceAmount || 0,
+        customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || '',
         siteVisitMapping: mappingResult.mappingMetadata
       };
-      
-      // Remove fields that shouldn't be in insertQuotationSchema
-      const { createdAt, ...cleanQuotationData } = quotationData;
 
-      try {
-        const quotation = await storage.createQuotation(cleanQuotationData);
-        
-        res.status(201).json({
-          quotation,
-          mappingAnalysis: completenessAnalysis,
-          warnings: mappingResult.businessRuleWarnings
-        });
-      } catch (storageError) {
-        console.error("Storage error creating quotation:", storageError);
-        throw storageError;
-      }
+      const quotation = await storage.createQuotation(quotationData);
+      
+      res.status(201).json({
+        quotation,
+        mappingAnalysis: completenessAnalysis,
+        warnings: mappingResult.businessRuleWarnings
+      });
     } catch (error) {
       console.error("Error creating quotation from site visit:", error);
-      res.status(500).json({ message: "Failed to create quotation from site visit", error: String(error) });
+      res.status(500).json({ message: "Failed to create quotation from site visit" });
     }
   });
 
