@@ -291,6 +291,40 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(403).json({ message: "Access denied" });
       }
 
+      // Check if user provided form data (modified projects)
+      const formData = req.body;
+      const hasFormData = formData && formData.projects && formData.projects.length > 0;
+      
+      if (hasFormData) {
+        // User has provided modified form data - use it directly instead of re-mapping from site visit
+        // This allows users to change project types and configurations during quotation creation
+        
+        // Validate and create quotation with form data
+        try {
+          const quotationToCreate = {
+            ...formData,
+            quotationNumber: QuotationTemplateService.generateQuotationNumber(),
+            source: formData.source || 'site_visit' as const,
+            status: formData.status || 'draft' as const,
+            createdAt: undefined // Remove createdAt - storage adds it
+          };
+          
+          const { createdAt, ...cleanQuotationData } = quotationToCreate;
+          const quotation = await storage.createQuotation(cleanQuotationData);
+          
+          res.status(201).json({
+            quotation,
+            message: "Quotation created successfully from site visit with modified projects"
+          });
+          return;
+        } catch (error) {
+          console.error("Error creating quotation with form data:", error);
+          res.status(500).json({ message: "Failed to create quotation from form data", error: String(error) });
+          return;
+        }
+      }
+
+      // If no form data provided, use the original site visit mapping flow
       const { DataCompletenessAnalyzer, SiteVisitDataMapper } = await import("../services/quotation-mapping-service");
       
       // Get site visit data
@@ -304,10 +338,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
-      console.log("QUOTATION_CREATE_DEBUG: Completeness analysis:", JSON.stringify(completenessAnalysis, null, 2));
-      
       if (!completenessAnalysis.canCreateQuotation) {
-        console.log("QUOTATION_CREATE_DEBUG: Cannot create quotation. Missing fields:", completenessAnalysis.missingCriticalFields);
         return res.status(400).json({ 
           message: "Site visit data incomplete for quotation creation",
           analysis: completenessAnalysis
@@ -316,15 +347,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       // Map site visit data to quotation
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
-      
-      console.log("QUOTATION_CREATE_DEBUG: Mapping result quotationData:", JSON.stringify({
-        customerId: mappingResult.quotationData.customerId,
-        status: mappingResult.quotationData.status,
-        projects: mappingResult.quotationData.projects?.length || 0,
-        totalSystemCost: mappingResult.quotationData.totalSystemCost,
-        createdAt: mappingResult.quotationData.createdAt,
-        hasProjects: !!mappingResult.quotationData.projects
-      }, null, 2));
       
       // Create quotation with mapped data - ensure all required fields are present
       // Note: createdAt is added automatically by storage.createQuotation, so don't include it here
@@ -355,12 +377,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         });
       } catch (storageError) {
         console.error("Storage error creating quotation:", storageError);
-        console.log("QUOTATION_DATA attempted:", JSON.stringify({
-          customerId: cleanQuotationData.customerId,
-          quotationNumber: cleanQuotationData.quotationNumber,
-          projects: cleanQuotationData.projects?.length || 0,
-          status: cleanQuotationData.status
-        }, null, 2));
         throw storageError;
       }
     } catch (error) {
