@@ -301,6 +301,18 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         
         // Validate and create quotation with form data
         try {
+          console.log("FORM_DATA_RECEIVED:", JSON.stringify({
+            hasProjects: !!formData.projects,
+            projectsLength: formData.projects?.length,
+            hasCustomerId: !!formData.customerId,
+            hasSource: !!formData.source,
+            hasStatus: !!formData.status,
+            hasTotalSystemCost: formData.totalSystemCost !== undefined,
+            hasTotalCustomerPayment: formData.totalCustomerPayment !== undefined,
+            hasAdvanceAmount: formData.advanceAmount !== undefined,
+            hasBalanceAmount: formData.balanceAmount !== undefined
+          }, null, 2));
+          
           const quotationToCreate = {
             ...formData,
             quotationNumber: QuotationTemplateService.generateQuotationNumber(),
@@ -319,6 +331,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           return;
         } catch (error) {
           console.error("Error creating quotation with form data:", error);
+          console.error("Error details:", (error as any).message || String(error));
+          if ((error as any).errors) {
+            console.error("Validation errors:", JSON.stringify((error as any).errors, null, 2));
+          }
           res.status(500).json({ message: "Failed to create quotation from form data", error: String(error) });
           return;
         }
