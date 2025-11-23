@@ -308,6 +308,13 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
+      console.log("📊 COMPLETENESS ANALYSIS:");
+      console.log("canCreateQuotation:", completenessAnalysis.canCreateQuotation);
+      console.log("completenessScore:", completenessAnalysis.completenessScore);
+      console.log("missingCriticalFields:", completenessAnalysis.missingCriticalFields);
+      console.log("recommendedAction:", completenessAnalysis.recommendedAction);
+      console.log("=======================");
+      
       if (!completenessAnalysis.canCreateQuotation) {
         return res.status(400).json({ 
           message: "Site visit data incomplete for quotation creation",
@@ -343,14 +350,20 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         warnings: mappingResult.businessRuleWarnings
       });
     } catch (error: any) {
-      console.error("Error creating quotation from site visit:", error);
-      console.error("Error details:", error?.message || JSON.stringify(error));
-      if (error?.errors) {
-        console.error("Validation errors:", error.errors);
+      console.error("❌ ERROR CREATING QUOTATION FROM SITE VISIT");
+      console.error("Error type:", error?.constructor?.name);
+      console.error("Error message:", error?.message);
+      console.error("Full error:", JSON.stringify(error, null, 2));
+      
+      // Log Zod validation errors specifically
+      if (error?.issues) {
+        console.error("VALIDATION ISSUES:", JSON.stringify(error.issues, null, 2));
       }
+      
       res.status(500).json({ 
         message: "Failed to create quotation from site visit",
-        error: error?.message || "Unknown error"
+        error: error?.message || "Unknown error",
+        issues: error?.issues || undefined
       });
     }
   });
