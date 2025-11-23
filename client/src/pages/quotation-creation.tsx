@@ -5912,6 +5912,7 @@ export default function QuotationCreation() {
                               <td className="p-2 border-r">
                                 {editingBomItem === index ? (
                                   <Input
+                                    autoFocus
                                     value={item.description}
                                     onChange={(e) => {
                                       const updated = [...bomItems];
@@ -5937,6 +5938,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-right">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         type="number"
                                         value={(item as any).rate || 0}
                                         onChange={(e) => {
@@ -5960,6 +5962,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-center">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         type="number"
                                         value={item.qty}
                                         onChange={(e) => {
@@ -5990,6 +5993,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         value={item.type}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6011,6 +6015,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         value={item.volt}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6032,6 +6037,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         value={item.rating}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6053,6 +6059,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         value={item.make}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6074,6 +6081,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         type="number"
                                         value={item.qty}
                                         onChange={(e) => {
@@ -6096,6 +6104,7 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
+                                        autoFocus
                                         value={item.unit}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
