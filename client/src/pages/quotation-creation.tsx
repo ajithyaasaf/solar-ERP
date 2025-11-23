@@ -2096,6 +2096,18 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               </Select>
             </div>
           </div>
+
+          <div className="flex items-center space-x-2 mt-4">
+            <Checkbox
+              id={`offgrid-amc-${projectIndex}`}
+              checked={(project as any).amc || false}
+              onCheckedChange={(checked) => handleFieldChange('amc', checked)}
+              data-testid={`checkbox-amc-${projectIndex}`}
+            />
+            <label htmlFor={`offgrid-amc-${projectIndex}`} className="text-sm font-medium cursor-pointer">
+              Annual Maintenance Contract (AMC)
+            </label>
+          </div>
         </div>
       )}
 
