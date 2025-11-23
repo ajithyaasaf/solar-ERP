@@ -1034,14 +1034,6 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           )}
                         </div>
                       )}
-                      {siteVisit.marketingData.offGridConfig.amc !== undefined && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Annual Maintenance Contract (AMC)</p>
-                          <Badge variant={siteVisit.marketingData.offGridConfig.amc ? "default" : "secondary"}>
-                            {siteVisit.marketingData.offGridConfig.amc ? "Yes" : "No"}
-                          </Badge>
-                        </div>
-                      )}
                       <div>
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.offGridConfig.projectValue?.toLocaleString() || 'TBD'}</p>

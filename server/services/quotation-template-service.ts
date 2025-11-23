@@ -23,7 +23,7 @@ export interface BillOfMaterialsItem {
   volt: string;
   rating: string;
   make: string;
-  qty: number | string;
+  qty: number;
   unit: string;
   rate?: number;
   amount?: number;
@@ -268,13 +268,6 @@ export class QuotationTemplateService {
         scopeOfWork.customerScope.civilWork.push("1) Civil work:");
         scopeOfWork.customerScope.civilWork.push("   • Earth pit Construction as per spec (for Structure)");
         scopeOfWork.customerScope.civilWork.push("   • Battery stand and inverter installation base to be provided by Customer");
-      }
-
-      // Annual Maintenance Contract
-      if ((project as any).amc) {
-        scopeOfWork.electricalWork.push("2) Annual Maintenance Contract (AMC):");
-        scopeOfWork.electricalWork.push("   • We give 1 year of free service, which includes 3 quarterly services.");
-        scopeOfWork.electricalWork.push("   • We offer annual maintenance contract starting from the second year of installation on chargeable basis.");
       }
     } else if (project.projectType === 'hybrid') {
       // Electrical Work Scope

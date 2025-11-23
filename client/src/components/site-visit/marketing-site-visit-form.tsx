@@ -108,7 +108,6 @@ interface OffGridConfig extends OnGridConfig {
   batteryStands?: string;
   inverterVolt?: string;
   inverterKVA?: string;
-  amc?: boolean;
   // Off-grid doesn't have net meter scope
 }
 
@@ -1591,15 +1590,6 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       />
                     </div>
                   )}
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="offgrid-amc"
-                      checked={formData.offGridConfig.amc || false}
-                      onCheckedChange={(checked) => updateConfig('offGridConfig', { amc: checked })}
-                    />
-                    <Label htmlFor="offgrid-amc">Annual Maintenance Contract (AMC)</Label>
-                  </div>
                 </div>
 
                 <div>

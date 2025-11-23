@@ -305,26 +305,8 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
-      console.log("📍 SITE VISIT DATA:");
-      console.log("Department:", siteVisit.department);
-      console.log("Marketing data projectType:", siteVisit.marketingData?.projectType);
-      console.log("Customer name:", siteVisit.customer?.name);
-      console.log("Customer mobile:", siteVisit.customer?.mobile);
-      console.log("Customer address:", siteVisit.customer?.address);
-      console.log("OnGridConfig present:", !!siteVisit.marketingData?.onGridConfig);
-      console.log("OffGridConfig present:", !!siteVisit.marketingData?.offGridConfig);
-      console.log("HybridConfig present:", !!siteVisit.marketingData?.hybridConfig);
-      console.log("=============================");
-
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
-      
-      console.log("📊 COMPLETENESS ANALYSIS:");
-      console.log("canCreateQuotation:", completenessAnalysis.canCreateQuotation);
-      console.log("completenessScore:", completenessAnalysis.completenessScore);
-      console.log("missingCriticalFields:", completenessAnalysis.missingCriticalFields);
-      console.log("recommendedAction:", completenessAnalysis.recommendedAction);
-      console.log("=======================");
       
       if (!completenessAnalysis.canCreateQuotation) {
         return res.status(400).json({ 
@@ -347,12 +329,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         siteVisitMapping: mappingResult.mappingMetadata
       };
 
-      console.log("=== QUOTATION DATA TO VALIDATE ===");
-      console.log("QuotationData keys:", Object.keys(quotationData));
-      console.log("Projects:", JSON.stringify(quotationData.projects, null, 2));
-      console.log("CustomerId:", quotationData.customerId);
-      console.log("====================================");
-
       const quotation = await storage.createQuotation(quotationData);
       
       res.status(201).json({
@@ -360,22 +336,9 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         mappingAnalysis: completenessAnalysis,
         warnings: mappingResult.businessRuleWarnings
       });
-    } catch (error: any) {
-      console.error("❌ ERROR CREATING QUOTATION FROM SITE VISIT");
-      console.error("Error type:", error?.constructor?.name);
-      console.error("Error message:", error?.message);
-      console.error("Full error:", JSON.stringify(error, null, 2));
-      
-      // Log Zod validation errors specifically
-      if (error?.issues) {
-        console.error("VALIDATION ISSUES:", JSON.stringify(error.issues, null, 2));
-      }
-      
-      res.status(500).json({ 
-        message: "Failed to create quotation from site visit",
-        error: error?.message || "Unknown error",
-        issues: error?.issues || undefined
-      });
+    } catch (error) {
+      console.error("Error creating quotation from site visit:", error);
+      res.status(500).json({ message: "Failed to create quotation from site visit" });
     }
   });
 

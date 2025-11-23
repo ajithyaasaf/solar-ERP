@@ -393,8 +393,7 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
   batteryCount: z.number().min(1),
   batteryStands: z.string().optional(),
   inverterVolt: z.string().optional(), // Changed to string to allow custom values
-  inverterKVA: z.string().optional(), // For off-grid systems, inverters are rated in KVA
-  amc: z.boolean().default(false) // Annual Maintenance Contract
+  inverterKVA: z.string().optional() // For off-grid systems, inverters are rated in KVA
 }).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
 export const hybridConfigSchema = offGridConfigSchema.extend({
@@ -1562,7 +1561,6 @@ export const quotationOffGridProjectSchema = z.object({
     type: z.enum(monoRailOptions).optional()
   }).optional(),
   civilWorkScope: z.enum(workScopeOptions).optional(),
-  amc: z.boolean().default(false), // Annual Maintenance Contract
   backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for off-grid systems
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
@@ -1618,7 +1616,6 @@ export const quotationHybridProjectSchema = z.object({
   civilWorkScope: z.enum(workScopeOptions).optional(),
   electricalWorkScope: z.enum(workScopeOptions).optional(),
   netMeterScope: z.enum(workScopeOptions).optional(),
-  amc: z.boolean().default(false), // Annual Maintenance Contract
   backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for hybrid systems
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
