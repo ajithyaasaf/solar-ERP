@@ -393,7 +393,8 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
   batteryCount: z.number().min(1),
   batteryStands: z.string().optional(),
   inverterVolt: z.string().optional(), // Changed to string to allow custom values
-  inverterKVA: z.string().optional() // For off-grid systems, inverters are rated in KVA
+  inverterKVA: z.string().optional(), // For off-grid systems, inverters are rated in KVA
+  amc: z.boolean().default(false) // Annual Maintenance Contract
 }).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
 export const hybridConfigSchema = offGridConfigSchema.extend({
