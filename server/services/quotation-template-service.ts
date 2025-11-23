@@ -113,10 +113,10 @@ export class QuotationTemplateService {
     name: "Prakash Green Energy",
     logo: "/assets/company-logo.png",
     contact: {
-      phone: ["6374501500", "9585557516", "8925465011"],
+      phone: ["6374901500", "9585557516", "8925840511"],
       email: "support@prakashgreenenergy.com",
       website: "www.prakashgreenenergy.com",
-      address: "338ECOP5D95228, Madurai, Tamilnadu, India - 625 011"
+      address: "14 R, N.S. Konar Street, Jaihindpuram, Madurai, Tamilnadu, India - 625 011"
     }
   };
 
