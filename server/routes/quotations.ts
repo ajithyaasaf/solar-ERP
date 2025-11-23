@@ -166,11 +166,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Quotation not found" });
       }
 
-      const updatedQuotation = await storage.updateQuotation(req.params.id, {
-        ...req.body,
-        updatedBy: user.uid,
-        updatedAt: new Date()
-      });
+      const updatedQuotation = await storage.updateQuotation(req.params.id, req.body, user.uid);
 
       res.json(updatedQuotation);
     } catch (error) {
@@ -308,7 +304,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
+      console.log("QUOTATION_CREATE_DEBUG: Completeness analysis:", JSON.stringify(completenessAnalysis, null, 2));
+      
       if (!completenessAnalysis.canCreateQuotation) {
+        console.log("QUOTATION_CREATE_DEBUG: Cannot create quotation. Missing fields:", completenessAnalysis.missingCriticalFields);
         return res.status(400).json({ 
           message: "Site visit data incomplete for quotation creation",
           analysis: completenessAnalysis
@@ -318,27 +317,55 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Map site visit data to quotation
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
       
-      // Create quotation with mapped data
+      console.log("QUOTATION_CREATE_DEBUG: Mapping result quotationData:", JSON.stringify({
+        customerId: mappingResult.quotationData.customerId,
+        status: mappingResult.quotationData.status,
+        projects: mappingResult.quotationData.projects?.length || 0,
+        totalSystemCost: mappingResult.quotationData.totalSystemCost,
+        createdAt: mappingResult.quotationData.createdAt,
+        hasProjects: !!mappingResult.quotationData.projects
+      }, null, 2));
+      
+      // Create quotation with mapped data - ensure all required fields are present
+      // Note: createdAt is added automatically by storage.createQuotation, so don't include it here
       const quotationData = {
         ...mappingResult.quotationData,
-        createdBy: user.uid,
+        customerId: mappingResult.quotationData.customerId || 'temp_customer_' + Date.now(),
         quotationNumber: QuotationTemplateService.generateQuotationNumber(),
         source: 'site_visit' as const,
         status: mappingResult.quotationData.status || 'draft' as const,
-        customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || '',
+        projects: mappingResult.quotationData.projects || [],
+        totalSystemCost: mappingResult.quotationData.totalSystemCost || 0,
+        totalCustomerPayment: mappingResult.quotationData.totalCustomerPayment || 0,
+        advanceAmount: mappingResult.quotationData.advanceAmount || 0,
+        balanceAmount: mappingResult.quotationData.balanceAmount || 0,
         siteVisitMapping: mappingResult.mappingMetadata
       };
-
-      const quotation = await storage.createQuotation(quotationData);
       
-      res.status(201).json({
-        quotation,
-        mappingAnalysis: completenessAnalysis,
-        warnings: mappingResult.businessRuleWarnings
-      });
+      // Remove fields that shouldn't be in insertQuotationSchema
+      const { createdAt, ...cleanQuotationData } = quotationData;
+
+      try {
+        const quotation = await storage.createQuotation(cleanQuotationData);
+        
+        res.status(201).json({
+          quotation,
+          mappingAnalysis: completenessAnalysis,
+          warnings: mappingResult.businessRuleWarnings
+        });
+      } catch (storageError) {
+        console.error("Storage error creating quotation:", storageError);
+        console.log("QUOTATION_DATA attempted:", JSON.stringify({
+          customerId: cleanQuotationData.customerId,
+          quotationNumber: cleanQuotationData.quotationNumber,
+          projects: cleanQuotationData.projects?.length || 0,
+          status: cleanQuotationData.status
+        }, null, 2));
+        throw storageError;
+      }
     } catch (error) {
       console.error("Error creating quotation from site visit:", error);
-      res.status(500).json({ message: "Failed to create quotation from site visit" });
+      res.status(500).json({ message: "Failed to create quotation from site visit", error: String(error) });
     }
   });
 
