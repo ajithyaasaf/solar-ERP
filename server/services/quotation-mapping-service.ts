@@ -841,6 +841,7 @@ export class SiteVisitDataMapper {
       electricalWorkScope: config.electricalWorkScope,
       netMeterScope: config.netMeterScope,
       amc: config.amc || false,
+      backupSolutions: config.backupSolutions,
       projectValue,
       gstPercentage,
       gstAmount,
