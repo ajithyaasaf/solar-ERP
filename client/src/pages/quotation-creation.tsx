@@ -3404,6 +3404,11 @@ export default function QuotationCreation() {
       paymentTerms: "advance_90_balance_10",
       deliveryTimeframe: "2_3_weeks",
       termsTemplate: "standard",
+      includeAMC: false,
+      amcDurationYears: 1,
+      amcCostPerYear: 0,
+      amcTotalCost: 0,
+      amcCoverage: ["Parts replacement", "Labor", "Annual service visits", "Emergency support"],
       status: "draft",
       followUps: [],
       // Initialize critical business fields with defaults
@@ -5400,6 +5405,91 @@ export default function QuotationCreation() {
                       <div className="text-sm text-muted-foreground">
                         {100 - (form.watch("advancePaymentPercentage") || 0)}% Immediately after completion of work
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Annual Maintenance Contract */}
+                  <div className="space-y-4 lg:col-span-2 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <h4 className="font-medium text-base flex items-center gap-2">
+                      <Wrench className="h-4 w-4" />
+                      Annual Maintenance Contract (AMC)
+                    </h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="includeAMC"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormControl>
+                              <Checkbox 
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-include-amc"
+                              />
+                            </FormControl>
+                            <FormLabel className="cursor-pointer">Include AMC</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      {form.watch("includeAMC") && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="amcDurationYears"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Duration (Years)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min="1"
+                                    max="10"
+                                    {...field}
+                                    onChange={(e) => {
+                                      const duration = parseInt(e.target.value) || 1;
+                                      field.onChange(duration);
+                                      const costPerYear = form.watch("amcCostPerYear") || 0;
+                                      form.setValue("amcTotalCost", duration * costPerYear);
+                                    }}
+                                    data-testid="input-amc-duration"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="amcCostPerYear"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Cost per Year (₹)</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min="0"
+                                    {...field}
+                                    onChange={(e) => {
+                                      const cost = parseFloat(e.target.value) || 0;
+                                      field.onChange(cost);
+                                      const duration = form.watch("amcDurationYears") || 1;
+                                      form.setValue("amcTotalCost", duration * cost);
+                                    }}
+                                    data-testid="input-amc-cost"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Total AMC Cost (₹)</label>
+                            <div className="p-2 bg-white dark:bg-slate-900 rounded-md font-bold text-primary border">
+                              ₹{form.watch("amcTotalCost")?.toLocaleString() || "0"}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
