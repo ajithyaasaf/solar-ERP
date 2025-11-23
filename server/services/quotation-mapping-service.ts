@@ -186,6 +186,18 @@ export class DataCompletenessAnalyzer {
     const hasBasicCustomerInfo = siteVisit.customer?.name && siteVisit.customer?.mobile && siteVisit.customer?.address;
     const hasAnyCustomerInfo = siteVisit.customer?.name || siteVisit.customer?.mobile; // At least name or mobile
     
+    // Debug logging
+    console.log("COMPLETENESS_DEBUG:", {
+      department: siteVisit.department,
+      hasValidMarketingConfig,
+      hasBasicCustomerInfo,
+      hasAnyCustomerInfo,
+      customer: siteVisit.customer ? { name: siteVisit.customer.name, mobile: siteVisit.customer.mobile, address: siteVisit.customer.address } : null,
+      visitOutcome: siteVisit.visitOutcome,
+      status: siteVisit.status,
+      missingCritical: missing.critical.length
+    });
+    
     const canCreateQuotation = (
       // Traditional strict path
       (missing.critical.length === 0 && 
@@ -194,7 +206,9 @@ export class DataCompletenessAnalyzer {
       // Marketing flexible path - allow when marketing data is complete
       (hasValidMarketingConfig && hasBasicCustomerInfo) ||
       // Partial data path - allow even with minimal customer info (let user complete the rest)
-      (hasAnyCustomerInfo && siteVisit.department === 'marketing')
+      (hasAnyCustomerInfo && siteVisit.department === 'marketing') ||
+      // Ultra-flexible path for marketing department - just need department
+      (siteVisit.department === 'marketing' && siteVisit.marketingData)
     );
 
     // Determine recommended action - be more flexible

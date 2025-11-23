@@ -166,11 +166,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Quotation not found" });
       }
 
-      const updatedQuotation = await storage.updateQuotation(req.params.id, {
-        ...req.body,
-        updatedBy: user.uid,
-        updatedAt: new Date()
-      });
+      const updatedQuotation = await storage.updateQuotation(req.params.id, req.body, user.uid);
 
       res.json(updatedQuotation);
     } catch (error) {
@@ -353,11 +349,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       try {
         quotationData = {
           ...mappingResult.quotationData,
-          createdBy: user.uid,
           quotationNumber: QuotationTemplateService.generateQuotationNumber(),
           source: 'site_visit' as const,
           status: mappingResult.quotationData.status || 'draft' as const,
-          customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || '',
+          customerId: mappingResult.quotationData.customerId || '',
           siteVisitMapping: mappingResult.mappingMetadata
         };
 
