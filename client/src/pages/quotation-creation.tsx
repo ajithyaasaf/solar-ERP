@@ -886,6 +886,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           batteryStands: "1",
           electricalWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
+          amc: false,
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
@@ -923,6 +924,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           batteryStands: "1",
           electricalWorkScope: "customer_scope",
           netMeterScope: "customer_scope",
+          amc: false,
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
