@@ -293,6 +293,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       // Check if user provided form data (modified projects)
       const formData = req.body;
+      console.log("ENDPOINT_DEBUG: req.body keys:", Object.keys(formData || {}));
+      console.log("ENDPOINT_DEBUG: Has projects?", !!formData?.projects);
+      console.log("ENDPOINT_DEBUG: Projects length:", formData?.projects?.length || 0);
+      
       const hasFormData = formData && formData.projects && formData.projects.length > 0;
       
       if (hasFormData) {
