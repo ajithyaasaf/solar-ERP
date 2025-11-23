@@ -66,7 +66,8 @@ import {
   Edit2,
   Save,
   X,
-  Table
+  Table,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -3286,6 +3287,7 @@ export default function QuotationCreation() {
   const [bomItems, setBomItems] = useState<any[]>([]);
   const [isFetchingBom, setIsFetchingBom] = useState(false);
   const [editingBomItem, setEditingBomItem] = useState<number | null>(null);
+  const [originalBomItem, setOriginalBomItem] = useState<any | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
   // State for editable scope of work sections
@@ -5938,7 +5940,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-right">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         type="number"
                                         value={(item as any).rate || 0}
                                         onChange={(e) => {
@@ -5962,7 +5963,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-center">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         type="number"
                                         value={item.qty}
                                         onChange={(e) => {
@@ -5993,7 +5993,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         value={item.type}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6015,7 +6014,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         value={item.volt}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6037,7 +6035,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         value={item.rating}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6059,7 +6056,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         value={item.make}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6081,7 +6077,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         type="number"
                                         value={item.qty}
                                         onChange={(e) => {
@@ -6104,7 +6099,6 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        autoFocus
                                         value={item.unit}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
@@ -6135,8 +6129,13 @@ export default function QuotationCreation() {
                                         type="button"
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => setEditingBomItem(null)}
+                                        onClick={() => {
+                                          setEditingBomItem(null);
+                                          setOriginalBomItem(null);
+                                        }}
                                         className="h-7 w-7 p-0"
+                                        title="Save changes"
+                                        data-testid="button-save-bom"
                                       >
                                         <Save className="h-4 w-4 text-green-600" />
                                       </Button>
@@ -6145,24 +6144,69 @@ export default function QuotationCreation() {
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => {
+                                          // Restore original values
+                                          if (originalBomItem) {
+                                            const restored = [...bomItems];
+                                            restored[index] = { ...originalBomItem };
+                                            setBomItems(restored);
+                                          }
                                           setEditingBomItem(null);
-                                          // Reload BOM to cancel changes (you can store original state if needed)
+                                          setOriginalBomItem(null);
                                         }}
                                         className="h-7 w-7 p-0"
+                                        title="Cancel changes"
+                                        data-testid="button-cancel-bom"
                                       >
                                         <X className="h-4 w-4 text-red-600" />
                                       </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const updated = bomItems.filter((_, i) => i !== index);
+                                          setBomItems(updated);
+                                          setEditingBomItem(null);
+                                          setOriginalBomItem(null);
+                                        }}
+                                        className="h-7 w-7 p-0"
+                                        title="Delete row"
+                                        data-testid="button-delete-bom"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-600" />
+                                      </Button>
                                     </>
                                   ) : (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => setEditingBomItem(index)}
-                                      className="h-7 w-7 p-0"
-                                    >
-                                      <Edit2 className="h-4 w-4" />
-                                    </Button>
+                                    <>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setOriginalBomItem({ ...item });
+                                          setEditingBomItem(index);
+                                        }}
+                                        className="h-7 w-7 p-0"
+                                        title="Edit row"
+                                        data-testid="button-edit-bom"
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          const updated = bomItems.filter((_, i) => i !== index);
+                                          setBomItems(updated);
+                                        }}
+                                        className="h-7 w-7 p-0"
+                                        title="Delete row"
+                                        data-testid="button-delete-bom-view"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-red-600" />
+                                      </Button>
+                                    </>
                                   )}
                                 </div>
                               </td>
