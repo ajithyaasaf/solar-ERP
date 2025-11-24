@@ -289,9 +289,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
-    console.log("POST /api/quotations/from-site-visit - Body keys:", Object.keys(req.body || {}));
-    console.log("POST /api/quotations/from-site-visit - Has projects?", !!req.body?.projects);
-    
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
@@ -311,9 +308,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       const hasFormProjects = req.body && req.body.projects && Array.isArray(req.body.projects) && req.body.projects.length > 0;
       
       if (hasFormProjects) {
-        console.log("Using user form data with", req.body.projects.length, "projects");
-        console.log("First project details:", JSON.stringify(req.body.projects[0], null, 2).substring(0, 500));
-        
         try {
           // Update customer with any overrides if provided
           if (req.body.customerData && req.body.customerId) {
@@ -369,22 +363,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       res.status(201).json({ quotation });
       
     } catch (error) {
-      console.error("=== QUOTATION CREATION FAILED ===");
-      console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
-      console.error("Error message:", (error as any).message);
-      if ((error as any).errors) {
-        console.error("Zod validation errors:");
-        (error as any).errors.forEach((e: any, i: number) => {
-          console.error(`  [${i}] Path: ${e.path?.join('.')} | Code: ${e.code} | Message: ${e.message}`);
-        });
-      }
-      console.error("Full error:", JSON.stringify(error, null, 2));
-      console.error("============================");
-      
+      console.error("Quotation creation error:", (error as any).message, (error as any).errors);
       res.status(500).json({ 
         message: "Failed to create quotation",
-        error: (error as any).message,
-        details: (error as any).errors
+        error: (error as any).message
       });
     }
   });
