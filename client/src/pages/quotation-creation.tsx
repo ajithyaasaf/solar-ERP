@@ -114,7 +114,7 @@ const quotationFormSchema = insertQuotationSchema.omit({
   siteVisitMapping: siteVisitMappingSchema.optional(),
   // Add temporary customer data fields for site visit forms with email made optional
   customerData: insertCustomerSchema.omit({ email: true }).extend({
-    email: z.string().email().optional() // Make email optional for front-end forms
+    email: z.string().email().or(z.literal('')).optional() // Allow empty string or valid email
   }).optional(),
   // Add GST-related total fields
   totalGSTAmount: z.number().min(0).default(0),
