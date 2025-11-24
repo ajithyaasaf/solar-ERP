@@ -23,7 +23,7 @@ export interface BillOfMaterialsItem {
   volt: string;
   rating: string;
   make: string;
-  qty: number;
+  qty: string | number; // Can be "-" (user to decide qty) or a number
   unit: string;
   rate?: number;
   amount?: number;
