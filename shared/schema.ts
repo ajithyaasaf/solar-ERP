@@ -1562,6 +1562,7 @@ export const quotationOffGridProjectSchema = z.object({
   }).optional(),
   civilWorkScope: z.enum(workScopeOptions).optional(),
   backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for off-grid systems
+  amcIncluded: z.boolean().default(false), // Annual Maintenance Contract checkbox
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),

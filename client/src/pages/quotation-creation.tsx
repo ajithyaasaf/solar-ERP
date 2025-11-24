@@ -2097,6 +2097,21 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               </Select>
             </div>
           </div>
+
+          {/* AMC Checkbox */}
+          <div className="mt-4 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded">
+            <input
+              type="checkbox"
+              id={`checkbox-amc-${projectIndex}`}
+              checked={project.amcIncluded ?? false}
+              onChange={(e) => handleFieldChange('amcIncluded', e.target.checked)}
+              data-testid={`checkbox-amc-${projectIndex}`}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+            />
+            <label htmlFor={`checkbox-amc-${projectIndex}`} className="text-sm font-medium text-blue-900 dark:text-blue-100 cursor-pointer flex-1">
+              ✓ Include Annual Maintenance Contract (AMC)
+            </label>
+          </div>
         </div>
       )}
 

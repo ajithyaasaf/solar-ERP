@@ -269,6 +269,14 @@ export class QuotationTemplateService {
         scopeOfWork.customerScope.civilWork.push("   • Earth pit Construction as per spec (for Structure)");
         scopeOfWork.customerScope.civilWork.push("   • Battery stand and inverter installation base to be provided by Customer");
       }
+
+      // Add AMC text if included
+      const amcIncluded = (project as any).amcIncluded || false;
+      if (amcIncluded) {
+        scopeOfWork.structure.push("2) Annual Maintenance:");
+        scopeOfWork.structure.push("   • We give 1 year of free service, which includes 3 quarterly services.");
+        scopeOfWork.structure.push("   • We offer annual maintenance contract starting from the second year of installation as per customer choice on chargeable basis.");
+      }
     } else if (project.projectType === 'hybrid') {
       // Electrical Work Scope
       const electricalWorkScope = (project as any).electricalWorkScope || 'customer_scope';
