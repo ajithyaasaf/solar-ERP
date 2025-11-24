@@ -289,6 +289,22 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
+    console.log("\n=== QUOTATION SUBMISSION DEBUG ===");
+    console.log("Has projects in body:", !!req.body?.projects);
+    if (req.body?.projects?.[0]) {
+      const proj = req.body.projects[0];
+      console.log("First project type:", proj.projectType);
+      console.log("First project keys:", Object.keys(proj).sort());
+      console.log("systemKW:", proj.systemKW);
+      console.log("panelCount:", proj.panelCount);
+      console.log("projectValue:", proj.projectValue);
+      console.log("customerPayment:", proj.customerPayment);
+      console.log("batteryBrand:", proj.batteryBrand);
+      console.log("voltage:", proj.voltage);
+      console.log("batteryCount:", proj.batteryCount);
+      console.log("inverterPhase:", proj.inverterPhase);
+    }
+    console.log("===================================\n");
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
