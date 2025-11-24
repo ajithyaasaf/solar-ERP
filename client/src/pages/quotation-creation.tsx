@@ -4118,11 +4118,27 @@ export default function QuotationCreation() {
         const hasValidProjects = values.projects.every((project: any) => {
           // For solar projects (on_grid, off_grid, hybrid)
           if (['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
-            return (
+            // Base validation for all solar projects
+            const baseSolarValid = (
               project.panelCount > 0 &&
               project.projectValue > 0 &&
               values.customerData?.propertyType // Property type is required for subsidy calculation
             );
+            
+            // Additional validation for off-grid projects
+            if (project.projectType === 'off_grid') {
+              // Ensure all required off-grid fields are present
+              const offGridValid = (
+                project.batteryBrand &&
+                project.voltage !== undefined &&
+                project.voltage !== null &&
+                project.batteryCount > 0 &&
+                project.inverterPhase
+              );
+              return baseSolarValid && offGridValid;
+            }
+            
+            return baseSolarValid;
           }
           // For water_heater and water_pump, just check projectValue
           return project.projectValue > 0;
