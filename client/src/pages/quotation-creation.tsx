@@ -1377,15 +1377,20 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   const handleFieldChange = (field: string, value: any) => {
     // If user is changing projectType to off_grid, initialize all required off-grid fields
     if (field === 'projectType' && value === 'off_grid') {
+      // Calculate systemKW from panel data
+      const panelWatts = parseInt(project.panelWatts || '455');
+      const panelCount = project.panelCount || 6;
+      const systemKW = (panelWatts * panelCount) / 1000; // e.g., (455 * 6) / 1000 = 2.73
+      
       const defaults = {
         projectType: value,
         // Initialize PANEL fields with defaults (required for all solar projects)
         solarPanelMake: project.solarPanelMake || ['loom_solar'],
         panelWatts: project.panelWatts || '455',
         panelType: project.panelType || 'bifacial',
-        panelCount: project.panelCount || 6,
+        panelCount: panelCount,
         dcrPanelCount: project.dcrPanelCount || 0,
-        nonDcrPanelCount: project.nonDcrPanelCount || 6,
+        nonDcrPanelCount: project.nonDcrPanelCount || panelCount,
         // Initialize INVERTER fields with defaults
         inverterMake: project.inverterMake || ['loom_solar'],
         inverterKW: project.inverterKW || 3,
@@ -1402,6 +1407,9 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         // Initialize structure fields
         floor: project.floor || '0',
         structureType: project.structureType || 'gp_structure',
+        // **CRITICAL**: Initialize required fields for schema validation
+        systemKW: systemKW,  // REQUIRED: (panelWatts * panelCount) / 1000
+        pricePerKW: project.pricePerKW || 68000,  // REQUIRED: base rate per kW
         // Set minimum pricing to allow form submission
         projectValue: project.projectValue || 100000,
         basePrice: project.basePrice || 100000,
