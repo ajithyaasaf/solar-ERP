@@ -2138,20 +2138,52 @@ export class FirestoreStorage implements IStorage {
   async createQuotation(
     data: z.infer<typeof insertQuotationSchema>,
   ): Promise<Quotation> {
-    const validatedData = insertQuotationSchema.parse(data);
-    const quotationsRef = this.db.collection("quotations");
-    
-    const quotationDoc = await quotationsRef.add({
-      ...validatedData,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
-    
-    return {
-      id: quotationDoc.id,
-      ...validatedData,
-      createdAt: new Date(),
-    } as Quotation;
+    try {
+      console.log("\n\n🎯🎯🎯 STORAGE.CREATE_QUOTATION CALLED 🎯🎯🎯");
+      console.log("📥 Input data keys:", Object.keys(data));
+      console.log("📥 Full input data:", JSON.stringify(data, null, 2));
+      
+      console.log("\n🔍 Starting schema validation...");
+      const validatedData = insertQuotationSchema.parse(data);
+      
+      console.log("✅ Schema validation passed!");
+      console.log("📤 Validated data keys:", Object.keys(validatedData));
+      console.log("📤 Validated data:", JSON.stringify(validatedData, null, 2));
+      
+      const quotationsRef = this.db.collection("quotations");
+      
+      const quotationDoc = await quotationsRef.add({
+        ...validatedData,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+      
+      console.log("✅ Quotation saved to Firestore:", quotationDoc.id);
+      
+      return {
+        id: quotationDoc.id,
+        ...validatedData,
+        createdAt: new Date(),
+      } as Quotation;
+    } catch (error) {
+      console.error("\n❌ ERROR IN STORAGE.CREATE_QUOTATION ❌");
+      console.error("Error type:", error instanceof z.ZodError ? "ZodError" : error.constructor.name);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      
+      if (error instanceof z.ZodError) {
+        console.error("\n🔴 ZOD VALIDATION ERRORS DETAILED:");
+        error.errors.forEach((err, idx) => {
+          console.error(`\n❌ ERROR ${idx + 1}:`);
+          console.error(`   Path: ${err.path.join(" → ")}`);
+          console.error(`   Code: ${err.code}`);
+          console.error(`   Message: ${err.message}`);
+          console.error(`   Full error object:`, JSON.stringify(err, null, 2));
+        });
+      }
+      
+      console.error("Full error stack:", error instanceof Error ? error.stack : "No stack");
+      throw error;
+    }
   }
 
   async updateQuotation(
