@@ -108,6 +108,7 @@ interface OffGridConfig extends OnGridConfig {
   batteryStands?: string;
   inverterVolt?: string;
   inverterKVA?: string;
+  amcIncluded?: boolean; // Annual Maintenance Contract checkbox
   // Off-grid doesn't have net meter scope
 }
 
@@ -294,7 +295,8 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
         monoRail: {
           type: 'mini_rail'
         },
-        civilWorkScope: 'customer_scope'
+        civilWorkScope: 'customer_scope',
+        amcIncluded: false
       } : undefined,
       hybridConfig: projectType === 'hybrid' ? {
         solarPanelMake: ['premier'],
@@ -1590,6 +1592,18 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                       />
                     </div>
                   )}
+                </div>
+
+                <div className="mt-4 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded">
+                  <Checkbox
+                    id="offgrid-amc-checkbox"
+                    checked={formData.offGridConfig?.amcIncluded ?? false}
+                    onCheckedChange={(checked) => updateConfig('offGridConfig', { amcIncluded: checked })}
+                    data-testid="checkbox-offgrid-amc"
+                  />
+                  <Label htmlFor="offgrid-amc-checkbox" className="text-sm font-medium text-blue-900 dark:text-blue-100 cursor-pointer flex-1">
+                    ✓ Include Annual Maintenance Contract (AMC)
+                  </Label>
                 </div>
 
                 <div>

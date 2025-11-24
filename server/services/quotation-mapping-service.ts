@@ -764,6 +764,7 @@ export class SiteVisitDataMapper {
       gpStructure: config.gpStructure,
       monoRail: config.monoRail,
       civilWorkScope: config.civilWorkScope,
+      amcIncluded: config.amcIncluded || false, // Annual Maintenance Contract
       projectValue,
       gstPercentage,
       gstAmount,

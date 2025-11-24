@@ -1038,6 +1038,14 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Project Value</p>
                         <p className="font-medium text-green-600">₹{siteVisit.marketingData.offGridConfig.projectValue?.toLocaleString() || 'TBD'}</p>
                       </div>
+                      {siteVisit.marketingData.offGridConfig.amcIncluded !== undefined && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">Annual Maintenance Contract</p>
+                          <Badge variant={siteVisit.marketingData.offGridConfig.amcIncluded ? "default" : "secondary"}>
+                            {siteVisit.marketingData.offGridConfig.amcIncluded ? "Included" : "Not Included"}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
 
                     {/* Structure Configuration */}
