@@ -442,6 +442,16 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         });
       }
 
+      // Convert "-" qty to 0 in customBillOfMaterials before saving (Installation & Commissioning)
+      if (quotationData.customBillOfMaterials && Array.isArray(quotationData.customBillOfMaterials)) {
+        console.log("🔄 [FROM-SITE-VISIT] Converting '-' qty values to 0 in customBillOfMaterials...");
+        quotationData.customBillOfMaterials = quotationData.customBillOfMaterials.map((item: any) => ({
+          ...item,
+          qty: item.qty === "-" ? 0 : item.qty
+        }));
+        console.log("✅ [FROM-SITE-VISIT] Conversion complete. Updated BOM:", JSON.stringify(quotationData.customBillOfMaterials, null, 2));
+      }
+
       console.log("\n🔍 Starting schema validation...");
       const quotation = await storage.createQuotation(quotationData);
       
