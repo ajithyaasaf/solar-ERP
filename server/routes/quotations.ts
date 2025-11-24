@@ -290,6 +290,11 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
     try {
+      console.log("🚀 ENDPOINT HIT - /api/quotations/from-site-visit/:siteVisitId");
+      console.log("📦 req.body keys:", Object.keys(req.body || {}));
+      console.log("📦 req.body.projects present?", !!req.body?.projects);
+      console.log("📦 Full req.body:", JSON.stringify(req.body).substring(0, 500));
+      
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
