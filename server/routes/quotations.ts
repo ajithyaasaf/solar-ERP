@@ -329,6 +329,11 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
     try {
+      console.log("\n🟢🟢🟢 FROM SITE VISIT QUOTATION CREATION 🟢🟢🟢");
+      console.log("⏰ Timestamp:", new Date().toISOString());
+      console.log("Site Visit ID:", req.params.siteVisitId);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
@@ -340,12 +345,15 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       const { siteVisitService } = await import("../services/site-visit-service");
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
       
+      console.log("📍 Site visit retrieved:", siteVisit?.id);
+      
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
+      console.log("📊 Completeness analysis:", JSON.stringify(completenessAnalysis, null, 2));
       
       if (!completenessAnalysis.canCreateQuotation) {
         return res.status(400).json({ 
@@ -355,7 +363,9 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       }
 
       // Map site visit data to quotation
+      console.log("🔄 Starting mapping from site visit to quotation...");
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
+      console.log("✅ Mapping complete. Quotation data:", JSON.stringify(mappingResult.quotationData, null, 2));
       
       // Create quotation with mapped data
       const quotationData = {
@@ -368,16 +378,55 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         siteVisitMapping: mappingResult.mappingMetadata
       };
 
+      console.log("📋 Final quotation data to validate:", JSON.stringify(quotationData, null, 2));
+      
+      // Log each project in detail
+      if (quotationData.projects && Array.isArray(quotationData.projects)) {
+        console.log(`\n📦 PROJECTS IN QUOTATION DATA: ${quotationData.projects.length} projects`);
+        quotationData.projects.forEach((project: any, idx: number) => {
+          console.log(`\n📦 PROJECT ${idx}:`);
+          console.log(`  Type: ${project.projectType}`);
+          console.log(`  Full data:`, JSON.stringify(project, null, 2));
+        });
+      }
+
+      console.log("\n🔍 Starting schema validation...");
       const quotation = await storage.createQuotation(quotationData);
       
+      console.log("✅ Quotation created successfully:", quotation.id);
       res.status(201).json({
         quotation,
         mappingAnalysis: completenessAnalysis,
         warnings: mappingResult.businessRuleWarnings
       });
     } catch (error) {
-      console.error("Error creating quotation from site visit:", error);
-      res.status(500).json({ message: "Failed to create quotation from site visit" });
+      console.error("\n❌❌❌ ERROR IN FROM SITE VISIT QUOTATION CREATION ❌❌❌");
+      console.error("Error type:", error instanceof z.ZodError ? "ZodError" : error.constructor.name);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      
+      if (error instanceof z.ZodError) {
+        console.error("\n🔴 ZOD VALIDATION ERRORS:");
+        error.errors.forEach((err, idx) => {
+          console.error(`\nError ${idx}:`);
+          console.error(`  Path: ${err.path.join(" > ")}`);
+          console.error(`  Code: ${err.code}`);
+          console.error(`  Message: ${err.message}`);
+          console.error(`  Full error:`, JSON.stringify(err, null, 2));
+        });
+        return res.status(400).json({ 
+          message: "Validation error",
+          errors: error.errors,
+          errorDetails: error.errors.map((e: any) => ({
+            path: e.path.join(" > "),
+            code: e.code,
+            message: e.message
+          }))
+        });
+      }
+      
+      console.error("Full error object:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+      res.status(500).json({ message: "Failed to create quotation from site visit", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
