@@ -158,6 +158,16 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       console.log("✅ Schema validation PASSED");
       console.log("Validated quotation data:", JSON.stringify(quotationData, null, 2));
 
+      // Convert "-" qty to 0 in customBillOfMaterials before saving (Installation & Commissioning)
+      if (quotationData.customBillOfMaterials && Array.isArray(quotationData.customBillOfMaterials)) {
+        console.log("🔄 Converting '-' qty values to 0 in customBillOfMaterials...");
+        quotationData.customBillOfMaterials = quotationData.customBillOfMaterials.map((item: any) => ({
+          ...item,
+          qty: item.qty === "-" ? 0 : item.qty
+        }));
+        console.log("✅ Conversion complete. Updated BOM:", JSON.stringify(quotationData.customBillOfMaterials, null, 2));
+      }
+
       const quotation = await storage.createQuotation(quotationData);
       
       console.log("✅ Quotation created successfully:", quotation.id);

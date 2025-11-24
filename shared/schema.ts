@@ -1760,7 +1760,7 @@ export const insertQuotationSchema = z.object({
     volt: z.string(),
     rating: z.string(),
     make: z.string(),
-    qty: z.number(),
+    qty: z.union([z.literal("-"), z.number()]), // Allow "-" for user to decide or a number
     unit: z.string(),
     rate: z.number().optional(),
     amount: z.number().optional()
