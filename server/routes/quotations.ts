@@ -356,6 +356,8 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       console.log("🔍 Checking for user modifications: hasModifiedProjects =", hasModifiedProjects);
       
       let quotationData: any;
+      let mappingResult: any;
+      let completenessAnalysis: any;
       
       if (hasModifiedProjects) {
         // User has modified the projects in the form - use those instead of mapping from site visit
@@ -363,7 +365,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         console.log("Modified projects:", JSON.stringify(req.body.projects, null, 2));
         
         // Map site visit data for customer and other context, but use modified projects
-        const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
+        mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
         
         // Merge all user modifications from request body with mapped data
         quotationData = {
@@ -376,9 +378,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || (req.body.customerId || ''),
           siteVisitMapping: mappingResult.mappingMetadata
         };
+        console.log("✅ Merged user modifications with mapping result");
       } else {
         // No modifications - use standard site visit mapping with completeness check
-        const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
+        completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
         console.log("📊 Completeness analysis:", JSON.stringify(completenessAnalysis, null, 2));
         
         if (!completenessAnalysis.canCreateQuotation) {
@@ -390,7 +393,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
         // Map site visit data to quotation
         console.log("🔄 Starting mapping from site visit to quotation...");
-        const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
+        mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
         console.log("✅ Mapping complete. Quotation data:", JSON.stringify(mappingResult.quotationData, null, 2));
         
         quotationData = {
@@ -423,7 +426,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       res.status(201).json({
         quotation,
         mappingAnalysis: completenessAnalysis,
-        warnings: mappingResult.businessRuleWarnings
+        warnings: mappingResult?.businessRuleWarnings
       });
     } catch (error) {
       console.error("\n❌❌❌ ERROR IN FROM SITE VISIT QUOTATION CREATION ❌❌❌");
