@@ -883,7 +883,6 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           voltage: 12,
           batteryCount: 1,
           batteryStands: "1",
-          electricalWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
           backupSolutions: {
             backupWatts: 0,
