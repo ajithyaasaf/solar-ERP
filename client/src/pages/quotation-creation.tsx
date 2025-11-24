@@ -5999,7 +5999,7 @@ export default function QuotationCreation() {
                                         value={item.qty}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
-                                          updated[index].qty = parseInt(e.target.value) || 0;
+                                          updated[index].qty = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
                                           (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
                                           setBomItems(updated);
                                         }}
@@ -6113,7 +6113,7 @@ export default function QuotationCreation() {
                                         value={item.qty}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
-                                          updated[index].qty = parseInt(e.target.value) || 0;
+                                          updated[index].qty = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
                                           setBomItems(updated);
                                         }}
                                         onKeyDown={(e) => {
