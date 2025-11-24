@@ -5995,17 +5995,30 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-center">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={item.qty}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
-                                          updated[index].qty = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
+                                          updated[index].qty = e.target.value;
+                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (parseInt(e.target.value) || 0);
+                                          setBomItems(updated);
+                                        }}
+                                        onBlur={(e) => {
+                                          const updated = [...bomItems];
+                                          const val = parseInt(e.target.value) || 0;
+                                          updated[index].qty = val;
+                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * val;
                                           setBomItems(updated);
                                         }}
                                         onKeyDown={(e) => {
                                           if (e.key === 'Enter') {
                                             e.preventDefault();
+                                            const updated = [...bomItems];
+                                            const val = parseInt((e.target as any).value) || 0;
+                                            updated[index].qty = val;
+                                            (updated[index] as any).amount = ((updated[index] as any).rate || 0) * val;
+                                            setBomItems(updated);
                                             setEditingBomItem(null);
                                           }
                                         }}
@@ -6109,16 +6122,27 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={item.qty}
                                         onChange={(e) => {
                                           const updated = [...bomItems];
-                                          updated[index].qty = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                          updated[index].qty = e.target.value;
+                                          setBomItems(updated);
+                                        }}
+                                        onBlur={(e) => {
+                                          const updated = [...bomItems];
+                                          const val = parseInt(e.target.value) || 0;
+                                          updated[index].qty = val;
                                           setBomItems(updated);
                                         }}
                                         onKeyDown={(e) => {
                                           if (e.key === 'Enter') {
                                             e.preventDefault();
+                                            const updated = [...bomItems];
+                                            const val = parseInt((e.target as any).value) || 0;
+                                            updated[index].qty = val;
+                                            setBomItems(updated);
                                             setEditingBomItem(null);
                                           }
                                         }}
