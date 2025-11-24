@@ -312,6 +312,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       
       if (hasFormProjects) {
         console.log("Using user form data with", req.body.projects.length, "projects");
+        console.log("First project details:", JSON.stringify(req.body.projects[0], null, 2).substring(0, 500));
         
         try {
           // Update customer with any overrides if provided
