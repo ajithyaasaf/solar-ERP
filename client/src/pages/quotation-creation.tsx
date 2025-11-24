@@ -1375,6 +1375,23 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   const { toast } = useToast();
   
   const handleFieldChange = (field: string, value: any) => {
+    // If user is changing projectType to off_grid, initialize all required off-grid fields
+    if (field === 'projectType' && value === 'off_grid') {
+      onUpdate({
+        projectType: value,
+        // Initialize all required off-grid fields with defaults
+        batteryBrand: project.batteryBrand || 'exide',
+        voltage: project.voltage !== undefined ? project.voltage : 48,
+        batteryCount: project.batteryCount || 4,
+        inverterPhase: project.inverterPhase || 'single_phase',
+        inverterKVA: project.inverterKVA || '5',
+        batteryType: project.batteryType || 'lead_acid',
+        batteryAH: project.batteryAH || '150'
+      });
+      return;
+    }
+    
+    // For other field changes, just update that field
     onUpdate({ [field]: value });
   };
 
