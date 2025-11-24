@@ -690,7 +690,8 @@ export class QuotationTemplateService {
     });
 
     // 2. Solar Offgrid Inverter - Voltage based on inverterVolt or calculated from battery
-    const inverterVoltage = project.inverterVolt || (project.voltage * project.batteryCount) || '230';
+    const inverterVoltageRaw = project.inverterVolt || (project.voltage * project.batteryCount) || '230';
+    const inverterVoltage = String(inverterVoltageRaw); // Ensure it's always a string
     items.push({
       slNo: slNo++,
       description: "Solar Offgrid Inverter",
