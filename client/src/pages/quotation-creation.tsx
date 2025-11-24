@@ -4299,8 +4299,12 @@ export default function QuotationCreation() {
     });
     
     // Ensure all pricing is consistent with business rules
+    console.log("💵 Pricing check - difference:", Math.abs(data.totalCustomerPayment - calculatedCustomerPayment));
+    console.log("   Form totalCustomerPayment:", data.totalCustomerPayment);
+    console.log("   Calculated totalCustomerPayment:", calculatedCustomerPayment);
     if (Math.abs(data.totalCustomerPayment - calculatedCustomerPayment) > 1) {
-      console.log("❌ Pricing validation failed - aborting submission");
+      console.log("❌ Pricing validation FAILED - aborting submission");
+      console.log("   Error: prices don't match");
       toast({
         title: "Pricing Error",
         description: "Pricing calculations don't match business rules. Please refresh the data.",
@@ -4308,6 +4312,7 @@ export default function QuotationCreation() {
       });
       return;
     }
+    console.log("✅ Pricing validation PASSED - proceeding with submission");
     
     // Prepare final submission with proper QuotationProject validation
     const submissionData: QuotationFormData = {
