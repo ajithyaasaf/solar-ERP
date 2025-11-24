@@ -112,8 +112,10 @@ const quotationFormSchema = insertQuotationSchema.omit({
   projects: z.array(quotationProjectSchemaWithGST).min(1, "At least one project is required"),
   followUps: z.array(quotationFollowUpSchema).default([]),
   siteVisitMapping: siteVisitMappingSchema.optional(),
-  // Add temporary customer data fields for site visit forms
-  customerData: insertCustomerSchema.optional(),
+  // Add temporary customer data fields for site visit forms with email made optional
+  customerData: insertCustomerSchema.omit({ email: true }).extend({
+    email: z.string().email().optional() // Make email optional for front-end forms
+  }).optional(),
   // Add GST-related total fields
   totalGSTAmount: z.number().min(0).default(0),
   totalWithGST: z.number().min(0).default(0)
