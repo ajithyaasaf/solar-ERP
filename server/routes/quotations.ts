@@ -305,6 +305,56 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
+      // **CRITICAL FIX**: Check if user provided form data with projects (e.g., changed project type to off-grid)
+      // If yes, use that directly instead of mapping from site visit
+      if (req.body && req.body.projects && Array.isArray(req.body.projects) && req.body.projects.length > 0) {
+        try {
+          // User has modified the projects (e.g., changed type to off-grid) - use their data
+          console.log("✅ USING USER FORM DATA - projects provided:", req.body.projects.length);
+          
+          // Update customer if form has customer data (e.g., EB number override)
+          if (req.body.customerData && req.body.customerId) {
+            try {
+              await storage.updateCustomer(req.body.customerId, req.body.customerData);
+            } catch (e) {
+              console.warn("Could not update customer:", e);
+            }
+          }
+          
+          // Create quotation with user's form data
+          const quotationData = {
+            ...req.body,
+            quotationNumber: QuotationTemplateService.generateQuotationNumber(),
+            source: 'site_visit' as const,
+            status: req.body.status || 'draft' as const,
+            createdBy: user.uid,
+            siteVisitMapping: { siteVisitId: req.params.siteVisitId }
+          };
+          
+          // Remove non-schema fields
+          const { customerData, createdAt, ...cleanData } = quotationData;
+          
+          const quotation = await storage.createQuotation(cleanData);
+          
+          res.status(201).json({
+            quotation,
+            message: "Quotation created successfully with user-provided configuration"
+          });
+          return;
+        } catch (error) {
+          console.error("❌ Error using form data:", (error as any).message);
+          console.error("📋 Form data error details:", (error as any).errors);
+          res.status(500).json({ 
+            message: "Failed to create quotation with form data",
+            error: (error as any).message || String(error)
+          });
+          return;
+        }
+      }
+
+      // **FALLBACK**: No form data - use site visit mapping as before
+      console.log("📍 USING SITE VISIT MAPPING - no form projects provided");
+      
       // Analyze data completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
