@@ -215,8 +215,21 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         return res.status(404).json({ message: "Quotation not found" });
       }
 
+      // Prepare update data with "-" to 0 conversion
+      const updateData = { ...req.body };
+      
+      // Convert "-" qty to 0 in customBillOfMaterials before saving (Installation & Commissioning)
+      if (updateData.customBillOfMaterials && Array.isArray(updateData.customBillOfMaterials)) {
+        console.log("🔄 [PATCH] Converting '-' qty values to 0 in customBillOfMaterials...");
+        updateData.customBillOfMaterials = updateData.customBillOfMaterials.map((item: any) => ({
+          ...item,
+          qty: item.qty === "-" ? 0 : item.qty
+        }));
+        console.log("✅ [PATCH] Conversion complete. Updated BOM:", JSON.stringify(updateData.customBillOfMaterials, null, 2));
+      }
+
       const updatedQuotation = await storage.updateQuotation(req.params.id, {
-        ...req.body,
+        ...updateData,
         updatedBy: user.uid,
         updatedAt: new Date()
       });
