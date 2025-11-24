@@ -290,7 +290,12 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
     console.log("\n=== QUOTATION SUBMISSION DEBUG ===");
+    console.log("Request body keys:", Object.keys(req.body).sort());
+    console.log("Request body type:", typeof req.body);
     console.log("Has projects in body:", !!req.body?.projects);
+    console.log("Projects is array:", Array.isArray(req.body?.projects));
+    console.log("Projects length:", req.body?.projects?.length);
+    console.log("Full body:", JSON.stringify(req.body, null, 2));
     if (req.body?.projects?.[0]) {
       const proj = req.body.projects[0];
       console.log("First project type:", proj.projectType);
