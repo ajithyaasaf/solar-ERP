@@ -337,8 +337,19 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         warnings: mappingResult.businessRuleWarnings
       });
     } catch (error) {
-      console.error("Error creating quotation from site visit:", error);
-      res.status(500).json({ message: "Failed to create quotation from site visit" });
+      console.error("❌ ERROR creating quotation from site visit:");
+      console.error("📋 Error message:", (error as any).message);
+      console.error("🔍 Error details:", (error as any));
+      
+      // Log Zod validation errors if present
+      if ((error as any).errors) {
+        console.error("❌ VALIDATION ERRORS:", JSON.stringify((error as any).errors, null, 2));
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to create quotation from site visit",
+        error: (error as any).message || String(error)
+      });
     }
   });
 
