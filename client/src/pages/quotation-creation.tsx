@@ -1377,17 +1377,39 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   const handleFieldChange = (field: string, value: any) => {
     // If user is changing projectType to off_grid, initialize all required off-grid fields
     if (field === 'projectType' && value === 'off_grid') {
-      onUpdate({
+      const defaults = {
         projectType: value,
-        // Initialize all required off-grid fields with defaults
+        // Initialize PANEL fields with defaults (required for all solar projects)
+        solarPanelMake: project.solarPanelMake || ['loom_solar'],
+        panelWatts: project.panelWatts || '455',
+        panelType: project.panelType || 'bifacial',
+        panelCount: project.panelCount || 6,
+        dcrPanelCount: project.dcrPanelCount || 0,
+        nonDcrPanelCount: project.nonDcrPanelCount || 6,
+        // Initialize INVERTER fields with defaults
+        inverterMake: project.inverterMake || ['loom_solar'],
+        inverterKW: project.inverterKW || 3,
+        inverterPhase: project.inverterPhase || 'single_phase',
+        inverterQty: project.inverterQty || 1,
+        inverterKVA: project.inverterKVA || '5',
+        inverterVolt: project.inverterVolt || '230',
+        // Initialize BATTERY fields with defaults (off-grid specific)
         batteryBrand: project.batteryBrand || 'exide',
         voltage: project.voltage !== undefined ? project.voltage : 48,
         batteryCount: project.batteryCount || 4,
-        inverterPhase: project.inverterPhase || 'single_phase',
-        inverterKVA: project.inverterKVA || '5',
         batteryType: project.batteryType || 'lead_acid',
-        batteryAH: project.batteryAH || '150'
-      });
+        batteryAH: project.batteryAH || '150',
+        // Initialize structure fields
+        floor: project.floor || '0',
+        structureType: project.structureType || 'gp_structure',
+        // Set minimum pricing to allow form submission
+        projectValue: project.projectValue || 100000,
+        basePrice: project.basePrice || 100000,
+        gstAmount: project.gstAmount || 0,
+        gstPercentage: project.gstPercentage || 0,
+        customerPayment: project.customerPayment || 100000
+      };
+      onUpdate(defaults);
       return;
     }
     
