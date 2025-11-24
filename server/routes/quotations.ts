@@ -368,10 +368,22 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       res.status(201).json({ quotation });
       
     } catch (error) {
-      console.error("Quotation creation error:", (error as any).message, (error as any).errors);
+      console.error("=== QUOTATION CREATION FAILED ===");
+      console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+      console.error("Error message:", (error as any).message);
+      if ((error as any).errors) {
+        console.error("Zod validation errors:");
+        (error as any).errors.forEach((e: any, i: number) => {
+          console.error(`  [${i}] Path: ${e.path?.join('.')} | Code: ${e.code} | Message: ${e.message}`);
+        });
+      }
+      console.error("Full error:", JSON.stringify(error, null, 2));
+      console.error("============================");
+      
       res.status(500).json({ 
         message: "Failed to create quotation",
-        error: (error as any).message
+        error: (error as any).message,
+        details: (error as any).errors
       });
     }
   });
