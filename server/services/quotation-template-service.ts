@@ -648,7 +648,7 @@ export class QuotationTemplateService {
       unit: "Set"
     });
 
-    // 12. Installation & Commissioning - Always included
+    // 12. Installation & Commissioning - Always included (qty as "-" for user to modify)
     items.push({
       slNo: slNo++,
       description: "Installation & Commissioning",
@@ -656,7 +656,7 @@ export class QuotationTemplateService {
       volt: "-",
       rating: "-",
       make: "As per MNRE App",
-      qty: 1,
+      qty: "-",
       unit: "Nos"
     });
 
@@ -841,7 +841,7 @@ export class QuotationTemplateService {
       unit: "Set"
     });
 
-    // 12. Installation & Commissioning - Always included
+    // 12. Installation & Commissioning - Always included (qty as "-" for user to modify)
     items.push({
       slNo: slNo++,
       description: "Installation & Commissioning",
@@ -849,7 +849,7 @@ export class QuotationTemplateService {
       volt: "-",
       rating: "-",
       make: "As per MNRE App",
-      qty: 1,
+      qty: "-",
       unit: "Nos"
     });
 
@@ -1045,7 +1045,7 @@ export class QuotationTemplateService {
       unit: "Set"
     });
 
-    // 13. Installation & Commissioning - Always included
+    // 13. Installation & Commissioning - Always included (qty as "-" for user to modify)
     items.push({
       slNo: slNo++,
       description: "Installation & Commissioning",
@@ -1053,7 +1053,7 @@ export class QuotationTemplateService {
       volt: "-",
       rating: "-",
       make: "As per MNRE App",
-      qty: 1,
+      qty: "-",
       unit: "Nos"
     });
 

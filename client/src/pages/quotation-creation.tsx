@@ -5998,26 +5998,27 @@ export default function QuotationCreation() {
                                         type="text"
                                         inputMode="numeric"
                                         value={item.qty}
+                                        placeholder="-"
                                         onChange={(e) => {
                                           const updated = [...bomItems];
                                           updated[index].qty = e.target.value;
-                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (parseInt(e.target.value) || 0);
+                                          (updated[index] as any).amount = (e.target.value === '-' || e.target.value === '') ? 0 : ((updated[index] as any).rate || 0) * (parseInt(e.target.value) || 0);
                                           setBomItems(updated);
                                         }}
                                         onBlur={(e) => {
                                           const updated = [...bomItems];
-                                          const val = parseInt(e.target.value) || 0;
+                                          const val = e.target.value === '-' || e.target.value === '' ? '-' : parseInt(e.target.value) || 0;
                                           updated[index].qty = val;
-                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * val;
+                                          (updated[index] as any).amount = (val === '-' || val === 0) ? 0 : ((updated[index] as any).rate || 0) * val;
                                           setBomItems(updated);
                                         }}
                                         onKeyDown={(e) => {
                                           if (e.key === 'Enter') {
                                             e.preventDefault();
                                             const updated = [...bomItems];
-                                            const val = parseInt((e.target as any).value) || 0;
+                                            const val = (e.target as any).value === '-' || (e.target as any).value === '' ? '-' : parseInt((e.target as any).value) || 0;
                                             updated[index].qty = val;
-                                            (updated[index] as any).amount = ((updated[index] as any).rate || 0) * val;
+                                            (updated[index] as any).amount = (val === '-' || val === 0) ? 0 : ((updated[index] as any).rate || 0) * val;
                                             setBomItems(updated);
                                             setEditingBomItem(null);
                                           }
@@ -6125,6 +6126,7 @@ export default function QuotationCreation() {
                                         type="text"
                                         inputMode="numeric"
                                         value={item.qty}
+                                        placeholder="-"
                                         onChange={(e) => {
                                           const updated = [...bomItems];
                                           updated[index].qty = e.target.value;
@@ -6132,7 +6134,7 @@ export default function QuotationCreation() {
                                         }}
                                         onBlur={(e) => {
                                           const updated = [...bomItems];
-                                          const val = parseInt(e.target.value) || 0;
+                                          const val = e.target.value === '-' || e.target.value === '' ? '-' : parseInt(e.target.value) || 0;
                                           updated[index].qty = val;
                                           setBomItems(updated);
                                         }}
@@ -6140,7 +6142,7 @@ export default function QuotationCreation() {
                                           if (e.key === 'Enter') {
                                             e.preventDefault();
                                             const updated = [...bomItems];
-                                            const val = parseInt((e.target as any).value) || 0;
+                                            const val = (e.target as any).value === '-' || (e.target as any).value === '' ? '-' : parseInt((e.target as any).value) || 0;
                                             updated[index].qty = val;
                                             setBomItems(updated);
                                             setEditingBomItem(null);
