@@ -338,7 +338,6 @@ export const customerDetailsSchema = z.object({
   mobile: z.string().min(10, "Valid mobile number is required"),
   address: z.string().min(3, "Address is required"),
   ebServiceNumber: z.string().optional(),
-  tariffCode: z.string().optional(), // Electricity tariff code (e.g., LA1A/DOMESTIC)
   propertyType: z.enum(propertyTypes),
   location: z.string().optional(),
   source: z.string().min(1, "Source is required")
