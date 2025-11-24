@@ -883,12 +883,12 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           voltage: 12,
           batteryCount: 1,
           batteryStands: "1",
+          electricalWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
-            backupHours: [],
-            manuallyEdited: false
+            backupHours: []
           },
           others: ""
         };
@@ -924,8 +924,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
-            backupHours: [],
-            manuallyEdited: false
+            backupHours: []
           },
           others: ""
         };
@@ -3579,6 +3578,8 @@ export default function QuotationCreation() {
     },
     onError: (error: any) => {
       console.error("Error creating quotation:", error);
+      console.error("Error response body:", error.body);
+      console.error("Full error object:", JSON.stringify(error));
       
       // Handle structured validation errors
       if (error.status === 422 && error.completenessAnalysis) {
@@ -3588,10 +3589,18 @@ export default function QuotationCreation() {
           variant: "destructive"
         });
         // Could show detailed missing fields UI here
+      } else if (error.status === 400) {
+        // Log the actual validation errors
+        console.error("Validation error details:", error.body);
+        toast({
+          title: "Validation Error",
+          description: error.message || "Please check all required fields and try again.",
+          variant: "destructive"
+        });
       } else {
         toast({
           title: "Error Creating Quotation",
-          description: "Please check all required fields and try again.",
+          description: error.message || "Please check all required fields and try again.",
           variant: "destructive"
         });
       }
