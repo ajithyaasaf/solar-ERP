@@ -289,91 +289,71 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
+    console.log("POST /api/quotations/from-site-visit - Body keys:", Object.keys(req.body || {}));
+    console.log("POST /api/quotations/from-site-visit - Has projects?", !!req.body?.projects);
+    
     try {
-      console.log("🚀 ENDPOINT HIT - /api/quotations/from-site-visit/:siteVisitId");
-      console.log("📦 req.body keys:", Object.keys(req.body || {}));
-      console.log("📦 req.body.projects present?", !!req.body?.projects);
-      console.log("📦 Full req.body:", JSON.stringify(req.body).substring(0, 500));
-      
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       const { DataCompletenessAnalyzer, SiteVisitDataMapper } = await import("../services/quotation-mapping-service");
-      
-      // Get site visit data
       const { siteVisitService } = await import("../services/site-visit-service");
-      const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
       
+      // Get site visit
+      const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
-      // **CRITICAL FIX**: Check if user provided form data with projects (e.g., changed project type to off-grid)
-      // If yes, use that directly instead of mapping from site visit
-      if (req.body && req.body.projects && Array.isArray(req.body.projects) && req.body.projects.length > 0) {
+      // **KEY LOGIC**: If request body has projects, use them (user customized form)
+      const hasFormProjects = req.body && req.body.projects && Array.isArray(req.body.projects) && req.body.projects.length > 0;
+      
+      if (hasFormProjects) {
+        console.log("Using user form data with", req.body.projects.length, "projects");
+        
         try {
-          // User has modified the projects (e.g., changed type to off-grid) - use their data
-          console.log("✅ USING USER FORM DATA - projects provided:", req.body.projects.length);
-          
-          // Update customer if form has customer data (e.g., EB number override)
+          // Update customer with any overrides if provided
           if (req.body.customerData && req.body.customerId) {
-            try {
-              await storage.updateCustomer(req.body.customerId, req.body.customerData);
-            } catch (e) {
-              console.warn("Could not update customer:", e);
-            }
+            await storage.updateCustomer(req.body.customerId, req.body.customerData);
           }
           
-          // Create quotation with user's form data
+          // Create quotation directly from form data
           const quotationData = {
             ...req.body,
             quotationNumber: QuotationTemplateService.generateQuotationNumber(),
             source: 'site_visit' as const,
             status: req.body.status || 'draft' as const,
-            createdBy: user.uid,
-            siteVisitMapping: { siteVisitId: req.params.siteVisitId }
+            createdBy: user.uid
           };
           
           // Remove non-schema fields
-          const { customerData, createdAt, ...cleanData } = quotationData;
+          delete quotationData.customerData;
+          delete quotationData.createdAt;
           
-          const quotation = await storage.createQuotation(cleanData);
-          
-          res.status(201).json({
-            quotation,
-            message: "Quotation created successfully with user-provided configuration"
+          const quotation = await storage.createQuotation(quotationData);
+          return res.status(201).json({ quotation });
+        } catch (err) {
+          console.error("Form data creation error:", (err as any).message);
+          return res.status(500).json({ 
+            message: "Failed to create quotation",
+            error: (err as any).message 
           });
-          return;
-        } catch (error) {
-          console.error("❌ Error using form data:", (error as any).message);
-          console.error("📋 Form data error details:", (error as any).errors);
-          res.status(500).json({ 
-            message: "Failed to create quotation with form data",
-            error: (error as any).message || String(error)
-          });
-          return;
         }
       }
 
-      // **FALLBACK**: No form data - use site visit mapping as before
-      console.log("📍 USING SITE VISIT MAPPING - no form projects provided");
-      
-      // Analyze data completeness
+      // **FALLBACK**: No form projects - use site visit mapping
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
       
       if (!completenessAnalysis.canCreateQuotation) {
         return res.status(400).json({ 
-          message: "Site visit data incomplete for quotation creation",
+          message: "Site visit data incomplete",
           analysis: completenessAnalysis
         });
       }
 
-      // Map site visit data to quotation
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
-      
-      // Create quotation with mapped data
       const quotationData = {
         ...mappingResult.quotationData,
         createdBy: user.uid,
@@ -385,25 +365,13 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       };
 
       const quotation = await storage.createQuotation(quotationData);
+      res.status(201).json({ quotation });
       
-      res.status(201).json({
-        quotation,
-        mappingAnalysis: completenessAnalysis,
-        warnings: mappingResult.businessRuleWarnings
-      });
     } catch (error) {
-      console.error("❌ ERROR creating quotation from site visit:");
-      console.error("📋 Error message:", (error as any).message);
-      console.error("🔍 Error details:", (error as any));
-      
-      // Log Zod validation errors if present
-      if ((error as any).errors) {
-        console.error("❌ VALIDATION ERRORS:", JSON.stringify((error as any).errors, null, 2));
-      }
-      
+      console.error("Quotation creation error:", (error as any).message, (error as any).errors);
       res.status(500).json({ 
-        message: "Failed to create quotation from site visit",
-        error: (error as any).message || String(error)
+        message: "Failed to create quotation",
+        error: (error as any).message
       });
     }
   });
