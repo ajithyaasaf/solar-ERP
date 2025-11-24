@@ -91,7 +91,7 @@ import {
   monoRailOptions,
   workScopeOptions,
   propertyTypes,
-  customerDetailsSchema
+  insertCustomerSchema
 } from "@shared/schema";
 
 // Create extended project schema with GST fields
@@ -113,7 +113,7 @@ const quotationFormSchema = insertQuotationSchema.omit({
   followUps: z.array(quotationFollowUpSchema).default([]),
   siteVisitMapping: siteVisitMappingSchema.optional(),
   // Add temporary customer data fields for site visit forms
-  customerData: customerDetailsSchema.optional(),
+  customerData: insertCustomerSchema.optional(),
   // Add GST-related total fields
   totalGSTAmount: z.number().min(0).default(0),
   totalWithGST: z.number().min(0).default(0)
@@ -888,7 +888,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
-            backupHours: []
+            backupHours: [],
+            manuallyEdited: false
           },
           others: ""
         };
@@ -924,7 +925,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           backupSolutions: {
             backupWatts: 0,
             usageWatts: [],
-            backupHours: []
+            backupHours: [],
+            manuallyEdited: false
           },
           others: ""
         };
@@ -3577,9 +3579,29 @@ export default function QuotationCreation() {
       setLocation("/quotations");
     },
     onError: (error: any) => {
-      console.error("Error creating quotation:", error);
-      console.error("Error response body:", error.body);
-      console.error("Full error object:", JSON.stringify(error));
+      console.error("\n❌❌❌ ERROR CREATING QUOTATION ❌❌❌");
+      console.error("Error object:", error);
+      console.error("Error status:", error.status);
+      console.error("Error message:", error.message);
+      console.error("Error name:", error.name);
+      console.error("Full error stringified:", JSON.stringify(error, null, 2));
+      
+      // Try to extract validation errors from the response
+      try {
+        if (error.message && error.message.includes("400:")) {
+          console.error("400 Validation Error - attempting to parse details");
+          const errorText = error.message.substring(error.message.indexOf(":") + 1);
+          console.error("Parsed error response:", errorText);
+          try {
+            const parsed = JSON.parse(errorText);
+            console.error("Validation errors details:", JSON.stringify(parsed, null, 2));
+          } catch (e) {
+            console.error("Could not parse error as JSON:", errorText);
+          }
+        }
+      } catch (e) {
+        console.error("Error while trying to parse error details:", e);
+      }
       
       // Handle structured validation errors
       if (error.status === 422 && error.completenessAnalysis) {
@@ -3588,10 +3610,7 @@ export default function QuotationCreation() {
           description: error.message,
           variant: "destructive"
         });
-        // Could show detailed missing fields UI here
-      } else if (error.status === 400) {
-        // Log the actual validation errors
-        console.error("Validation error details:", error.body);
+      } else if (error.status === 400 || error.message?.includes("400:")) {
         toast({
           title: "Validation Error",
           description: error.message || "Please check all required fields and try again.",
@@ -4226,7 +4245,13 @@ export default function QuotationCreation() {
     console.log("🔍 Stack trace to see WHO called this:");
     console.trace("Form submission trace");
     console.log("═══════════════════════════════════════════");
-    console.log("Form data:", data);
+    console.log("Form data:", JSON.stringify(data, null, 2));
+    
+    // Log each project in detail
+    data.projects?.forEach((project, idx) => {
+      console.log(`\n📦 PROJECT ${idx} - Type: ${project.projectType}`);
+      console.log("Project details:", JSON.stringify(project, null, 2));
+    });
     
     // GUARD: Only allow submission if we're on the final step (Review & Submit)
     if (currentStep !== WIZARD_STEPS.length - 1) {

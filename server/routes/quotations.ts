@@ -126,30 +126,69 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
   // Create new quotation
   app.post("/api/quotations", verifyAuth, async (req, res) => {
     try {
+      console.log("\n🔵🔵🔵 NEW QUOTATION CREATION REQUEST 🔵🔵🔵");
+      console.log("⏰ Timestamp:", new Date().toISOString());
+      console.log("📨 Request body received:", JSON.stringify(req.body, null, 2));
+      
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
       }
 
+      console.log("👤 User verified:", user.displayName);
+      
+      // Log each project before validation
+      if (req.body.projects && Array.isArray(req.body.projects)) {
+        console.log(`\n📦 PROJECTS TO VALIDATE: ${req.body.projects.length} projects`);
+        req.body.projects.forEach((project: any, idx: number) => {
+          console.log(`\n📦 PROJECT ${idx}:`);
+          console.log(`  Type: ${project.projectType}`);
+          console.log(`  Full data:`, JSON.stringify(project, null, 2));
+        });
+      }
+
       // Validate request body
+      console.log("\n🔍 Starting schema validation...");
       const quotationData = insertQuotationSchema.parse({
         ...req.body,
         preparedBy: user.displayName || user.email || user.uid,
         quotationNumber: QuotationTemplateService.generateQuotationNumber()
       });
+      
+      console.log("✅ Schema validation PASSED");
+      console.log("Validated quotation data:", JSON.stringify(quotationData, null, 2));
 
       const quotation = await storage.createQuotation(quotationData);
       
+      console.log("✅ Quotation created successfully:", quotation.id);
       res.status(201).json(quotation);
     } catch (error) {
+      console.error("\n❌❌❌ ERROR IN QUOTATION CREATION ❌❌❌");
+      console.error("Error type:", error instanceof z.ZodError ? "ZodError" : error.constructor.name);
+      console.error("Error message:", error instanceof Error ? error.message : String(error));
+      
       if (error instanceof z.ZodError) {
+        console.error("\n🔴 ZOD VALIDATION ERRORS:");
+        error.errors.forEach((err, idx) => {
+          console.error(`\nError ${idx}:`);
+          console.error(`  Path: ${err.path.join(" > ")}`);
+          console.error(`  Code: ${err.code}`);
+          console.error(`  Message: ${err.message}`);
+          console.error(`  Full error:`, JSON.stringify(err, null, 2));
+        });
         return res.status(400).json({ 
           message: "Validation error",
-          errors: error.errors 
+          errors: error.errors,
+          errorDetails: error.errors.map((e: any) => ({
+            path: e.path.join(" > "),
+            code: e.code,
+            message: e.message
+          }))
         });
       }
-      console.error("Error creating quotation:", error);
-      res.status(500).json({ message: "Failed to create quotation" });
+      console.error("Full error object:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+      res.status(500).json({ message: "Failed to create quotation", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
