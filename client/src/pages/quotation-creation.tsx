@@ -66,8 +66,7 @@ import {
   Edit2,
   Save,
   X,
-  Table,
-  Trash2
+  Table
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -1375,53 +1374,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   const { toast } = useToast();
   
   const handleFieldChange = (field: string, value: any) => {
-    // If user is changing projectType to off_grid, initialize all required off-grid fields
-    if (field === 'projectType' && value === 'off_grid') {
-      // Calculate systemKW from panel data
-      const panelWatts = parseInt(project.panelWatts || '455');
-      const panelCount = project.panelCount || 6;
-      const systemKW = (panelWatts * panelCount) / 1000; // e.g., (455 * 6) / 1000 = 2.73
-      
-      const defaults = {
-        projectType: value,
-        // Initialize PANEL fields with defaults (required for all solar projects)
-        solarPanelMake: project.solarPanelMake || ['loom_solar'],
-        panelWatts: project.panelWatts || '455',
-        panelType: project.panelType || 'bifacial',
-        panelCount: panelCount,
-        dcrPanelCount: project.dcrPanelCount || 0,
-        nonDcrPanelCount: project.nonDcrPanelCount || panelCount,
-        // Initialize INVERTER fields with defaults
-        inverterMake: project.inverterMake || ['loom_solar'],
-        inverterKW: project.inverterKW || 3,
-        inverterPhase: project.inverterPhase || 'single_phase',
-        inverterQty: project.inverterQty || 1,
-        inverterKVA: project.inverterKVA || '5',
-        inverterVolt: project.inverterVolt || '230',
-        // Initialize BATTERY fields with defaults (off-grid specific)
-        batteryBrand: project.batteryBrand || 'exide',
-        voltage: project.voltage !== undefined ? project.voltage : 48,
-        batteryCount: project.batteryCount || 4,
-        batteryType: project.batteryType || 'lead_acid',
-        batteryAH: project.batteryAH || '150',
-        // Initialize structure fields
-        floor: project.floor || '0',
-        structureType: project.structureType || 'gp_structure',
-        // **CRITICAL**: Initialize required fields for schema validation
-        systemKW: systemKW,  // REQUIRED: (panelWatts * panelCount) / 1000
-        pricePerKW: project.pricePerKW || 68000,  // REQUIRED: base rate per kW
-        // Set minimum pricing to allow form submission
-        projectValue: project.projectValue || 100000,
-        basePrice: project.basePrice || 100000,
-        gstAmount: project.gstAmount || 0,
-        gstPercentage: project.gstPercentage || 0,
-        customerPayment: project.customerPayment || 100000
-      };
-      onUpdate(defaults);
-      return;
-    }
-    
-    // For other field changes, just update that field
     onUpdate({ [field]: value });
   };
 
@@ -3334,8 +3286,6 @@ export default function QuotationCreation() {
   const [bomItems, setBomItems] = useState<any[]>([]);
   const [isFetchingBom, setIsFetchingBom] = useState(false);
   const [editingBomItem, setEditingBomItem] = useState<number | null>(null);
-  const [originalBomItem, setOriginalBomItem] = useState<any | null>(null);
-  const [deletingBomIndex, setDeletingBomIndex] = useState<number | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
   // State for editable scope of work sections
@@ -4148,27 +4098,11 @@ export default function QuotationCreation() {
         const hasValidProjects = values.projects.every((project: any) => {
           // For solar projects (on_grid, off_grid, hybrid)
           if (['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
-            // Base validation for all solar projects
-            const baseSolarValid = (
+            return (
               project.panelCount > 0 &&
               project.projectValue > 0 &&
               values.customerData?.propertyType // Property type is required for subsidy calculation
             );
-            
-            // Additional validation for off-grid projects
-            if (project.projectType === 'off_grid') {
-              // Ensure all required off-grid fields are present
-              const offGridValid = (
-                project.batteryBrand &&
-                project.voltage !== undefined &&
-                project.voltage !== null &&
-                project.batteryCount > 0 &&
-                project.inverterPhase
-              );
-              return baseSolarValid && offGridValid;
-            }
-            
-            return baseSolarValid;
           }
           // For water_heater and water_pump, just check projectValue
           return project.projectValue > 0;
@@ -4307,12 +4241,8 @@ export default function QuotationCreation() {
     });
     
     // Ensure all pricing is consistent with business rules
-    console.log("💵 Pricing check - difference:", Math.abs(data.totalCustomerPayment - calculatedCustomerPayment));
-    console.log("   Form totalCustomerPayment:", data.totalCustomerPayment);
-    console.log("   Calculated totalCustomerPayment:", calculatedCustomerPayment);
     if (Math.abs(data.totalCustomerPayment - calculatedCustomerPayment) > 1) {
-      console.log("❌ Pricing validation FAILED - aborting submission");
-      console.log("   Error: prices don't match");
+      console.log("❌ Pricing validation failed - aborting submission");
       toast({
         title: "Pricing Error",
         description: "Pricing calculations don't match business rules. Please refresh the data.",
@@ -4320,7 +4250,6 @@ export default function QuotationCreation() {
       });
       return;
     }
-    console.log("✅ Pricing validation PASSED - proceeding with submission");
     
     // Prepare final submission with proper QuotationProject validation
     const submissionData: QuotationFormData = {
@@ -5983,7 +5912,6 @@ export default function QuotationCreation() {
                               <td className="p-2 border-r">
                                 {editingBomItem === index ? (
                                   <Input
-                                    autoFocus
                                     value={item.description}
                                     onChange={(e) => {
                                       const updated = [...bomItems];
@@ -6009,13 +5937,11 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-right">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={(item as any).rate === 0 ? '' : (item as any).rate}
+                                        type="number"
+                                        value={(item as any).rate || 0}
                                         onChange={(e) => {
-                                          const val = e.target.value;
                                           const updated = [...bomItems];
-                                          (updated[index] as any).rate = val === '' ? 0 : parseFloat(val) || 0;
+                                          (updated[index] as any).rate = parseFloat(e.target.value) || 0;
                                           (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
                                           setBomItems(updated);
                                         }}
@@ -6034,13 +5960,11 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r text-center">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={item.qty === 0 ? '' : item.qty}
+                                        type="number"
+                                        value={item.qty}
                                         onChange={(e) => {
-                                          const val = e.target.value;
                                           const updated = [...bomItems];
-                                          updated[index].qty = val === '' ? 0 : parseInt(val) || 0;
+                                          updated[index].qty = parseInt(e.target.value) || 0;
                                           (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
                                           setBomItems(updated);
                                         }}
@@ -6150,13 +6074,11 @@ export default function QuotationCreation() {
                                   <td className="p-2 border-r">
                                     {editingBomItem === index ? (
                                       <Input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={item.qty === 0 ? '' : item.qty}
+                                        type="number"
+                                        value={item.qty}
                                         onChange={(e) => {
-                                          const val = e.target.value;
                                           const updated = [...bomItems];
-                                          updated[index].qty = val === '' ? 0 : parseInt(val) || 0;
+                                          updated[index].qty = parseInt(e.target.value) || 0;
                                           setBomItems(updated);
                                         }}
                                         onKeyDown={(e) => {
@@ -6204,13 +6126,8 @@ export default function QuotationCreation() {
                                         type="button"
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => {
-                                          setEditingBomItem(null);
-                                          setOriginalBomItem(null);
-                                        }}
+                                        onClick={() => setEditingBomItem(null)}
                                         className="h-7 w-7 p-0"
-                                        title="Save changes"
-                                        data-testid="button-save-bom"
                                       >
                                         <Save className="h-4 w-4 text-green-600" />
                                       </Button>
@@ -6219,65 +6136,24 @@ export default function QuotationCreation() {
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => {
-                                          // Restore original values
-                                          if (originalBomItem) {
-                                            const restored = [...bomItems];
-                                            restored[index] = { ...originalBomItem };
-                                            setBomItems(restored);
-                                          }
                                           setEditingBomItem(null);
-                                          setOriginalBomItem(null);
+                                          // Reload BOM to cancel changes (you can store original state if needed)
                                         }}
                                         className="h-7 w-7 p-0"
-                                        title="Cancel changes"
-                                        data-testid="button-cancel-bom"
                                       >
                                         <X className="h-4 w-4 text-red-600" />
                                       </Button>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setDeletingBomIndex(index);
-                                        }}
-                                        className="h-7 w-7 p-0"
-                                        title="Delete row"
-                                        data-testid="button-delete-bom"
-                                      >
-                                        <Trash2 className="h-4 w-4 text-red-600" />
-                                      </Button>
                                     </>
                                   ) : (
-                                    <>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setOriginalBomItem({ ...item });
-                                          setEditingBomItem(index);
-                                        }}
-                                        className="h-7 w-7 p-0"
-                                        title="Edit row"
-                                        data-testid="button-edit-bom"
-                                      >
-                                        <Edit2 className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setDeletingBomIndex(index);
-                                        }}
-                                        className="h-7 w-7 p-0"
-                                        title="Delete row"
-                                        data-testid="button-delete-bom-view"
-                                      >
-                                        <Trash2 className="h-4 w-4 text-red-600" />
-                                      </Button>
-                                    </>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setEditingBomItem(index)}
+                                      className="h-7 w-7 p-0"
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
                                   )}
                                 </div>
                               </td>
@@ -6396,40 +6272,6 @@ export default function QuotationCreation() {
           </form>
         </Form>
       </div>
-
-      {/* BOM Delete Confirmation Dialog */}
-      <AlertDialog open={deletingBomIndex !== null} onOpenChange={(open) => {
-        if (!open) setDeletingBomIndex(null);
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete BOM Row?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this BOM item? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete-bom">
-              Keep Item
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deletingBomIndex !== null) {
-                  const updated = bomItems.filter((_, i) => i !== deletingBomIndex);
-                  setBomItems(updated);
-                  setEditingBomItem(null);
-                  setOriginalBomItem(null);
-                  setDeletingBomIndex(null);
-                }
-              }}
-              data-testid="button-confirm-delete-bom"
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Row
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Exit Confirmation Dialog */}
       <AlertDialog open={showExitConfirmation} onOpenChange={setShowExitConfirmation}>
