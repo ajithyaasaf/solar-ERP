@@ -4,6 +4,7 @@ import { useAuthContext } from "@/contexts/auth-context";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDate, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -160,7 +161,7 @@ export default function UserManagement() {
         return;
       }
 
-      for (const user of usersToUpdate) {
+      for (const user of usersToUpdate as any[]) {
         const betterName =
           user.email && !user.email.includes("@example.com")
             ? user.email
@@ -175,7 +176,7 @@ export default function UserManagement() {
                 .join(" ")
             : `Employee ${user.id.slice(0, 8)}`;
 
-        await updateUserMutation.mutateAsync({
+        const sanitized = sanitizeFormData({
           id: user.id,
           displayName: betterName,
           email: user.email.includes("@example.com")
@@ -183,14 +184,15 @@ export default function UserManagement() {
             : user.email,
           role: user.role || "employee",
           department: user.department || null,
-        });
+        }, ['displayName', 'email']);
+        
+        await updateUserMutation.mutateAsync(sanitized);
       }
 
       await refetchUsers();
       toast({
         title: "Users synced",
         description: `Updated ${usersToUpdate.length} users with proper display names and emails.`,
-        variant: "success",
       });
     } catch (error) {
       console.error("Error syncing users:", error);

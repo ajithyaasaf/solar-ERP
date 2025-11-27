@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -122,8 +123,8 @@ export default function Products() {
     queryKey: [`/api/products?page=${currentPage}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}`]
   });
   
-  const products = productsResponse?.data || [];
-  const pagination = productsResponse?.pagination;
+  const products = (productsResponse as any)?.data || [];
+  const pagination = (productsResponse as any)?.pagination;
   
   // Prefetch next page for smoother pagination
   useEffect(() => {

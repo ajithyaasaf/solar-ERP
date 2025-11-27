@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { TimeDisplay } from "@/components/time/time-display";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -192,7 +193,8 @@ export default function AttendanceManagement() {
   // Update attendance mutation
   const updateAttendanceMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const response = await apiRequest(`/api/attendance/${id}`, 'PATCH', data);
+      const sanitized = sanitizeFormData(data, ['notes', 'remarks', 'reason']);
+      const response = await apiRequest(`/api/attendance/${id}`, 'PATCH', sanitized);
       return response.json();
     },
     onSuccess: () => {
