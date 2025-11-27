@@ -2922,7 +2922,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               />
               <datalist id={`pump-panel-watts-list-${projectIndex}`}>
                 {panelWatts.map((watts) => (
-                  <option key={watts} value={watts}>{watts}W</option>
+                  <option key={watts} value={String(watts)}>{String(watts)}W</option>
                 ))}
               </datalist>
             </div>
