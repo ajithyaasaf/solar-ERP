@@ -172,7 +172,7 @@ export const insertUserEnhancedSchema = z.object({
 export const insertDesignationSchema = z.object({
   name: z.string().min(2, "Designation name must be at least 2 characters"),
   level: z.number().min(1).max(10),
-  description: z.string().optional(),
+  description: z.string().nullish(),
   permissions: z.array(z.enum(systemPermissions)).default([])
 });
 
@@ -348,9 +348,9 @@ export const technicalSiteVisitSchema = z.object({
   serviceTypes: z.array(z.enum(serviceTypes)),
   workType: z.enum(technicalWorkTypes),
   workingStatus: z.enum(workingStatus),
-  pendingRemarks: z.string().optional(),
+  pendingRemarks: z.string().nullish(),
   teamMembers: z.array(z.string()),
-  description: z.string().optional()
+  description: z.string().nullish()
 });
 
 // Solar system configuration schemas
@@ -371,12 +371,12 @@ export const onGridConfigSchema = z.object({
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
   projectValue: z.number().min(0),
-  others: z.string().optional(),
+  others: z.string().nullish(),
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.string().optional(),
-    higherEndHeight: z.string().optional()
+    lowerEndHeight: z.string().nullish(),
+    higherEndHeight: z.string().nullish()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -391,25 +391,25 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
   batteryAH: z.enum(batteryAHOptions).optional(),
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
-  batteryStands: z.string().optional(),
-  inverterVolt: z.string().optional(), // Changed to string to allow custom values
-  inverterKVA: z.string().optional(), // For off-grid systems, inverters are rated in KVA
+  batteryStands: z.string().nullish(),
+  inverterVolt: z.string().nullish(), // Changed to string to allow custom values
+  inverterKVA: z.string().nullish(), // For off-grid systems, inverters are rated in KVA
   amcIncluded: z.boolean().default(false) // Annual Maintenance Contract checkbox
 }).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
 export const hybridConfigSchema = offGridConfigSchema.extend({
   electricalWorkScope: z.enum(workScopeOptions).optional(),
   netMeterScope: z.enum(workScopeOptions).optional(), // Hybrid has net meter back
-  inverterKVA: z.string().optional() // For hybrid systems, inverters are rated in KVA
+  inverterKVA: z.string().nullish() // For hybrid systems, inverters are rated in KVA
 });
 
 export const waterHeaterConfigSchema = z.object({
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
-  heatingCoil: z.string().optional(),
-  productImage: z.string().optional(), // Optional product image URL
+  heatingCoil: z.string().nullish(),
+  productImage: z.string().nullish(), // Optional product image URL
   projectValue: z.number().min(0),
-  others: z.string().optional(),
+  others: z.string().nullish(),
   // New fields from client specification
   floor: z.enum(floorLevels).optional(),
   plumbingWorkScope: z.enum(workScopeOptions).optional(),
@@ -421,18 +421,18 @@ export const waterHeaterConfigSchema = z.object({
 });
 
 export const waterPumpConfigSchema = z.object({
-  driveHP: z.string().optional(), // Renamed from 'hp'
-  hp: z.string().optional(), // Keep for backward compatibility
+  driveHP: z.string().nullish(), // Renamed from 'hp'
+  hp: z.string().nullish(), // Keep for backward compatibility
   drive: z.string(),
-  solarPanel: z.string().optional(),
+  solarPanel: z.string().nullish(),
   panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
-  panelWatts: z.string().optional(),
+  panelWatts: z.string().nullish(),
   panelType: z.enum(panelTypes).optional(),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
   projectValue: z.number().min(0),
-  others: z.string().optional(),
+  others: z.string().nullish(),
   // Quantity field for BOM generation
   qty: z.number().min(1).default(1),
   // Phase selection for inverter
@@ -440,8 +440,8 @@ export const waterPumpConfigSchema = z.object({
   // New fields from client specification
   structureType: z.enum(structureTypes).optional(),
   gpStructure: z.object({
-    lowerEndHeight: z.string().optional(),
-    higherEndHeight: z.string().optional()
+    lowerEndHeight: z.string().nullish(),
+    higherEndHeight: z.string().nullish()
   }).optional(),
   monoRail: z.object({
     type: z.enum(monoRailOptions).optional()
@@ -474,17 +474,17 @@ export const marketingSiteVisitSchema = z.object({
 export const adminSiteVisitSchema = z.object({
   bankProcess: z.object({
     step: z.enum(bankProcessSteps),
-    description: z.string().optional()
+    description: z.string().nullish()
   }).optional(),
   ebProcess: z.object({
     type: z.enum(ebProcessTypes),
-    description: z.string().optional()
+    description: z.string().nullish()
   }).optional(),
-  purchase: z.string().optional(),
-  driving: z.string().optional(),
-  officialCashTransactions: z.string().optional(),
-  officialPersonalWork: z.string().optional(),
-  others: z.string().optional()
+  purchase: z.string().nullish(),
+  driving: z.string().nullish(),
+  officialCashTransactions: z.string().nullish(),
+  officialPersonalWork: z.string().nullish(),
+  others: z.string().nullish()
 });
 
 // Site photo schema
@@ -494,7 +494,7 @@ export const sitePhotoSchema = z.object({
   timestamp: z.union([z.date(), z.string()]).transform((val) => 
     typeof val === 'string' ? new Date(val) : val
   ),
-  description: z.string().optional()
+  description: z.string().nullish()
 });
 
 // Main site visit schema
@@ -699,13 +699,13 @@ export const insertEmployeeSchema = z.object({
   personalInfo: z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
-    middleName: z.string().optional(),
+    middleName: z.string().nullish(),
     displayName: z.string().min(2, "Display name must be at least 2 characters"),
     dateOfBirth: z.date().optional(),
     gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
     maritalStatus: z.enum(maritalStatus).optional(),
     bloodGroup: z.enum(bloodGroups).optional(),
-    nationality: z.string().optional(),
+    nationality: z.string().nullish(),
     photoURL: z.string().url().optional(),
   }),
 
@@ -714,19 +714,19 @@ export const insertEmployeeSchema = z.object({
     primaryEmail: z.string().email("Valid email is required"),
     secondaryEmail: z.string().email().optional(),
     primaryPhone: z.string().min(10, "Valid phone number is required"),
-    secondaryPhone: z.string().optional(),
+    secondaryPhone: z.string().nullish(),
     permanentAddress: z.object({
-      street: z.string().optional(),
-      city: z.string().optional(),
-      state: z.string().optional(),
-      pincode: z.string().optional(),
+      street: z.string().nullish(),
+      city: z.string().nullish(),
+      state: z.string().nullish(),
+      pincode: z.string().nullish(),
       country: z.string().default("India"),
     }).optional(),
     currentAddress: z.object({
-      street: z.string().optional(),
-      city: z.string().optional(),
-      state: z.string().optional(),
-      pincode: z.string().optional(),
+      street: z.string().nullish(),
+      city: z.string().nullish(),
+      state: z.string().nullish(),
+      pincode: z.string().nullish(),
       country: z.string().default("India"),
       isSameAsPermanent: z.boolean().default(false),
     }).optional(),
@@ -741,8 +741,8 @@ export const insertEmployeeSchema = z.object({
     confirmationDate: z.date().optional(),
     probationPeriodMonths: z.number().min(0).max(24).default(6),
     reportingManagerId: z.string().optional(),
-    workLocation: z.string().optional(),
-    shiftPattern: z.string().optional(),
+    workLocation: z.string().nullish(),
+    shiftPattern: z.string().nullish(),
     weeklyOffDays: z.array(z.number()).default([0, 6]), // Sunday, Saturday
   }),
 
@@ -753,22 +753,22 @@ export const insertEmployeeSchema = z.object({
     currency: z.string().default("INR"),
     paymentMethod: z.enum(["bank_transfer", "cash", "cheque"]).default("bank_transfer"),
     bankDetails: z.object({
-      accountNumber: z.string().optional(),
-      bankName: z.string().optional(),
-      ifscCode: z.string().optional(),
-      accountHolderName: z.string().optional(),
+      accountNumber: z.string().nullish(),
+      bankName: z.string().nullish(),
+      ifscCode: z.string().nullish(),
+      accountHolderName: z.string().nullish(),
     }).optional(),
-    pfNumber: z.string().optional(),
-    esiNumber: z.string().optional(),
-    panNumber: z.string().optional(),
-    aadharNumber: z.string().optional(),
+    pfNumber: z.string().nullish(),
+    esiNumber: z.string().nullish(),
+    panNumber: z.string().nullish(),
+    aadharNumber: z.string().nullish(),
   }),
 
   // Professional Information
   professionalInfo: z.object({
     totalExperienceYears: z.number().min(0).optional(),
     relevantExperienceYears: z.number().min(0).optional(),
-    highestQualification: z.string().optional(),
+    highestQualification: z.string().nullish(),
     skills: z.array(z.string()).default([]),
     certifications: z.array(z.string()).default([]),
     languages: z.array(z.string()).default([]),
@@ -776,7 +776,7 @@ export const insertEmployeeSchema = z.object({
       companyName: z.string(),
       designation: z.string(),
       duration: z.string(),
-      reasonForLeaving: z.string().optional(),
+      reasonForLeaving: z.string().nullish(),
     })).default([]),
   }),
 
@@ -785,14 +785,14 @@ export const insertEmployeeSchema = z.object({
     name: z.string().min(1, "Emergency contact name is required"),
     relationship: z.string().min(1, "Relationship is required"),
     primaryPhone: z.string().min(10, "Valid phone number is required"),
-    secondaryPhone: z.string().optional(),
-    address: z.string().optional(),
+    secondaryPhone: z.string().nullish(),
+    address: z.string().nullish(),
   })).default([]),
 
   // System Information
   status: z.enum(employeeStatus).default("active"),
   isActive: z.boolean().default(true),
-  notes: z.string().optional(),
+  notes: z.string().nullish(),
   createdBy: z.string().optional(),
   lastUpdatedBy: z.string().optional(),
 });
