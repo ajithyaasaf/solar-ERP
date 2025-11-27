@@ -342,7 +342,8 @@ export default function EnhancedPayrollManagement() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("/api/enhanced-payroll-settings", "PATCH", data);
+      const sanitized = sanitizeFormData(data, ['companyAddress', 'companyPan', 'companyTan']);
+      const response = await apiRequest("/api/enhanced-payroll-settings", "PATCH", sanitized);
       return response.json();
     },
     onSuccess: () => {

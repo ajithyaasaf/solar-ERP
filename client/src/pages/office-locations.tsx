@@ -87,7 +87,8 @@ export default function OfficeLocations() {
   // Create new office location
   const createLocationMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('/api/office-locations', 'POST', data);
+      const sanitized = sanitizeFormData(data, ['address']);
+      return apiRequest('/api/office-locations', 'POST', sanitized);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/office-locations"] });
@@ -110,7 +111,8 @@ export default function OfficeLocations() {
   // Update office location
   const updateLocationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest(`/api/office-locations/${id}`, 'PATCH', data);
+      const sanitized = sanitizeFormData(data, ['address']);
+      return apiRequest(`/api/office-locations/${id}`, 'PATCH', sanitized);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/office-locations"] });
