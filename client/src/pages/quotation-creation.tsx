@@ -989,7 +989,10 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
       
       // Calculate system kW from panel data (this is the source of truth)
-      const calculatedKW = (parseInt(newProject.panelWatts) * newProject.panelCount) / 1000;
+      // Safe parsing: remove non-digit characters, then parse
+      const panelWattsStr = String(newProject.panelWatts || '').trim().replace(/[^\d]/g, '');
+      const panelWattsNum = parseInt(panelWattsStr, 10) || 0;
+      const calculatedKW = (panelWattsNum * newProject.panelCount) / 1000;
       newProject.systemKW = calculatedKW;
       
       // Calculate default project value based on systemKW and default rate
@@ -1469,9 +1472,23 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.projectType, project.batteryAH, project.batteryCount]);
 
+  // Helper function to safely parse panel watts (remove whitespace and non-numeric chars, then parse)
+  const parsePanelWatts = (value: any): number => {
+    if (!value) return 0;
+    // Convert to string, trim, and remove any non-digit characters
+    const stringValue = String(value).trim();
+    // Extract only digits from the string
+    const numericOnly = stringValue.replace(/[^\d]/g, '');
+    // Parse to integer
+    const parsed = parseInt(numericOnly, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // Auto-calculate system kW from panel data (actual decimal value)
-  const actualSystemKW = project.panelWatts && project.panelCount 
-    ? (parseInt(project.panelWatts) * project.panelCount) / 1000
+  const panelWattsNumber = parsePanelWatts(project.panelWatts);
+  const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
+  const actualSystemKW = (panelWattsNumber && panelCountNumber) 
+    ? (panelWattsNumber * panelCountNumber) / 1000
     : 0;
 
   // Round system kW: ≤3.5 → 3, >3.5 → 4
