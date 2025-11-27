@@ -70,6 +70,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
 import { useAuthContext } from "@/contexts/auth-context";
 import { 
@@ -3526,17 +3527,22 @@ export default function QuotationCreation() {
   // Create/Update quotation mutation using proper apiRequest with auth
   const createQuotationMutation = useMutation({
     mutationFn: async (data: QuotationFormData) => {
-      let finalCustomerId = data.customerId;
+      // Sanitize form data: convert empty strings to null for optional fields
+      const sanitizedData = sanitizeFormData(data, [
+        'email', 'location', 'ebServiceNumber', 'propertyType', 'scope'
+      ]);
+      
+      let finalCustomerId = sanitizedData.customerId;
       
       // For manual quotations (NOT in edit mode), handle customer creation/lookup
-      if (!isEditMode && quotationSource === "manual" && data.customerData) {
+      if (!isEditMode && quotationSource === "manual" && sanitizedData.customerData) {
         // Check if customer already selected via customerId dropdown
-        if (data.customerId) {
-          finalCustomerId = data.customerId;
+        if (sanitizedData.customerId) {
+          finalCustomerId = sanitizedData.customerId;
         } else {
           // Create new customer from customerData form
-          console.log("Creating new customer:", data.customerData);
-          const customerResponse = await apiRequest("/api/customers", "POST", data.customerData);
+          console.log("Creating new customer:", sanitizedData.customerData);
+          const customerResponse = await apiRequest("/api/customers", "POST", sanitizedData.customerData);
           const newCustomer = await customerResponse.json();
           finalCustomerId = newCustomer.id;
           console.log("New customer created with ID:", finalCustomerId);
@@ -3549,7 +3555,7 @@ export default function QuotationCreation() {
       }
       
       // Prepare payload - customerData handling depends on quotation source
-      const { totalGSTAmount, totalWithGST, ...basePayload } = data;
+      const { totalGSTAmount, totalWithGST, ...basePayload } = sanitizedData;
       
       // Use PUT for edit mode, POST for create mode
       if (isEditMode && quotationId) {
@@ -3571,7 +3577,7 @@ export default function QuotationCreation() {
           // IMPORTANT: For site visit quotations, customerData allows user to override mapped values (e.g., EB number edits)
           // For manual quotations, customerData is already used for customer creation above
           // Include it in payload so backend can merge overrides: ...mappingResult.quotationData, ...req.body
-          customerData: data.customerData
+          customerData: sanitizedData.customerData
         };
         const url = quotationSource === "site_visit" && selectedSiteVisit 
           ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
@@ -4254,6 +4260,11 @@ export default function QuotationCreation() {
   };
 
   const onSubmit = (data: QuotationFormData) => {
+    // Sanitize form data: convert empty strings to null for optional fields
+    const sanitizedData = sanitizeFormData(data, [
+      'email', 'location', 'ebServiceNumber', 'propertyType', 'scope'
+    ]);
+    
     console.log("═══════════════════════════════════════════");
     console.log("🚀🚀🚀 FORM SUBMIT - onSubmit triggered 🚀🚀🚀");
     console.log("⏰ Timestamp:", new Date().toISOString());
@@ -4262,10 +4273,10 @@ export default function QuotationCreation() {
     console.log("🔍 Stack trace to see WHO called this:");
     console.trace("Form submission trace");
     console.log("═══════════════════════════════════════════");
-    console.log("Form data:", JSON.stringify(data, null, 2));
+    console.log("Form data:", JSON.stringify(sanitizedData, null, 2));
     
     // Log each project in detail
-    data.projects?.forEach((project, idx) => {
+    sanitizedData.projects?.forEach((project, idx) => {
       console.log(`\n📦 PROJECT ${idx} - Type: ${project.projectType}`);
       console.log("Project details:", JSON.stringify(project, null, 2));
     });
@@ -4278,14 +4289,14 @@ export default function QuotationCreation() {
     }
     
     // Validate business rules before submission
-    const totalSystemCost = data.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
-    const totalGSTAmount = data.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
-    const totalWithGST = data.projects.reduce((sum, p) => sum + p.projectValue, 0);
-    const totalSubsidyAmount = data.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
+    const totalSystemCost = sanitizedData.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
+    const totalGSTAmount = sanitizedData.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
+    const totalWithGST = sanitizedData.projects.reduce((sum, p) => sum + p.projectValue, 0);
+    const totalSubsidyAmount = sanitizedData.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
     const calculatedCustomerPayment = totalWithGST - totalSubsidyAmount;
     
     console.log("💰 Pricing validation:", {
-      totalCustomerPayment: data.totalCustomerPayment,
+      totalCustomerPayment: sanitizedData.totalCustomerPayment,
       calculatedCustomerPayment,
       difference: Math.abs(data.totalCustomerPayment - calculatedCustomerPayment)
     });

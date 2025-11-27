@@ -118,10 +118,10 @@ export const insertUserEnhancedSchema = z.object({
   photoURL: z.string().nullable().optional(),
   
   // Statutory Information
-  esiNumber: z.string().optional(),
-  epfNumber: z.string().optional(),
-  aadharNumber: z.string().length(12, "AADHAR must be 12 digits").optional().or(z.literal("")),
-  panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format").optional().or(z.literal("")),
+  esiNumber: z.string().nullish(),
+  epfNumber: z.string().nullish(),
+  aadharNumber: z.string().length(12, "AADHAR must be 12 digits").nullish(),
+  panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format").nullish(),
   
   // Personal Details
   fatherName: z.string().optional(),
