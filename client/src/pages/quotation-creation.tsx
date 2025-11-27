@@ -1408,6 +1408,15 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     });
   }, []);
 
+  // Helper function to safely parse panel watts (remove whitespace and non-numeric chars, then parse)
+  const parsePanelWatts = (value: any): number => {
+    if (!value) return 0;
+    const stringValue = String(value).trim();
+    const numericOnly = stringValue.replace(/[^\d]/g, '');
+    const parsed = parseInt(numericOnly, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // Auto-populate inverterKW when panel details change (for solar projects)
   useEffect(() => {
     // Only apply to solar projects (on_grid, off_grid, hybrid)
@@ -1420,9 +1429,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       return;
     }
 
-    // Calculate systemKW from panel data
-    const actualSystemKW = project.panelWatts && project.panelCount 
-      ? (parseInt(project.panelWatts) * project.panelCount) / 1000
+    // Calculate systemKW from panel data - USE SAFE PARSING
+    const panelWattsNumber = parsePanelWatts(project.panelWatts);
+    const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
+    const actualSystemKW = (panelWattsNumber && panelCountNumber) 
+      ? (panelWattsNumber * panelCountNumber) / 1000
       : 0;
 
     // Round system kW: ≤3.5 → floor, >3.5 → ceil
@@ -1475,19 +1486,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.projectType, project.batteryAH, project.batteryCount]);
 
-  // Helper function to safely parse panel watts (remove whitespace and non-numeric chars, then parse)
-  const parsePanelWatts = (value: any): number => {
-    if (!value) return 0;
-    // Convert to string, trim, and remove any non-digit characters
-    const stringValue = String(value).trim();
-    // Extract only digits from the string
-    const numericOnly = stringValue.replace(/[^\d]/g, '');
-    // Parse to integer
-    const parsed = parseInt(numericOnly, 10);
-    return isNaN(parsed) ? 0 : parsed;
-  };
-
-  // Auto-calculate system kW from panel data (actual decimal value)
+  // Auto-calculate system kW from panel data (actual decimal value) - USING SAFE PARSING
   const panelWattsNumber = parsePanelWatts(project.panelWatts);
   const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
   const actualSystemKW = (panelWattsNumber && panelCountNumber) 
