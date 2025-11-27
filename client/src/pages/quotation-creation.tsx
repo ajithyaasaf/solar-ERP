@@ -4987,7 +4987,7 @@ export default function QuotationCreation() {
                           
                           // Use same rounding logic as Project Configuration step
                           const roundedSystemKW = systemKW > 0 
-                            ? (systemKW <= 3.5 ? Math.floor(systemKW) : Math.ceil(systemKW))
+                            ? Math.round(systemKW)
                             : 0;
                           
                           // Calculate Rate/kW and GST/kW using ROUNDED systemKW
@@ -5025,7 +5025,7 @@ export default function QuotationCreation() {
                                     const value = e.target.value;
                                     const newKW = value === '' ? 0 : (parseFloat(value) || 0);
                                     const newRoundedKW = newKW > 0
-                                      ? (newKW <= 3.5 ? Math.floor(newKW) : Math.ceil(newKW))
+                                      ? Math.round(newKW)
                                       : 0;
                                     const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
@@ -5163,7 +5163,7 @@ export default function QuotationCreation() {
                       const projectValue = project.projectValue || 0;
                       
                       const roundedSystemKW = systemKW > 0 
-                        ? (systemKW <= 3.5 ? Math.floor(systemKW) : Math.ceil(systemKW))
+                        ? Math.round(systemKW)
                         : 0;
                       
                       const calculatedRatePerKW = basePrice && roundedSystemKW > 0
@@ -5206,7 +5206,7 @@ export default function QuotationCreation() {
                                     const value = e.target.value;
                                     const newKW = value === '' ? 0 : (parseFloat(value) || 0);
                                     const newRoundedKW = newKW > 0
-                                      ? (newKW <= 3.5 ? Math.floor(newKW) : Math.ceil(newKW))
+                                      ? Math.round(newKW)
                                       : 0;
                                     const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
