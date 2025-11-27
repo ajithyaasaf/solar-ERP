@@ -1089,7 +1089,10 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       }
       
       // Calculate system kW from panel data (this is the source of truth)
-      const calculatedKW = (parseInt(project.panelWatts) * project.panelCount) / 1000;
+      // Safe parsing: remove non-digit characters, then parse
+      const panelWattsStr = String(project.panelWatts || '').trim().replace(/[^\d]/g, '');
+      const panelWattsNum = parseInt(panelWattsStr, 10) || 0;
+      const calculatedKW = (panelWattsNum * project.panelCount) / 1000;
       
       // Store systemKW for backend compatibility
       project.systemKW = calculatedKW;
@@ -1593,7 +1596,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               list={`panel-watts-list-${projectIndex}`}
               value={project.panelWatts || ''}
               onChange={(e) => {
-                const value = e.target.value;
+                let value = e.target.value.trim();
+                // Remove 'W' suffix if it was accidentally added
+                if (value.endsWith('W')) {
+                  value = value.slice(0, -1).trim();
+                }
+                // Remove any non-numeric characters
+                value = value.replace(/[^\d]/g, '');
                 handleFieldChange('panelWatts', value);
               }}
               placeholder="Enter or select panel wattage"
@@ -1601,7 +1610,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             />
             <datalist id={`panel-watts-list-${projectIndex}`}>
               {panelWatts.map((watts) => (
-                <option key={watts} value={watts}>{watts}W</option>
+                <option key={watts} value={String(watts)}>{String(watts)}W</option>
               ))}
             </datalist>
           </div>
