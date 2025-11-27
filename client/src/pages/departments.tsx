@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
 import { formatDate } from "@/lib/utils";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { TimeInput } from "@/components/time/time-input";
 import { TimeDisplay, formatTimeFor12Hour } from "@/components/time/time-display";
 import { TimingDialog } from "@/components/departments/timing-dialog";
@@ -371,7 +372,7 @@ export default function Departments() {
                   </TableRow>
                 ) : (
                   filteredDepartments?.map((department: any) => {
-                    const timing = departmentTimings && typeof departmentTimings === 'object' ? departmentTimings[department.id] : null;
+                    const timing = departmentTimings && typeof departmentTimings === 'object' ? (departmentTimings as Record<string, any>)[department.id] : null;
                     return (
                     <TableRow key={department.id}>
                       <TableCell>
