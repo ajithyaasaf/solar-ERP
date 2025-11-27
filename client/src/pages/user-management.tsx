@@ -142,7 +142,7 @@ export default function UserManagement() {
   const handleSyncUsers = async () => {
     setIsSyncing(true);
     try {
-      const apiUsers = await queryClient.fetchQuery({ queryKey: ["users"] });
+      const apiUsers = await queryClient.fetchQuery({ queryKey: ["users"] }) as any[];
       const usersToUpdate = apiUsers.filter(
         (user: any) =>
           user.email?.includes("@example.com") ||
