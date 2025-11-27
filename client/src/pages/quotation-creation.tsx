@@ -4316,7 +4316,7 @@ export default function QuotationCreation() {
     const submissionData: QuotationFormData = {
       ...sanitizedData,
       source: quotationSource, // Use the actual selected source
-      preparedBy: user?.uid || "", // Use actual authenticated user ID
+      preparedBy: sanitizedData.preparedBy || user?.displayName || "", // Use form value, fallback to user name
       projects: sanitizedData.projects, // Already validated by schema
       customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
       customCompanyScopeItems: Object.keys(companyScopeItems).length > 0 ? companyScopeItems : undefined, // Include custom company scope if edited
