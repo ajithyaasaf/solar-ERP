@@ -33,12 +33,12 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
   const defaultValues: Partial<CustomerFormValues> = {
     name: "",
     mobile: "",
-    address: "",
-    email: "",
-    ebServiceNumber: "",
+    address: "" as any,  // Form uses empty string, schema accepts null
+    email: "" as any,    // Form uses empty string, schema accepts null
+    ebServiceNumber: "" as any,
     propertyType: undefined,
-    location: "",
-    scope: "",
+    location: "" as any,
+    scope: "" as any,
     ...initialData,
   };
 
@@ -146,7 +146,8 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                     <Textarea 
                       placeholder="Full address" 
                       className="min-h-[100px]" 
-                      {...field} 
+                      {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
