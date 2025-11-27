@@ -1596,32 +1596,26 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               list={`panel-watts-list-${projectIndex}`}
               value={project.panelWatts || ''}
               onChange={(e) => {
-                const rawValue = e.target.value;
-                console.log('🔍 PANEL WATTS RAW INPUT:', {
-                  rawValue,
-                  length: rawValue.length,
-                  charCodes: Array.from(rawValue).map(c => c.charCodeAt(0)),
-                  trimmed: rawValue.trim(),
-                  afterRemoveW: rawValue.endsWith('W') ? rawValue.slice(0, -1).trim() : rawValue
-                });
-                
-                let value = rawValue.trim();
-                // Remove 'W' suffix if it was accidentally added
+                let value = String(e.target.value).trim();
+                // Remove 'W' suffix if present
                 if (value.endsWith('W')) {
                   value = value.slice(0, -1).trim();
                 }
-                // Remove any non-numeric characters
+                // Keep only digits
                 value = value.replace(/[^\d]/g, '');
-                
-                console.log('🔍 PANEL WATTS PROCESSED:', { finalValue: value, original: rawValue });
+                // Validate it's a valid panel watts value
+                if (value && !panelWatts.includes(value as any)) {
+                  // If not in predefined list, still allow it (for custom values)
+                  // but ensure it's clean numeric
+                }
                 handleFieldChange('panelWatts', value);
               }}
-              placeholder="Enter or select panel wattage"
+              placeholder="Enter panel wattage (e.g., 540)"
               data-testid={`input-panel-watts-${projectIndex}`}
             />
             <datalist id={`panel-watts-list-${projectIndex}`}>
               {panelWatts.map((watts) => (
-                <option key={watts} value={String(watts)}>{String(watts)}W</option>
+                <option key={watts} value={watts}>{watts}W</option>
               ))}
             </datalist>
           </div>
@@ -2899,30 +2893,22 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 list={`pump-panel-watts-list-${projectIndex}`}
                 value={project.panelWatts || ''}
                 onChange={(e) => {
-                  const rawValue = e.target.value;
-                  console.log('🔍 PUMP PANEL WATTS RAW INPUT:', {
-                    rawValue,
-                    length: rawValue.length,
-                    charCodes: Array.from(rawValue).map(c => c.charCodeAt(0)),
-                    trimmed: rawValue.trim(),
-                    afterRemoveW: rawValue.endsWith('W') ? rawValue.slice(0, -1).trim() : rawValue
-                  });
-                  
-                  let value = rawValue.trim();
+                  let value = String(e.target.value).trim();
                   if (value.endsWith('W')) {
                     value = value.slice(0, -1).trim();
                   }
                   value = value.replace(/[^\d]/g, '');
-                  
-                  console.log('🔍 PUMP PANEL WATTS PROCESSED:', { finalValue: value, original: rawValue });
+                  if (value && !panelWatts.includes(value as any)) {
+                    // Allow custom values if needed
+                  }
                   handleFieldChange('panelWatts', value);
                 }}
-                placeholder="Enter or select panel wattage"
+                placeholder="Enter panel wattage (e.g., 540)"
                 data-testid={`input-pump-panel-watts-${projectIndex}`}
               />
               <datalist id={`pump-panel-watts-list-${projectIndex}`}>
                 {panelWatts.map((watts) => (
-                  <option key={watts} value={String(watts)}>{String(watts)}W</option>
+                  <option key={watts} value={watts}>{watts}W</option>
                 ))}
               </datalist>
             </div>
