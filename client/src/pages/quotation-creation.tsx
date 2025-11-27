@@ -109,14 +109,14 @@ const quotationFormSchema = insertQuotationSchema.omit({
   customerId: true       // Will be set from customerData or existing customer
 }).extend({
   // Override for frontend form compatibility
-  customerId: z.string().optional(), // Allow empty for new customers (will be created server-side)
+  customerId: z.string().nullish(), // Allow empty for new customers (will be created server-side)
   projects: z.array(quotationProjectSchemaWithGST).min(1, "At least one project is required"),
   followUps: z.array(quotationFollowUpSchema).default([]),
-  siteVisitMapping: siteVisitMappingSchema.optional(),
+  siteVisitMapping: siteVisitMappingSchema.nullish(),
   // Add temporary customer data fields for site visit forms with email made optional
   customerData: insertCustomerSchema.omit({ email: true }).extend({
     email: z.string().email().nullish() // Allow null/undefined for optional email
-  }).optional(),
+  }).nullish(),
   // Add GST-related total fields
   totalGSTAmount: z.number().min(0).default(0),
   totalWithGST: z.number().min(0).default(0)

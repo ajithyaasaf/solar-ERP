@@ -68,7 +68,7 @@ type User = z.infer<typeof insertUserEnhancedSchema> & {
 };
 
 const userFormSchema = insertUserEnhancedSchema.extend({
-  createLogin: z.boolean().optional()
+  createLogin: z.boolean().nullish()
 }).omit({
   uid: true
 });

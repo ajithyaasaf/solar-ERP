@@ -4,6 +4,7 @@ import { useAuthContext } from "@/contexts/auth-context";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { locationService } from "@/lib/location-service";
 import { capturePhotoWithOverlay } from "@/lib/photo-overlay-utils";
 import { Button } from "@/components/ui/button";

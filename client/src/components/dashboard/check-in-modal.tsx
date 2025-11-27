@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import {
   Dialog,
   DialogContent,
