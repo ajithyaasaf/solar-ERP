@@ -1099,7 +1099,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       
       // Calculate rounded kW for rate calculation (matching UI display logic)
       const roundedKW = calculatedKW > 0 
-        ? (calculatedKW <= 3.5 ? Math.floor(calculatedKW) : Math.ceil(calculatedKW))
+        ? (calculatedKW <= 3.5 ? Math.floor(calculatedKW) : Math.round(calculatedKW))
         : 0;
       
       // Calculate base price and GST from project value (which is total including GST)
@@ -1436,9 +1436,9 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       ? (panelWattsNumber * panelCountNumber) / 1000
       : 0;
 
-    // Round system kW: ≤3.5 → floor, >3.5 → ceil
+    // Round system kW: ≤3.5 → floor, >3.5 → round to nearest
     const roundedKW = actualSystemKW > 0 
-      ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.ceil(actualSystemKW))
+      ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.round(actualSystemKW))
       : 0;
 
     // Auto-populate inverterKW if roundedKW is valid
@@ -1493,9 +1493,9 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     ? (panelWattsNumber * panelCountNumber) / 1000
     : 0;
 
-  // Round system kW: ≤3.5 → 3, >3.5 → 4
+  // Round system kW: ≤3.5 → floor, >3.5 → round to nearest
   const roundedSystemKW = actualSystemKW > 0 
-    ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.ceil(actualSystemKW))
+    ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.round(actualSystemKW))
     : 0;
 
   // Display actual kW with 2 decimals
