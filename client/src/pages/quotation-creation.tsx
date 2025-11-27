@@ -1596,13 +1596,24 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               list={`panel-watts-list-${projectIndex}`}
               value={project.panelWatts || ''}
               onChange={(e) => {
-                let value = e.target.value.trim();
+                const rawValue = e.target.value;
+                console.log('🔍 PANEL WATTS RAW INPUT:', {
+                  rawValue,
+                  length: rawValue.length,
+                  charCodes: Array.from(rawValue).map(c => c.charCodeAt(0)),
+                  trimmed: rawValue.trim(),
+                  afterRemoveW: rawValue.endsWith('W') ? rawValue.slice(0, -1).trim() : rawValue
+                });
+                
+                let value = rawValue.trim();
                 // Remove 'W' suffix if it was accidentally added
                 if (value.endsWith('W')) {
                   value = value.slice(0, -1).trim();
                 }
                 // Remove any non-numeric characters
                 value = value.replace(/[^\d]/g, '');
+                
+                console.log('🔍 PANEL WATTS PROCESSED:', { finalValue: value, original: rawValue });
                 handleFieldChange('panelWatts', value);
               }}
               placeholder="Enter or select panel wattage"
@@ -2888,7 +2899,22 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 list={`pump-panel-watts-list-${projectIndex}`}
                 value={project.panelWatts || ''}
                 onChange={(e) => {
-                  const value = e.target.value;
+                  const rawValue = e.target.value;
+                  console.log('🔍 PUMP PANEL WATTS RAW INPUT:', {
+                    rawValue,
+                    length: rawValue.length,
+                    charCodes: Array.from(rawValue).map(c => c.charCodeAt(0)),
+                    trimmed: rawValue.trim(),
+                    afterRemoveW: rawValue.endsWith('W') ? rawValue.slice(0, -1).trim() : rawValue
+                  });
+                  
+                  let value = rawValue.trim();
+                  if (value.endsWith('W')) {
+                    value = value.slice(0, -1).trim();
+                  }
+                  value = value.replace(/[^\d]/g, '');
+                  
+                  console.log('🔍 PUMP PANEL WATTS PROCESSED:', { finalValue: value, original: rawValue });
                   handleFieldChange('panelWatts', value);
                 }}
                 placeholder="Enter or select panel wattage"
