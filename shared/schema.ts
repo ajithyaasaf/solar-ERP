@@ -1372,22 +1372,24 @@ export const customerCreationSources = [
 
 // Unified Customer Schema - Single source of truth for customer data
 // Uses mobile as unique identifier with proper validation and tracking fields
+// IMPORTANT: Use .nullish() for optional fields to accept null/undefined but reject empty strings
+// Frontend forms must use sanitizeFormData() utility to convert "" to null before submission
 export const insertCustomerSchema = z.object({
   // Core required fields (minimum for any customer record)
   name: z.string().min(2, "Customer name must be at least 2 characters"),
   mobile: z.string().min(10, "Valid mobile number is required").max(15, "Mobile number cannot exceed 15 digits"),
   
-  // Optional contact fields
-  email: z.string().email("Please enter a valid email address").optional(),
-  address: z.string().min(3, "Address must be at least 3 characters").optional(),
+  // Optional contact fields - using .nullish() to accept null/undefined but reject empty strings
+  email: z.string().email("Please enter a valid email address").nullish(),
+  address: z.string().min(3, "Address must be at least 3 characters").nullish(),
   
   // Site visit specific fields (optional for basic customer records)
-  ebServiceNumber: z.string().optional(),
-  propertyType: z.enum(propertyTypes).optional(),
-  location: z.string().optional(),
+  ebServiceNumber: z.string().nullish(),
+  propertyType: z.enum(propertyTypes).nullish(),
+  location: z.string().nullish(),
   
   // Customer management specific fields
-  scope: z.string().optional(),
+  scope: z.string().nullish(),
   
   // Data consistency tracking fields
   profileCompleteness: z.enum(customerProfileCompleteness).default("basic"),

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertCustomerSchema, type InsertUnifiedCustomer } from "@shared/schema";
+import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -13,16 +14,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-// UNIFIED: Use shared customer schema with additional frontend validation
-const customerFormSchema = insertCustomerSchema.extend({
-  // Allow empty strings for optional fields to handle controlled form inputs
-  email: z.string().email({ message: "Please enter a valid email address" }).optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
-  ebServiceNumber: z.string().optional().or(z.literal("")),
-  propertyType: z.enum(["residential", "commercial", "agri", "other"]).optional().or(z.literal("")),
-  location: z.string().optional().or(z.literal("")),
-  scope: z.string().optional().or(z.literal(""))
-}).omit({ profileCompleteness: true, createdFrom: true }); // Frontend doesn't need to handle these
+// UNIFIED: Use shared customer schema directly (single source of truth)
+// Empty strings in form are handled by sanitizeFormData() utility before submission
+const customerFormSchema = insertCustomerSchema.omit({ profileCompleteness: true, createdFrom: true }); // Frontend doesn't need to handle these
 
 type CustomerFormValues = z.infer<typeof customerFormSchema>;
 
@@ -101,21 +95,17 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
   });
 
   const onSubmit = (data: CustomerFormValues) => {
-    // CRITICAL: Strip empty strings to prevent overwriting existing data
-    const sanitizeData = (formData: CustomerFormValues) => {
-      const sanitized: any = {};
-      
-      Object.entries(formData).forEach(([key, value]) => {
-        // Only include non-empty, meaningful values
-        if (value !== undefined && value !== null && value !== '') {
-          sanitized[key] = value;
-        }
-      });
-      
-      return sanitized;
-    };
+    // CRITICAL: Use sanitizeFormData() to convert empty strings to null
+    // This ensures consistency with backend schema validation
+    const sanitizedData = sanitizeFormData(data, [
+      'email',
+      'address',
+      'ebServiceNumber',
+      'propertyType',
+      'location',
+      'scope'
+    ] as const);
     
-    const sanitizedData = sanitizeData(data);
     customerMutation.mutate(sanitizedData);
   };
 
