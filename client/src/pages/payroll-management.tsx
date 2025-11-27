@@ -282,7 +282,8 @@ export default function EnhancedPayrollManagement() {
 
   const createFieldConfigMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("/api/payroll/field-configs", "POST", data);
+      const sanitized = sanitizeFormData(data, ['fieldName', 'description', 'label']);
+      const response = await apiRequest("/api/payroll/field-configs", "POST", sanitized);
       return response.json();
     },
     onSuccess: () => {
@@ -294,7 +295,8 @@ export default function EnhancedPayrollManagement() {
 
   const createSalaryStructureMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("/api/enhanced-salary-structures", "POST", data);
+      const sanitized = sanitizeFormData(data, ['structureName', 'description', 'notes']);
+      const response = await apiRequest("/api/enhanced-salary-structures", "POST", sanitized);
       if (!response.ok) {
         throw new Error(`Failed to create salary structure: ${response.status}`);
       }
@@ -317,7 +319,8 @@ export default function EnhancedPayrollManagement() {
 
   const bulkProcessPayrollMutation = useMutation({
     mutationFn: async (data: { month: number; year: number; userIds?: string[] }) => {
-      const response = await apiRequest("/api/enhanced-payrolls/bulk-process", "POST", data);
+      const sanitized = sanitizeFormData(data, []);
+      const response = await apiRequest("/api/enhanced-payrolls/bulk-process", "POST", sanitized);
       if (!response.ok) {
         throw new Error(`Failed to process payroll: ${response.status}`);
       }

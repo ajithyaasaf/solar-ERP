@@ -427,7 +427,8 @@ export default function SiteVisitPage() {
   // Follow-up checkout mutation
   const followUpCheckoutMutation = useMutation({
     mutationFn: async ({ followUpId, checkoutData }: { followUpId: string; checkoutData: any }) => {
-      return apiRequest(`/api/follow-ups/${followUpId}/checkout`, 'PATCH', checkoutData);
+      const sanitized = sanitizeFormData(checkoutData, ['notes', 'remarks', 'description', 'outcomeNotes']);
+      return apiRequest(`/api/follow-ups/${followUpId}/checkout`, 'PATCH', sanitized);
     },
     onSuccess: () => {
       toast({
