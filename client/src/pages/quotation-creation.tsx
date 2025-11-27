@@ -1595,24 +1595,26 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               list={`panel-watts-list-${projectIndex}`}
               value={project.panelWatts || ''}
               onChange={(e) => {
-                const rawValue = e.target.value;
-                // BULLETPROOF: Extract ONLY digits, strip everything else
-                const onlyDigits = rawValue.replace(/\D/g, '');
-                handleFieldChange('panelWatts', onlyDigits);
-              }}
-              onBlur={(e) => {
-                // Final validation on blur: ensure only digits stored
-                const cleanValue = String(e.target.value).replace(/\D/g, '');
-                if (cleanValue !== project.panelWatts) {
-                  handleFieldChange('panelWatts', cleanValue);
+                let value = String(e.target.value).trim();
+                // Remove 'W' suffix if present
+                if (value.endsWith('W')) {
+                  value = value.slice(0, -1).trim();
                 }
+                // Keep only digits
+                value = value.replace(/[^\d]/g, '');
+                // Validate it's a valid panel watts value
+                if (value && !panelWatts.includes(value as any)) {
+                  // If not in predefined list, still allow it (for custom values)
+                  // but ensure it's clean numeric
+                }
+                handleFieldChange('panelWatts', value);
               }}
               placeholder="Enter panel wattage (e.g., 540)"
               data-testid={`input-panel-watts-${projectIndex}`}
             />
             <datalist id={`panel-watts-list-${projectIndex}`}>
               {panelWatts.map((watts) => (
-                <option key={watts} value={watts} />
+                <option key={watts} value={watts}>{watts}W</option>
               ))}
             </datalist>
           </div>
@@ -2890,24 +2892,22 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 list={`pump-panel-watts-list-${projectIndex}`}
                 value={project.panelWatts || ''}
                 onChange={(e) => {
-                  const rawValue = e.target.value;
-                  // BULLETPROOF: Extract ONLY digits, strip everything else
-                  const onlyDigits = rawValue.replace(/\D/g, '');
-                  handleFieldChange('panelWatts', onlyDigits);
-                }}
-                onBlur={(e) => {
-                  // Final validation on blur: ensure only digits stored
-                  const cleanValue = String(e.target.value).replace(/\D/g, '');
-                  if (cleanValue !== project.panelWatts) {
-                    handleFieldChange('panelWatts', cleanValue);
+                  let value = String(e.target.value).trim();
+                  if (value.endsWith('W')) {
+                    value = value.slice(0, -1).trim();
                   }
+                  value = value.replace(/[^\d]/g, '');
+                  if (value && !panelWatts.includes(value as any)) {
+                    // Allow custom values if needed
+                  }
+                  handleFieldChange('panelWatts', value);
                 }}
                 placeholder="Enter panel wattage (e.g., 540)"
                 data-testid={`input-pump-panel-watts-${projectIndex}`}
               />
               <datalist id={`pump-panel-watts-list-${projectIndex}`}>
                 {panelWatts.map((watts) => (
-                  <option key={watts} value={watts} />
+                  <option key={watts} value={watts}>{watts}W</option>
                 ))}
               </datalist>
             </div>
