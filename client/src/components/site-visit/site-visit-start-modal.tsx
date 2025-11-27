@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { 
   MapPin, 
   Camera, 
@@ -657,19 +656,13 @@ export function SiteVisitStartModal({ isOpen, onClose, userDepartment }: SiteVis
         notes: data.notes || ''
       };
 
-      // Sanitize customer data: convert empty strings to null for optional fields
-      const sanitizedPayload = {
-        ...siteVisitPayload,
-        customer: sanitizeFormData(siteVisitPayload.customer, ['ebServiceNumber', 'address'])
-      };
-
       console.log("=== FRONTEND SITE VISIT PAYLOAD ===");
-      console.log("Payload being sent:", JSON.stringify(sanitizedPayload, null, 2));
+      console.log("Payload being sent:", JSON.stringify(siteVisitPayload, null, 2));
       console.log("================================");
 
       try {
         console.log("Making API request to /api/site-visits...");
-        const result = await apiRequest('/api/site-visits', 'POST', sanitizedPayload);
+        const result = await apiRequest('/api/site-visits', 'POST', siteVisitPayload);
         console.log("API request successful:", result);
         return result;
       } catch (error) {

@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { 
   Plus, 
   MapPin, 
@@ -427,8 +426,7 @@ export default function SiteVisitPage() {
   // Follow-up checkout mutation
   const followUpCheckoutMutation = useMutation({
     mutationFn: async ({ followUpId, checkoutData }: { followUpId: string; checkoutData: any }) => {
-      const sanitized = sanitizeFormData(checkoutData, ['notes', 'remarks', 'description', 'outcomeNotes']);
-      return apiRequest(`/api/follow-ups/${followUpId}/checkout`, 'PATCH', sanitized);
+      return apiRequest(`/api/follow-ups/${followUpId}/checkout`, 'PATCH', checkoutData);
     },
     onSuccess: () => {
       toast({

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertCustomerSchema, type InsertUnifiedCustomer } from "@shared/schema";
-import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -14,9 +13,16 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-// UNIFIED: Use shared customer schema directly (single source of truth)
-// Empty strings in form are handled by sanitizeFormData() utility before submission
-const customerFormSchema = insertCustomerSchema.omit({ profileCompleteness: true, createdFrom: true }); // Frontend doesn't need to handle these
+// UNIFIED: Use shared customer schema with additional frontend validation
+const customerFormSchema = insertCustomerSchema.extend({
+  // Allow empty strings for optional fields to handle controlled form inputs
+  email: z.string().email({ message: "Please enter a valid email address" }).optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  ebServiceNumber: z.string().optional().or(z.literal("")),
+  propertyType: z.enum(["residential", "commercial", "agri", "other"]).optional().or(z.literal("")),
+  location: z.string().optional().or(z.literal("")),
+  scope: z.string().optional().or(z.literal(""))
+}).omit({ profileCompleteness: true, createdFrom: true }); // Frontend doesn't need to handle these
 
 type CustomerFormValues = z.infer<typeof customerFormSchema>;
 
@@ -33,18 +39,18 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
   const defaultValues: Partial<CustomerFormValues> = {
     name: "",
     mobile: "",
-    address: "" as any,  // Form uses empty string, schema accepts null
-    email: "" as any,    // Form uses empty string, schema accepts null
-    ebServiceNumber: "" as any,
+    address: "",
+    email: "",
+    ebServiceNumber: "",
     propertyType: undefined,
-    location: "" as any,
-    scope: "" as any,
+    location: "",
+    scope: "",
     ...initialData,
   };
 
   // UNIFIED: Create/Update customer mutation with unified schema
   const customerMutation = useMutation({
-    mutationFn: async (data: Partial<CustomerFormValues>) => {
+    mutationFn: async (data: CustomerFormValues) => {
       const endpoint = isEditing 
         ? `/api/customers/${initialData?.id}` 
         : "/api/customers";
@@ -95,17 +101,21 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
   });
 
   const onSubmit = (data: CustomerFormValues) => {
-    // CRITICAL: Use sanitizeFormData() to convert empty strings to null
-    // This ensures consistency with backend schema validation
-    const sanitizedData = sanitizeFormData(data, [
-      'email',
-      'address',
-      'ebServiceNumber',
-      'propertyType',
-      'location',
-      'scope'
-    ] as const);
+    // CRITICAL: Strip empty strings to prevent overwriting existing data
+    const sanitizeData = (formData: CustomerFormValues) => {
+      const sanitized: any = {};
+      
+      Object.entries(formData).forEach(([key, value]) => {
+        // Only include non-empty, meaningful values
+        if (value !== undefined && value !== null && value !== '') {
+          sanitized[key] = value;
+        }
+      });
+      
+      return sanitized;
+    };
     
+    const sanitizedData = sanitizeData(data);
     customerMutation.mutate(sanitizedData);
   };
 
@@ -146,8 +156,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                     <Textarea 
                       placeholder="Full address" 
                       className="min-h-[100px]" 
-                      {...field}
-                      value={field.value || ""}
+                      {...field} 
                     />
                   </FormControl>
                   <FormMessage />
@@ -163,7 +172,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Email address" type="email" {...field} value={field.value || ""} />
+                      <Input placeholder="Email address" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -193,7 +202,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="City, State" {...field} value={field.value || ""} />
+                      <Input placeholder="City, State" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -207,7 +216,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                   <FormItem>
                     <FormLabel>EB Service Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="EB service number (optional)" {...field} value={field.value || ""} />
+                      <Input placeholder="EB service number (optional)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -225,7 +234,6 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                     <select
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       {...field}
-                      value={field.value || ""}
                     >
                       <option value="">Select property type (optional)</option>
                       <option value="residential">Residential</option>
@@ -249,8 +257,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                     <Textarea 
                       placeholder="Description of projects, requirements, etc." 
                       className="min-h-[100px]" 
-                      {...field}
-                      value={field.value || ""}
+                      {...field} 
                     />
                   </FormControl>
                   <FormDescription>

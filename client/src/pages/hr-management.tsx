@@ -54,7 +54,6 @@ import {
   bloodGroups,
   paymentModes
 } from "@shared/schema";
-import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { z } from "zod";
 import { formatDate, getInitials } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -68,7 +67,7 @@ type User = z.infer<typeof insertUserEnhancedSchema> & {
 };
 
 const userFormSchema = insertUserEnhancedSchema.extend({
-  createLogin: z.boolean().nullish()
+  createLogin: z.boolean().optional()
 }).omit({
   uid: true
 });
@@ -98,14 +97,7 @@ export default function HRManagement() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: z.infer<typeof userFormSchema>) => {
-      // Sanitize form data: convert empty strings to null for optional fields
-      const sanitizedData = sanitizeFormData(data, [
-        'employeeId', 'esiNumber', 'epfNumber', 'aadharNumber', 'panNumber',
-        'fatherName', 'spouseName', 'contactNumber', 'emergencyContactPerson',
-        'emergencyContactNumber', 'permanentAddress', 'presentAddress', 'location',
-        'bankAccountNumber', 'bankName', 'ifscCode', 'educationalQualification'
-      ]);
-      const response = await apiRequest('/api/users', 'POST', sanitizedData);
+      const response = await apiRequest('/api/users', 'POST', data);
       return response.json();
     },
     onSuccess: () => {
@@ -128,14 +120,7 @@ export default function HRManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ uid, data }: { uid: string; data: Partial<z.infer<typeof userFormSchema>> }) => {
-      // Sanitize form data: convert empty strings to null for optional fields
-      const sanitizedData = sanitizeFormData(data, [
-        'employeeId', 'esiNumber', 'epfNumber', 'aadharNumber', 'panNumber',
-        'fatherName', 'spouseName', 'contactNumber', 'emergencyContactPerson',
-        'emergencyContactNumber', 'permanentAddress', 'presentAddress', 'location',
-        'bankAccountNumber', 'bankName', 'ifscCode', 'educationalQualification'
-      ]);
-      const response = await apiRequest(`/api/users/${uid}`, 'PATCH', sanitizedData);
+      const response = await apiRequest(`/api/users/${uid}`, 'PATCH', data);
       return response.json();
     },
     onSuccess: () => {

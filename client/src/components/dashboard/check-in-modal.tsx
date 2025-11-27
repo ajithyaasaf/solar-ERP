@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { useAuthContext } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useGeolocation } from "@/hooks/use-geolocation";
-import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import {
   Dialog,
   DialogContent,
@@ -83,14 +82,14 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(sanitizeFormData({
+        body: JSON.stringify({
           userId: user.id,
           latitude: geolocation.latitude?.toString(),
           longitude: geolocation.longitude?.toString(),
           location,
           customerId: location === 'field' ? customer : undefined,
           reason: location === 'field' ? reason : undefined,
-        }, ['reason', 'customer'])),
+        }),
       });
       
       if (!response.ok) {
@@ -137,13 +136,13 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(sanitizeFormData({
+        body: JSON.stringify({
           userId: user.id,
           latitude: geolocation.latitude?.toString(),
           longitude: geolocation.longitude?.toString(),
           photoUrl: photoDataUrl,
           reason: reason || undefined,
-        }, ['reason'])),
+        }),
       });
       
       if (!response.ok) {

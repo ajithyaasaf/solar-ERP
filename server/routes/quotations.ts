@@ -151,7 +151,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       console.log("\n🔍 Starting schema validation...");
       const quotationData = insertQuotationSchema.parse({
         ...req.body,
-        preparedBy: req.body.preparedBy || user.displayName || user.email || user.uid,
+        preparedBy: user.displayName || user.email || user.uid,
         quotationNumber: QuotationTemplateService.generateQuotationNumber()
       });
       

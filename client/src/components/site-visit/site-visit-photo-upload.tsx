@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import { 
   Camera, 
   Upload,

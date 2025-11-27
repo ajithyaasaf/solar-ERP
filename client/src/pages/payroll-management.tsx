@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UndoManager, useUndoManager } from "@/components/undo/undo-manager";
@@ -282,8 +281,7 @@ export default function EnhancedPayrollManagement() {
 
   const createFieldConfigMutation = useMutation({
     mutationFn: async (data: any) => {
-      const sanitized = sanitizeFormData(data, ['fieldName', 'description', 'label']);
-      const response = await apiRequest("/api/payroll/field-configs", "POST", sanitized);
+      const response = await apiRequest("/api/payroll/field-configs", "POST", data);
       return response.json();
     },
     onSuccess: () => {
@@ -295,8 +293,7 @@ export default function EnhancedPayrollManagement() {
 
   const createSalaryStructureMutation = useMutation({
     mutationFn: async (data: any) => {
-      const sanitized = sanitizeFormData(data, ['structureName', 'description', 'notes']);
-      const response = await apiRequest("/api/enhanced-salary-structures", "POST", sanitized);
+      const response = await apiRequest("/api/enhanced-salary-structures", "POST", data);
       if (!response.ok) {
         throw new Error(`Failed to create salary structure: ${response.status}`);
       }
@@ -319,8 +316,7 @@ export default function EnhancedPayrollManagement() {
 
   const bulkProcessPayrollMutation = useMutation({
     mutationFn: async (data: { month: number; year: number; userIds?: string[] }) => {
-      const sanitized = sanitizeFormData(data, []);
-      const response = await apiRequest("/api/enhanced-payrolls/bulk-process", "POST", sanitized);
+      const response = await apiRequest("/api/enhanced-payrolls/bulk-process", "POST", data);
       if (!response.ok) {
         throw new Error(`Failed to process payroll: ${response.status}`);
       }
@@ -346,8 +342,7 @@ export default function EnhancedPayrollManagement() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
-      const sanitized = sanitizeFormData(data, ['companyAddress', 'companyPan', 'companyTan']);
-      const response = await apiRequest("/api/enhanced-payroll-settings", "PATCH", sanitized);
+      const response = await apiRequest("/api/enhanced-payroll-settings", "PATCH", data);
       return response.json();
     },
     onSuccess: () => {

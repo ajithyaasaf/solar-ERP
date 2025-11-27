@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
-import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,11 +19,11 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const leaveApplicationFormSchema = z.object({
   leaveType: z.enum(["casual_leave", "permission", "unpaid_leave"]),
-  startDate: z.date().nullish(),
-  endDate: z.date().nullish(),
-  permissionDate: z.date().nullish(),
-  permissionStartTime: z.string().nullish(),
-  permissionEndTime: z.string().nullish(),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
+  permissionDate: z.date().optional(),
+  permissionStartTime: z.string().optional(),
+  permissionEndTime: z.string().optional(),
   reason: z.string().min(10, "Reason must be at least 10 characters"),
 }).superRefine((data, ctx) => {
   if ((data.leaveType === "casual_leave" || data.leaveType === "unpaid_leave") && !data.startDate) {
@@ -144,7 +143,7 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         throw new Error("User profile is incomplete. Please contact HR to update your profile.");
       }
 
-      let payload: any = {
+      const payload: any = {
         userId: user!.uid,
         employeeId: user!.employeeId || user!.uid,
         userName: user!.displayName,
@@ -173,7 +172,6 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         };
       }
 
-      payload = sanitizeFormData(payload, ['reason']);
       return apiRequest("/api/leave-applications", "POST", payload);
     },
     onSuccess: () => {
