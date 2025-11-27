@@ -70,6 +70,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
 import { useAuthContext } from "@/contexts/auth-context";
 import { 
@@ -108,14 +109,14 @@ const quotationFormSchema = insertQuotationSchema.omit({
   customerId: true       // Will be set from customerData or existing customer
 }).extend({
   // Override for frontend form compatibility
-  customerId: z.string().optional(), // Allow empty for new customers (will be created server-side)
+  customerId: z.string().nullish(), // Allow empty for new customers (will be created server-side)
   projects: z.array(quotationProjectSchemaWithGST).min(1, "At least one project is required"),
   followUps: z.array(quotationFollowUpSchema).default([]),
-  siteVisitMapping: siteVisitMappingSchema.optional(),
+  siteVisitMapping: siteVisitMappingSchema.nullish(),
   // Add temporary customer data fields for site visit forms with email made optional
   customerData: insertCustomerSchema.omit({ email: true }).extend({
-    email: z.string().email().or(z.literal('')).optional() // Allow empty string or valid email
-  }).optional(),
+    email: z.string().email().nullish() // Allow null/undefined for optional email
+  }).nullish(),
   // Add GST-related total fields
   totalGSTAmount: z.number().min(0).default(0),
   totalWithGST: z.number().min(0).default(0)
@@ -3526,17 +3527,22 @@ export default function QuotationCreation() {
   // Create/Update quotation mutation using proper apiRequest with auth
   const createQuotationMutation = useMutation({
     mutationFn: async (data: QuotationFormData) => {
-      let finalCustomerId = data.customerId;
+      // Sanitize form data: convert empty strings to null for optional fields
+      const sanitizedData = sanitizeFormData(data, [
+        'email', 'location', 'ebServiceNumber', 'propertyType', 'scope'
+      ]);
+      
+      let finalCustomerId = sanitizedData.customerId;
       
       // For manual quotations (NOT in edit mode), handle customer creation/lookup
-      if (!isEditMode && quotationSource === "manual" && data.customerData) {
+      if (!isEditMode && quotationSource === "manual" && sanitizedData.customerData) {
         // Check if customer already selected via customerId dropdown
-        if (data.customerId) {
-          finalCustomerId = data.customerId;
+        if (sanitizedData.customerId) {
+          finalCustomerId = sanitizedData.customerId;
         } else {
           // Create new customer from customerData form
-          console.log("Creating new customer:", data.customerData);
-          const customerResponse = await apiRequest("/api/customers", "POST", data.customerData);
+          console.log("Creating new customer:", sanitizedData.customerData);
+          const customerResponse = await apiRequest("/api/customers", "POST", sanitizedData.customerData);
           const newCustomer = await customerResponse.json();
           finalCustomerId = newCustomer.id;
           console.log("New customer created with ID:", finalCustomerId);
@@ -3549,7 +3555,7 @@ export default function QuotationCreation() {
       }
       
       // Prepare payload - customerData handling depends on quotation source
-      const { totalGSTAmount, totalWithGST, ...basePayload } = data;
+      const { totalGSTAmount, totalWithGST, ...basePayload } = sanitizedData;
       
       // Use PUT for edit mode, POST for create mode
       if (isEditMode && quotationId) {
@@ -3571,7 +3577,7 @@ export default function QuotationCreation() {
           // IMPORTANT: For site visit quotations, customerData allows user to override mapped values (e.g., EB number edits)
           // For manual quotations, customerData is already used for customer creation above
           // Include it in payload so backend can merge overrides: ...mappingResult.quotationData, ...req.body
-          customerData: data.customerData
+          customerData: sanitizedData.customerData
         };
         const url = quotationSource === "site_visit" && selectedSiteVisit 
           ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
@@ -4254,6 +4260,11 @@ export default function QuotationCreation() {
   };
 
   const onSubmit = (data: QuotationFormData) => {
+    // Sanitize form data: convert empty strings to null for optional fields
+    const sanitizedData = sanitizeFormData(data, [
+      'email', 'location', 'ebServiceNumber', 'propertyType', 'scope'
+    ]);
+    
     console.log("═══════════════════════════════════════════");
     console.log("🚀🚀🚀 FORM SUBMIT - onSubmit triggered 🚀🚀🚀");
     console.log("⏰ Timestamp:", new Date().toISOString());
@@ -4262,10 +4273,10 @@ export default function QuotationCreation() {
     console.log("🔍 Stack trace to see WHO called this:");
     console.trace("Form submission trace");
     console.log("═══════════════════════════════════════════");
-    console.log("Form data:", JSON.stringify(data, null, 2));
+    console.log("Form data:", JSON.stringify(sanitizedData, null, 2));
     
     // Log each project in detail
-    data.projects?.forEach((project, idx) => {
+    sanitizedData.projects?.forEach((project, idx) => {
       console.log(`\n📦 PROJECT ${idx} - Type: ${project.projectType}`);
       console.log("Project details:", JSON.stringify(project, null, 2));
     });
@@ -4278,20 +4289,20 @@ export default function QuotationCreation() {
     }
     
     // Validate business rules before submission
-    const totalSystemCost = data.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
-    const totalGSTAmount = data.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
-    const totalWithGST = data.projects.reduce((sum, p) => sum + p.projectValue, 0);
-    const totalSubsidyAmount = data.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
+    const totalSystemCost = sanitizedData.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
+    const totalGSTAmount = sanitizedData.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
+    const totalWithGST = sanitizedData.projects.reduce((sum, p) => sum + p.projectValue, 0);
+    const totalSubsidyAmount = sanitizedData.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
     const calculatedCustomerPayment = totalWithGST - totalSubsidyAmount;
     
     console.log("💰 Pricing validation:", {
-      totalCustomerPayment: data.totalCustomerPayment,
+      totalCustomerPayment: sanitizedData.totalCustomerPayment,
       calculatedCustomerPayment,
-      difference: Math.abs(data.totalCustomerPayment - calculatedCustomerPayment)
+      difference: Math.abs(sanitizedData.totalCustomerPayment - calculatedCustomerPayment)
     });
     
     // Ensure all pricing is consistent with business rules
-    if (Math.abs(data.totalCustomerPayment - calculatedCustomerPayment) > 1) {
+    if (Math.abs(sanitizedData.totalCustomerPayment - calculatedCustomerPayment) > 1) {
       console.log("❌ Pricing validation failed - aborting submission");
       toast({
         title: "Pricing Error",
@@ -4303,18 +4314,18 @@ export default function QuotationCreation() {
     
     // Prepare final submission with proper QuotationProject validation
     const submissionData: QuotationFormData = {
-      ...data,
+      ...sanitizedData,
       source: quotationSource, // Use the actual selected source
-      preparedBy: user?.uid || "", // Use actual authenticated user ID
-      projects: data.projects, // Already validated by schema
+      preparedBy: sanitizedData.preparedBy || user?.displayName || "", // Use form value, fallback to user name
+      projects: sanitizedData.projects, // Already validated by schema
       customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
       customCompanyScopeItems: Object.keys(companyScopeItems).length > 0 ? companyScopeItems : undefined, // Include custom company scope if edited
       customCustomerScopeItems: Object.keys(customerScopeItems).length > 0 ? customerScopeItems : undefined, // Include custom customer scope if edited
       totalSystemCost,
       totalSubsidyAmount,
       totalCustomerPayment: calculatedCustomerPayment,
-      advanceAmount: Math.round(calculatedCustomerPayment * (data.advancePaymentPercentage / 100)),
-      balanceAmount: calculatedCustomerPayment - Math.round(calculatedCustomerPayment * (data.advancePaymentPercentage / 100))
+      advanceAmount: Math.round(calculatedCustomerPayment * (sanitizedData.advancePaymentPercentage / 100)),
+      balanceAmount: calculatedCustomerPayment - Math.round(calculatedCustomerPayment * (sanitizedData.advancePaymentPercentage / 100))
     };
     
     createQuotationMutation.mutate(submissionData);

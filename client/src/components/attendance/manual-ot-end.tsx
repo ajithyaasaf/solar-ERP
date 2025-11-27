@@ -4,6 +4,7 @@ import { useAuthContext } from "@/contexts/auth-context";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";

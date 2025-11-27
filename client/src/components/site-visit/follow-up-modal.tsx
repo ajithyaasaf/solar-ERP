@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { locationService, LocationStatus } from "@/lib/location-service";
 import { 
   MapPin, Camera, User, Phone, MapPinIcon, Clock, RefreshCw, Upload,
@@ -576,6 +577,9 @@ export function FollowUpModal({ isOpen, onClose, originalVisit }: FollowUpModalP
         description
       };
 
+      // Sanitize follow-up data: convert empty strings to null for optional fields
+      const sanitizedPayload = sanitizeFormData(followUpPayload, ['description', 'siteInPhotoUrl']);
+
       console.log("FOLLOW_UP_CREATE: Original visit check:", {
         currentVisitId: originalVisit!.id,
         isFollowUp: originalVisit!.isFollowUp,
@@ -583,9 +587,9 @@ export function FollowUpModal({ isOpen, onClose, originalVisit }: FollowUpModalP
         actualOriginalVisitId: actualOriginalVisitId
       });
       
-      console.log("FOLLOW_UP_CREATE: Sending payload to server:", followUpPayload);
+      console.log("FOLLOW_UP_CREATE: Sending payload to server:", sanitizedPayload);
       
-      return apiRequest('/api/site-visits/follow-up', 'POST', followUpPayload);
+      return apiRequest('/api/site-visits/follow-up', 'POST', sanitizedPayload);
     },
     onSuccess: () => {
       toast({

@@ -19,6 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import { getAuth } from 'firebase/auth';
 import { 
   MapPin, 
@@ -605,6 +606,7 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
       
       const token = await currentUser.getIdToken();
       
+      const sanitizedPayload = sanitizeFormData(checkoutPayload, ['notes', 'remarks', 'description', 'outcomeNotes']);
       const response = await fetch(endpoint, {
         method: 'PATCH',
         headers: {
@@ -612,7 +614,7 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
-        body: JSON.stringify(checkoutPayload)
+        body: JSON.stringify(sanitizedPayload)
       });
 
       console.log("=== RESPONSE STATUS ===");

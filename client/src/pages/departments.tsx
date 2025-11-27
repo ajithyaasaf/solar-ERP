@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
 import { formatDate } from "@/lib/utils";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { TimeInput } from "@/components/time/time-input";
 import { TimeDisplay, formatTimeFor12Hour } from "@/components/time/time-display";
 import { TimingDialog } from "@/components/departments/timing-dialog";
@@ -121,7 +122,8 @@ export default function Departments() {
   // Create department mutation
   const createDepartmentMutation = useMutation({
     mutationFn: (departmentData: { name: string; description: string }) => {
-      return apiRequest('/api/departments', 'POST', departmentData);
+      const sanitized = sanitizeFormData(departmentData, ['description']);
+      return apiRequest('/api/departments', 'POST', sanitized);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -154,7 +156,8 @@ export default function Departments() {
   const updateDepartmentMutation = useMutation({
     mutationFn: (departmentData: { id: number; name: string; description: string }) => {
       const { id, ...data } = departmentData;
-      return apiRequest(`/api/departments/${id}`, 'PATCH', data);
+      const sanitized = sanitizeFormData(data, ['description']);
+      return apiRequest(`/api/departments/${id}`, 'PATCH', sanitized);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ 
@@ -218,7 +221,8 @@ export default function Departments() {
   const updateTimingMutation = useMutation({
     mutationFn: (data: { departmentId: string; timing: any }) => {
       console.log('DEPARTMENTS: Updating timing for department:', data.departmentId);
-      return apiRequest(`/api/departments/${data.departmentId}/timing`, 'POST', data.timing);
+      const sanitized = sanitizeFormData(data.timing, ['flexibleCheckInStart', 'flexibleCheckInEnd', 'updatedBy']);
+      return apiRequest(`/api/departments/${data.departmentId}/timing`, 'POST', sanitized);
     },
     onSuccess: async (result, variables) => {
       console.log('DEPARTMENTS: Timing update successful for:', variables.departmentId);
@@ -368,7 +372,7 @@ export default function Departments() {
                   </TableRow>
                 ) : (
                   filteredDepartments?.map((department: any) => {
-                    const timing = departmentTimings && typeof departmentTimings === 'object' ? departmentTimings[department.id] : null;
+                    const timing = departmentTimings && typeof departmentTimings === 'object' ? (departmentTimings as Record<string, any>)[department.id] : null;
                     return (
                     <TableRow key={department.id}>
                       <TableCell>

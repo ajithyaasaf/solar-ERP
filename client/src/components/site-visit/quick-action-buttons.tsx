@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import { useToast } from "@/hooks/use-toast";
 import { RescheduleModal } from "./reschedule-modal";
 

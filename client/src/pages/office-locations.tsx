@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
+import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,7 +88,8 @@ export default function OfficeLocations() {
   // Create new office location
   const createLocationMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest('/api/office-locations', 'POST', data);
+      const sanitized = sanitizeFormData(data, ['address']);
+      return apiRequest('/api/office-locations', 'POST', sanitized);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/office-locations"] });
@@ -110,7 +112,8 @@ export default function OfficeLocations() {
   // Update office location
   const updateLocationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return apiRequest(`/api/office-locations/${id}`, 'PATCH', data);
+      const sanitized = sanitizeFormData(data, ['address']);
+      return apiRequest(`/api/office-locations/${id}`, 'PATCH', sanitized);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/office-locations"] });
