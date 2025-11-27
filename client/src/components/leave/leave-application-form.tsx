@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
-import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
+import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -144,7 +144,7 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         throw new Error("User profile is incomplete. Please contact HR to update your profile.");
       }
 
-      const payload: any = {
+      let payload: any = {
         userId: user!.uid,
         employeeId: user!.employeeId || user!.uid,
         userName: user!.displayName,
@@ -173,6 +173,7 @@ export function LeaveApplicationForm({ onSuccess }: LeaveApplicationFormProps) {
         };
       }
 
+      payload = sanitizeFormData(payload, ['reason']);
       return apiRequest("/api/leave-applications", "POST", payload);
     },
     onSuccess: () => {

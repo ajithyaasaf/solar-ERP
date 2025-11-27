@@ -4,7 +4,7 @@ import { useAuthContext } from "@/contexts/auth-context";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
+import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
 import { locationService } from "@/lib/location-service";
 import { capturePhotoWithOverlay } from "@/lib/photo-overlay-utils";
 import { Button } from "@/components/ui/button";
@@ -255,7 +255,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
         locationCapability: location.accuracy <= 10 ? 'excellent' as const : location.accuracy <= 50 ? 'good' as const : 'limited' as const
       };
 
-      const requestData = {
+      const requestData = sanitizeFormData({
         userId: user.uid,
         latitude: location.latitude,
         longitude: location.longitude,
@@ -263,7 +263,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
         attendanceType: 'office',
         imageUrl: photoUploadUrl,
         deviceInfo
-      };
+      }, []);
 
       console.log('FRONTEND: Sending simplified check-in request');
       console.log('Location data:', { 
