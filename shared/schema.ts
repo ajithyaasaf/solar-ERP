@@ -124,8 +124,8 @@ export const insertUserEnhancedSchema = z.object({
   panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format").nullish(),
   
   // Personal Details
-  fatherName: z.string().optional(),
-  spouseName: z.string().optional(),
+  fatherName: z.string().nullish(),
+  spouseName: z.string().nullish(),
   dateOfBirth: z.date().optional(),
   age: z.number().min(0).max(150).optional(),
   gender: z.enum(["male", "female", "other"]).optional(),
@@ -133,12 +133,12 @@ export const insertUserEnhancedSchema = z.object({
   bloodGroup: z.enum(bloodGroups).optional(),
   
   // Employee Document URLs
-  profilePhotoUrl: z.string().optional(),
-  aadharCardUrl: z.string().optional(),
-  panCardUrl: z.string().optional(),
+  profilePhotoUrl: z.string().nullish(),
+  aadharCardUrl: z.string().nullish(),
+  panCardUrl: z.string().nullish(),
   
   // Professional Information
-  educationalQualification: z.string().optional(),
+  educationalQualification: z.string().nullish(),
   experienceYears: z.number().min(0).optional(),
   
   // Employment Lifecycle
@@ -146,18 +146,18 @@ export const insertUserEnhancedSchema = z.object({
   employeeStatus: z.enum(employeeStatus).default("active"),
   
   // Contact Information
-  contactNumber: z.string().optional(),
-  emergencyContactPerson: z.string().optional(),
-  emergencyContactNumber: z.string().optional(),
-  permanentAddress: z.string().optional(),
-  presentAddress: z.string().optional(),
-  location: z.string().optional(),
+  contactNumber: z.string().nullish(),
+  emergencyContactPerson: z.string().nullish(),
+  emergencyContactNumber: z.string().nullish(),
+  permanentAddress: z.string().nullish(),
+  presentAddress: z.string().nullish(),
+  location: z.string().nullish(),
   
   // Payroll Information
   paymentMode: z.enum(paymentModes).optional(),
-  bankAccountNumber: z.string().optional(),
-  bankName: z.string().optional(),
-  ifscCode: z.string().optional(),
+  bankAccountNumber: z.string().nullish(),
+  bankName: z.string().nullish(),
+  ifscCode: z.string().nullish(),
   
   // Document Management
   documents: z.object({
