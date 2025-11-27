@@ -44,7 +44,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
 
   // UNIFIED: Create/Update customer mutation with unified schema
   const customerMutation = useMutation({
-    mutationFn: async (data: CustomerFormValues) => {
+    mutationFn: async (data: Partial<CustomerFormValues>) => {
       const endpoint = isEditing 
         ? `/api/customers/${initialData?.id}` 
         : "/api/customers";
@@ -163,7 +163,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Email address" type="email" {...field} />
+                      <Input placeholder="Email address" type="email" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -193,7 +193,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="City, State" {...field} />
+                      <Input placeholder="City, State" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -207,7 +207,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                   <FormItem>
                     <FormLabel>EB Service Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="EB service number (optional)" {...field} />
+                      <Input placeholder="EB service number (optional)" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -225,6 +225,7 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                     <select
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       {...field}
+                      value={field.value || ""}
                     >
                       <option value="">Select property type (optional)</option>
                       <option value="residential">Residential</option>
@@ -248,7 +249,8 @@ export function CustomerForm({ initialData, onSuccess, isEditing = false }: Cust
                     <Textarea 
                       placeholder="Description of projects, requirements, etc." 
                       className="min-h-[100px]" 
-                      {...field} 
+                      {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormDescription>
