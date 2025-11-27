@@ -108,14 +108,14 @@ export const insertUserEnhancedSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(2, "Display name must be at least 2 characters"),
   role: z.enum(["master_admin", "admin", "employee"]).default("employee"),
-  department: z.enum(departments).nullable().optional(),
-  designation: z.enum(designations).nullable().optional(),
+  department: z.enum(departments).nullable().nullish(),
+  designation: z.enum(designations).nullable().nullish(),
   employeeId: z.string().nullish(),
-  reportingManagerId: z.string().nullable().optional(),
-  payrollGrade: z.enum(payrollGrades).nullable().optional(),
-  joinDate: z.date().optional(),
+  reportingManagerId: z.string().nullable().nullish(),
+  payrollGrade: z.enum(payrollGrades).nullable().nullish(),
+  joinDate: z.date().nullish(),
   isActive: z.boolean().default(true),
-  photoURL: z.string().nullable().optional(),
+  photoURL: z.string().nullable().nullish(),
   
   // Statutory Information
   esiNumber: z.string().nullish(),
@@ -126,11 +126,11 @@ export const insertUserEnhancedSchema = z.object({
   // Personal Details
   fatherName: z.string().nullish(),
   spouseName: z.string().nullish(),
-  dateOfBirth: z.date().optional(),
-  age: z.number().min(0).max(150).optional(),
-  gender: z.enum(["male", "female", "other"]).optional(),
-  maritalStatus: z.enum(maritalStatus).optional(),
-  bloodGroup: z.enum(bloodGroups).optional(),
+  dateOfBirth: z.date().nullish(),
+  age: z.number().min(0).max(150).nullish(),
+  gender: z.enum(["male", "female", "other"]).nullish(),
+  maritalStatus: z.enum(maritalStatus).nullish(),
+  bloodGroup: z.enum(bloodGroups).nullish(),
   
   // Employee Document URLs
   profilePhotoUrl: z.string().nullish(),
@@ -139,10 +139,10 @@ export const insertUserEnhancedSchema = z.object({
   
   // Professional Information
   educationalQualification: z.string().nullish(),
-  experienceYears: z.number().min(0).optional(),
+  experienceYears: z.number().min(0).nullish(),
   
   // Employment Lifecycle
-  dateOfLeaving: z.date().optional(),
+  dateOfLeaving: z.date().nullish(),
   employeeStatus: z.enum(employeeStatus).default("active"),
   
   // Contact Information
@@ -154,19 +154,19 @@ export const insertUserEnhancedSchema = z.object({
   location: z.string().nullish(),
   
   // Payroll Information
-  paymentMode: z.enum(paymentModes).optional(),
+  paymentMode: z.enum(paymentModes).nullish(),
   bankAccountNumber: z.string().nullish(),
   bankName: z.string().nullish(),
   ifscCode: z.string().nullish(),
   
   // Document Management
   documents: z.object({
-    marksheets: z.array(z.string()).optional(),
-    certificates: z.array(z.string()).optional(),
-    idProofs: z.array(z.string()).optional(),
-    bankDocuments: z.array(z.string()).optional(),
-    others: z.array(z.string()).optional()
-  }).optional()
+    marksheets: z.array(z.string()).nullish(),
+    certificates: z.array(z.string()).nullish(),
+    idProofs: z.array(z.string()).nullish(),
+    bankDocuments: z.array(z.string()).nullish(),
+    others: z.array(z.string()).nullish()
+  }).nullish()
 });
 
 export const insertDesignationSchema = z.object({
@@ -182,7 +182,7 @@ export const insertPermissionGroupSchema = z.object({
   designation: z.enum(designations),
   permissions: z.array(z.enum(systemPermissions)),
   canApprove: z.boolean().default(false),
-  maxApprovalAmount: z.number().nullable().optional()
+  maxApprovalAmount: z.number().nullable().nullish()
 });
 
 // Enterprise HR Management Schemas
@@ -328,7 +328,7 @@ export const ebProcessTypes = [
 export const locationSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
-  accuracy: z.number().optional(),
+  accuracy: z.number().nullish(),
   address: z.string().nullish()
 });
 
@@ -357,38 +357,38 @@ export const technicalSiteVisitSchema = z.object({
 export const onGridConfigSchema = z.object({
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
   panelWatts: z.string(), // Changed to string to allow custom values
-  panelType: z.enum(panelTypes).optional(),
+  panelType: z.enum(panelTypes).nullish(),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterPhase: z.enum(inverterPhases),
-  inverterKW: z.number().min(0).optional(),
-  inverterQty: z.number().min(1).optional(),
+  inverterKW: z.number().min(0).nullish(),
+  inverterQty: z.number().min(1).nullish(),
   lightningArrest: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
-  electricalCount: z.number().min(0).optional(),
+  electricalCount: z.number().min(0).nullish(),
   earth: z.array(z.enum(earthingTypes)).default([]),
-  floor: z.enum(floorLevels).optional(),
+  floor: z.enum(floorLevels).nullish(),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
   projectValue: z.number().min(0),
   others: z.string().nullish(),
   // New fields from client specification
-  structureType: z.enum(structureTypes).optional(),
+  structureType: z.enum(structureTypes).nullish(),
   gpStructure: z.object({
     lowerEndHeight: z.string().nullish(),
     higherEndHeight: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   monoRail: z.object({
-    type: z.enum(monoRailOptions).optional()
-  }).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional(),
-  netMeterScope: z.enum(workScopeOptions).optional()
+    type: z.enum(monoRailOptions).nullish()
+  }).nullish(),
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
+  netMeterScope: z.enum(workScopeOptions).nullish()
 });
 
 export const offGridConfigSchema = onGridConfigSchema.extend({
   batteryBrand: z.enum(batteryBrands),
-  batteryType: z.enum(batteryTypes).optional(),
-  batteryAH: z.enum(batteryAHOptions).optional(),
+  batteryType: z.enum(batteryTypes).nullish(),
+  batteryAH: z.enum(batteryAHOptions).nullish(),
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
   batteryStands: z.string().nullish(),
@@ -398,8 +398,8 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
 }).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
 export const hybridConfigSchema = offGridConfigSchema.extend({
-  electricalWorkScope: z.enum(workScopeOptions).optional(),
-  netMeterScope: z.enum(workScopeOptions).optional(), // Hybrid has net meter back
+  electricalWorkScope: z.enum(workScopeOptions).nullish(),
+  netMeterScope: z.enum(workScopeOptions).nullish(), // Hybrid has net meter back
   inverterKVA: z.string().nullish() // For hybrid systems, inverters are rated in KVA
 });
 
@@ -411,9 +411,9 @@ export const waterHeaterConfigSchema = z.object({
   projectValue: z.number().min(0),
   others: z.string().nullish(),
   // New fields from client specification
-  floor: z.enum(floorLevels).optional(),
-  plumbingWorkScope: z.enum(workScopeOptions).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional(),
+  floor: z.enum(floorLevels).nullish(),
+  plumbingWorkScope: z.enum(workScopeOptions).nullish(),
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
   // New fields for quotation description changes
   qty: z.number().min(1).default(1),
   waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).default('non_pressurized'),
@@ -427,7 +427,7 @@ export const waterPumpConfigSchema = z.object({
   solarPanel: z.string().nullish(),
   panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
   panelWatts: z.string().nullish(),
-  panelType: z.enum(panelTypes).optional(),
+  panelType: z.enum(panelTypes).nullish(),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
@@ -436,25 +436,25 @@ export const waterPumpConfigSchema = z.object({
   // Quantity field for BOM generation
   qty: z.number().min(1).default(1),
   // Phase selection for inverter
-  inverterPhase: z.enum(inverterPhases).optional(),
+  inverterPhase: z.enum(inverterPhases).nullish(),
   // New fields from client specification
-  structureType: z.enum(structureTypes).optional(),
+  structureType: z.enum(structureTypes).nullish(),
   gpStructure: z.object({
     lowerEndHeight: z.string().nullish(),
     higherEndHeight: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   monoRail: z.object({
-    type: z.enum(monoRailOptions).optional()
-  }).optional(),
+    type: z.enum(monoRailOptions).nullish()
+  }).nullish(),
   // Replaced field: plumbingWorkScope renamed to earthWork
-  earthWork: z.enum(workScopeOptions).optional(),
-  plumbingWorkScope: z.enum(workScopeOptions).optional(), // Keep for backward compatibility
-  civilWorkScope: z.enum(workScopeOptions).optional(),
+  earthWork: z.enum(workScopeOptions).nullish(),
+  plumbingWorkScope: z.enum(workScopeOptions).nullish(), // Keep for backward compatibility
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
   // New checkbox fields
   lightningArrest: z.boolean().default(false),
   dcCable: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
-  electricalCount: z.number().min(0).optional(),
+  electricalCount: z.number().min(0).nullish(),
   earth: z.array(z.enum(earthingTypes)).default([]),
   labourAndTransport: z.boolean().default(false)
 });
@@ -462,12 +462,12 @@ export const waterPumpConfigSchema = z.object({
 // Marketing site visit schema
 export const marketingSiteVisitSchema = z.object({
   updateRequirements: z.boolean(),
-  projectType: z.enum(marketingProjectTypes).optional(),
-  onGridConfig: onGridConfigSchema.optional(),
-  offGridConfig: offGridConfigSchema.optional(),
-  hybridConfig: hybridConfigSchema.optional(),
-  waterHeaterConfig: waterHeaterConfigSchema.optional(),
-  waterPumpConfig: waterPumpConfigSchema.optional()
+  projectType: z.enum(marketingProjectTypes).nullish(),
+  onGridConfig: onGridConfigSchema.nullish(),
+  offGridConfig: offGridConfigSchema.nullish(),
+  hybridConfig: hybridConfigSchema.nullish(),
+  waterHeaterConfig: waterHeaterConfigSchema.nullish(),
+  waterPumpConfig: waterPumpConfigSchema.nullish()
 });
 
 // Admin site visit schema
@@ -475,11 +475,11 @@ export const adminSiteVisitSchema = z.object({
   bankProcess: z.object({
     step: z.enum(bankProcessSteps),
     description: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   ebProcess: z.object({
     type: z.enum(ebProcessTypes),
     description: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   purchase: z.string().nullish(),
   driving: z.string().nullish(),
   officialCashTransactions: z.string().nullish(),
@@ -507,23 +507,23 @@ export const insertSiteVisitSchema = z.object({
   siteInTime: z.date(),
   siteInLocation: locationSchema,
   siteInPhotoUrl: z.string().url().nullish(),
-  siteOutTime: z.date().optional(),
-  siteOutLocation: locationSchema.optional(),
+  siteOutTime: z.date().nullish(),
+  siteOutLocation: locationSchema.nullish(),
   siteOutPhotoUrl: z.string().url().nullish(),
   
   // Customer Information
   customer: customerDetailsSchema,
   
   // Department-specific data
-  technicalData: technicalSiteVisitSchema.optional(),
-  marketingData: marketingSiteVisitSchema.optional(),
-  adminData: adminSiteVisitSchema.optional(),
+  technicalData: technicalSiteVisitSchema.nullish(),
+  marketingData: marketingSiteVisitSchema.nullish(),
+  adminData: adminSiteVisitSchema.nullish(),
   
   // Site Photos (1-20 photos)
   sitePhotos: z.array(sitePhotoSchema).max(20).default([]),
   
   // Checkout Site Photos (additional photos taken during checkout)
-  siteOutPhotos: z.array(sitePhotoSchema).max(20).default([]).optional(),
+  siteOutPhotos: z.array(sitePhotoSchema).max(20).default([]).nullish(),
   
   // Follow-up System Enhancement
   isFollowUp: z.boolean().default(false),
@@ -537,14 +537,14 @@ export const insertSiteVisitSchema = z.object({
   status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
   
   // Visit outcome for business classification (selected at checkout)
-  visitOutcome: z.enum(visitOutcomes).optional(),
+  visitOutcome: z.enum(visitOutcomes).nullish(),
   outcomeNotes: z.string().nullish(),
-  scheduledFollowUpDate: z.date().optional(),
-  outcomeSelectedAt: z.date().optional(),
+  scheduledFollowUpDate: z.date().nullish(),
+  outcomeSelectedAt: z.date().nullish(),
   outcomeSelectedBy: z.string().nullish(),
   
   // Dynamic Status Management for Follow-up Workflow Enhancement
-  customerCurrentStatus: z.enum(["converted", "on_process", "cancelled"]).optional(), // Dynamic customer status based on latest activity
+  customerCurrentStatus: z.enum(["converted", "on_process", "cancelled"]).nullish(), // Dynamic customer status based on latest activity
   lastActivityType: z.enum(["initial_visit", "follow_up"]).default("initial_visit"), // Type of last activity affecting customer status
   lastActivityDate: z.date().default(() => new Date()), // Timestamp of last status-affecting activity
   activeFollowUpId: z.string().nullish(), // Reference to active follow-up if customer is in follow-up process
@@ -564,8 +564,8 @@ export const insertFollowUpSiteVisitSchema = z.object({
   siteInTime: z.date().default(() => new Date()),
   siteInLocation: locationSchema,
   siteInPhotoUrl: z.string().url().nullish(),
-  siteOutTime: z.date().optional(),
-  siteOutLocation: locationSchema.optional(),
+  siteOutTime: z.date().nullish(),
+  siteOutLocation: locationSchema.nullish(),
   siteOutPhotoUrl: z.string().url().nullish(),
   
   // Follow-up specific data
@@ -580,9 +580,9 @@ export const insertFollowUpSiteVisitSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   
   // Dynamic Status Management for Follow-up Impact Tracking
-  originalCustomerStatus: z.enum(["converted", "on_process", "cancelled"]).optional(), // Customer status before follow-up started
+  originalCustomerStatus: z.enum(["converted", "on_process", "cancelled"]).nullish(), // Customer status before follow-up started
   affectsCustomerStatus: z.boolean().default(true), // Whether this follow-up impacts customer status
-  newCustomerStatus: z.enum(["converted", "on_process", "cancelled"]).optional(), // Customer status after follow-up completion
+  newCustomerStatus: z.enum(["converted", "on_process", "cancelled"]).nullish(), // Customer status after follow-up completion
   
   // Photo documentation for follow-ups
   sitePhotos: z.array(z.string().url()).max(10).default([]), // Array of site "in" photo URLs
@@ -592,10 +592,10 @@ export const insertFollowUpSiteVisitSchema = z.object({
   status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
   
   // Visit outcome for business classification (follow-up specific outcomes)
-  visitOutcome: z.enum(["completed", "on_process", "cancelled"]).optional(),
+  visitOutcome: z.enum(["completed", "on_process", "cancelled"]).nullish(),
   outcomeNotes: z.string().nullish(),
-  scheduledFollowUpDate: z.date().optional(),
-  outcomeSelectedAt: z.date().optional(),
+  scheduledFollowUpDate: z.date().nullish(),
+  outcomeSelectedAt: z.date().nullish(),
   outcomeSelectedBy: z.string().nullish(),
   
   notes: z.string().nullish(),
@@ -662,7 +662,7 @@ export type QuickActionType = typeof quickActionTypes[number];
 // Quick Update Request Schema
 export const quickUpdateSiteVisitSchema = z.object({
   action: z.enum(quickActionTypes),
-  scheduledFollowUpDate: z.coerce.date().optional(), // Required for reschedule action - coerce for HTTP JSON compatibility
+  scheduledFollowUpDate: z.coerce.date().nullish(), // Required for reschedule action - coerce for HTTP JSON compatibility
   outcomeNotes: z.string().nullish(), // Optional notes for any action
   reason: z.string().nullish() // Optional reason for cancel/reschedule
 });
@@ -701,18 +701,18 @@ export const insertEmployeeSchema = z.object({
     lastName: z.string().min(1, "Last name is required"),
     middleName: z.string().nullish(),
     displayName: z.string().min(2, "Display name must be at least 2 characters"),
-    dateOfBirth: z.date().optional(),
-    gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
-    maritalStatus: z.enum(maritalStatus).optional(),
-    bloodGroup: z.enum(bloodGroups).optional(),
+    dateOfBirth: z.date().nullish(),
+    gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+    maritalStatus: z.enum(maritalStatus).nullish(),
+    bloodGroup: z.enum(bloodGroups).nullish(),
     nationality: z.string().nullish(),
-    photoURL: z.string().url().optional(),
+    photoURL: z.string().url().nullish(),
   }),
 
   // Contact Information
   contactInfo: z.object({
     primaryEmail: z.string().email("Valid email is required"),
-    secondaryEmail: z.string().email().optional(),
+    secondaryEmail: z.string().email().nullish(),
     primaryPhone: z.string().min(10, "Valid phone number is required"),
     secondaryPhone: z.string().nullish(),
     permanentAddress: z.object({
@@ -721,7 +721,7 @@ export const insertEmployeeSchema = z.object({
       state: z.string().nullish(),
       pincode: z.string().nullish(),
       country: z.string().default("India"),
-    }).optional(),
+    }).nullish(),
     currentAddress: z.object({
       street: z.string().nullish(),
       city: z.string().nullish(),
@@ -729,7 +729,7 @@ export const insertEmployeeSchema = z.object({
       pincode: z.string().nullish(),
       country: z.string().default("India"),
       isSameAsPermanent: z.boolean().default(false),
-    }).optional(),
+    }).nullish(),
   }),
 
   // Employment Information
@@ -738,7 +738,7 @@ export const insertEmployeeSchema = z.object({
     designation: z.enum(designations),
     employmentType: z.enum(employmentTypes).default("full_time"),
     joinDate: z.date(),
-    confirmationDate: z.date().optional(),
+    confirmationDate: z.date().nullish(),
     probationPeriodMonths: z.number().min(0).max(24).default(6),
     reportingManagerId: z.string().nullish(),
     workLocation: z.string().nullish(),
@@ -748,8 +748,8 @@ export const insertEmployeeSchema = z.object({
 
   // Payroll Information
   payrollInfo: z.object({
-    payrollGrade: z.enum(payrollGrades).optional(),
-    basicSalary: z.number().min(0).optional(),
+    payrollGrade: z.enum(payrollGrades).nullish(),
+    basicSalary: z.number().min(0).nullish(),
     currency: z.string().default("INR"),
     paymentMethod: z.enum(["bank_transfer", "cash", "cheque"]).default("bank_transfer"),
     bankDetails: z.object({
@@ -757,7 +757,7 @@ export const insertEmployeeSchema = z.object({
       bankName: z.string().nullish(),
       ifscCode: z.string().nullish(),
       accountHolderName: z.string().nullish(),
-    }).optional(),
+    }).nullish(),
     pfNumber: z.string().nullish(),
     esiNumber: z.string().nullish(),
     panNumber: z.string().nullish(),
@@ -766,8 +766,8 @@ export const insertEmployeeSchema = z.object({
 
   // Professional Information
   professionalInfo: z.object({
-    totalExperienceYears: z.number().min(0).optional(),
-    relevantExperienceYears: z.number().min(0).optional(),
+    totalExperienceYears: z.number().min(0).nullish(),
+    relevantExperienceYears: z.number().min(0).nullish(),
     highestQualification: z.string().nullish(),
     skills: z.array(z.string()).default([]),
     certifications: z.array(z.string()).default([]),
@@ -804,10 +804,10 @@ export const insertEmployeeDocumentSchema = z.object({
   documentName: z.string().min(1, "Document name is required"),
   documentUrl: z.string().url("Valid URL is required"),
   documentNumber: z.string().nullish(), // For ID documents
-  expiryDate: z.date().optional(),
+  expiryDate: z.date().nullish(),
   isVerified: z.boolean().default(false),
   verifiedBy: z.string().nullish(),
-  verifiedAt: z.date().optional(),
+  verifiedAt: z.date().nullish(),
   uploadedBy: z.string(),
   notes: z.string().nullish(),
 });
@@ -831,14 +831,14 @@ export const insertPerformanceReviewSchema = z.object({
   reviewerComments: z.string().nullish(),
   employeeComments: z.string().nullish(),
   reviewedBy: z.string(),
-  nextReviewDate: z.date().optional(),
+  nextReviewDate: z.date().nullish(),
 });
 
 export const insertAttendanceSchema = z.object({
   userId: z.string(),
-  date: z.date().optional(),
-  checkInTime: z.date().optional(),
-  checkOutTime: z.date().optional(),
+  date: z.date().nullish(),
+  checkInTime: z.date().nullish(),
+  checkOutTime: z.date().nullish(),
   attendanceType: z.enum(["office", "remote", "field_work"]).default("office"),
   customerId: z.string().nullish(),
   customerName: z.string().nullish(),
@@ -850,21 +850,21 @@ export const insertAttendanceSchema = z.object({
   checkOutLongitude: z.string().nullish(),
   checkOutImageUrl: z.string().nullish(),
   status: z.enum(["present", "absent", "late", "leave", "holiday", "half_day"]).default("present"),
-  overtimeHours: z.number().optional(),
+  overtimeHours: z.number().nullish(),
   otReason: z.string().nullish(),
   otImageUrl: z.string().nullish(),
-  workingHours: z.number().optional(),
-  breakHours: z.number().optional(),
+  workingHours: z.number().nullish(),
+  breakHours: z.number().nullish(),
   isLate: z.boolean().default(false),
-  lateMinutes: z.number().optional(),
+  lateMinutes: z.number().nullish(),
   approvedBy: z.string().nullish(),
   remarks: z.string().nullish(),
   isWithinOfficeRadius: z.boolean().default(false),
-  distanceFromOffice: z.number().optional(),
+  distanceFromOffice: z.number().nullish(),
   
   // Manual OT System Fields
-  otStartTime: z.date().optional(),
-  otEndTime: z.date().optional(),
+  otStartTime: z.date().nullish(),
+  otEndTime: z.date().nullish(),
   otStartLatitude: z.string().nullish(),
   otStartLongitude: z.string().nullish(),
   otStartImageUrl: z.string().nullish(),
@@ -874,9 +874,9 @@ export const insertAttendanceSchema = z.object({
   otStartAddress: z.string().nullish(),
   otEndAddress: z.string().nullish(),
   isManualOT: z.boolean().default(false),
-  manualOTHours: z.number().optional(),
+  manualOTHours: z.number().nullish(),
   otStatus: z.enum(["not_started", "in_progress", "completed"]).default("not_started"),
-  otType: z.enum(["early_arrival", "late_departure", "weekend", "holiday"]).optional(),
+  otType: z.enum(["early_arrival", "late_departure", "weekend", "holiday"]).nullish(),
 });
 
 export const insertOfficeLocationSchema = z.object({
@@ -950,16 +950,16 @@ export const insertRoleSchema = z.object({
   name: z.string().min(2, "Role name must be at least 2 characters"),
   description: z.string().nullish(),
   isSystemRole: z.boolean().default(false),
-  department: z.enum(departments).nullable().optional(),
-  designation: z.enum(designations).nullable().optional(),
+  department: z.enum(departments).nullable().nullish(),
+  designation: z.enum(designations).nullable().nullish(),
   permissions: z.array(z.enum(systemPermissions)).default([]),
   approvalLimits: z.object({
-    quotations: z.number().nullable().optional(),
-    invoices: z.number().nullable().optional(),
-    expenses: z.number().nullable().optional(),
+    quotations: z.number().nullable().nullish(),
+    invoices: z.number().nullable().nullish(),
+    expenses: z.number().nullable().nullish(),
     leave: z.boolean().default(false),
     overtime: z.boolean().default(false)
-  }).optional()
+  }).nullish()
 });
 
 export const insertUserRoleAssignmentSchema = z.object({
@@ -967,7 +967,7 @@ export const insertUserRoleAssignmentSchema = z.object({
   roleId: z.string(),
   assignedBy: z.string(),
   effectiveFrom: z.date().default(() => new Date()),
-  effectiveTo: z.date().nullable().optional(),
+  effectiveTo: z.date().nullable().nullish(),
   isActive: z.boolean().default(true)
 });
 
@@ -978,7 +978,7 @@ export const insertPermissionOverrideSchema = z.object({
   reason: z.string().min(10, "Reason must be at least 10 characters"),
   grantedBy: z.string(),
   effectiveFrom: z.date().default(() => new Date()),
-  effectiveTo: z.date().nullable().optional()
+  effectiveTo: z.date().nullable().nullish()
 });
 
 export const insertAuditLogSchema = z.object({
@@ -986,11 +986,11 @@ export const insertAuditLogSchema = z.object({
   action: z.string(),
   entityType: z.string(),
   entityId: z.string(),
-  changes: z.record(z.any()).optional(),
+  changes: z.record(z.any()).nullish(),
   ipAddress: z.string().nullish(),
   userAgent: z.string().nullish(),
-  department: z.enum(departments).nullable().optional(),
-  designation: z.enum(designations).nullable().optional()
+  department: z.enum(departments).nullable().nullish(),
+  designation: z.enum(designations).nullable().nullish()
 });
 
 // Payroll System Schemas
@@ -999,11 +999,11 @@ export const insertSalaryStructureSchema = z.object({
   employeeId: z.string(),
   fixedSalary: z.number().min(0),
   basicSalary: z.number().min(0),
-  hra: z.number().min(0).optional(),
-  allowances: z.number().min(0).optional(),
-  variableComponent: z.number().min(0).optional(),
+  hra: z.number().min(0).nullish(),
+  allowances: z.number().min(0).nullish(),
+  variableComponent: z.number().min(0).nullish(),
   effectiveFrom: z.date(),
-  effectiveTo: z.date().nullable().optional(),
+  effectiveTo: z.date().nullable().nullish(),
   isActive: z.boolean().default(true),
   createdBy: z.string(),
   approvedBy: z.string().nullish()
@@ -1049,7 +1049,7 @@ export const insertPayrollSchema = z.object({
   // Processing
   processedBy: z.string(),
   approvedBy: z.string().nullish(),
-  paidOn: z.date().optional(),
+  paidOn: z.date().nullish(),
   paymentReference: z.string().nullish(),
   
   // Metadata
@@ -1084,7 +1084,7 @@ export const insertSalaryAdvanceSchema = z.object({
   amount: z.number().min(0),
   reason: z.string(),
   requestDate: z.date().default(() => new Date()),
-  approvedDate: z.date().optional(),
+  approvedDate: z.date().nullish(),
   deductionStartMonth: z.number().min(1).max(12),
   deductionStartYear: z.number().min(2020),
   numberOfInstallments: z.number().min(1).default(1),
@@ -1097,8 +1097,8 @@ export const insertSalaryAdvanceSchema = z.object({
 
 export const insertAttendancePolicySchema = z.object({
   name: z.string(),
-  department: z.enum(departments).nullable().optional(),
-  designation: z.enum(designations).nullable().optional(),
+  department: z.enum(departments).nullable().nullish(),
+  designation: z.enum(designations).nullable().nullish(),
   
   // Timing policies
   checkInTime: z.string().default("9:30 AM"), // 12-hour format (h:mm AM/PM)
@@ -1131,8 +1131,8 @@ export const insertPayrollFieldConfigSchema = z.object({
   dataType: z.enum(["number", "percentage", "boolean", "text"]),
   isRequired: z.boolean().default(false),
   isSystemField: z.boolean().default(false),
-  defaultValue: z.number().optional(),
-  department: z.enum(departments).optional(),
+  defaultValue: z.number().nullish(),
+  department: z.enum(departments).nullish(),
   sortOrder: z.number().min(1).default(1),
   isActive: z.boolean().default(true)
 });
@@ -1152,7 +1152,7 @@ export const insertEnhancedSalaryStructureSchema = z.object({
   vptAmount: z.number().min(0).default(0),
   templateId: z.string().nullish(),
   effectiveFrom: z.date(),
-  effectiveTo: z.date().optional(),
+  effectiveTo: z.date().nullish(),
   isActive: z.boolean().default(true)
 });
 
@@ -1189,9 +1189,9 @@ export const insertEnhancedPayrollSchema = z.object({
   netSalary: z.number(),
   status: z.enum(["draft", "processed", "approved", "paid"]).default("draft"),
   processedBy: z.string().nullish(),
-  processedAt: z.date().optional(),
+  processedAt: z.date().nullish(),
   approvedBy: z.string().nullish(),
-  approvedAt: z.date().optional(),
+  approvedAt: z.date().nullish(),
   remarks: z.string().nullish()
 });
 
@@ -1490,29 +1490,29 @@ export const quotationOnGridProjectSchema = z.object({
   pricePerKW: z.number().min(0),
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
   panelWatts: z.string(), // Changed to string to allow custom values
-  panelType: z.enum(panelTypes).optional(),
+  panelType: z.enum(panelTypes).nullish(),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
-  inverterKW: z.number().min(0).optional(),
-  inverterQty: z.number().min(1).optional(),
+  inverterKW: z.number().min(0).nullish(),
+  inverterQty: z.number().min(1).nullish(),
   inverterPhase: z.enum(inverterPhases),
   lightningArrest: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
-  electricalCount: z.number().min(0).optional(),
+  electricalCount: z.number().min(0).nullish(),
   earth: z.array(z.enum(earthingTypes)).default([]),
-  floor: z.enum(floorLevels).optional(),
-  structureType: z.enum(structureTypes).optional(),
+  floor: z.enum(floorLevels).nullish(),
+  structureType: z.enum(structureTypes).nullish(),
   gpStructure: z.object({
     lowerEndHeight: z.string().nullish(),
     higherEndHeight: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   monoRail: z.object({
-    type: z.enum(monoRailOptions).optional()
-  }).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional(),
-  netMeterScope: z.enum(workScopeOptions).optional(),
+    type: z.enum(monoRailOptions).nullish()
+  }).nullish(),
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
+  netMeterScope: z.enum(workScopeOptions).nullish(),
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),
@@ -1525,7 +1525,7 @@ export const quotationOnGridProjectSchema = z.object({
     panel: z.enum(warrantyPeriods).default("25_years"),
     inverter: z.enum(warrantyPeriods).default("5_years"),
     installation: z.enum(warrantyPeriods).default("2_years")
-  }).optional()
+  }).nullish()
 });
 
 export const quotationOffGridProjectSchema = z.object({
@@ -1534,37 +1534,37 @@ export const quotationOffGridProjectSchema = z.object({
   pricePerKW: z.number().min(0),
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
   panelWatts: z.string(), // Changed to string to allow custom values
-  panelType: z.enum(panelTypes).optional(),
+  panelType: z.enum(panelTypes).nullish(),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
-  inverterKW: z.number().min(0).optional(),
+  inverterKW: z.number().min(0).nullish(),
   inverterKVA: z.string().nullish(), // For off-grid systems, inverters are rated in KVA
-  inverterQty: z.number().min(1).optional(),
+  inverterQty: z.number().min(1).nullish(),
   inverterPhase: z.enum(inverterPhases),
   inverterVolt: z.string().nullish(), // Changed to string to allow custom values
   batteryBrand: z.enum(batteryBrands),
-  batteryType: z.enum(batteryTypes).optional(),
-  batteryAH: z.enum(batteryAHOptions).optional(),
+  batteryType: z.enum(batteryTypes).nullish(),
+  batteryAH: z.enum(batteryAHOptions).nullish(),
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
   batteryStands: z.string().nullish(),
   lightningArrest: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
-  electricalCount: z.number().min(0).optional(),
+  electricalCount: z.number().min(0).nullish(),
   earth: z.array(z.enum(earthingTypes)).default([]),
-  floor: z.enum(floorLevels).optional(),
-  structureType: z.enum(structureTypes).optional(),
+  floor: z.enum(floorLevels).nullish(),
+  structureType: z.enum(structureTypes).nullish(),
   gpStructure: z.object({
     lowerEndHeight: z.string().nullish(),
     higherEndHeight: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   monoRail: z.object({
-    type: z.enum(monoRailOptions).optional()
-  }).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional(),
-  backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for off-grid systems
+    type: z.enum(monoRailOptions).nullish()
+  }).nullish(),
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
+  backupSolutions: backupSolutionsSchema.nullish(), // Backup solutions for off-grid systems
   amcIncluded: z.boolean().default(false), // Annual Maintenance Contract checkbox
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
@@ -1579,7 +1579,7 @@ export const quotationOffGridProjectSchema = z.object({
     inverter: z.enum(warrantyPeriods).default("5_years"),
     battery: z.enum(warrantyPeriods).default("2_years"),
     installation: z.enum(warrantyPeriods).default("2_years")
-  }).optional()
+  }).nullish()
 });
 
 export const quotationHybridProjectSchema = z.object({
@@ -1588,39 +1588,39 @@ export const quotationHybridProjectSchema = z.object({
   pricePerKW: z.number().min(0),
   solarPanelMake: z.array(z.enum(solarPanelBrands)).default([]),
   panelWatts: z.string(), // Changed to string to allow custom values
-  panelType: z.enum(panelTypes).optional(),
+  panelType: z.enum(panelTypes).nullish(),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
-  inverterKW: z.number().min(0).optional(),
+  inverterKW: z.number().min(0).nullish(),
   inverterKVA: z.string().nullish(), // For hybrid systems, inverters are rated in KVA
-  inverterQty: z.number().min(1).optional(),
+  inverterQty: z.number().min(1).nullish(),
   inverterPhase: z.enum(inverterPhases),
   inverterVolt: z.string().nullish(), // Changed to string to allow custom values
   batteryBrand: z.enum(batteryBrands),
-  batteryType: z.enum(batteryTypes).optional(),
-  batteryAH: z.enum(batteryAHOptions).optional(),
+  batteryType: z.enum(batteryTypes).nullish(),
+  batteryAH: z.enum(batteryAHOptions).nullish(),
   voltage: z.number().min(0),
   batteryCount: z.number().min(1),
   batteryStands: z.string().nullish(),
   lightningArrest: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
-  electricalCount: z.number().min(0).optional(),
+  electricalCount: z.number().min(0).nullish(),
   earth: z.array(z.enum(earthingTypes)).default([]),
-  floor: z.enum(floorLevels).optional(),
-  structureType: z.enum(structureTypes).optional(),
+  floor: z.enum(floorLevels).nullish(),
+  structureType: z.enum(structureTypes).nullish(),
   gpStructure: z.object({
     lowerEndHeight: z.string().nullish(),
     higherEndHeight: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   monoRail: z.object({
-    type: z.enum(monoRailOptions).optional()
-  }).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional(),
-  electricalWorkScope: z.enum(workScopeOptions).optional(),
-  netMeterScope: z.enum(workScopeOptions).optional(),
-  backupSolutions: backupSolutionsSchema.optional(), // Backup solutions for hybrid systems
+    type: z.enum(monoRailOptions).nullish()
+  }).nullish(),
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
+  electricalWorkScope: z.enum(workScopeOptions).nullish(),
+  netMeterScope: z.enum(workScopeOptions).nullish(),
+  backupSolutions: backupSolutionsSchema.nullish(), // Backup solutions for hybrid systems
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
   gstAmount: z.number().min(0).default(0),
@@ -1634,7 +1634,7 @@ export const quotationHybridProjectSchema = z.object({
     inverter: z.enum(warrantyPeriods).default("5_years"),
     battery: z.enum(warrantyPeriods).default("2_years"),
     installation: z.enum(warrantyPeriods).default("2_years")
-  }).optional()
+  }).nullish()
 });
 
 export const quotationWaterHeaterProjectSchema = z.object({
@@ -1643,9 +1643,9 @@ export const quotationWaterHeaterProjectSchema = z.object({
   litre: z.number().min(1),
   heatingCoil: z.string().nullish(),
   productImage: z.string().nullish(), // Optional product image URL
-  floor: z.enum(floorLevels).optional(),
-  plumbingWorkScope: z.enum(workScopeOptions).optional(),
-  civilWorkScope: z.enum(workScopeOptions).optional(),
+  floor: z.enum(floorLevels).nullish(),
+  plumbingWorkScope: z.enum(workScopeOptions).nullish(),
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
   // New fields for quotation description changes
   qty: z.number().min(1).default(1),
   waterHeaterModel: z.enum(['pressurized', 'non_pressurized']).default('non_pressurized'),
@@ -1661,7 +1661,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
   warranty: z.object({
     heater: z.enum(warrantyPeriods).default("5_years"),
     installation: z.enum(warrantyPeriods).default("1_year")
-  }).optional()
+  }).nullish()
 });
 
 export const quotationWaterPumpProjectSchema = z.object({
@@ -1671,31 +1671,31 @@ export const quotationWaterPumpProjectSchema = z.object({
   drive: z.string(),
   solarPanel: z.string().nullish(),
   panelWatts: z.string().nullish(),
-  panelType: z.enum(panelTypes).optional(),
+  panelType: z.enum(panelTypes).nullish(),
   panelBrand: z.array(z.enum(solarPanelBrands)).default([]),
   dcrPanelCount: z.number().min(0).default(0),
   nonDcrPanelCount: z.number().min(0).default(0),
   panelCount: z.number().min(1),
-  structureType: z.enum(structureTypes).optional(),
+  structureType: z.enum(structureTypes).nullish(),
   gpStructure: z.object({
     lowerEndHeight: z.string().nullish(),
     higherEndHeight: z.string().nullish()
-  }).optional(),
+  }).nullish(),
   monoRail: z.object({
-    type: z.enum(monoRailOptions).optional()
-  }).optional(),
+    type: z.enum(monoRailOptions).nullish()
+  }).nullish(),
   // Replaced field: plumbingWorkScope renamed to earthWork
-  earthWork: z.enum(workScopeOptions).optional(),
-  plumbingWorkScope: z.enum(workScopeOptions).optional(), // Keep for backward compatibility
-  civilWorkScope: z.enum(workScopeOptions).optional(),
+  earthWork: z.enum(workScopeOptions).nullish(),
+  plumbingWorkScope: z.enum(workScopeOptions).nullish(), // Keep for backward compatibility
+  civilWorkScope: z.enum(workScopeOptions).nullish(),
   // New checkbox fields
   lightningArrest: z.boolean().default(false),
   dcCable: z.boolean().default(false),
   electricalAccessories: z.boolean().default(false),
-  electricalCount: z.number().min(0).optional(),
+  electricalCount: z.number().min(0).nullish(),
   earth: z.array(z.enum(earthingTypes)).default([]),
   labourAndTransport: z.boolean().default(false),
-  inverterPhase: z.enum(inverterPhases).optional(), // Added for phase calculation in description
+  inverterPhase: z.enum(inverterPhases).nullish(), // Added for phase calculation in description
   qty: z.number().min(1).default(1), // Added quantity field for BOM
   projectValue: z.number().min(0),
   gstPercentage: z.number().min(0).max(100).default(18),
@@ -1709,7 +1709,7 @@ export const quotationWaterPumpProjectSchema = z.object({
     pump: z.enum(warrantyPeriods).default("2_years"),
     panel: z.enum(warrantyPeriods).default("25_years"),
     installation: z.enum(warrantyPeriods).default("1_year")
-  }).optional()
+  }).nullish()
 });
 
 // Union type for all project types
@@ -1737,10 +1737,10 @@ export const quotationFollowUpSchema = z.object({
   followUpDate: z.date(),
   followUpType: z.enum(["call", "email", "whatsapp", "site_visit", "other"]),
   followUpNotes: z.string().nullish(),
-  nextFollowUpDate: z.date().optional(),
+  nextFollowUpDate: z.date().nullish(),
   followUpBy: z.string(),
-  customerResponse: z.enum(["positive", "negative", "neutral", "no_response"]).optional(),
-  leadTemperature: z.enum(["hot", "warm", "cold"]).optional()
+  customerResponse: z.enum(["positive", "negative", "neutral", "no_response"]).nullish(),
+  leadTemperature: z.enum(["hot", "warm", "cold"]).nullish()
 });
 
 // Comprehensive quotation schema
@@ -1751,7 +1751,7 @@ export const insertQuotationSchema = z.object({
   
   // Source tracking (critical for workflow differentiation)
   source: z.enum(quotationSources),
-  siteVisitMapping: siteVisitMappingSchema.optional(), // Only for site_visit source
+  siteVisitMapping: siteVisitMappingSchema.nullish(), // Only for site_visit source
   
   // Multi-project support
   projects: z.array(quotationProjectSchema).min(1, "At least one project is required"),
@@ -1766,13 +1766,13 @@ export const insertQuotationSchema = z.object({
     make: z.string(),
     qty: z.union([z.literal("-"), z.number()]), // Allow "-" for user to decide or a number
     unit: z.string(),
-    rate: z.number().optional(),
-    amount: z.number().optional()
-  })).optional(),
+    rate: z.number().nullish(),
+    amount: z.number().nullish()
+  })).nullish(),
   
   // Custom Scope of Work items (optional override)
-  customCompanyScopeItems: z.record(z.array(z.string())).optional(), // Key: projectIndex, Value: array of scope items
-  customCustomerScopeItems: z.record(z.array(z.string())).optional(), // Key: projectIndex, Value: array of scope items
+  customCompanyScopeItems: z.record(z.array(z.string())).nullish(), // Key: projectIndex, Value: array of scope items
+  customCustomerScopeItems: z.record(z.array(z.string())).nullish(), // Key: projectIndex, Value: array of scope items
   
   // Pricing and financial details
   totalSystemCost: z.number().min(0),
@@ -1793,8 +1793,8 @@ export const insertQuotationSchema = z.object({
   
   // Follow-up and communication tracking
   followUps: z.array(quotationFollowUpSchema).default([]),
-  lastFollowUpDate: z.date().optional(),
-  nextFollowUpDate: z.date().optional(),
+  lastFollowUpDate: z.date().nullish(),
+  nextFollowUpDate: z.date().nullish(),
   
   // Document and communication preferences
   communicationPreference: z.enum(["email", "whatsapp", "sms", "print"]).default("whatsapp"),
@@ -1805,9 +1805,9 @@ export const insertQuotationSchema = z.object({
   contactPerson: z.string().default("M. Selva Prakash"),
   contactNumber: z.string().default("+91 99949 01500"),
   approvedBy: z.string().nullish(),
-  approvedAt: z.date().optional(),
-  sentAt: z.date().optional(),
-  validUntil: z.date().optional(),
+  approvedAt: z.date().nullish(),
+  sentAt: z.date().nullish(),
+  validUntil: z.date().nullish(),
   
   // Additional notes and attachments
   internalNotes: z.string().nullish(),
@@ -1821,13 +1821,13 @@ export const insertQuotationSchema = z.object({
     ifscCode: z.string().default("SBIN0001766"),
     accountHolderName: z.string().default("Prakash Green Energy"),
     branch: z.string().default("Madurai Main Branch")
-  }).optional(),
+  }).nullish(),
   
   // Physical Damage Exclusions
   physicalDamageExclusions: z.object({
     enabled: z.boolean().default(true),
     disclaimerText: z.string().default("***Physical Damages will not be Covered***")
-  }).optional(),
+  }).nullish(),
   
   // Detailed Warranty Terms
   detailedWarrantyTerms: z.object({
@@ -1838,16 +1838,16 @@ export const insertQuotationSchema = z.object({
         "90% Performance Warranty till the end of 15 years",
         "80% Performance Warranty till the end of 25 years"
       ])
-    }).optional(),
+    }).nullish(),
     inverter: z.object({
       replacementWarranty: z.string().default("Replacement Warranty for 10 Years"),
       serviceWarranty: z.string().default("Service Warranty for 5 Years")
-    }).optional(),
+    }).nullish(),
     installation: z.object({
       warrantyPeriod: z.string().default("2 Years Installation Warranty"),
       serviceWarranty: z.string().default("Complete service support during warranty period")
-    }).optional()
-  }).optional(),
+    }).nullish()
+  }).nullish(),
   
   // Document Requirements for Subsidy
   documentRequirements: z.object({
@@ -1863,7 +1863,7 @@ export const insertQuotationSchema = z.object({
       "Cancelled Cheque"
     ]),
     note: z.string().default("All Required Documents should be in the same name as mentioned in the EB Service Number.")
-  }).optional(),
+  }).nullish(),
   
   // Revision History Tracking
   revisionHistory: z.array(z.object({
@@ -1871,7 +1871,7 @@ export const insertQuotationSchema = z.object({
     updatedAt: z.date(),
     updatedBy: z.string(),
     changeNote: z.string().nullish()
-  })).optional().default([]),
+  })).nullish().default([]),
   
   // Metadata
   createdAt: z.date().default(() => new Date()),
@@ -1918,7 +1918,7 @@ export const updateQuotationSchema = insertQuotationSchema.omit({
   revisionHistory: true   // Server-controlled, managed automatically
 }).extend({
   // updatedAt will be set server-side automatically
-  updatedAt: z.date().optional()
+  updatedAt: z.date().nullish()
 });
 
 // ================================
@@ -2005,15 +2005,15 @@ export const insertLeaveApplicationSchema = z.object({
   leaveType: z.enum(leaveTypes),
   
   // For casual_leave and unpaid_leave
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
-  totalDays: z.number().min(0).optional(),
+  startDate: z.date().nullish(),
+  endDate: z.date().nullish(),
+  totalDays: z.number().min(0).nullish(),
   
   // For permission (2 hours)
-  permissionDate: z.date().optional(),
+  permissionDate: z.date().nullish(),
   permissionStartTime: z.string().nullish(),  // Format: "09:00 AM"
   permissionEndTime: z.string().nullish(),    // Format: "11:00 AM"
-  permissionHours: z.number().min(0).max(2).optional(),
+  permissionHours: z.number().min(0).max(2).nullish(),
   
   // Common fields
   reason: z.string().min(10, "Reason must be at least 10 characters"),
@@ -2024,17 +2024,17 @@ export const insertLeaveApplicationSchema = z.object({
   // Reporting Manager approval
   reportingManagerId: z.string().nullable(),
   reportingManagerName: z.string().nullish(),
-  managerApprovedAt: z.date().optional(),
+  managerApprovedAt: z.date().nullish(),
   managerApprovedBy: z.string().nullish(),
   managerRemarks: z.string().nullish(),
   
   // HR approval
-  hrApprovedAt: z.date().optional(),
+  hrApprovedAt: z.date().nullish(),
   hrApprovedBy: z.string().nullish(),
   hrRemarks: z.string().nullish(),
   
   // Rejection handling
-  rejectedAt: z.date().optional(),
+  rejectedAt: z.date().nullish(),
   rejectedBy: z.string().nullish(),
   rejectionReason: z.string().nullish(),
   
@@ -2042,7 +2042,7 @@ export const insertLeaveApplicationSchema = z.object({
   balanceAtApplication: z.object({
     casualLeaveAvailable: z.number(),
     permissionHoursAvailable: z.number()
-  }).optional(),
+  }).nullish(),
   
   // Payroll impact (for unpaid leaves)
   affectsPayroll: z.boolean().default(false),
@@ -2072,7 +2072,7 @@ export const insertFixedHolidaySchema = z.object({
   isOptional: z.boolean().default(false),
   
   // Applicability
-  applicableDepartments: z.array(z.enum(departments)).optional(), // null = all departments
+  applicableDepartments: z.array(z.enum(departments)).nullish(), // null = all departments
   
   description: z.string().nullish(),
   createdBy: z.string(),
