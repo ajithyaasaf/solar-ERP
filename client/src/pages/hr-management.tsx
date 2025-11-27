@@ -128,7 +128,14 @@ export default function HRManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: async ({ uid, data }: { uid: string; data: Partial<z.infer<typeof userFormSchema>> }) => {
-      const response = await apiRequest(`/api/users/${uid}`, 'PATCH', data);
+      // Sanitize form data: convert empty strings to null for optional fields
+      const sanitizedData = sanitizeFormData(data, [
+        'employeeId', 'esiNumber', 'epfNumber', 'aadharNumber', 'panNumber',
+        'fatherName', 'spouseName', 'contactNumber', 'emergencyContactPerson',
+        'emergencyContactNumber', 'permanentAddress', 'presentAddress', 'location',
+        'bankAccountNumber', 'bankName', 'ifscCode', 'educationalQualification'
+      ]);
+      const response = await apiRequest(`/api/users/${uid}`, 'PATCH', sanitizedData);
       return response.json();
     },
     onSuccess: () => {
