@@ -4298,11 +4298,11 @@ export default function QuotationCreation() {
     console.log("💰 Pricing validation:", {
       totalCustomerPayment: sanitizedData.totalCustomerPayment,
       calculatedCustomerPayment,
-      difference: Math.abs(data.totalCustomerPayment - calculatedCustomerPayment)
+      difference: Math.abs(sanitizedData.totalCustomerPayment - calculatedCustomerPayment)
     });
     
     // Ensure all pricing is consistent with business rules
-    if (Math.abs(data.totalCustomerPayment - calculatedCustomerPayment) > 1) {
+    if (Math.abs(sanitizedData.totalCustomerPayment - calculatedCustomerPayment) > 1) {
       console.log("❌ Pricing validation failed - aborting submission");
       toast({
         title: "Pricing Error",
@@ -4314,18 +4314,18 @@ export default function QuotationCreation() {
     
     // Prepare final submission with proper QuotationProject validation
     const submissionData: QuotationFormData = {
-      ...data,
+      ...sanitizedData,
       source: quotationSource, // Use the actual selected source
       preparedBy: user?.uid || "", // Use actual authenticated user ID
-      projects: data.projects, // Already validated by schema
+      projects: sanitizedData.projects, // Already validated by schema
       customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
       customCompanyScopeItems: Object.keys(companyScopeItems).length > 0 ? companyScopeItems : undefined, // Include custom company scope if edited
       customCustomerScopeItems: Object.keys(customerScopeItems).length > 0 ? customerScopeItems : undefined, // Include custom customer scope if edited
       totalSystemCost,
       totalSubsidyAmount,
       totalCustomerPayment: calculatedCustomerPayment,
-      advanceAmount: Math.round(calculatedCustomerPayment * (data.advancePaymentPercentage / 100)),
-      balanceAmount: calculatedCustomerPayment - Math.round(calculatedCustomerPayment * (data.advancePaymentPercentage / 100))
+      advanceAmount: Math.round(calculatedCustomerPayment * (sanitizedData.advancePaymentPercentage / 100)),
+      balanceAmount: calculatedCustomerPayment - Math.round(calculatedCustomerPayment * (sanitizedData.advancePaymentPercentage / 100))
     };
     
     createQuotationMutation.mutate(submissionData);

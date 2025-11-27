@@ -54,6 +54,7 @@ import {
   bloodGroups,
   paymentModes
 } from "@shared/schema";
+import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { z } from "zod";
 import { formatDate, getInitials } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -97,7 +98,14 @@ export default function HRManagement() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: z.infer<typeof userFormSchema>) => {
-      const response = await apiRequest('/api/users', 'POST', data);
+      // Sanitize form data: convert empty strings to null for optional fields
+      const sanitizedData = sanitizeFormData(data, [
+        'employeeId', 'esiNumber', 'epfNumber', 'aadharNumber', 'panNumber',
+        'fatherName', 'spouseName', 'contactNumber', 'emergencyContactPerson',
+        'emergencyContactNumber', 'permanentAddress', 'presentAddress', 'location',
+        'bankAccountNumber', 'bankName', 'ifscCode', 'educationalQualification'
+      ]);
+      const response = await apiRequest('/api/users', 'POST', sanitizedData);
       return response.json();
     },
     onSuccess: () => {
