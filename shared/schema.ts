@@ -506,10 +506,10 @@ export const insertSiteVisitSchema = z.object({
   // Location & Time Tracking
   siteInTime: z.date(),
   siteInLocation: locationSchema,
-  siteInPhotoUrl: z.string().url().optional(),
+  siteInPhotoUrl: z.string().url().nullish(),
   siteOutTime: z.date().optional(),
   siteOutLocation: locationSchema.optional(),
-  siteOutPhotoUrl: z.string().url().optional(),
+  siteOutPhotoUrl: z.string().url().nullish(),
   
   // Customer Information
   customer: customerDetailsSchema,
@@ -530,15 +530,15 @@ export const insertSiteVisitSchema = z.object({
   followUpOf: z.string().optional(), // ID of original visit (if this is a follow-up)
   hasFollowUps: z.boolean().default(false), // True if this visit has follow-ups
   followUpCount: z.number().default(0), // Number of follow-ups for this site
-  followUpReason: z.string().optional(), // Why follow-up was needed
-  followUpDescription: z.string().optional(), // Simple description for follow-ups
+  followUpReason: z.string().nullish(), // Why follow-up was needed
+  followUpDescription: z.string().nullish(), // Simple description for follow-ups
   
   // Status and metadata
   status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
   
   // Visit outcome for business classification (selected at checkout)
   visitOutcome: z.enum(visitOutcomes).optional(),
-  outcomeNotes: z.string().optional(),
+  outcomeNotes: z.string().nullish(),
   scheduledFollowUpDate: z.date().optional(),
   outcomeSelectedAt: z.date().optional(),
   outcomeSelectedBy: z.string().optional(),
@@ -549,7 +549,7 @@ export const insertSiteVisitSchema = z.object({
   lastActivityDate: z.date().default(() => new Date()), // Timestamp of last status-affecting activity
   activeFollowUpId: z.string().optional(), // Reference to active follow-up if customer is in follow-up process
   
-  notes: z.string().optional(),
+  notes: z.string().nullish(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date())
 });
@@ -563,10 +563,10 @@ export const insertFollowUpSiteVisitSchema = z.object({
   department: z.enum(["technical", "marketing", "admin"]),
   siteInTime: z.date().default(() => new Date()),
   siteInLocation: locationSchema,
-  siteInPhotoUrl: z.string().url().optional(),
+  siteInPhotoUrl: z.string().url().nullish(),
   siteOutTime: z.date().optional(),
   siteOutLocation: locationSchema.optional(),
-  siteOutPhotoUrl: z.string().url().optional(),
+  siteOutPhotoUrl: z.string().url().nullish(),
   
   // Follow-up specific data
   followUpReason: z.enum([
@@ -593,12 +593,12 @@ export const insertFollowUpSiteVisitSchema = z.object({
   
   // Visit outcome for business classification (follow-up specific outcomes)
   visitOutcome: z.enum(["completed", "on_process", "cancelled"]).optional(),
-  outcomeNotes: z.string().optional(),
+  outcomeNotes: z.string().nullish(),
   scheduledFollowUpDate: z.date().optional(),
   outcomeSelectedAt: z.date().optional(),
   outcomeSelectedBy: z.string().optional(),
   
-  notes: z.string().optional(),
+  notes: z.string().nullish(),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
   
@@ -1729,14 +1729,14 @@ export const siteVisitMappingSchema = z.object({
   completenessScore: z.number().min(0).max(100), // Percentage of fields auto-filled
   missingCriticalFields: z.array(z.string()).default([]),
   missingOptionalFields: z.array(z.string()).default([]),
-  dataQualityNotes: z.string().optional()
+  dataQualityNotes: z.string().nullish()
 });
 
 // Follow-up tracking for quotations
 export const quotationFollowUpSchema = z.object({
   followUpDate: z.date(),
   followUpType: z.enum(["call", "email", "whatsapp", "site_visit", "other"]),
-  followUpNotes: z.string().optional(),
+  followUpNotes: z.string().nullish(),
   nextFollowUpDate: z.date().optional(),
   followUpBy: z.string(),
   customerResponse: z.enum(["positive", "negative", "neutral", "no_response"]).optional(),
@@ -1786,7 +1786,7 @@ export const insertQuotationSchema = z.object({
   paymentTerms: z.enum(paymentTerms).default("advance_90_balance_10"),
   deliveryTimeframe: z.enum(deliveryTimeframes).default("2_3_weeks"),
   termsTemplate: z.enum(termsTemplates).default("standard"),
-  customTerms: z.string().optional(),
+  customTerms: z.string().nullish(),
   
   // Status and approval workflow
   status: z.enum(quotationStatuses).default("draft"),
@@ -1810,8 +1810,8 @@ export const insertQuotationSchema = z.object({
   validUntil: z.date().optional(),
   
   // Additional notes and attachments
-  internalNotes: z.string().optional(),
-  customerNotes: z.string().optional(),
+  internalNotes: z.string().nullish(),
+  customerNotes: z.string().nullish(),
   attachments: z.array(z.string().url()).default([]),
   
   // Account Details for payment
