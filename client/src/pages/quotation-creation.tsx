@@ -1083,59 +1083,47 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
     const project = updatedProjects[index];
     
     if (["on_grid", "off_grid", "hybrid"].includes(project.projectType)) {
-      // Ensure gstPercentage is set (only if undefined/null, allow 0 or empty string)
+      // STEP 1: Validate and normalize GST percentage
       if (project.gstPercentage === undefined || project.gstPercentage === null) {
         project.gstPercentage = BUSINESS_RULES.gst.percentage;
       }
-      
-      // Calculate system kW from panel data (this is the source of truth)
-      // Safe parsing: remove non-digit characters, then parse
-      const panelWattsStr = String(project.panelWatts || '').trim().replace(/[^\d]/g, '');
-      const panelWattsNum = parseInt(panelWattsStr, 10) || 0;
-      const calculatedKW = (panelWattsNum * project.panelCount) / 1000;
-      
-      // Store systemKW for backend compatibility
-      project.systemKW = calculatedKW;
-      
-      // Calculate rounded kW for rate calculation - STANDARD MATH.ROUND() (not hybrid logic)
-      const roundedKW = calculatedKW > 0 ? Math.round(calculatedKW) : 0;
-      
-      // Calculate base price and GST from project value (which is total including GST)
-      // Use default GST if field is empty/invalid, otherwise use the entered value
       const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
         ? BUSINESS_RULES.gst.percentage 
         : parseFloat(project.gstPercentage) || 0;
       
-      // EDGE CASE: Ensure projectValue is valid
-      if (project.projectValue <= 0) {
-        project.projectValue = 0;
+      // STEP 2: Calculate system kW from panel specifications (source of truth)
+      const panelWattsStr = String(project.panelWatts || '').trim().replace(/[^\d]/g, '');
+      const panelWattsNum = parseInt(panelWattsStr, 10) || 0;
+      const calculatedKW = panelWattsNum > 0 ? (panelWattsNum * (project.panelCount || 1)) / 1000 : 0;
+      
+      // Store system KW for backend compatibility
+      project.systemKW = calculatedKW;
+      
+      // STEP 3: Calculate rounded kW using STANDARD Math.round() (NOT hybrid logic)
+      const roundedKW = calculatedKW > 0 ? Math.round(calculatedKW) : 0;
+      
+      // ✅ CRITICAL FIX: Always save roundedKW to inverterKW (required for BOM generation)
+      project.inverterKW = roundedKW;
+      
+      // STEP 4: Calculate pricing breakdown (all solar projects follow same logic)
+      const validProjectValue = Math.max(0, project.projectValue || 0);
+      if (validProjectValue > 0) {
+        const basePrice = Math.round(validProjectValue / (1 + effectiveGST / 100));
+        const gstAmount = validProjectValue - basePrice;
+        project.basePrice = basePrice;
+        project.gstAmount = gstAmount;
+        project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
+      } else {
         project.basePrice = 0;
         project.gstAmount = 0;
         project.pricePerKW = 0;
-      } else {
-        const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
-        const gstAmount = project.projectValue - basePrice;
-        
-        project.basePrice = basePrice;
-        project.gstAmount = gstAmount;
-        
-        // CRITICAL FIX: Save the calculated roundedKW to inverterKW for BOM generation
-        project.inverterKW = roundedKW;
-        
-        // Calculate and store rate per kW using ROUNDED kW (matching UI display)
-        project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
       }
       
-      // Get propertyType from form - always use customerData as the source of truth
-      // Defensive check: Use formValues already captured at the start of updateProject
+      // STEP 5: Calculate subsidy based on calculated kW (not rounded)
       const propertyType = formValues.customerData?.propertyType || 'residential';
-      
-      // Defensive check: Log warning if propertyType is missing for subsidy calculation
-      if (!formValues.customerData?.propertyType && ['on_grid', 'hybrid'].includes(project.projectType)) {
-        console.warn('⚠️ Property type missing - using default "residential" for subsidy calculation');
+      if (!formValues.customerData?.propertyType) {
+        console.warn('⚠️ Property type missing - using "residential" for subsidy');
       }
-      
-      // Use the new calculateSubsidy function
       project.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, project.projectType);
       project.customerPayment = project.projectValue - project.subsidyAmount;
     } else if (project.projectType === "water_heater") {
