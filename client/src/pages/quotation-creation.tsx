@@ -1869,7 +1869,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 const fieldName = (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
                   ? 'inverterKVA' 
                   : 'inverterKW';
-                handleFieldChange(fieldName, value === '' ? undefined : capacity);
+                // For inverterKVA (off-grid/hybrid), store as string; for inverterKW (on-grid), store as number
+                if (fieldName === 'inverterKVA') {
+                  handleFieldChange(fieldName, value === '' ? undefined : value);
+                } else {
+                  handleFieldChange(fieldName, value === '' ? undefined : capacity);
+                }
                 
                 if (capacity > 0 && project.projectType === 'on_grid') {
                   const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
