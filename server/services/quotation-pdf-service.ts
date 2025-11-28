@@ -454,6 +454,9 @@ export class QuotationPDFService {
         Quotation for ${template.reference}
       </div>
       
+      <!-- Page Break - Move pricing and BOM to second page -->
+      <div style="page-break-before: always;"></div>
+      
       ${!isWaterUtility ? `
       <!-- Pricing Table -->
       <table class="pricing-table">
