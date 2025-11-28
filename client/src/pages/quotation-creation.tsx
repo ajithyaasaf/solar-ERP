@@ -1424,11 +1424,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       return;
     }
 
-    // Only auto-populate if inverterKW is not already set
-    if (project.inverterKW !== undefined && project.inverterKW !== null) {
-      return;
-    }
-
     // Calculate systemKW from panel data - USE SAFE PARSING
     const panelWattsNumber = parsePanelWatts(project.panelWatts);
     const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
@@ -1436,13 +1431,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       ? (panelWattsNumber * panelCountNumber) / 1000
       : 0;
 
-    // Round system kW: ≤3.5 → floor, >3.5 → round to nearest
+    // Round system kW using standard Math.round()
     const roundedKW = actualSystemKW > 0 
-      ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.round(actualSystemKW))
+      ? Math.round(actualSystemKW)
       : 0;
 
-    // Auto-populate inverterKW if roundedKW is valid
-    if (roundedKW > 0) {
+    // Always recalculate inverterKW based on panel specs
+    if (roundedKW > 0 && project.inverterKW !== roundedKW) {
       onUpdate({ inverterKW: roundedKW });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
