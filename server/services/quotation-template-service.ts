@@ -381,15 +381,13 @@ export class QuotationTemplateService {
 
   /**
    * Round system kW for rate calculations (matching frontend logic)
-   * <1 kW → use actual decimal value (e.g., 0.68 → 0.68)
-   * 1-3.5 kW → floor (e.g., 3.24 → 3)
-   * >3.5 kW → ceil (e.g., 3.6 → 4)
+   * Uses standard mathematical rounding: .50 and above rounds up, below .50 rounds down
    * This ensures rate per kW matches what user sees in the quotation form
    */
   static roundSystemKWForRateCalculation(actualKW: number): number {
     if (actualKW <= 0) return 0;
     if (actualKW < 1) return actualKW; // Use actual decimal value for sub-1kW systems
-    return actualKW <= 3.5 ? Math.floor(actualKW) : Math.ceil(actualKW);
+    return Math.round(actualKW);
   }
 
   /**
