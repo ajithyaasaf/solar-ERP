@@ -1385,6 +1385,9 @@ export const insertCustomerSchema = z.object({
   
   // Site visit specific fields (optional for basic customer records)
   ebServiceNumber: z.string().nullish(),
+  tariffCode: z.string().nullish(),
+  ebSanctionPhase: z.enum(["1_phase", "3_phase"]).nullish(),
+  ebSanctionKW: z.string().nullish(),
   propertyType: z.enum(propertyTypes).nullish(),
   location: z.string().nullish(),
   
@@ -1409,6 +1412,9 @@ export interface UnifiedCustomer {
   
   // Site visit specific fields
   ebServiceNumber?: string;
+  tariffCode?: string;
+  ebSanctionPhase?: "1_phase" | "3_phase";
+  ebSanctionKW?: string;
   propertyType?: "residential" | "commercial" | "agri" | "other";
   location?: string;
   
