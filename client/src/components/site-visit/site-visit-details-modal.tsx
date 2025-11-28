@@ -944,10 +944,10 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
                         <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.offGridConfig.inverterMake)}</p>
                       </div>
-                      {siteVisit.marketingData.offGridConfig.inverterKW && (
+                      {(siteVisit.marketingData.offGridConfig.inverterKVA || siteVisit.marketingData.offGridConfig.inverterKW) && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Inverter KW</p>
-                          <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterKW} KW</p>
+                          <p className="text-sm text-muted-foreground">Inverter KVA</p>
+                          <p className="font-medium">{siteVisit.marketingData.offGridConfig.inverterKVA || siteVisit.marketingData.offGridConfig.inverterKW} KVA</p>
                         </div>
                       )}
                       {siteVisit.marketingData.offGridConfig.inverterQty && (
@@ -1144,10 +1144,10 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <p className="text-sm text-muted-foreground">Inverter Make</p>
                         <p className="font-medium">{formatStringOrArraySimple(siteVisit.marketingData.hybridConfig.inverterMake)}</p>
                       </div>
-                      {siteVisit.marketingData.hybridConfig.inverterKW && (
+                      {(siteVisit.marketingData.hybridConfig.inverterKVA || siteVisit.marketingData.hybridConfig.inverterKW) && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Inverter KW</p>
-                          <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterKW} KW</p>
+                          <p className="text-sm text-muted-foreground">Inverter KVA</p>
+                          <p className="font-medium">{siteVisit.marketingData.hybridConfig.inverterKVA || siteVisit.marketingData.hybridConfig.inverterKW} KVA</p>
                         </div>
                       )}
                       {siteVisit.marketingData.hybridConfig.inverterQty && (

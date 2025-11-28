@@ -956,11 +956,20 @@ export default function Quotations() {
                                       <span className="text-gray-600">Phase:</span>
                                       <p className="font-medium">{project.inverterPhase}</p>
                                     </div>
-                                    {project.inverterKW && (
-                                      <div className="space-y-1">
-                                        <span className="text-gray-600">Capacity:</span>
-                                        <p className="font-medium">{project.inverterKW} kW</p>
-                                      </div>
+                                    {(project.projectType === 'off_grid' || project.projectType === 'hybrid') ? (
+                                      (project.inverterKVA || project.inverterKW) && (
+                                        <div className="space-y-1">
+                                          <span className="text-gray-600">Capacity:</span>
+                                          <p className="font-medium">{project.inverterKVA || project.inverterKW} KVA</p>
+                                        </div>
+                                      )
+                                    ) : (
+                                      project.inverterKW && (
+                                        <div className="space-y-1">
+                                          <span className="text-gray-600">Capacity:</span>
+                                          <p className="font-medium">{project.inverterKW} kW</p>
+                                        </div>
+                                      )
                                     )}
                                     {project.inverterQty && (
                                       <div className="space-y-1">

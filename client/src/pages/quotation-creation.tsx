@@ -1000,6 +1000,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           panelCount: 6,
           inverterMake: [],
           inverterKW: 3,
+          inverterKVA: "3",
           inverterQty: 1,
           inverterPhase: "single_phase",
           lightningArrest: false,
@@ -1037,6 +1038,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           panelCount: 6,
           inverterMake: [],
           inverterKW: 3,
+          inverterKVA: "3",
           inverterQty: 1,
           inverterPhase: "single_phase",
           lightningArrest: false,
@@ -1866,14 +1868,28 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               onChange={(e) => {
                 const value = e.target.value;
                 const capacity = parseFloat(value) || 0;
-                const fieldName = (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
-                  ? 'inverterKVA' 
-                  : 'inverterKW';
-                handleFieldChange(fieldName, value === '' ? undefined : capacity);
+                const isOffGridOrHybrid = project.projectType === 'off_grid' || project.projectType === 'hybrid';
                 
-                if (capacity > 0 && project.projectType === 'on_grid') {
-                  const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
-                  handleFieldChange('inverterPhase', autoPhase);
+                if (isOffGridOrHybrid) {
+                  // For off-grid and hybrid: 
+                  // - inverterKVA as STRING (schema expects z.string())
+                  // - inverterKW as NUMBER (for pricing utilities compatibility)
+                  handleFieldChange('inverterKVA', value === '' ? undefined : value);
+                  handleFieldChange('inverterKW', value === '' ? undefined : capacity);
+                  
+                  // Auto-select phase based on numeric value
+                  if (capacity > 0) {
+                    const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
+                    handleFieldChange('inverterPhase', autoPhase);
+                  }
+                } else {
+                  // For on-grid: send as NUMBER (schema expects z.number())
+                  handleFieldChange('inverterKW', value === '' ? undefined : capacity);
+                  
+                  if (capacity > 0) {
+                    const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
+                    handleFieldChange('inverterPhase', autoPhase);
+                  }
                 }
               }}
               min="0"
