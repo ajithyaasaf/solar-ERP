@@ -678,7 +678,7 @@ export class QuotationPDFService {
             const isContinuation = cleanItem.match(/^(and|or|the|a|in)/i) && idx > 0;
             // Display with or without bullet based on continuation
             const displayText = isContinuation ? cleanItem : item;
-            return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: -8px;' : ''}">${displayText}</div>`;
+            return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: 0px; line-height: 1.6;' : ''}">${displayText}</div>`;
           }).join('')}
           ${template.floor !== undefined && template.floor !== null ? `
           <div style="margin-top: 8px; font-weight: bold;">
