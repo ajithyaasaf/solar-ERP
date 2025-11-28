@@ -1871,6 +1871,11 @@ export const insertQuotationSchema = z.object({
     note: z.string().default("All Required Documents should be in the same name as mentioned in the EB Service Number.")
   }).nullish(),
   
+  // EB Sanction fields (Electricity Board requirements - quotation-specific)
+  tariffCode: z.string().nullish(),
+  ebSanctionPhase: z.enum(["1_phase", "3_phase"]).nullish(),
+  ebSanctionKW: z.string().nullish(),
+  
   // Revision History Tracking
   revisionHistory: z.array(z.object({
     version: z.number(),

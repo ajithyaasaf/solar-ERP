@@ -115,7 +115,7 @@ const quotationFormSchema = insertQuotationSchema.omit({
   siteVisitMapping: siteVisitMappingSchema.nullish(),
   // Add temporary customer data fields for site visit forms with email made optional
   customerData: insertCustomerSchema.omit({ email: true }).extend({
-    email: z.string().email().nullish() // Allow null/undefined for optional email
+    email: z.string().email().or(z.literal("")).nullish().transform(v => v === "" ? null : v) // Convert empty string to null
   }).nullish(),
   // Add GST-related total fields
   totalGSTAmount: z.number().min(0).default(0),
@@ -4467,9 +4467,18 @@ export default function QuotationCreation() {
       return;
     }
     
+    // Extract EB Sanction fields from customerData and move to quotation top-level
+    const ebFields = {
+      tariffCode: sanitizedData.customerData?.tariffCode || null,
+      ebSanctionPhase: sanitizedData.customerData?.ebSanctionPhase || null,
+      ebSanctionKW: sanitizedData.customerData?.ebSanctionKW || null
+    };
+    
     // Prepare final submission with proper QuotationProject validation
     const submissionData: QuotationFormData = {
       ...sanitizedData,
+      // EB Sanction fields at quotation level (not in customerData)
+      ...ebFields,
       source: quotationSource, // Use the actual selected source
       preparedBy: sanitizedData.preparedBy || user?.displayName || "", // Use form value, fallback to user name
       projects: sanitizedData.projects, // Already validated by schema
