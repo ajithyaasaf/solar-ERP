@@ -4441,6 +4441,18 @@ export default function QuotationCreation() {
       'email', 'location', 'ebServiceNumber', 'propertyType', 'scope', 'tariffCode', 'ebSanctionPhase', 'ebSanctionKW'
     ]);
     
+    // CRITICAL: Deep sanitize nested customerData fields
+    if (sanitizedData.customerData) {
+      sanitizedData.customerData = {
+        ...sanitizedData.customerData,
+        ebSanctionPhase: sanitizedData.customerData.ebSanctionPhase === "" ? null : sanitizedData.customerData.ebSanctionPhase,
+        tariffCode: sanitizedData.customerData.tariffCode === "" ? null : sanitizedData.customerData.tariffCode,
+        ebSanctionKW: sanitizedData.customerData.ebSanctionKW === "" ? null : sanitizedData.customerData.ebSanctionKW,
+        ebServiceNumber: sanitizedData.customerData.ebServiceNumber === "" ? null : sanitizedData.customerData.ebServiceNumber,
+        propertyType: sanitizedData.customerData.propertyType === "" ? null : sanitizedData.customerData.propertyType,
+      };
+    }
+    
     console.log("═══════════════════════════════════════════");
     console.log("🚀🚀🚀 FORM SUBMIT - onSubmit triggered 🚀🚀🚀");
     console.log("⏰ Timestamp:", new Date().toISOString());
@@ -4490,9 +4502,9 @@ export default function QuotationCreation() {
     
     // Extract EB Sanction fields from customerData and move to quotation top-level
     const ebFields = {
-      tariffCode: sanitizedData.customerData?.tariffCode || null,
-      ebSanctionPhase: sanitizedData.customerData?.ebSanctionPhase || null,
-      ebSanctionKW: sanitizedData.customerData?.ebSanctionKW || null
+      tariffCode: sanitizedData.customerData?.tariffCode === "" ? null : (sanitizedData.customerData?.tariffCode || null),
+      ebSanctionPhase: sanitizedData.customerData?.ebSanctionPhase === "" ? null : (sanitizedData.customerData?.ebSanctionPhase || null),
+      ebSanctionKW: sanitizedData.customerData?.ebSanctionKW === "" ? null : (sanitizedData.customerData?.ebSanctionKW || null)
     };
     
     // Prepare final submission with proper QuotationProject validation
