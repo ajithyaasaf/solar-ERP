@@ -751,7 +751,20 @@ export class QuotationTemplateService {
       unit: "Set"
     });
 
-    // 5. DCDB with MCB - Always 600V
+    // 5. ACDB with MCB - Voltage based on inverter (off-grid connects AC loads)
+    const inverterVoltageOffGrid = project.inverterVolt || (project.voltage * project.batteryCount) || '230';
+    items.push({
+      slNo: slNo++,
+      description: "ACDB with MCB",
+      type: "AC",
+      volt: inverterVoltageOffGrid,
+      rating: `${inverterKVA}`,
+      make: "Reputed",
+      qty: project.inverterQty || 1,
+      unit: "Set"
+    });
+
+    // 6. DCDB with MCB - Always 600V
     items.push({
       slNo: slNo++,
       description: "DCDB with MCB",
@@ -763,7 +776,7 @@ export class QuotationTemplateService {
       unit: "Set"
     });
 
-    // 6. DC Cable - Qty: 20m (40m if inverter >10 kW)
+    // 7. DC Cable - Qty: 20m (40m if inverter >10 kW)
     const dcCableQty = parseFloat(inverterKVA) > 10 ? 40 : 20;
     items.push({
       slNo: slNo++,
@@ -776,7 +789,7 @@ export class QuotationTemplateService {
       unit: "Mtr"
     });
 
-    // 7. AC Cable - Qty: 15m (30m if inverter >10 kW)
+    // 8. AC Cable - Qty: 15m (30m if inverter >10 kW)
     const acCableQty = parseFloat(inverterKVA) > 10 ? 30 : 15;
     items.push({
       slNo: slNo++,
@@ -789,7 +802,7 @@ export class QuotationTemplateService {
       unit: "Mtr"
     });
 
-    // 8. Earthing - Add if earthing is selected
+    // 9. Earthing - Add if earthing is selected
     if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
       const earthType = structureType; // Use same type as structure
       
