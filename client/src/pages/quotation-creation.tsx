@@ -1869,12 +1869,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 const fieldName = (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
                   ? 'inverterKVA' 
                   : 'inverterKW';
-                // For inverterKVA (off-grid/hybrid), store as string; for inverterKW (on-grid), store as number
-                if (fieldName === 'inverterKVA') {
-                  handleFieldChange(fieldName, value === '' ? undefined : value);
-                } else {
-                  handleFieldChange(fieldName, value === '' ? undefined : capacity);
-                }
+                handleFieldChange(fieldName, value === '' ? undefined : capacity);
                 
                 if (capacity > 0 && project.projectType === 'on_grid') {
                   const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
@@ -4479,17 +4474,6 @@ export default function QuotationCreation() {
       ebSanctionKW: sanitizedData.customerData?.ebSanctionKW || null
     };
     
-    // Convert inverterKVA to string for offgrid and hybrid projects
-    const processedProjects = sanitizedData.projects.map(project => {
-      if ((project.projectType === 'off_grid' || project.projectType === 'hybrid') && project.inverterKVA !== undefined) {
-        return {
-          ...project,
-          inverterKVA: String(project.inverterKVA)
-        };
-      }
-      return project;
-    });
-
     // Prepare final submission with proper QuotationProject validation
     const submissionData: QuotationFormData = {
       ...sanitizedData,
@@ -4497,7 +4481,7 @@ export default function QuotationCreation() {
       ...ebFields,
       source: quotationSource, // Use the actual selected source
       preparedBy: sanitizedData.preparedBy || user?.displayName || "", // Use form value, fallback to user name
-      projects: processedProjects, // Convert inverterKVA to string for offgrid and hybrid
+      projects: sanitizedData.projects, // Already validated by schema
       customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
       customCompanyScopeItems: Object.keys(companyScopeItems).length > 0 ? companyScopeItems : undefined, // Include custom company scope if edited
       customCustomerScopeItems: Object.keys(customerScopeItems).length > 0 ? customerScopeItems : undefined, // Include custom customer scope if edited
