@@ -639,6 +639,9 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
         email: "",
         propertyType: "",
         ebServiceNumber: "",
+        tariffCode: "",
+        ebSanctionPhase: "",
+        ebSanctionKW: "",
         location: "",
         source: "manual"
       });
@@ -658,6 +661,9 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
       email: customerData.email || "",
       propertyType: customerData.propertyType || "",
       ebServiceNumber: customerData.ebServiceNumber || "",
+      tariffCode: customerData.tariffCode || "",
+      ebSanctionPhase: customerData.ebSanctionPhase || "",
+      ebSanctionKW: customerData.ebSanctionKW || "",
       location: customerData.location || "",
       source: "manual"
     });
@@ -829,6 +835,71 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
             placeholder="Enter EB service number (optional)"
             className={isAutoFilled && customerState.ebServiceNumber ? "bg-green-50 border-green-200" : ""}
             data-testid="input-eb-service-number"
+          />
+        </div>
+
+        {/* Tariff Code */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Tariff Code</label>
+            {isAutoFilled && customerState.tariffCode && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Input
+            value={customerState.tariffCode || ""}
+            onChange={(e) => updateCustomerField("tariffCode", e.target.value)}
+            placeholder="e.g., LA1A/Domestic (optional)"
+            className={isAutoFilled && customerState.tariffCode ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-tariff-code"
+          />
+        </div>
+
+        {/* EB Sanction - Load Phase */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">EB Sanction - Load Phase</label>
+            {isAutoFilled && customerState.ebSanctionPhase && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Select value={customerState.ebSanctionPhase || undefined} onValueChange={(value) => updateCustomerField("ebSanctionPhase", value)}>
+            <SelectTrigger 
+              className={isAutoFilled && customerState.ebSanctionPhase ? "bg-green-50 border-green-200" : ""}
+              data-testid="select-eb-sanction-phase"
+            >
+              <SelectValue placeholder="Select load phase" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1_phase">1 Phase</SelectItem>
+              <SelectItem value="3_phase">3 Phase</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* EB Sanction - KW */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">EB Sanction - KW</label>
+            {isAutoFilled && customerState.ebSanctionKW && (
+              <Badge variant="secondary" className="text-xs ml-2">
+                <Check className="h-3 w-3 mr-1" />
+                Auto-filled
+              </Badge>
+            )}
+          </div>
+          <Input
+            value={customerState.ebSanctionKW || ""}
+            onChange={(e) => updateCustomerField("ebSanctionKW", e.target.value)}
+            placeholder="e.g., 4 (optional)"
+            className={isAutoFilled && customerState.ebSanctionKW ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-eb-sanction-kw"
           />
         </div>
 
@@ -5730,6 +5801,33 @@ export default function QuotationCreation() {
                           <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || 'TBD'}</span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Customer EB Details - Display Only */}
+                {(form.watch("customerData")?.tariffCode || form.watch("customerData")?.ebSanctionPhase || form.watch("customerData")?.ebSanctionKW) && (
+                  <div className="space-y-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <h4 className="font-medium text-sm sm:text-base">EB Sanction Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      {form.watch("customerData")?.tariffCode && (
+                        <div>
+                          <p className="text-muted-foreground mb-1">Tariff Code</p>
+                          <p className="font-medium">{form.watch("customerData")?.tariffCode}</p>
+                        </div>
+                      )}
+                      {form.watch("customerData")?.ebSanctionPhase && (
+                        <div>
+                          <p className="text-muted-foreground mb-1">Load Phase</p>
+                          <p className="font-medium">{form.watch("customerData")?.ebSanctionPhase === '1_phase' ? '1 Phase' : '3 Phase'}</p>
+                        </div>
+                      )}
+                      {form.watch("customerData")?.ebSanctionKW && (
+                        <div>
+                          <p className="text-muted-foreground mb-1">Sanctioned KW</p>
+                          <p className="font-medium">{form.watch("customerData")?.ebSanctionKW} KW</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -41,6 +41,9 @@ interface AdminFormData {
   ebProcess?: {
     type: string;
     description?: string;
+    tariffCode?: string;
+    ebSanctionPhase?: string;
+    ebSanctionKW?: string;
   };
   purchase?: string;
   driving?: string;
@@ -117,7 +120,7 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
     }));
   };
 
-  const updateEbProcess = (updates: Partial<{ type: string; description: string }>) => {
+  const updateEbProcess = (updates: Partial<{ type: string; description: string; tariffCode: string; ebSanctionPhase: string; ebSanctionKW: string }>) => {
     setFormData(prev => ({
       ...prev,
       ebProcess: prev.ebProcess ? { ...prev.ebProcess, ...updates } : { type: 'new_connection', description: '', ...updates }
@@ -378,6 +381,49 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
                   Description must be at least 10 characters long
                 </p>
               )}
+            </div>
+
+            {/* EB Sanction Details */}
+            <div className="border-t pt-4 mt-4">
+              <Label className="text-base font-medium mb-4 block">EB Sanction Details (Optional)</Label>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label>Tariff Code</Label>
+                  <Input
+                    value={formData.ebProcess.tariffCode || ''}
+                    onChange={(e) => updateEbProcess({ tariffCode: e.target.value })}
+                    placeholder="e.g., LA1A/Domestic"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Tariff code from EB connection (optional)</p>
+                </div>
+
+                <div>
+                  <Label>Load Phase</Label>
+                  <Select 
+                    value={formData.ebProcess.ebSanctionPhase || ''}
+                    onValueChange={(value) => updateEbProcess({ ebSanctionPhase: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select load phase" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1_phase">1 Phase</SelectItem>
+                      <SelectItem value="3_phase">3 Phase</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Sanctioned KW</Label>
+                  <Input
+                    value={formData.ebProcess.ebSanctionKW || ''}
+                    onChange={(e) => updateEbProcess({ ebSanctionKW: e.target.value })}
+                    placeholder="e.g., 4"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Sanctioned load in KW (optional)</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
