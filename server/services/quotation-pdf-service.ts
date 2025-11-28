@@ -358,12 +358,14 @@ export class QuotationPDFService {
         }
         
         .page-break {
-          page-break-before: always;
+          margin-top: 5px;
+          page-break-inside: avoid;
         }
         
         @media print {
           .page-break {
-            page-break-before: always;
+            page-break-before: auto;
+            margin-top: 5px;
           }
         }
       </style>
@@ -503,7 +505,7 @@ export class QuotationPDFService {
       ` : ''}
       
       <!-- Bill of Materials -->
-      <div style="margin-top: 15px;">
+      <div style="margin-top: 5px; page-break-inside: avoid;">
         <h3 style="color: #228B22; text-align: center;">Bill of Materials</h3>
         
         ${!isWaterUtility && template.bomSummary ? `
