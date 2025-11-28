@@ -761,7 +761,7 @@ export class QuotationTemplateService {
       slNo: slNo++,
       description: "ACDB with MCB",
       type: "AC",
-      volt: String(inverterVoltageOffGrid),
+      volt: inverterVoltageOffGrid,
       rating: `${inverterKVA}`,
       make: "Reputed",
       qty: project.inverterQty || 1,
