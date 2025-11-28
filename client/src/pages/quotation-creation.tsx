@@ -1099,20 +1099,24 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       // Store system KW for backend compatibility
       project.systemKW = calculatedKW;
       
-      // STEP 3: Calculate rounded kW using STANDARD Math.round() (NOT hybrid logic)
-      const roundedKW = calculatedKW > 0 ? Math.round(calculatedKW) : 0;
+      // STEP 3: Calculate rounded kW - CONDITIONAL ROUNDING FOR SUB-1KW SUPPORT
+      // ✅ CRITICAL: Only round if >= 1 kW, preserve decimals for sub-1kW systems (e.g., 0.68 kW)
+      const roundedKW = calculatedKW > 0 
+        ? (calculatedKW < 1 ? calculatedKW : Math.round(calculatedKW)) 
+        : 0;
       
       // ✅ CRITICAL FIX: Always save roundedKW to inverterKW (required for BOM generation)
       project.inverterKW = roundedKW;
       
       // STEP 4: Calculate pricing breakdown (all solar projects follow same logic)
+      // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
       const validProjectValue = Math.max(0, project.projectValue || 0);
       if (validProjectValue > 0) {
-        const basePrice = Math.round(validProjectValue / (1 + effectiveGST / 100));
+        const basePrice = validProjectValue / (1 + effectiveGST / 100);
         const gstAmount = validProjectValue - basePrice;
         project.basePrice = basePrice;
         project.gstAmount = gstAmount;
-        project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
+        project.pricePerKW = roundedKW > 0 ? basePrice / roundedKW : 0;
       } else {
         project.basePrice = 0;
         project.gstAmount = 0;
@@ -1139,7 +1143,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         ? 0 
         : parseFloat(project.gstPercentage) || 0;
       const quantity = project.qty || 1;
-      const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
+      const basePrice = project.projectValue / (1 + effectiveGST / 100);
       const gstAmount = project.projectValue - basePrice;
       
       project.basePrice = basePrice;
@@ -1162,7 +1166,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         ? 0 
         : parseFloat(project.gstPercentage) || 0;
       const quantity = project.qty || 1;
-      const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
+      const basePrice = project.projectValue / (1 + effectiveGST / 100);
       const gstAmount = project.projectValue - basePrice;
       
       project.basePrice = basePrice;

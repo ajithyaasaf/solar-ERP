@@ -386,7 +386,9 @@ export class QuotationTemplateService {
    */
   static roundSystemKWForRateCalculation(actualKW: number): number {
     if (actualKW <= 0) return 0;
-    if (actualKW < 1) return actualKW; // Use actual decimal value for sub-1kW systems
+    // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW stays 0.68)
+    // Only round for systems >= 1 kW
+    if (actualKW < 1) return actualKW;
     return Math.round(actualKW);
   }
 
@@ -1290,15 +1292,14 @@ export class QuotationTemplateService {
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
           totalWithGST = project.projectValue;
-          // Calculate unrounded base price for GST calculation
-          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
-          basePrice = Math.round(unroundedBasePrice);
+          // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
+          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
           gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 68000;
           totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
-          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
           gstAmount = totalWithGST - basePrice;
         }
         
@@ -1320,19 +1321,18 @@ export class QuotationTemplateService {
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
           totalWithGST = project.projectValue;
-          // Calculate unrounded base price for GST calculation
-          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
-          basePrice = Math.round(unroundedBasePrice);
+          // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
+          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
           gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 85000;
           totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
-          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
           gstAmount = totalWithGST - basePrice;
         }
         
-        // FIXED: Use rounded kW for rate calculation (matching frontend logic)
+        // ✅ CRITICAL: Conditional rounding for sub-1kW support
         const roundedKW_offGrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_offGrid > 0 ? basePrice / roundedKW_offGrid : 0;
         
@@ -1359,19 +1359,18 @@ export class QuotationTemplateService {
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
           totalWithGST = project.projectValue;
-          // Calculate unrounded base price for GST calculation
-          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
-          basePrice = Math.round(unroundedBasePrice);
+          // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
+          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
           gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 95000;
           totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
-          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
+          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
           gstAmount = totalWithGST - basePrice;
         }
         
-        // FIXED: Use rounded kW for rate calculation (matching frontend logic)
+        // ✅ CRITICAL: Conditional rounding for sub-1kW support
         const roundedKW_hybrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_hybrid > 0 ? basePrice / roundedKW_hybrid : 0;
         
