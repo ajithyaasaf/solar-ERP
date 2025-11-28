@@ -672,10 +672,11 @@ export class QuotationPDFService {
         
         <div>
           ${(template.scopeOfWork.structure || []).map((item, idx) => {
-            // First item or items starting with bullet get normal display
-            // Continuation lines (starting with 'and', lowercase start) get no bullet
+            // Continuation lines (starting with 'and', 'or', etc.) should be indented without bullet
             const isContinuation = item.trim().match(/^(and|or|the|a|in)/i) && idx > 0;
-            return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: -8px;' : ''}">${item}</div>`;
+            // Remove leading bullet point if it's a continuation
+            const displayText = isContinuation ? item.replace(/^\s*•\s*/, '') : item;
+            return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: -8px;' : ''}">${displayText}</div>`;
           }).join('')}
           ${template.floor !== undefined && template.floor !== null ? `
           <div style="margin-top: 8px; font-weight: bold;">
