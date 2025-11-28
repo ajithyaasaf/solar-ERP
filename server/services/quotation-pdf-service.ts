@@ -672,11 +672,12 @@ export class QuotationPDFService {
         
         <div>
           ${(template.scopeOfWork.structure || []).map((item, idx) => {
-            // Continuation lines (starting with 'and', 'or', etc.) should be indented without bullet
-            const cleanItem = item.trim();
+            // First, remove all leading bullets/dashes/spaces to expose actual text
+            const cleanItem = item.trim().replace(/^[\s•\-\*–—]+/, '').trim();
+            // Then check if it's a continuation word
             const isContinuation = cleanItem.match(/^(and|or|the|a|in)/i) && idx > 0;
-            // Remove ALL leading bullet/dash characters if it's a continuation
-            const displayText = isContinuation ? cleanItem.replace(/^[\s•\-\*–—]*\s*/, '').trim() : item;
+            // Display with or without bullet based on continuation
+            const displayText = isContinuation ? cleanItem : item;
             return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: -8px;' : ''}">${displayText}</div>`;
           }).join('')}
           ${template.floor !== undefined && template.floor !== null ? `
