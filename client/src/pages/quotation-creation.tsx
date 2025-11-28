@@ -1097,24 +1097,34 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       // Store systemKW for backend compatibility
       project.systemKW = calculatedKW;
       
-      // Calculate rounded kW for rate calculation (matching UI display logic)
-      const roundedKW = calculatedKW > 0 
-        ? (calculatedKW <= 3.5 ? Math.floor(calculatedKW) : Math.round(calculatedKW))
-        : 0;
+      // Calculate rounded kW for rate calculation - STANDARD MATH.ROUND() (not hybrid logic)
+      const roundedKW = calculatedKW > 0 ? Math.round(calculatedKW) : 0;
       
       // Calculate base price and GST from project value (which is total including GST)
       // Use default GST if field is empty/invalid, otherwise use the entered value
       const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
         ? BUSINESS_RULES.gst.percentage 
         : parseFloat(project.gstPercentage) || 0;
-      const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
-      const gstAmount = project.projectValue - basePrice;
       
-      project.basePrice = basePrice;
-      project.gstAmount = gstAmount;
-      
-      // Calculate and store rate per kW using ROUNDED kW (matching UI display)
-      project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
+      // EDGE CASE: Ensure projectValue is valid
+      if (project.projectValue <= 0) {
+        project.projectValue = 0;
+        project.basePrice = 0;
+        project.gstAmount = 0;
+        project.pricePerKW = 0;
+      } else {
+        const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
+        const gstAmount = project.projectValue - basePrice;
+        
+        project.basePrice = basePrice;
+        project.gstAmount = gstAmount;
+        
+        // CRITICAL FIX: Save the calculated roundedKW to inverterKW for BOM generation
+        project.inverterKW = roundedKW;
+        
+        // Calculate and store rate per kW using ROUNDED kW (matching UI display)
+        project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
+      }
       
       // Get propertyType from form - always use customerData as the source of truth
       // Defensive check: Use formValues already captured at the start of updateProject
