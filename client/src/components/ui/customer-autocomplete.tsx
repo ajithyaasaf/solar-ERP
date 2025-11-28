@@ -14,6 +14,9 @@ interface Customer {
   address: string;
   propertyType?: string;
   ebServiceNumber?: string;
+  tariffCode?: string;
+  ebSanctionPhase?: string;
+  ebSanctionKW?: string;
   location?: string;
   displayText: string;
 }
@@ -26,6 +29,9 @@ interface CustomerAutocompleteProps {
     email?: string;
     propertyType?: string;
     ebServiceNumber?: string;
+    tariffCode?: string;
+    ebSanctionPhase?: string;
+    ebSanctionKW?: string;
     location?: string;
   };
   onChange: (customer: {
@@ -36,6 +42,9 @@ interface CustomerAutocompleteProps {
     email?: string;
     propertyType?: string;
     ebServiceNumber?: string;
+    tariffCode?: string;
+    ebSanctionPhase?: string;
+    ebSanctionKW?: string;
     location?: string;
   }) => void;
   onDuplicateDetected?: (existingCustomer: Customer | null) => void;
@@ -231,6 +240,9 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       email: value.email || '',
       propertyType: value.propertyType || '',
       ebServiceNumber: value.ebServiceNumber || '',
+      tariffCode: value.tariffCode || '',
+      ebSanctionPhase: value.ebSanctionPhase || '',
+      ebSanctionKW: value.ebSanctionKW || '',
       location: value.location || ''
     });
   };
@@ -250,6 +262,9 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       email: customer.email || '',
       propertyType: customer.propertyType || '',
       ebServiceNumber: customer.ebServiceNumber || '',
+      tariffCode: customer.tariffCode || '',
+      ebSanctionPhase: customer.ebSanctionPhase || '',
+      ebSanctionKW: customer.ebSanctionKW || '',
       location: customer.location || ''
     });
     
@@ -272,6 +287,9 @@ const CustomerAutocomplete: React.FC<CustomerAutocompleteProps> = ({
       email: '',
       propertyType: '',
       ebServiceNumber: '',
+      tariffCode: '',
+      ebSanctionPhase: '',
+      ebSanctionKW: '',
       location: ''
     });
   };

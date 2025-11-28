@@ -98,7 +98,7 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
       } else if (section === 'ebProcess') {
         setFormData(prev => ({
           ...prev,
-          ebProcess: { type: 'new_connection', description: '' }
+          ebProcess: { type: 'new_connection', description: '', tariffCode: '', ebSanctionPhase: '', ebSanctionKW: '' }
         }));
       }
 
@@ -123,7 +123,7 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
   const updateEbProcess = (updates: Partial<{ type: string; description: string; tariffCode: string; ebSanctionPhase: string; ebSanctionKW: string }>) => {
     setFormData(prev => ({
       ...prev,
-      ebProcess: prev.ebProcess ? { ...prev.ebProcess, ...updates } : { type: 'new_connection', description: '', ...updates }
+      ebProcess: prev.ebProcess ? { ...prev.ebProcess, ...updates } : { type: 'new_connection', description: '', tariffCode: '', ebSanctionPhase: '', ebSanctionKW: '', ...updates }
     }));
   };
 
