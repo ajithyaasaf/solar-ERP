@@ -756,12 +756,12 @@ export class QuotationTemplateService {
     });
 
     // 5. ACDB with MCB - Voltage based on inverter (off-grid connects AC loads)
-    const inverterVoltageOffGrid = project.inverterVolt || (project.voltage * project.batteryCount) || '230';
+    const inverterVoltageOffGrid = project.inverterVolt || String(project.voltage * project.batteryCount) || '230';
     items.push({
       slNo: slNo++,
       description: "ACDB with MCB",
       type: "AC",
-      volt: inverterVoltageOffGrid,
+      volt: String(inverterVoltageOffGrid),
       rating: `${inverterKVA}`,
       make: "Reputed",
       qty: project.inverterQty || 1,
@@ -969,7 +969,7 @@ export class QuotationTemplateService {
       slNo: slNo++,
       description: "ACDB with MCB",
       type: "AC",
-      volt: inverterVoltage,
+      volt: String(inverterVoltage),
       rating: `${inverterKVA}`,
       make: "Reputed",
       qty: project.inverterQty || 1,
