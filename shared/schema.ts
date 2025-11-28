@@ -1600,7 +1600,7 @@ export const quotationHybridProjectSchema = z.object({
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterKW: z.number().min(0).nullish(),
-  inverterKVA: z.string().nullish(), // For hybrid systems, inverters are rated in KVA
+  inverterKVA: z.number().nullish(), // For hybrid systems, inverters are rated in KVA
   inverterQty: z.number().min(1).nullish(),
   inverterPhase: z.enum(inverterPhases),
   inverterVolt: z.string().nullish(), // Changed to string to allow custom values
