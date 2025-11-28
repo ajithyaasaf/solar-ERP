@@ -690,9 +690,8 @@ export class QuotationTemplateService {
     // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
     const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
     
-    // ✅ CRITICAL: Use inverterKW saved from frontend (not fallback to panelSystemKW)
-    // For off-grid, inverterKW is now calculated and saved in frontend, use it directly
-    const inverterKVA = project.inverterKW || (project as any).inverterKVA || panelSystemKW;
+    // ✅ CRITICAL: For off-grid, prioritize inverterKVA (user-entered value), then inverterKW
+    const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
@@ -901,9 +900,8 @@ export class QuotationTemplateService {
     // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
     const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
     
-    // ✅ CRITICAL: Use inverterKW saved from frontend (not fallback to panelSystemKW)
-    // For off-grid, inverterKW is now calculated and saved in frontend, use it directly
-    const inverterKVA = project.inverterKW || (project as any).inverterKVA || panelSystemKW;
+    // ✅ CRITICAL: For hybrid, prioritize inverterKVA (user-entered value), then inverterKW
+    const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
