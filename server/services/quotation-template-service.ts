@@ -484,7 +484,8 @@ export class QuotationTemplateService {
 
     // Calculate actual kW from panel data (for panel mounting structure)
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-    const panelMountingRating = Math.round(panelSystemKW);
+    // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
+    const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
     
     // Inverter kW (for inverter components)
     const inverterKW = project.inverterKW || panelSystemKW;
@@ -683,7 +684,8 @@ export class QuotationTemplateService {
 
     // Calculate actual kW from panel data (for panel mounting structure)
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-    const panelMountingRating = Math.round(panelSystemKW);
+    // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
+    const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
     
     // ✅ CRITICAL: Use inverterKW saved from frontend (not fallback to panelSystemKW)
     // For off-grid, inverterKW is now calculated and saved in frontend, use it directly
@@ -893,7 +895,8 @@ export class QuotationTemplateService {
 
     // Calculate actual kW from panel data (for panel mounting structure)
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-    const panelMountingRating = Math.round(panelSystemKW);
+    // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
+    const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
     
     // ✅ CRITICAL: Use inverterKW saved from frontend (not fallback to panelSystemKW)
     // For off-grid, inverterKW is now calculated and saved in frontend, use it directly
