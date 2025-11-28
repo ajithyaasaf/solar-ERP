@@ -1743,14 +1743,21 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             </label>
             <Input
               type="number"
-              value={project.inverterKW ?? ''}
+              value={
+                (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
+                  ? (project.inverterKVA ?? '')
+                  : (project.inverterKW ?? '')
+              }
               onChange={(e) => {
                 const value = e.target.value;
-                const kw = parseFloat(value) || 0;
-                handleFieldChange('inverterKW', value === '' ? undefined : kw);
+                const capacity = parseFloat(value) || 0;
+                const fieldName = (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
+                  ? 'inverterKVA' 
+                  : 'inverterKW';
+                handleFieldChange(fieldName, value === '' ? undefined : capacity);
                 
-                if (kw > 0) {
-                  const autoPhase = kw < 6 ? 'single_phase' : 'three_phase';
+                if (capacity > 0 && project.projectType === 'on_grid') {
+                  const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
                   handleFieldChange('inverterPhase', autoPhase);
                 }
               }}
