@@ -357,6 +357,9 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
       mobile: siteVisitCustomerData.mobile || "",
       address: siteVisitCustomerData.address || "",
       ebServiceNumber: siteVisitCustomerData.ebServiceNumber || "",
+      tariffCode: siteVisitCustomerData.tariffCode || "",
+      ebSanctionPhase: siteVisitCustomerData.ebSanctionPhase || "",
+      ebSanctionKW: siteVisitCustomerData.ebSanctionKW || "",
       propertyType: siteVisitCustomerData.propertyType || "",
       location: siteVisitCustomerData.location || "",
       source: "site_visit"
@@ -509,6 +512,56 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
           />
         </div>
 
+        {/* Tariff Code */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">Tariff Code</label>
+            {renderFieldStatus("tariffCode")}
+          </div>
+          <Input
+            value={customerState.tariffCode || ""}
+            onChange={(e) => updateCustomerField("tariffCode", e.target.value)}
+            placeholder="e.g., LA1A/Domestic (optional)"
+            className={isFieldFromSiteVisit("tariffCode") ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-tariff-code"
+          />
+        </div>
+
+        {/* EB Sanction - Load Phase */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">EB Sanction - Load Phase</label>
+            {renderFieldStatus("ebSanctionPhase")}
+          </div>
+          <Select value={customerState.ebSanctionPhase || undefined} onValueChange={(value) => updateCustomerField("ebSanctionPhase", value)}>
+            <SelectTrigger 
+              className={isFieldFromSiteVisit("ebSanctionPhase") ? "bg-green-50 border-green-200" : ""}
+              data-testid="select-eb-sanction-phase"
+            >
+              <SelectValue placeholder="Select load phase" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1_phase">1 Phase</SelectItem>
+              <SelectItem value="3_phase">3 Phase</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* EB Sanction - KW */}
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <label className="text-sm font-medium">EB Sanction - KW</label>
+            {renderFieldStatus("ebSanctionKW")}
+          </div>
+          <Input
+            value={customerState.ebSanctionKW || ""}
+            onChange={(e) => updateCustomerField("ebSanctionKW", e.target.value)}
+            placeholder="e.g., 4 (optional)"
+            className={isFieldFromSiteVisit("ebSanctionKW") ? "bg-green-50 border-green-200" : ""}
+            data-testid="input-eb-sanction-kw"
+          />
+        </div>
+
         {/* Location */}
         <div className="space-y-2 md:col-span-2">
           <div className="flex items-center">
@@ -546,6 +599,9 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
     email: "",
     propertyType: "",
     ebServiceNumber: "",
+    tariffCode: "",
+    ebSanctionPhase: "",
+    ebSanctionKW: "",
     location: "",
     source: "manual"
   });
