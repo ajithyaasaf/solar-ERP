@@ -1418,39 +1418,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // Auto-populate inverterKW ONLY when user hasn't manually set it
-  useEffect(() => {
-    // Only apply to solar projects (on_grid, off_grid, hybrid)
-    if (!['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
-      return;
-    }
-
-    // Calculate systemKW from panel data - USE SAFE PARSING
-    const panelWattsNumber = parsePanelWatts(project.panelWatts);
-    const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
-    const actualSystemKW = (panelWattsNumber && panelCountNumber) 
-      ? (panelWattsNumber * panelCountNumber) / 1000
-      : 0;
-
-    // Round system kW using standard Math.round()
-    const roundedKW = actualSystemKW > 0 
-      ? Math.round(actualSystemKW)
-      : 0;
-
-    // ✅ CRITICAL FIX: Only auto-populate if user hasn't manually set inverterKW/KVA
-    // Check the correct field based on project type
-    const fieldName = (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
-      ? 'inverterKVA' 
-      : 'inverterKW';
-    const currentValue = project[fieldName as keyof typeof project];
-    
-    // Only auto-populate if field is not set (undefined or 0)
-    // If user has manually entered a value, RESPECT IT and don't overwrite
-    if (roundedKW > 0 && (!currentValue || currentValue === 0)) {
-      onUpdate({ [fieldName]: roundedKW });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.projectType, project.panelWatts, project.panelCount]);
+  // ✅ NO AUTO-POPULATE: Inverter KW/KVA is a separate manual field
+  // User must enter it explicitly, not auto-populated from panel specs
 
   // Auto-update backup solutions when battery specs change (for off_grid and hybrid only)
   useEffect(() => {
@@ -1745,9 +1714,6 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           <div className="space-y-2">
             <label className="text-sm font-medium">
               {(project.projectType === 'off_grid' || project.projectType === 'hybrid') ? 'Inverter KVA *' : 'Inverter KW *'}
-              {roundedSystemKW > 0 && (
-                <span className="text-xs text-muted-foreground ml-2">(Auto: {roundedSystemKW} KW)</span>
-              )}
             </label>
             <Input
               type="number"
