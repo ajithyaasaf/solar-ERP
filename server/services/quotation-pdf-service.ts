@@ -671,7 +671,12 @@ export class QuotationPDFService {
         <h3 style="color: #228B22;">Scope of Work</h3>
         
         <div>
-          ${(template.scopeOfWork.structure || []).map(item => `<div>${item}</div>`).join('')}
+          ${(template.scopeOfWork.structure || []).map((item, idx) => {
+            // First item or items starting with bullet get normal display
+            // Continuation lines (starting with 'and', lowercase start) get no bullet
+            const isContinuation = item.trim().match(/^(and|or|the|a|in)/i) && idx > 0;
+            return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: -8px;' : ''}">${item}</div>`;
+          }).join('')}
           ${template.floor !== undefined && template.floor !== null ? `
           <div style="margin-top: 8px; font-weight: bold;">
             ${(() => {
