@@ -4474,6 +4474,17 @@ export default function QuotationCreation() {
       ebSanctionKW: sanitizedData.customerData?.ebSanctionKW || null
     };
     
+    // Convert inverterKVA to string for offgrid and hybrid projects
+    const processedProjects = sanitizedData.projects.map(project => {
+      if ((project.projectType === 'off_grid' || project.projectType === 'hybrid') && project.inverterKVA !== undefined) {
+        return {
+          ...project,
+          inverterKVA: String(project.inverterKVA)
+        };
+      }
+      return project;
+    });
+
     // Prepare final submission with proper QuotationProject validation
     const submissionData: QuotationFormData = {
       ...sanitizedData,
@@ -4481,7 +4492,7 @@ export default function QuotationCreation() {
       ...ebFields,
       source: quotationSource, // Use the actual selected source
       preparedBy: sanitizedData.preparedBy || user?.displayName || "", // Use form value, fallback to user name
-      projects: sanitizedData.projects, // Already validated by schema
+      projects: processedProjects, // Convert inverterKVA to string for offgrid and hybrid
       customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
       customCompanyScopeItems: Object.keys(companyScopeItems).length > 0 ? companyScopeItems : undefined, // Include custom company scope if edited
       customCustomerScopeItems: Object.keys(customerScopeItems).length > 0 ? customerScopeItems : undefined, // Include custom customer scope if edited
