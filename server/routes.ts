@@ -3067,6 +3067,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Customer not found" });
       }
 
+      // Merge EB Sanction fields from quotation.customerData if they exist
+      // These fields are captured during quotation creation and need to appear in PDF
+      const customerWithEBSanction = {
+        ...customer,
+        tariffCode: (quotation as any).customerData?.tariffCode || customer.tariffCode,
+        ebSanctionPhase: (quotation as any).customerData?.ebSanctionPhase || customer.ebSanctionPhase,
+        ebSanctionKW: (quotation as any).customerData?.ebSanctionKW || customer.ebSanctionKW
+      };
+
       // Get the first/main project
       const projects = quotation.projects || [];
       if (projects.length === 0) {
@@ -3081,7 +3090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { html, template } = await QuotationPDFService.generateHTMLPreview(
         quotation,
         mainProject,
-        customer
+        customerWithEBSanction
       );
 
       // Return HTML for client-side PDF generation
