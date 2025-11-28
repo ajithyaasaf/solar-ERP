@@ -672,24 +672,13 @@ export class QuotationPDFService {
         
         <div>
           ${(template.scopeOfWork.structure || []).map((item, idx) => {
-            const trimmed = item.trim();
-            
-            // Check if it's a section header (starts with number + parenthesis)
-            const isSectionHeader = /^\d+\)/.test(trimmed);
-            if (isSectionHeader) {
-              return `<div style="font-weight: bold; margin-top: 8px; margin-bottom: 4px;">${trimmed}</div>`;
-            }
-            
-            // Remove bullets to check for continuation
-            const cleanItem = trimmed.replace(/^[\s•\-\*–—]+/, '').trim();
+            // First, remove all leading bullets/dashes/spaces to expose actual text
+            const cleanItem = item.trim().replace(/^[\s•\-\*–—]+/, '').trim();
+            // Then check if it's a continuation word
             const isContinuation = cleanItem.match(/^(and|or|the|a|in)/i) && idx > 0;
-            
-            if (isContinuation) {
-              return `<div style="margin-left: 40px; margin-top: 0px; line-height: 1.6;">${cleanItem}</div>`;
-            }
-            
-            // Regular bullet item
-            return `<div style="margin-left: 20px; margin-top: 0px; line-height: 1.6;">${item}</div>`;
+            // Display with or without bullet based on continuation
+            const displayText = isContinuation ? cleanItem : item;
+            return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: 0px; line-height: 1.6;' : ''}">${displayText}</div>`;
           }).join('')}
           ${template.floor !== undefined && template.floor !== null ? `
           <div style="margin-top: 8px; font-weight: bold;">
