@@ -1527,7 +1527,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   const { toast } = useToast();
   
   const handleFieldChange = (field: string, value: any) => {
-    onUpdate({ [field]: value });
+    // CRITICAL: Ensure inverterKVA is always STRING for schema validation
+    if (field === 'inverterKVA' && value !== undefined && value !== null) {
+      onUpdate({ [field]: String(value) });
+    } else {
+      onUpdate({ [field]: value });
+    }
   };
 
   // Helper function to calculate backup watts
