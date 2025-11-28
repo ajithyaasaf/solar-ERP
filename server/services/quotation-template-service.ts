@@ -685,8 +685,9 @@ export class QuotationTemplateService {
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
     const panelMountingRating = Math.round(panelSystemKW);
     
-    // Inverter KVA (for inverter components)
-    const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
+    // ✅ CRITICAL: Use inverterKW saved from frontend (not fallback to panelSystemKW)
+    // For off-grid, inverterKW is now calculated and saved in frontend, use it directly
+    const inverterKVA = project.inverterKW || (project as any).inverterKVA || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
@@ -881,8 +882,9 @@ export class QuotationTemplateService {
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
     const panelMountingRating = Math.round(panelSystemKW);
     
-    // Inverter KVA (for inverter components)
-    const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
+    // ✅ CRITICAL: Use inverterKW saved from frontend (not fallback to panelSystemKW)
+    // For off-grid, inverterKW is now calculated and saved in frontend, use it directly
+    const inverterKVA = project.inverterKW || (project as any).inverterKVA || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
@@ -1292,20 +1294,20 @@ export class QuotationTemplateService {
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
           totalWithGST = project.projectValue;
-          // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
-          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(unroundedBasePrice);
           gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 68000;
           totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
-          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
         
         // FIXED: Use rounded kW for rate calculation (matching frontend logic)
         const roundedKW_onGrid = this.roundSystemKWForRateCalculation(kw);
-        ratePerKw = roundedKW_onGrid > 0 ? basePrice / roundedKW_onGrid : 0;
+        ratePerKw = roundedKW_onGrid > 0 ? Math.round(basePrice / roundedKW_onGrid) : 0;
         
         // NEW: Include inverter KW in description
         const inverterKW_onGrid = project.inverterKW || kw;
@@ -1321,20 +1323,20 @@ export class QuotationTemplateService {
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
           totalWithGST = project.projectValue;
-          // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
-          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(unroundedBasePrice);
           gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 85000;
           totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
-          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
         
         // ✅ CRITICAL: Conditional rounding for sub-1kW support
         const roundedKW_offGrid = this.roundSystemKWForRateCalculation(kw);
-        ratePerKw = roundedKW_offGrid > 0 ? basePrice / roundedKW_offGrid : 0;
+        ratePerKw = roundedKW_offGrid > 0 ? Math.round(basePrice / roundedKW_offGrid) : 0;
         
         // NEW: Updated description format based on specification
         const panelWatts_offGrid = project.panelWatts || '530';
@@ -1359,20 +1361,20 @@ export class QuotationTemplateService {
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
           totalWithGST = project.projectValue;
-          // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
-          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          const unroundedBasePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(unroundedBasePrice);
           gstAmount = totalWithGST - basePrice;
         } else {
           // Fallback: calculate from scratch using pricePerKW or default
           const fallbackRatePerKw = project.pricePerKW || 95000;
           totalWithGST = fallbackRatePerKw * kw * (1 + actualGstPercentage / 100);
-          basePrice = totalWithGST / (1 + actualGstPercentage / 100);
+          basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
         
         // ✅ CRITICAL: Conditional rounding for sub-1kW support
         const roundedKW_hybrid = this.roundSystemKWForRateCalculation(kw);
-        ratePerKw = roundedKW_hybrid > 0 ? basePrice / roundedKW_hybrid : 0;
+        ratePerKw = roundedKW_hybrid > 0 ? Math.round(basePrice / roundedKW_hybrid) : 0;
         
         // NEW: Updated description format based on specification
         const calculatedKW_hybrid = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);

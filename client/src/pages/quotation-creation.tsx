@@ -1109,14 +1109,13 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       project.inverterKW = roundedKW;
       
       // STEP 4: Calculate pricing breakdown (all solar projects follow same logic)
-      // ✅ CRITICAL: NO rounding on prices - preserve exact decimal values
       const validProjectValue = Math.max(0, project.projectValue || 0);
       if (validProjectValue > 0) {
-        const basePrice = validProjectValue / (1 + effectiveGST / 100);
+        const basePrice = Math.round(validProjectValue / (1 + effectiveGST / 100));
         const gstAmount = validProjectValue - basePrice;
         project.basePrice = basePrice;
         project.gstAmount = gstAmount;
-        project.pricePerKW = roundedKW > 0 ? basePrice / roundedKW : 0;
+        project.pricePerKW = roundedKW > 0 ? Math.round(basePrice / roundedKW) : 0;
       } else {
         project.basePrice = 0;
         project.gstAmount = 0;
@@ -1143,7 +1142,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         ? 0 
         : parseFloat(project.gstPercentage) || 0;
       const quantity = project.qty || 1;
-      const basePrice = project.projectValue / (1 + effectiveGST / 100);
+      const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
       const gstAmount = project.projectValue - basePrice;
       
       project.basePrice = basePrice;
@@ -1166,7 +1165,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         ? 0 
         : parseFloat(project.gstPercentage) || 0;
       const quantity = project.qty || 1;
-      const basePrice = project.projectValue / (1 + effectiveGST / 100);
+      const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
       const gstAmount = project.projectValue - basePrice;
       
       project.basePrice = basePrice;
