@@ -1418,7 +1418,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // Auto-populate inverterKW when panel details change (for solar projects)
+  // Auto-populate inverterKW ONLY when user hasn't manually set it
   useEffect(() => {
     // Only apply to solar projects (on_grid, off_grid, hybrid)
     if (!['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
@@ -1437,9 +1437,17 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       ? Math.round(actualSystemKW)
       : 0;
 
-    // Always recalculate inverterKW based on panel specs
-    if (roundedKW > 0 && project.inverterKW !== roundedKW) {
-      onUpdate({ inverterKW: roundedKW });
+    // ✅ CRITICAL FIX: Only auto-populate if user hasn't manually set inverterKW/KVA
+    // Check the correct field based on project type
+    const fieldName = (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
+      ? 'inverterKVA' 
+      : 'inverterKW';
+    const currentValue = project[fieldName as keyof typeof project];
+    
+    // Only auto-populate if field is not set (undefined or 0)
+    // If user has manually entered a value, RESPECT IT and don't overwrite
+    if (roundedKW > 0 && (!currentValue || currentValue === 0)) {
+      onUpdate({ [fieldName]: roundedKW });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.projectType, project.panelWatts, project.panelCount]);
