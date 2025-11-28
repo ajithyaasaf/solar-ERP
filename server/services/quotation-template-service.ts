@@ -638,9 +638,9 @@ export class QuotationTemplateService {
         description: "Electrical Accessories",
         type: "NA",
         volt: "NA",
-        rating: "3",
+        rating: `${inverterKW}`,
         make: "As per MNRE App",
-        qty: project.electricalCount || project.inverterKW || 1,
+        qty: project.electricalCount || inverterKW || 1,
         unit: "Set"
       });
     }
@@ -834,7 +834,7 @@ export class QuotationTemplateService {
         description: "Electrical Accessories",
         type: "NA",
         volt: "NA",
-        rating: "3",
+        rating: `${inverterKVA}`,
         make: "As per MNRE App",
         qty: project.electricalCount || inverterKVA || 1,
         unit: "Set"
@@ -1041,7 +1041,7 @@ export class QuotationTemplateService {
         description: "Electrical Accessories",
         type: "NA",
         volt: "NA",
-        rating: "3",
+        rating: `${inverterKVA}`,
         make: "As per MNRE App",
         qty: project.electricalCount || inverterKVA || 1,
         unit: "Set"
