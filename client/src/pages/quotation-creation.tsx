@@ -1105,8 +1105,9 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         ? (calculatedKW < 1 ? calculatedKW : Math.round(calculatedKW)) 
         : 0;
       
-      // ✅ CRITICAL FIX: Always save roundedKW to inverterKW (required for BOM generation)
-      project.inverterKW = roundedKW;
+      // ✅ CRITICAL: DO NOT auto-overwrite inverterKW here!
+      // inverterKW is a separate manual field - user enters it explicitly in the form
+      // Using roundedKW only for rate calculations, NOT for overwriting user input
       
       // STEP 4: Calculate pricing breakdown (all solar projects follow same logic)
       const validProjectValue = Math.max(0, project.projectValue || 0);
