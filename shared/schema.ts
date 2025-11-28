@@ -393,14 +393,14 @@ export const offGridConfigSchema = onGridConfigSchema.extend({
   batteryCount: z.number().min(1),
   batteryStands: z.string().nullish(),
   inverterVolt: z.string().nullish(), // Changed to string to allow custom values
-  inverterKVA: z.string().nullish(), // For off-grid systems, inverters are rated in KVA
+  inverterKVA: z.number().nullish(), // For off-grid systems, inverters are rated in KVA
   amcIncluded: z.boolean().default(false) // Annual Maintenance Contract checkbox
 }).omit({ netMeterScope: true }); // Off-grid doesn't have net meter
 
 export const hybridConfigSchema = offGridConfigSchema.extend({
   electricalWorkScope: z.enum(workScopeOptions).nullish(),
   netMeterScope: z.enum(workScopeOptions).nullish(), // Hybrid has net meter back
-  inverterKVA: z.string().nullish() // For hybrid systems, inverters are rated in KVA
+  inverterKVA: z.number().nullish() // For hybrid systems, inverters are rated in KVA
 });
 
 export const waterHeaterConfigSchema = z.object({
@@ -1546,7 +1546,7 @@ export const quotationOffGridProjectSchema = z.object({
   panelCount: z.number().min(1),
   inverterMake: z.array(z.enum(inverterMakes)).default([]),
   inverterKW: z.number().min(0).nullish(),
-  inverterKVA: z.string().nullish(), // For off-grid systems, inverters are rated in KVA
+  inverterKVA: z.number().nullish(), // For off-grid systems, inverters are rated in KVA
   inverterQty: z.number().min(1).nullish(),
   inverterPhase: z.enum(inverterPhases),
   inverterVolt: z.string().nullish(), // Changed to string to allow custom values
