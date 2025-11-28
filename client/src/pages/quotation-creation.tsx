@@ -3684,7 +3684,7 @@ export default function QuotationCreation() {
     mutationFn: async (data: QuotationFormData) => {
       // Sanitize form data: convert empty strings to null for optional fields
       const sanitizedData = sanitizeFormData(data, [
-        'email', 'location', 'ebServiceNumber', 'propertyType', 'scope'
+        'email', 'location', 'ebServiceNumber', 'propertyType', 'scope', 'tariffCode', 'ebSanctionPhase', 'ebSanctionKW'
       ]);
       
       let finalCustomerId = sanitizedData.customerId;
@@ -4417,7 +4417,7 @@ export default function QuotationCreation() {
   const onSubmit = (data: QuotationFormData) => {
     // Sanitize form data: convert empty strings to null for optional fields
     const sanitizedData = sanitizeFormData(data, [
-      'email', 'location', 'ebServiceNumber', 'propertyType', 'scope'
+      'email', 'location', 'ebServiceNumber', 'propertyType', 'scope', 'tariffCode', 'ebSanctionPhase', 'ebSanctionKW'
     ]);
     
     console.log("═══════════════════════════════════════════");
