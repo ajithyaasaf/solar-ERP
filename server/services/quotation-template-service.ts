@@ -480,9 +480,12 @@ export class QuotationTemplateService {
     const items: BillOfMaterialsItem[] = [];
     let slNo = startSlNo;
 
-    // Calculate actual kW from panel data
-    const calculatedKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-    const inverterKW = project.inverterKW || calculatedKW;
+    // Calculate actual kW from panel data (for panel mounting structure)
+    const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
+    const panelMountingRating = Math.round(panelSystemKW);
+    
+    // Inverter kW (for inverter components)
+    const inverterKW = project.inverterKW || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
     const panelType = project.panelType === 'topcon' ? 'Topcon' : 
@@ -512,7 +515,7 @@ export class QuotationTemplateService {
       unit: "Nos"
     });
 
-    // 3. Panel Mounting Structure - Type from structureType field
+    // 3. Panel Mounting Structure - Type from structureType field, rating based on PANEL kW
     const structureTypeMap: Record<string, string> = {
       'gp_structure': 'GI',
       'mono_rail': 'Aluminium',
@@ -527,7 +530,7 @@ export class QuotationTemplateService {
       description: "Panel Mounting Structure",
       type: structureType,
       volt: "NA",
-      rating: `${inverterKW}`,
+      rating: `${panelMountingRating}`,
       make: "Reputed",
       qty: project.inverterQty || 1,
       unit: "Set"
