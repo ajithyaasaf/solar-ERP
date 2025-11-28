@@ -405,6 +405,9 @@ export class QuotationPDFService {
           ${template.customer.address}<br>
           Contact Number: ${template.customer.contactNumber}
           ${template.customer.ebServiceNumber ? `<br>EB NO: ${template.customer.ebServiceNumber}` : ''}
+          ${template.customer.tariffCode ? `<br>Tariff Code: ${template.customer.tariffCode}` : ''}
+          ${template.customer.ebSanctionPhase ? `<br>Load Phase: ${template.customer.ebSanctionPhase === '1_phase' ? '1 Phase' : '3 Phase'}` : ''}
+          ${template.customer.ebSanctionKW ? `<br>Sanctioned KW: ${template.customer.ebSanctionKW}` : ''}
         </div>
         
         <div class="contact-info">

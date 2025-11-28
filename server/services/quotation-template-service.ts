@@ -45,6 +45,9 @@ export interface QuotationTemplate {
     address: string;
     contactNumber: string;
     ebServiceNumber?: string;
+    tariffCode?: string;
+    ebSanctionPhase?: string;
+    ebSanctionKW?: string;
   };
   reference: string;
   pricingBreakdown: {
@@ -1647,7 +1650,10 @@ export class QuotationTemplateService {
         name: customer.name,
         address: customer.address,
         contactNumber: customer.mobile,
-        ebServiceNumber: customer.ebServiceNumber
+        ebServiceNumber: customer.ebServiceNumber,
+        tariffCode: customer.tariffCode,
+        ebSanctionPhase: customer.ebSanctionPhase,
+        ebSanctionKW: customer.ebSanctionKW
       },
       reference: reference,
       pricingBreakdown,
