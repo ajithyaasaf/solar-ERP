@@ -1074,7 +1074,20 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
   const updateProject = (index: number, updatedData: any) => {
     const currentProjects = form.getValues("projects") || [];
     const updatedProjects = [...currentProjects];
+    
+    // ✅ CRITICAL: Preserve user-entered inverterKW/KVA - these are MANUAL fields
+    const previousInverterKW = updatedProjects[index]?.inverterKW;
+    const previousInverterKVA = updatedProjects[index]?.inverterKVA;
+    
     updatedProjects[index] = { ...updatedProjects[index], ...updatedData };
+
+    // ✅ CRITICAL: Restore inverterKW/KVA if not explicitly changed in this update
+    if (!updatedData.hasOwnProperty('inverterKW') && previousInverterKW !== undefined) {
+      updatedProjects[index].inverterKW = previousInverterKW;
+    }
+    if (!updatedData.hasOwnProperty('inverterKVA') && previousInverterKVA !== undefined) {
+      updatedProjects[index].inverterKVA = previousInverterKVA;
+    }
 
     // Defensive check: Ensure we have the latest form values
     const formValues = form.getValues();
