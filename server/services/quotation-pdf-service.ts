@@ -449,13 +449,13 @@ export class QuotationPDFService {
         <strong>Prakash Green Energy.</strong>
       </div>
       
+      <!-- Page Break - Move everything below to second page -->
+      <div style="page-break-before: always;"></div>
+      
       <!-- Yellow Highlighted Quotation Title -->
       <div style="background: #ffff99; padding: 10px; margin: 20px 0; text-align: center; font-weight: bold; border: 1px solid #e6e600;">
         Quotation for ${template.reference}
       </div>
-      
-      <!-- Page Break - Move pricing and BOM to second page -->
-      <div style="page-break-before: always;"></div>
       
       ${!isWaterUtility ? `
       <!-- Pricing Table -->
