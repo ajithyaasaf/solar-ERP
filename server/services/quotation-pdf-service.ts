@@ -492,7 +492,7 @@ export class QuotationPDFService {
       </div>
 
       
-      <div style="text-align: center; margin: 20px 0; font-weight: bold; font-size: 16px;">
+      <div style="text-align: center; margin: 10px 0; font-weight: bold; font-size: 16px;">
         <strong>Total Amount ${template.pricingBreakdown.totalCost.toLocaleString()} - Subsidy Amount ${template.pricingBreakdown.subsidyAmount.toLocaleString()} = ${template.pricingBreakdown.customerPayment.toLocaleString()}</strong>
       </div>
       
@@ -503,7 +503,7 @@ export class QuotationPDFService {
       ` : ''}
       
       <!-- Bill of Materials -->
-      <div class="page-break">
+      <div style="margin-top: 15px;">
         <h3 style="color: #228B22; text-align: center;">Bill of Materials</h3>
         
         ${!isWaterUtility && template.bomSummary ? `
@@ -721,7 +721,7 @@ export class QuotationPDFService {
       ` : ''}
       
       <!-- Footer -->
-      <div style="text-align: center; margin-top: 40px; font-style: italic; color: #666;">
+      <div style="text-align: center; margin-top: 30px; font-style: italic; color: #666; font-size: 12px;">
         Deals with Solar On-Grid System, Off-Grid System, Hybrid System,<br>
         Solar Water Heater, Solar Water Pump and<br>
         All kinds of Solar Lights
