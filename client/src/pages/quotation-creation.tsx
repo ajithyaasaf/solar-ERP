@@ -554,8 +554,10 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
             {renderFieldStatus("ebSanctionKW")}
           </div>
           <Input
+            type="number"
+            inputMode="decimal"
             value={customerState.ebSanctionKW || ""}
-            onChange={(e) => updateCustomerField("ebSanctionKW", e.target.value)}
+            onChange={(e) => updateCustomerField("ebSanctionKW", e.target.value ? parseFloat(e.target.value) : null)}
             placeholder="e.g., 4 (optional)"
             className={isFieldFromSiteVisit("ebSanctionKW") ? "bg-green-50 border-green-200" : ""}
             data-testid="input-eb-sanction-kw"
@@ -895,8 +897,10 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
             )}
           </div>
           <Input
+            type="number"
+            inputMode="decimal"
             value={customerState.ebSanctionKW || ""}
-            onChange={(e) => updateCustomerField("ebSanctionKW", e.target.value)}
+            onChange={(e) => updateCustomerField("ebSanctionKW", e.target.value ? parseFloat(e.target.value) : null)}
             placeholder="e.g., 4 (optional)"
             className={isAutoFilled && customerState.ebSanctionKW ? "bg-green-50 border-green-200" : ""}
             data-testid="input-eb-sanction-kw"

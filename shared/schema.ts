@@ -1387,7 +1387,7 @@ export const insertCustomerSchema = z.object({
   ebServiceNumber: z.string().nullish(),
   tariffCode: z.string().nullish(),
   ebSanctionPhase: z.enum(["1_phase", "3_phase"]).nullish(),
-  ebSanctionKW: z.string().nullish(),
+  ebSanctionKW: z.number().min(0, "EB Sanction KW must be a positive number").nullish(),
   propertyType: z.enum(propertyTypes).nullish(),
   location: z.string().nullish(),
   
@@ -1414,7 +1414,7 @@ export interface UnifiedCustomer {
   ebServiceNumber?: string;
   tariffCode?: string;
   ebSanctionPhase?: "1_phase" | "3_phase";
-  ebSanctionKW?: string;
+  ebSanctionKW?: number;
   propertyType?: "residential" | "commercial" | "agri" | "other";
   location?: string;
   
@@ -1874,7 +1874,7 @@ export const insertQuotationSchema = z.object({
   // EB Sanction fields (Electricity Board requirements - quotation-specific)
   tariffCode: z.string().nullish(),
   ebSanctionPhase: z.enum(["1_phase", "3_phase"]).nullish(),
-  ebSanctionKW: z.string().nullish(),
+  ebSanctionKW: z.number().min(0, "EB Sanction KW must be a positive number").nullish(),
   
   // Revision History Tracking
   revisionHistory: z.array(z.object({
