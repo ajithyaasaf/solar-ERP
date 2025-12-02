@@ -4,6 +4,7 @@
  */
 
 import { Quotation, QuotationProject } from "@shared/schema";
+import { calculateSystemKW as sharedCalculateSystemKW, roundSystemKW, formatKWForDisplay as sharedFormatKWForDisplay } from "@shared/utils";
 
 export interface CompanyDetails {
   name: string;
@@ -356,43 +357,27 @@ export class QuotationTemplateService {
 
   /**
    * Calculate actual kW from panel watts and panel count
-   * Formula: (Panel Watts × Panel Count) / 1000
-   * Returns precise kW value rounded to 2 decimal places (e.g., 3240W = 3.24kW)
-   * This ensures accurate subsidy calculation based on kW ranges
+   * Delegates to shared utility for consistency across frontend and backend
    */
   static calculateSystemKW(panelWatts: string | number, panelCount: number): number {
-    const watts = typeof panelWatts === 'string' ? parseInt(panelWatts) : panelWatts;
-    const totalWatts = watts * panelCount;
-    const kw = totalWatts / 1000;
-    // Round to 2 decimal places for precision
-    return Math.round(kw * 100) / 100;
+    return sharedCalculateSystemKW(panelWatts, panelCount);
   }
 
   /**
    * Format kW for display in quotation
-   * <1 kW → show decimal (e.g., 0.68)
-   * >= 1 kW → round to nearest whole (e.g., 3.24 → 3, 9.90 → 10)
+   * Delegates to shared utility for consistency across frontend and backend
    */
   static formatKWForDisplay(kw: number): string {
-    if (kw < 1) {
-      // For sub-1kW systems, show up to 2 decimal places, remove trailing zeros
-      return kw.toFixed(2).replace(/\.?0+$/, '');
-    }
-    // For >= 1kW systems, round to nearest whole number
-    return Math.round(kw).toString();
+    return sharedFormatKWForDisplay(kw);
   }
 
   /**
-   * Round system kW for rate calculations (matching frontend logic)
+   * Round system kW for rate calculations
+   * Delegates to shared utility for consistency across frontend and backend
    * Uses standard mathematical rounding: .50 and above rounds up, below .50 rounds down
-   * This ensures rate per kW matches what user sees in the quotation form
    */
   static roundSystemKWForRateCalculation(actualKW: number): number {
-    if (actualKW <= 0) return 0;
-    // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW stays 0.68)
-    // Only round for systems >= 1 kW
-    if (actualKW < 1) return actualKW;
-    return Math.round(actualKW);
+    return roundSystemKW(actualKW);
   }
 
   /**

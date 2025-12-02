@@ -71,6 +71,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { sanitizeFormData } from "@shared/utils/form-sanitizer";
+import { roundSystemKW } from "@shared/utils";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
 import { useAuthContext } from "@/contexts/auth-context";
 import { 
@@ -1618,10 +1619,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     ? (panelWattsNumber * panelCountNumber) / 1000
     : 0;
 
-  // Round system kW: ≤3.5 → floor, >3.5 → round to nearest
-  const roundedSystemKW = actualSystemKW > 0 
-    ? (actualSystemKW <= 3.5 ? Math.floor(actualSystemKW) : Math.round(actualSystemKW))
-    : 0;
+  // Round system kW using centralized utility (Math.round for >= 1kW, preserve decimals for < 1kW)
+  const roundedSystemKW = roundSystemKW(actualSystemKW);
 
   // Display actual kW with 2 decimals
   const calculatedSystemKW = actualSystemKW.toFixed(2);
@@ -5161,10 +5160,8 @@ export default function QuotationCreation() {
                           const gstPercentage = project.gstPercentage || 18;
                           const projectValue = project.projectValue || 0;
                           
-                          // Use same rounding logic as Project Configuration step
-                          const roundedSystemKW = systemKW > 0 
-                            ? Math.round(systemKW)
-                            : 0;
+                          // Use centralized rounding utility
+                          const roundedSystemKW = roundSystemKW(systemKW);
                           
                           // Calculate Rate/kW and GST/kW using ROUNDED systemKW
                           const calculatedRatePerKW = basePrice && roundedSystemKW > 0
@@ -5200,9 +5197,7 @@ export default function QuotationCreation() {
                                   onChange={(e) => {
                                     const value = e.target.value;
                                     const newKW = value === '' ? 0 : (parseFloat(value) || 0);
-                                    const newRoundedKW = newKW > 0
-                                      ? Math.round(newKW)
-                                      : 0;
+                                    const newRoundedKW = roundSystemKW(newKW);
                                     const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
@@ -5338,9 +5333,7 @@ export default function QuotationCreation() {
                       const gstPercentage = project.gstPercentage || 18;
                       const projectValue = project.projectValue || 0;
                       
-                      const roundedSystemKW = systemKW > 0 
-                        ? Math.round(systemKW)
-                        : 0;
+                      const roundedSystemKW = roundSystemKW(systemKW);
                       
                       const calculatedRatePerKW = basePrice && roundedSystemKW > 0
                         ? Math.round(basePrice / roundedSystemKW)
@@ -5381,9 +5374,7 @@ export default function QuotationCreation() {
                                   onChange={(e) => {
                                     const value = e.target.value;
                                     const newKW = value === '' ? 0 : (parseFloat(value) || 0);
-                                    const newRoundedKW = newKW > 0
-                                      ? Math.round(newKW)
-                                      : 0;
+                                    const newRoundedKW = roundSystemKW(newKW);
                                     const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
                                     const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
                                     const newProjectValue = newBasePrice + newGSTAmount;
