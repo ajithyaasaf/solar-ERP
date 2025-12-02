@@ -71,7 +71,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { sanitizeFormData } from "@shared/utils/form-sanitizer";
-import { roundSystemKW } from "@shared/utils";
+import { roundSystemKW, formatKWForDisplay } from "@shared/utils";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
 import { useAuthContext } from "@/contexts/auth-context";
 import { 
@@ -218,7 +218,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
   switch (projectType) {
     case 'on_grid': {
       const systemKW = (project as any).systemKW || 0;
-      const kw = systemKW < 1 ? systemKW.toFixed(2).replace(/\.?0+$/, '') : Math.round(systemKW).toString();
+      const kw = formatKWForDisplay(systemKW);
       const inverterKW = (project as any).inverterKW || kw;
       const phase = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
       return `Supply and Installation of ${kw} kw Solar Panel ${inverterKW} KW Inverter ${phase} ON-GRID Solar System`;
@@ -241,7 +241,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
     
     case 'hybrid': {
       const systemKW = (project as any).systemKW || 0;
-      const totalKW = systemKW < 1 ? systemKW.toFixed(2).replace(/\.?0+$/, '') : Math.round(systemKW).toString();
+      const totalKW = formatKWForDisplay(systemKW);
       const inverterKVA = (project as any).inverterKVA || (project as any).inverterKW || 1;
       const voltage = project.voltage || 24;
       const batteryCount = project.batteryCount || 1;
@@ -268,7 +268,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const panelWattsNum = Number(project.panelWatts) || 540;
       const panelCount = project.panelCount || 10;
       const calculatedKW = (panelWattsNum * panelCount) / 1000;
-      const totalKW = calculatedKW < 1 ? calculatedKW.toFixed(2).replace(/\.?0+$/, '') : Math.round(calculatedKW).toString();
+      const totalKW = formatKWForDisplay(calculatedKW);
       const panelBrand = (project as any).panelBrand && (project as any).panelBrand.length > 0 
         ? (project as any).panelBrand[0].toUpperCase() 
         : 'UTL';
@@ -1246,11 +1246,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       // Store system KW for backend compatibility
       project.systemKW = calculatedKW;
       
-      // STEP 3: Calculate rounded kW - CONDITIONAL ROUNDING FOR SUB-1KW SUPPORT
-      // ✅ CRITICAL: Only round if >= 1 kW, preserve decimals for sub-1kW systems (e.g., 0.68 kW)
-      const roundedKW = calculatedKW > 0 
-        ? (calculatedKW < 1 ? calculatedKW : Math.round(calculatedKW)) 
-        : 0;
+      // STEP 3: Calculate rounded kW using centralized utility
+      const roundedKW = roundSystemKW(calculatedKW);
       
       // ✅ CRITICAL: DO NOT auto-overwrite inverterKW here!
       // inverterKW is a separate manual field - user enters it explicitly in the form
