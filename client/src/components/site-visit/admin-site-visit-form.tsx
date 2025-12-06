@@ -421,7 +421,7 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
                     onChange={(e) => updateEbProcess({ ebSanctionKW: e.target.value })}
                     placeholder="e.g., 4"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Sanctioned load in KW (optional)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Sanction load in KW (optional)</p>
                 </div>
               </div>
             </div>

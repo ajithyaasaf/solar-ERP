@@ -360,7 +360,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
       ebServiceNumber: siteVisitCustomerData.ebServiceNumber || "",
       tariffCode: siteVisitCustomerData.tariffCode || "",
       ebSanctionPhase: siteVisitCustomerData.ebSanctionPhase || null,
-      ebSanctionKW: siteVisitCustomerData.ebSanctionKW || "",
+      ebSanctionKW: siteVisitCustomerData.ebSanctionKW || null,
       propertyType: siteVisitCustomerData.propertyType || "",
       location: siteVisitCustomerData.location || "",
       source: "site_visit"
@@ -5872,7 +5872,7 @@ export default function QuotationCreation() {
                       )}
                       {form.watch("customerData")?.ebSanctionKW && (
                         <div>
-                          <p className="text-muted-foreground mb-1">Sanctioned KW</p>
+                          <p className="text-muted-foreground mb-1">Sanction Load</p>
                           <p className="font-medium">{form.watch("customerData")?.ebSanctionKW} KW</p>
                         </div>
                       )}
