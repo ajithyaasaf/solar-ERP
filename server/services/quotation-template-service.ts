@@ -6,6 +6,17 @@
 import { Quotation, QuotationProject } from "@shared/schema";
 import { calculateSystemKW as sharedCalculateSystemKW, roundSystemKW, formatKWForDisplay as sharedFormatKWForDisplay } from "@shared/utils";
 
+const batteryBrandDisplayMap: Record<string, string> = {
+  'exide': 'Exide',
+  'utl': 'UTL',
+  'exide_utl': 'Exide/UTL',
+};
+
+function getBatteryBrandDisplayName(brand: string | undefined): string {
+  if (!brand) return 'Exide';
+  return batteryBrandDisplayMap[brand.toLowerCase()] || brand;
+}
+
 export interface CompanyDetails {
   name: string;
   logo: string;
@@ -709,13 +720,14 @@ export class QuotationTemplateService {
     });
 
     // 3. Battery - Brand and specifications from form
+    const batteryBrandDisplay = getBatteryBrandDisplayName(project.batteryBrand);
     items.push({
       slNo: slNo++,
-      description: `${project.batteryBrand || 'Exide'} Battery`,
+      description: `${batteryBrandDisplay} Battery`,
       type: project.batteryType === 'lithium' ? 'Li-ion' : project.batteryType === 'lead_acid' ? 'LA' : 'Battery',
       volt: `${project.voltage || 12}`,
       rating: `${project.batteryAH || '100'} AH`,
-      make: project.batteryBrand || 'Exide',
+      make: batteryBrandDisplay,
       qty: project.batteryCount || 1,
       unit: "Nos"
     });
@@ -918,13 +930,14 @@ export class QuotationTemplateService {
     });
 
     // 3. Battery - Brand and specifications from form
+    const batteryBrandDisplayHybrid = getBatteryBrandDisplayName(project.batteryBrand);
     items.push({
       slNo: slNo++,
-      description: `${project.batteryBrand || 'Exide'} Battery`,
+      description: `${batteryBrandDisplayHybrid} Battery`,
       type: project.batteryType === 'lithium' ? 'Li-ion' : project.batteryType === 'lead_acid' ? 'LA' : 'Battery',
       volt: `${project.voltage || 12}`,
       rating: `${project.batteryAH || '100'} AH`,
-      make: project.batteryBrand || 'Exide',
+      make: batteryBrandDisplayHybrid,
       qty: project.batteryCount || 1,
       unit: "Nos"
     });
