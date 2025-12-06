@@ -37,6 +37,7 @@ export interface QuotationTemplate {
   quoteRevision: number;
   quoteValidity: string;
   preparedBy: string;
+  refName?: string;
   contactPerson: string;
   contactNumber: string;
   projectType: string;
@@ -1625,6 +1626,7 @@ export class QuotationTemplateService {
       quoteRevision: quotation.documentVersion || 1,
       quoteValidity: `${validityDays} Days`,
       preparedBy: preparedByName || quotation.preparedBy || "SM",
+      refName: quotation.refName || undefined,
       contactPerson: quotation.contactPerson || "M. Selva Prakash",
       contactNumber: quotation.contactNumber || "+91 99949 01500",
       projectType: project.projectType,

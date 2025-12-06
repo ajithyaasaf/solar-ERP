@@ -409,7 +409,7 @@ export class QuotationPDFService {
           ${template.customer.ebServiceNumber ? `<br>EB NO: ${template.customer.ebServiceNumber}` : ''}
           ${template.customer.tariffCode ? `<br>Tariff Code: ${template.customer.tariffCode}` : ''}
           ${template.customer.ebSanctionPhase ? `<br>Load Phase: ${template.customer.ebSanctionPhase === '1_phase' ? '1 Phase' : '3 Phase'}` : ''}
-          ${template.customer.ebSanctionKW ? `<br>Sanctioned KW: ${template.customer.ebSanctionKW}` : ''}
+          ${template.customer.ebSanctionKW ? `<br>Sanction Load: ${template.customer.ebSanctionKW}` : ''}
         </div>
         
         <div class="contact-info">
@@ -424,7 +424,7 @@ export class QuotationPDFService {
       <div class="reference">
         <strong>Dear Sir,</strong><br>
         <strong>Sub: Requirement of ${template.reference}</strong><br>
-        <strong>Ref: Discussion with ${template.preparedBy}</strong><br>
+        <strong>Ref: Discussion with ${template.refName || template.preparedBy}</strong><br>
         <strong>Prakash Green Energy, Madurai</strong>
       </div>
       

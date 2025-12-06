@@ -1808,6 +1808,7 @@ export const insertQuotationSchema = z.object({
   
   // Administrative fields
   preparedBy: z.string(),
+  refName: z.string().nullish(), // Reference name for "Discussion with" in PDF - defaults to preparedBy if not set
   contactPerson: z.string().default("M. Selva Prakash"),
   contactNumber: z.string().default("+91 99949 01500"),
   approvedBy: z.string().nullish(),

@@ -528,10 +528,10 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
           />
         </div>
 
-        {/* EB Sanction - Load Phase */}
+        {/* Load Phase */}
         <div className="space-y-2">
           <div className="flex items-center">
-            <label className="text-sm font-medium">EB Sanction - Load Phase</label>
+            <label className="text-sm font-medium">Load Phase</label>
             {renderFieldStatus("ebSanctionPhase")}
           </div>
           <Select value={customerState.ebSanctionPhase || undefined} onValueChange={(value) => updateCustomerField("ebSanctionPhase", value)}>
@@ -548,10 +548,10 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
           </Select>
         </div>
 
-        {/* EB Sanction - KW */}
+        {/* Sanction Load */}
         <div className="space-y-2">
           <div className="flex items-center">
-            <label className="text-sm font-medium">EB Sanction - KW</label>
+            <label className="text-sm font-medium">Sanction Load</label>
             {renderFieldStatus("ebSanctionKW")}
           </div>
           <Input
@@ -861,10 +861,10 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
           />
         </div>
 
-        {/* EB Sanction - Load Phase */}
+        {/* Load Phase */}
         <div className="space-y-2">
           <div className="flex items-center">
-            <label className="text-sm font-medium">EB Sanction - Load Phase</label>
+            <label className="text-sm font-medium">Load Phase</label>
             {isAutoFilled && customerState.ebSanctionPhase && (
               <Badge variant="secondary" className="text-xs ml-2">
                 <Check className="h-3 w-3 mr-1" />
@@ -886,10 +886,10 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
           </Select>
         </div>
 
-        {/* EB Sanction - KW */}
+        {/* Sanction Load */}
         <div className="space-y-2">
           <div className="flex items-center">
-            <label className="text-sm font-medium">EB Sanction - KW</label>
+            <label className="text-sm font-medium">Sanction Load</label>
             {isAutoFilled && customerState.ebSanctionKW && (
               <Badge variant="secondary" className="text-xs ml-2">
                 <Check className="h-3 w-3 mr-1" />
@@ -2363,7 +2363,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               <SelectContent>
                 <SelectItem value="exide">Exide</SelectItem>
                 <SelectItem value="utl">UTL</SelectItem>
-                <SelectItem value="exide_utl">Exide UTL</SelectItem>
+                <SelectItem value="exide_utl">Exide/UTL</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -3640,6 +3640,7 @@ export default function QuotationCreation() {
       communicationPreference: "whatsapp",
       documentVersion: 1,
       preparedBy: "",
+      refName: "", // Reference name for "Discussion with" in PDF - defaults to preparedBy if not set
       contactPerson: "M. Selva Prakash",
       contactNumber: "+91 99949 01500",
       internalNotes: "",
@@ -4526,6 +4527,7 @@ export default function QuotationCreation() {
       ...ebFields,
       source: quotationSource, // Use the actual selected source
       preparedBy: sanitizedData.preparedBy || user?.displayName || "", // Use form value, fallback to user name
+      refName: sanitizedData.refName || null, // Reference name for "Discussion with" - null means use preparedBy
       projects: projectsWithFixedTypes, // Fixed types before validation
       customBillOfMaterials: bomItems.length > 0 ? bomItems : undefined, // Include custom BOM if edited
       customCompanyScopeItems: Object.keys(companyScopeItems).length > 0 ? companyScopeItems : undefined, // Include custom company scope if edited
@@ -5190,7 +5192,7 @@ export default function QuotationCreation() {
                                 <Input 
                                   type="number" 
                                   step="0.01"
-                                  value={systemKW} 
+                                  value={formatKWForDisplay(systemKW)} 
                                   onChange={(e) => {
                                     const value = e.target.value;
                                     const newKW = value === '' ? 0 : (parseFloat(value) || 0);
@@ -5881,26 +5883,50 @@ export default function QuotationCreation() {
                 {/* Prepared By & Contact Details - Editable Fields */}
                 <div className="space-y-3">
                   <h4 className="font-medium text-sm sm:text-base">Quotation Details</h4>
-                  <FormField
-                    control={form.control}
-                    name="preparedBy"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prepared By</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter name of person preparing quotation" 
-                            data-testid="input-prepared-by"
-                            {...field}
-                          />
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground">
-                          This name will appear in the quotation PDF. Defaults to your name but can be changed if preparing on behalf of someone else.
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="preparedBy"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prepared By</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter name of person preparing quotation" 
+                              data-testid="input-prepared-by"
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            This name will appear as "Prepared by" in the quotation PDF.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="refName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ref Name</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder={form.watch("preparedBy") || "Enter reference name"} 
+                              data-testid="input-ref-name"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Name for "Ref: Discussion with" in PDF. Defaults to Prepared By if left empty.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField

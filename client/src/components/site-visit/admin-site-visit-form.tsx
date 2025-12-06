@@ -415,7 +415,7 @@ export function AdminSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading }: 
                 </div>
 
                 <div>
-                  <Label>Sanctioned KW</Label>
+                  <Label>Sanction Load</Label>
                   <Input
                     value={formData.ebProcess.ebSanctionKW || ''}
                     onChange={(e) => updateEbProcess({ ebSanctionKW: e.target.value })}
