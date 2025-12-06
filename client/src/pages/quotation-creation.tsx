@@ -5895,6 +5895,7 @@ export default function QuotationCreation() {
                               placeholder="Enter name of person preparing quotation" 
                               data-testid="input-prepared-by"
                               {...field}
+                              value={field.value || ""}
                             />
                           </FormControl>
                           <p className="text-xs text-muted-foreground">
