@@ -22,70 +22,70 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Get pagination parameters
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
-      
+
       // Get filters
       const filters: any = {};
       if (req.query.status && req.query.status !== "all") filters.status = req.query.status;
       if (req.query.source && req.query.source !== "all") filters.source = req.query.source;
       if (req.query.search) filters.search = req.query.search;
-      
+
       // Get sort parameters
       const sortBy = (req.query.sortBy as string) || "createdAt";
       const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
 
       // Get all quotations and apply filters/sorting on the backend
       let quotations = await storage.listQuotations();
-      
+
       // Apply search filter
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase();
-        quotations = quotations.filter(q => 
+        quotations = quotations.filter(q =>
           q.quotationNumber?.toLowerCase().includes(searchTerm) ||
           q.customerNotes?.toLowerCase().includes(searchTerm) ||
           q.internalNotes?.toLowerCase().includes(searchTerm)
         );
       }
-      
+
       // Apply status filter
       if (filters.status) {
         quotations = quotations.filter(q => q.status === filters.status);
       }
-      
+
       // Apply source filter
       if (filters.source) {
         quotations = quotations.filter(q => q.source === filters.source);
       }
-      
+
       // Apply sorting
       quotations.sort((a, b) => {
         let aVal: any = a[sortBy as keyof typeof a];
         let bVal: any = b[sortBy as keyof typeof b];
-        
+
         // Handle date sorting
         if (sortBy === "createdAt" || sortBy === "updatedAt") {
           aVal = new Date(aVal).getTime();
           bVal = new Date(bVal).getTime();
         }
-        
+
         // Handle numeric sorting
         if (typeof aVal === 'number' && typeof bVal === 'number') {
           return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
         }
-        
+
         // Handle string sorting
         const aStr = String(aVal || '').toLowerCase();
         const bStr = String(bVal || '').toLowerCase();
         return sortOrder === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
       });
-      
+
       // Calculate total before pagination
       const total = quotations.length;
-      
+
       // Apply pagination
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
       const paginatedQuotations = quotations.slice(startIndex, endIndex);
-      
+
       res.json({
         data: paginatedQuotations,
         pagination: {
@@ -129,19 +129,20 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       console.log("\n🔵🔵🔵 NEW QUOTATION CREATION REQUEST 🔵🔵🔵");
       console.log("⏰ Timestamp:", new Date().toISOString());
       console.log("📨 Request body received:", JSON.stringify(req.body, null, 2));
-      
+
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       console.log("👤 User verified:", user.displayName);
-      
+
       // Log each project before validation
       if (req.body.projects && Array.isArray(req.body.projects)) {
         console.log(`\n📦 PROJECTS TO VALIDATE: ${req.body.projects.length} projects`);
         req.body.projects.forEach((project: any, idx: number) => {
           console.log(`\n📦 PROJECT ${idx}:`);
+          console
           console.log(`  Type: ${project.projectType}`);
           console.log(`  Full data:`, JSON.stringify(project, null, 2));
         });
@@ -149,12 +150,17 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       // Validate request body
       console.log("\n🔍 Starting schema validation...");
+      console.log("🔍 BACKEND RECEIVED preparedBy:", req.body.preparedBy);
+      console.log("🔍 Type:", typeof req.body.preparedBy);
+      console.log("🔍 Is falsy?", !req.body.preparedBy);
+      console.log("🔍 User display name:", user.displayName);
+
       const quotationData = insertQuotationSchema.parse({
         ...req.body,
         preparedBy: req.body.preparedBy || user.displayName || user.email || user.uid,
         quotationNumber: QuotationTemplateService.generateQuotationNumber()
       });
-      
+
       console.log("✅ Schema validation PASSED");
       console.log("Validated quotation data:", JSON.stringify(quotationData, null, 2));
 
@@ -169,14 +175,15 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       }
 
       const quotation = await storage.createQuotation(quotationData);
-      
+
       console.log("✅ Quotation created successfully:", quotation.id);
+      console.log("🔍 PREPARED BY SAVED:", quotation.preparedBy);
       res.status(201).json(quotation);
     } catch (error) {
       console.error("\n❌❌❌ ERROR IN QUOTATION CREATION ❌❌❌");
       console.error("Error type:", error instanceof z.ZodError ? "ZodError" : error.constructor.name);
       console.error("Error message:", error instanceof Error ? error.message : String(error));
-      
+
       if (error instanceof z.ZodError) {
         console.error("\n🔴 ZOD VALIDATION ERRORS:");
         error.errors.forEach((err, idx) => {
@@ -186,7 +193,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           console.error(`  Message: ${err.message}`);
           console.error(`  Full error:`, JSON.stringify(err, null, 2));
         });
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Validation error",
           errors: error.errors,
           errorDetails: error.errors.map((e: any) => ({
@@ -217,7 +224,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       // Prepare update data with "-" to 0 conversion
       const updateData = { ...req.body };
-      
+
       // Convert "-" qty to 0 in customBillOfMaterials before saving (Installation & Commissioning)
       if (updateData.customBillOfMaterials && Array.isArray(updateData.customBillOfMaterials)) {
         console.log("🔄 [PATCH] Converting '-' qty values to 0 in customBillOfMaterials...");
@@ -267,9 +274,22 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       const project = quotation.projects[0]; // Handle first project for now
 
+      // Accept optional override parameters from request body
+      // This allows the frontend to send current form values that should be used in the PDF
+      // instead of the saved database values - useful for preview before save
+      const overrides = req.body || {};
+      const quotationWithOverrides = {
+        ...quotation,
+        // Only override if explicitly provided (not undefined)
+        ...(overrides.preparedBy !== undefined && { preparedBy: overrides.preparedBy }),
+        ...(overrides.refName !== undefined && { refName: overrides.refName }),
+        ...(overrides.contactPerson !== undefined && { contactPerson: overrides.contactPerson }),
+        ...(overrides.contactNumber !== undefined && { contactNumber: overrides.contactNumber })
+      };
+
       // Generate HTML content for client-side PDF generation
       const htmlResult = await QuotationPDFService.generateHTMLPreview(
-        quotation,
+        quotationWithOverrides,
         project,
         customer
       );
@@ -334,7 +354,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       }
 
       const { project, propertyType } = req.body;
-      
+
       if (!project) {
         return res.status(400).json({ message: "Project configuration is required" });
       }
@@ -356,20 +376,20 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       console.log("⏰ Timestamp:", new Date().toISOString());
       console.log("Site Visit ID:", req.params.siteVisitId);
       console.log("Request body:", JSON.stringify(req.body, null, 2));
-      
+
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       const { DataCompletenessAnalyzer, SiteVisitDataMapper } = await import("../services/quotation-mapping-service");
-      
+
       // Get site visit data
       const { siteVisitService } = await import("../services/site-visit-service");
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
-      
+
       console.log("📍 Site visit retrieved:", siteVisit?.id);
-      
+
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
@@ -377,19 +397,26 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       // Check if user provided modified projects in request body
       const hasModifiedProjects = req.body.projects && Array.isArray(req.body.projects) && req.body.projects.length > 0;
       console.log("🔍 Checking for user modifications: hasModifiedProjects =", hasModifiedProjects);
-      
+
       let quotationData: any;
       let mappingResult: any;
       let completenessAnalysis: any;
-      
+
       if (hasModifiedProjects) {
         // User has modified the projects in the form - use those instead of mapping from site visit
         console.log("📝 Using user-modified projects from request body");
         console.log("Modified projects:", JSON.stringify(req.body.projects, null, 2));
-        
+
         // Map site visit data for customer and other context, but use modified projects
         mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
-        
+
+        console.log("🔍🔍🔍 PREPARED BY DEBUG (hasModifiedProjects=true) 🔍🔍🔍");
+        console.log("  req.body.preparedBy:", req.body.preparedBy);
+        console.log("  Type:", typeof req.body.preparedBy);
+        console.log("  Is truthy?:", !!req.body.preparedBy);
+        console.log("  mappingResult.quotationData.preparedBy:", mappingResult.quotationData.preparedBy);
+        console.log("  user.displayName:", user.displayName);
+
         // Merge all user modifications from request body with mapped data
         quotationData = {
           ...mappingResult.quotationData,
@@ -399,16 +426,19 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           source: 'site_visit' as const,
           status: mappingResult.quotationData.status || 'draft' as const,
           customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || (req.body.customerId || ''),
-          siteVisitMapping: mappingResult.mappingMetadata
+          siteVisitMapping: mappingResult.mappingMetadata,
+          // CRITICAL: Ensure preparedBy from request body takes precedence
+          preparedBy: req.body.preparedBy || mappingResult.quotationData.preparedBy || user.displayName || user.email || user.uid
         };
+        console.log("🔍 FINAL preparedBy in quotationData:", quotationData.preparedBy);
         console.log("✅ Merged user modifications with mapping result");
       } else {
         // No modifications - use standard site visit mapping with completeness check
         completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
         console.log("📊 Completeness analysis:", JSON.stringify(completenessAnalysis, null, 2));
-        
+
         if (!completenessAnalysis.canCreateQuotation) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             message: "Site visit data incomplete for quotation creation",
             analysis: completenessAnalysis
           });
@@ -418,7 +448,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         console.log("🔄 Starting mapping from site visit to quotation...");
         mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
         console.log("✅ Mapping complete. Quotation data:", JSON.stringify(mappingResult.quotationData, null, 2));
-        
+
         quotationData = {
           ...mappingResult.quotationData,
           createdBy: user.uid,
@@ -426,12 +456,15 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           source: 'site_visit' as const,
           status: mappingResult.quotationData.status || 'draft' as const,
           customerId: mappingResult.quotationData.customerId || siteVisit.customer?.id || '',
-          siteVisitMapping: mappingResult.mappingMetadata
+          siteVisitMapping: mappingResult.mappingMetadata,
+          // CRITICAL: Ensure preparedBy from request body takes precedence
+          preparedBy: req.body.preparedBy || mappingResult.quotationData.preparedBy || user.displayName || user.email || user.uid
         };
+        console.log("🔍 SITE VISIT (no modifications) - preparedBy:", quotationData.preparedBy);
       }
 
       console.log("📋 Final quotation data to validate:", JSON.stringify(quotationData, null, 2));
-      
+
       // Log each project in detail
       if (quotationData.projects && Array.isArray(quotationData.projects)) {
         console.log(`\n📦 PROJECTS IN QUOTATION DATA: ${quotationData.projects.length} projects`);
@@ -454,7 +487,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       console.log("\n🔍 Starting schema validation...");
       const quotation = await storage.createQuotation(quotationData);
-      
+
       console.log("✅ Quotation created successfully:", quotation.id);
       res.status(201).json({
         quotation,
@@ -465,7 +498,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       console.error("\n❌❌❌ ERROR IN FROM SITE VISIT QUOTATION CREATION ❌❌❌");
       console.error("Error type:", error instanceof z.ZodError ? "ZodError" : error.constructor.name);
       console.error("Error message:", error instanceof Error ? error.message : String(error));
-      
+
       if (error instanceof z.ZodError) {
         console.error("\n🔴 ZOD VALIDATION ERRORS:");
         error.errors.forEach((err, idx) => {
@@ -475,7 +508,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           console.error(`  Message: ${err.message}`);
           console.error(`  Full error:`, JSON.stringify(err, null, 2));
         });
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Validation error",
           errors: error.errors,
           errorDetails: error.errors.map((e: any) => ({
@@ -485,7 +518,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           }))
         });
       }
-      
+
       console.error("Full error object:", error);
       console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
       res.status(500).json({ message: "Failed to create quotation from site visit", error: error instanceof Error ? error.message : String(error) });
@@ -502,7 +535,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       const { siteVisitService } = await import("../services/site-visit-service");
       const { DataCompletenessAnalyzer } = await import("../services/quotation-mapping-service");
-      
+
       // Get all completed site visits
       const siteVisits = await siteVisitService.getSiteVisitsWithFilters({
         status: 'completed'
@@ -537,19 +570,19 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       const { siteVisitService } = await import("../services/site-visit-service");
       const { DataCompletenessAnalyzer, SiteVisitDataMapper } = await import("../services/quotation-mapping-service");
-      
+
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
-      
+
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
       // Analyze completeness
       const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
-      
+
       // Get mapping preview
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
-      
+
       res.json({
         siteVisit,
         completenessAnalysis,

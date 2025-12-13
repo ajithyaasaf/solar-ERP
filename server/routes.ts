@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { 
-  insertAttendanceSchema, 
-  insertOfficeLocationSchema, 
+import {
+  insertAttendanceSchema,
+  insertOfficeLocationSchema,
   insertPermissionSchema,
   insertRoleSchema,
   insertUserRoleAssignmentSchema,
@@ -24,7 +24,7 @@ import {
   departments
 } from "@shared/schema";
 // Import all the necessary schemas from storage.ts since they've been moved there
-import { 
+import {
   insertUserSchema,
   insertDepartmentSchema,
   insertDesignationSchema,
@@ -59,11 +59,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const decodedToken = await auth.verifyIdToken(token);
       req.user = decodedToken;
-      
+
       // Load user profile from storage
       const userProfile = await storage.getUser(decodedToken.uid);
 
-      
+
       if (userProfile) {
         // Attach enhanced user data for permission checking
         req.authenticatedUser = {
@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canApprove: false,
           maxApprovalAmount: null
         };
-        
+
         // Master admin gets all permissions first - Use dynamic import for consistency
         if (userProfile.role === "master_admin") {
           const { systemPermissions } = await import("@shared/schema");
@@ -90,17 +90,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const effectivePermissions = getEffectivePermissions(userProfile.department, userProfile.designation);
             req.authenticatedUser.permissions = effectivePermissions;
 
-            
+
             // Set approval capabilities based on designation - Fixed duplicate keys
             const designationLevels = {
-              "house_man": 1, 
-              "welder": 2, 
-              "technician": 3, 
+              "house_man": 1,
+              "welder": 2,
+              "technician": 3,
               "cre": 4,
-              "executive": 5, 
-              "team_leader": 6, 
-              "officer": 7, 
-              "gm": 8, 
+              "executive": 5,
+              "team_leader": 6,
+              "officer": 7,
+              "gm": 8,
               "ceo": 9
             };
             const level = designationLevels[userProfile.designation] || 1;
@@ -125,9 +125,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             req.authenticatedUser.permissions = ["dashboard.view", "attendance.view_own", "leave.view_own", "leave.request"];
           }
         }
-        
+
       }
-      
+
       next();
     } catch (error) {
       console.error("Auth verification error:", error);
@@ -143,31 +143,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Get limit parameter with fallback and validation
       const limitParam = req.query.limit;
       const limit = limitParam ? Math.min(Math.max(parseInt(limitParam as string, 10) || 10, 1), 50) : 10;
-      
+
       // Try to fetch stored activity logs first
       try {
         const storedLogs = await storage.listActivityLogs(limit);
-        
+
         // If we have enough stored logs, return them directly
         if (storedLogs.length >= limit) {
           return res.json(storedLogs);
         }
-        
+
         // If we have some logs but not enough, supplement with generated logs
         const activities = [...storedLogs];
         const remainingCount = limit - storedLogs.length;
-        
+
         // Get supplementary data and generate activities
         const [customers, quotations, invoices] = await Promise.all([
           storage.listCustomers(),
           storage.listQuotations(),
           storage.listInvoices()
         ]);
-        
+
         // Generate from customers if needed
         if (customers.length > 0 && activities.length < limit) {
           const existingCustomerIds = new Set(
@@ -175,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .filter(a => a.entityType === 'customer')
               .map(a => a.entityId)
           );
-          
+
           const newCustomerActivities = customers
             .filter(c => !existingCustomerIds.has(c.id))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -190,10 +190,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               entityType: 'customer',
               userId: user.id
             }));
-            
+
           activities.push(...newCustomerActivities);
         }
-        
+
         // Generate from quotations if needed
         if (quotations.length > 0 && activities.length < limit) {
           const existingQuotationIds = new Set(
@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .filter(a => a.entityType === 'quotation')
               .map(a => a.entityId)
           );
-          
+
           const newQuotationActivities = quotations
             .filter(q => !existingQuotationIds.has(q.id))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -216,10 +216,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               entityType: 'quotation',
               userId: user.id
             }));
-            
+
           activities.push(...newQuotationActivities);
         }
-        
+
         // Generate from invoices if needed
         if (invoices.length > 0 && activities.length < limit) {
           const existingInvoiceIds = new Set(
@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .filter(a => a.entityType === 'invoice')
               .map(a => a.entityId)
           );
-          
+
           const newInvoiceActivities = invoices
             .filter(i => !existingInvoiceIds.has(i.id))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -242,13 +242,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               entityType: 'invoice',
               userId: user.id
             }));
-            
+
           activities.push(...newInvoiceActivities);
         }
-        
+
         // Sort all activities by date (newest first)
         activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        
+
         // Try to store generated activities for future use
         try {
           for (const activity of activities) {
@@ -267,26 +267,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error storing activity logs:", storeError);
           // Continue to return the activities even if storing fails
         }
-        
+
         return res.json(activities.slice(0, limit));
       } catch (error) {
         console.error("Error with stored logs, falling back to generated logs:", error);
-        
+
         // Fallback to fully generated logs
         const activities = [];
-        
+
         const [customers, quotations, invoices] = await Promise.all([
           storage.listCustomers(),
           storage.listQuotations(),
           storage.listInvoices()
         ]);
-        
+
         // Generate from customers (up to 2)
         if (customers.length > 0) {
           const recentCustomers = [...customers]
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 2);
-            
+
           recentCustomers.forEach(customer => {
             activities.push({
               id: `customer-${customer.id}`,
@@ -300,12 +300,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           });
         }
-        
+
         // Generate from most recent quotation
         if (quotations.length > 0) {
           const recentQuotation = quotations
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-            
+
           activities.push({
             id: `quotation-${recentQuotation.id}`,
             type: 'quotation_created' as const,
@@ -317,16 +317,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: user.id
           });
         }
-        
+
         // Generate from most recent invoice
         if (invoices.length > 0) {
           const recentInvoice = invoices
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-            
+
           activities.push({
             id: `invoice-${recentInvoice.id}`,
             type: 'invoice_paid' as const,
-            title: "Invoice paid", 
+            title: "Invoice paid",
             description: `${recentInvoice.invoiceNumber || 'Invoice'} for ₹${recentInvoice.total || 0}`,
             createdAt: recentInvoice.createdAt,
             entityId: recentInvoice.id,
@@ -334,15 +334,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: user.id
           });
         }
-        
+
         // Sort by creation date (newest first)
         activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        
+
         return res.json(activities.slice(0, limit));
       }
     } catch (error) {
       console.error("Error generating activity logs:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to fetch activity logs",
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -361,12 +361,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user = syncResult.user;
         }
       }
-      
+
       // Check enterprise permissions instead of hardcoded roles
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "users.view"))) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const result = await userService.getAllUsers();
       if (Array.isArray(result)) {
         res.json(result);
@@ -387,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Allow users to view their own profile or check enterprise permissions for viewing others
       const canViewOwnProfile = user && user.id === req.params.id;
       const hasViewPermission = user && await storage.checkEffectiveUserPermission(user.uid, "users.view");
-      
+
       if (!user || (!canViewOwnProfile && !hasViewPermission)) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -409,12 +409,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "users.create"))) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const result = await userService.createUser(req.body);
       if (!result.success) {
         return res.status(400).json({ message: result.error });
       }
-      
+
       res.status(201).json(result.user);
     } catch (error) {
       console.error("Error creating user:", error);
@@ -429,19 +429,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "users.edit"))) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Check role assignment permissions using enterprise RBAC
       if (req.body.role === "master_admin" && !(await storage.checkEffectiveUserPermission(user.uid, "permissions.assign"))) {
         return res
           .status(403)
           .json({ message: "Insufficient permissions to assign master_admin role" });
       }
-      
+
       const result = await userService.updateUserProfile(req.params.id, req.body);
       if (!result.success) {
         return res.status(400).json({ message: result.error });
       }
-      
+
       res.json(result.user);
     } catch (error) {
       console.error("Error updating user:", error);
@@ -456,24 +456,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       // Only master_admin and admin can register new users
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
-        return res.status(403).json({ 
-          message: "Public registration is disabled. Please contact your administrator to create an account." 
+        return res.status(403).json({
+          message: "Public registration is disabled. Please contact your administrator to create an account."
         });
       }
-      
+
       console.log("Admin registration request received for:", req.body.email || "unknown");
-      
+
       const result = await userService.createUser({
         ...req.body,
         role: req.body.role || "employee", // Allow role specification for admins
         createLogin: true // Always create login for admin-registered users
       });
-      
+
       if (!result.success) {
         return res.status(400).json({ message: result.error });
       }
-      
-      res.status(201).json({ 
+
+      res.status(201).json({
         message: result.message || "User registered successfully",
         user: {
           uid: result.user.uid,
@@ -494,10 +494,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sync-user", async (req, res) => {
     try {
       console.log("User sync request received:", req.body);
-      
+
       // Get UID from request body or auth token
       let uid = req.body.uid;
-      
+
       if (!uid) {
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -513,13 +513,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "UID required for user sync" });
         }
       }
-      
+
       const result = await userService.syncUserProfile(uid, req.body);
-      
+
       if (!result.success) {
         return res.status(400).json({ message: result.error });
       }
-      
+
       res.json({
         message: "User profile synced successfully",
         user: result.user,
@@ -537,11 +537,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Pass any displayName from the request body to preserve user registration data
       const syncData = req.body.displayName ? { displayName: req.body.displayName } : {};
       const result = await userService.syncUserProfile(req.authenticatedUser?.uid || "", syncData);
-      
+
       if (!result.success) {
         return res.status(400).json({ message: result.error });
       }
-      
+
       res.json({
         message: "User profile synced successfully",
         user: result.user,
@@ -574,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get effective permissions using enterprise RBAC
       const effectivePermissions = await storage.getEffectiveUserPermissions(req.params.id);
       const approvalLimits = await storage.getUserApprovalLimits(req.params.id);
-      
+
       res.json({
         user: {
           uid: targetUser.uid,
@@ -607,7 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { getDepartmentModuleAccess, getDesignationActionPermissions, getEffectivePermissions } = await import("@shared/schema");
-      
+
       // Test different department + designation combinations
       const testCases = [
         { department: "operations", designation: "ceo" },
@@ -648,7 +648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const users = await storage.getUsersByDepartment(req.params.department);
       res.json(users);
     } catch (error) {
@@ -663,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const users = await storage.getUsersByDesignation(req.params.designation);
       res.json(users);
     } catch (error) {
@@ -683,7 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.params.managerId !== req.authenticatedUser?.uid || "" && user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const subordinates = await storage.getUsersByReportingManager(req.params.managerId);
       res.json(subordinates);
     } catch (error) {
@@ -699,7 +699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const designations = await storage.listDesignations();
       res.json(designations);
     } catch (error) {
@@ -714,7 +714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const designation = await storage.createDesignation(req.body);
       res.status(201).json(designation);
     } catch (error) {
@@ -729,7 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const designation = await storage.updateDesignation(req.params.id, req.body);
       res.json(designation);
     } catch (error) {
@@ -744,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       await storage.deleteDesignation(req.params.id);
       res.json({ message: "Designation deleted successfully" });
     } catch (error) {
@@ -760,7 +760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const permissionGroups = await storage.listPermissionGroups();
       res.json(permissionGroups);
     } catch (error) {
@@ -775,7 +775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const permissionGroup = await storage.createPermissionGroup(req.body);
       res.status(201).json(permissionGroup);
     } catch (error) {
@@ -790,7 +790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const permissionGroup = await storage.updatePermissionGroup(req.params.id, req.body);
       res.json(permissionGroup);
     } catch (error) {
@@ -805,7 +805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       await storage.deletePermissionGroup(req.params.id);
       res.json({ message: "Permission group deleted successfully" });
     } catch (error) {
@@ -821,19 +821,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - master admin only" });
       }
-      
+
       const { migrateOrganizationalStructure } = await import('./migration-organizational-structure');
       const result = await migrateOrganizationalStructure();
-      
+
       if (result.success) {
-        res.json({ 
-          message: "Migration completed successfully", 
-          migratedCount: result.migratedCount 
+        res.json({
+          message: "Migration completed successfully",
+          migratedCount: result.migratedCount
         });
       } else {
-        res.status(500).json({ 
-          message: "Migration failed", 
-          error: result.error 
+        res.status(500).json({
+          message: "Migration failed",
+          error: result.error
         });
       }
     } catch (error) {
@@ -861,7 +861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/office-locations", verifyAuth, async (req, res) => {
     try {
       let officeLocations = await storage.listOfficeLocations();
-      
+
       // If no office locations exist, create default office location
       if (officeLocations.length === 0) {
         const defaultLocation = {
@@ -870,11 +870,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           longitude: "78.1338405791111",
           radius: 100
         };
-        
+
         await storage.createOfficeLocation(defaultLocation);
         officeLocations = await storage.listOfficeLocations();
       }
-      
+
       res.json(officeLocations);
     } catch (error) {
       console.error("Error fetching office locations:", error);
@@ -1025,21 +1025,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reason,
         imageUrl
       } = req.body;
-      
+
       if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
 
       // Input validation
       if (!latitude || !longitude) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Location coordinates are required",
           recommendations: ["Please enable location services and try again"]
         });
       }
 
       if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Invalid location coordinates",
           recommendations: ["Location must be valid GPS coordinates"]
         });
@@ -1047,7 +1047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import and use unified attendance service
       const { UnifiedAttendanceService } = await import('./services/unified-attendance-service');
-      
+
       const checkInRequest = {
         userId,
         latitude: Number(latitude),
@@ -1106,7 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Enterprise check-in error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "System error during check-in processing",
         error: {
           type: "enterprise_service_error",
@@ -1127,29 +1127,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate request
       if (!imageData || !userId) {
-        return res.status(400).json({ 
-          message: "Invalid request - image data and user ID required" 
+        return res.status(400).json({
+          message: "Invalid request - image data and user ID required"
         });
       }
 
       // For site visit and follow-up uploads, allow temporary user IDs
       const isSiteVisitUpload = userId.startsWith('site_visit') || userId.startsWith('sitevisit') || userId.startsWith('followup');
       if (!isSiteVisitUpload && userId !== req.authenticatedUser?.uid || "") {
-        return res.status(400).json({ 
-          message: "Invalid request - user ID mismatch" 
+        return res.status(400).json({
+          message: "Invalid request - user ID mismatch"
         });
       }
 
       if (!attendanceType) {
-        return res.status(400).json({ 
-          message: "Photo type is required for photo upload" 
+        return res.status(400).json({
+          message: "Photo type is required for photo upload"
         });
       }
 
       // Validate base64 image format
       if (!imageData.startsWith('data:image/')) {
-        return res.status(400).json({ 
-          message: "Invalid image format - base64 image data required" 
+        return res.status(400).json({
+          message: "Invalid image format - base64 image data required"
         });
       }
 
@@ -1158,11 +1158,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import and use Cloudinary service
       const { CloudinaryService } = await import('./services/cloudinary-service');
-      
+
       // Upload to Cloudinary with appropriate context
       const uploadResult = await CloudinaryService.uploadAttendancePhoto(
-        imageData, 
-        userId, 
+        imageData,
+        userId,
         new Date()
       );
 
@@ -1214,23 +1214,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate request
       if (!imageData || !employeeId || !documentType) {
-        return res.status(400).json({ 
-          message: "Invalid request - image data, employee ID, and document type required" 
+        return res.status(400).json({
+          message: "Invalid request - image data, employee ID, and document type required"
         });
       }
 
       // Validate document type
       const validDocumentTypes = ['photo', 'aadhar', 'pan'];
       if (!validDocumentTypes.includes(documentType)) {
-        return res.status(400).json({ 
-          message: `Invalid document type. Must be one of: ${validDocumentTypes.join(', ')}` 
+        return res.status(400).json({
+          message: `Invalid document type. Must be one of: ${validDocumentTypes.join(', ')}`
         });
       }
 
       // Validate base64 image format
       if (!imageData.startsWith('data:image/')) {
-        return res.status(400).json({ 
-          message: "Invalid image format - base64 image data required" 
+        return res.status(400).json({
+          message: "Invalid image format - base64 image data required"
         });
       }
 
@@ -1239,7 +1239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import Cloudinary service
       const { CloudinaryService } = await import('./services/cloudinary-service');
-      
+
       // Upload to appropriate Cloudinary folder based on document type
       let uploadResult;
       switch (documentType) {
@@ -1299,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/attendance/check-out", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
     try {
       const { userId, latitude, longitude, imageUrl, reason, otReason } = req.body;
-      
+
       if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -1314,18 +1314,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = new Date();
       const today = new Date(now);
       today.setHours(0, 0, 0, 0);
-      
+
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       // First try to find attendance record for today
       let attendanceRecord = await storage.getAttendanceByUserAndDate(userId, today);
-      
+
       // If not found today and it's early hours (before 6 AM), check yesterday
       if (!attendanceRecord && now.getHours() < 6) {
         attendanceRecord = await storage.getAttendanceByUserAndDate(userId, yesterday);
       }
-      
+
       if (!attendanceRecord) {
         return res.status(400).json({ message: "No check-in record found for today" });
       }
@@ -1339,19 +1339,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const finalCheckOutTime = new Date();
 
       // Get department timing through Enterprise Time Service for consistency
-      const departmentTiming = user.department 
+      const departmentTiming = user.department
         ? await EnterpriseTimeService.getDepartmentTiming(user.department)
         : null;
 
       if (!departmentTiming) {
-        return res.status(400).json({ 
-          message: "Department timing not configured. Please contact administrator." 
+        return res.status(400).json({
+          message: "Department timing not configured. Please contact administrator."
         });
       }
-      
+
       // CRITICAL FIX: Use Enterprise Time Service for time calculations
       const checkInTime = new Date(attendanceRecord.checkInTime || new Date());
-      
+
       // Calculate comprehensive time metrics using Enterprise Time Service
       const timeMetrics = await EnterpriseTimeService.calculateTimeMetrics(
         userId,
@@ -1359,17 +1359,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkInTime,
         finalCheckOutTime
       );
-      
+
       const { workingHours, overtimeHours } = timeMetrics;
 
       // Use department-specific working hours from timing
       const standardWorkingHours = departmentTiming.workingHours || 8;
       const overtimeThresholdMinutes = departmentTiming.overtimeThresholdMinutes || 30;
-      
+
       // Check if overtime meets the threshold
       const overtimeMinutes = overtimeHours * 60;
       const hasOvertimeThreshold = overtimeMinutes >= overtimeThresholdMinutes;
-      
+
       // Check if overtime requires approval and photo
       if (hasOvertimeThreshold) {
         if (!otReason) {
@@ -1396,11 +1396,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isOvertimeCheckout = overtimeHours > 0;
       const earlyCheckout = !isOvertimeCheckout && workingHours < standardWorkingHours;
       const earlyMinutes = earlyCheckout ? Math.floor((standardWorkingHours - workingHours) * 60) : 0;
-      
+
       // Early checkout reason requirement (simplified - just ask for reason, no policy blocking)
       if (!isOvertimeCheckout && earlyCheckout) {
         console.log(`CHECKOUT: Early checkout detected - Department: ${user.department}, earlyMinutes: ${earlyMinutes}`);
-        
+
         // Only require reason for early checkout, don't block based on department policy
         if (!reason || reason.trim().length < 10) {
           return res.status(400).json({
@@ -1457,12 +1457,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual Overtime APIs
-  
+
   // Start manual OT session
   app.post("/api/attendance/ot-start", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
     try {
       const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
-      
+
       if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -1473,7 +1473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import ManualOTService
       const { ManualOTService } = await import('./services/manual-ot-service');
-      
+
       const result = await ManualOTService.startOTSession({
         userId,
         latitude: parseFloat(latitude),
@@ -1513,7 +1513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/attendance/ot-end", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
     try {
       const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
-      
+
       if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -1524,7 +1524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import ManualOTService
       const { ManualOTService } = await import('./services/manual-ot-service');
-      
+
       const result = await ManualOTService.endOTSession({
         userId,
         latitude: parseFloat(latitude),
@@ -1559,14 +1559,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attendance/ot-status", verifyAuth, async (req, res) => {
     try {
       const userId = req.query.userId as string || req.authenticatedUser?.uid || "";
-      
+
       if (userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
       }
 
       // Import ManualOTService
       const { ManualOTService } = await import('./services/manual-ot-service');
-      
+
       const [otStatus, otButtonAvailability] = await Promise.all([
         ManualOTService.getOTStatus(userId),
         ManualOTService.isOTButtonAvailable(userId)
@@ -1585,17 +1585,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Department Timing Management APIs
-  
+
   // Get all department timings
   app.get("/api/departments/timings", verifyAuth, async (req, res) => {
     try {
       const { user } = req.authenticatedUser;
-      
+
       // Only master_admin can view all department timings
       if (user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Generate department timings dynamically from schema (12-hour format)
       const departmentTimingDefaults = {
         operations: {
@@ -1638,7 +1638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build department timings object from schema
       const departmentTimings = Object.fromEntries(
         departments.map(dept => [
-          dept, 
+          dept,
           departmentTimingDefaults[dept as keyof typeof departmentTimingDefaults] || {
             checkInTime: "9:00 AM", checkOutTime: "6:00 PM", workingHours: 8,
             overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
@@ -1646,7 +1646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         ])
       );
-      
+
       res.json(departmentTimings);
     } catch (error: any) {
       console.error("Error fetching department timings:", error);
@@ -1659,19 +1659,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { departmentId } = req.params;
       const { user } = req.authenticatedUser;
-      
+
       // Users can view their own department timing or master_admin can view all
       if (user.role !== "master_admin" && user.department !== departmentId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Get timing from database using storage layer
       const timing = await storage.getDepartmentTiming(departmentId);
-      
+
       if (!timing) {
         return res.status(404).json({ message: "Department timing not found" });
       }
-      
+
       res.json(timing);
     } catch (error: any) {
       console.error("Error fetching department timing:", error);
@@ -1684,12 +1684,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { departmentId } = req.params;
       const { user } = req.authenticatedUser;
-      
+
       // Only master_admin can update department timings
       if (user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const {
         checkInTime,
         checkOutTime,
@@ -1705,18 +1705,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allowFieldWork,
         allowEarlyCheckOut
       } = req.body;
-      
+
       console.log('BACKEND: Policy values received:', {
         allowRemoteWork,
-        allowFieldWork, 
+        allowFieldWork,
         allowEarlyCheckOut
       });
-      
+
       // Validate timing data
       if (!checkInTime || !checkOutTime || !workingHours) {
         return res.status(400).json({ message: "Check-in time, check-out time, and working hours are required" });
       }
-      
+
       const timingData = {
         checkInTime,
         checkOutTime,
@@ -1733,19 +1733,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allowEarlyCheckOut: allowEarlyCheckOut !== undefined ? Boolean(allowEarlyCheckOut) : false,
         updatedBy: user.uid
       };
-      
+
       console.log('BACKEND: Saving timing data with policies:', timingData);
 
       // Save to database using storage layer
       const updatedTiming = await storage.updateDepartmentTiming(departmentId, timingData);
-      
+
       // Clear Enterprise Time Service cache for this department
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
       EnterpriseTimeService.clearDepartmentCache(departmentId);
-      
+
       // Force clear all related cache to ensure fresh data
       EnterpriseTimeService.invalidateTimingCache(departmentId);
-      
+
       // Log activity
       await storage.createActivityLog({
         type: 'department_timing',
@@ -1755,7 +1755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: 'department',
         userId: user.uid
       });
-      
+
       res.json({
         message: "Department timing updated successfully",
         timing: updatedTiming
@@ -1903,7 +1903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attendance/live", verifyAuth, async (req, res) => {
     try {
       const { user } = req.authenticatedUser;
-      
+
       // Only admin/master_admin can view live attendance
       if (user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
@@ -1911,19 +1911,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       // Get all attendance records for today
       const attendanceRecords = await storage.listAttendanceByDate(today);
-      
+
       // Get all users to enrich attendance data
       const allUsers = await storage.listUsers();
-      
+
       // Create live attendance data with user details
       const liveAttendance = attendanceRecords.map((record) => {
         const userDetails = allUsers.find((u) => u.id === record.userId);
         const currentTime = new Date();
         const checkInTime = record.checkInTime ? new Date(record.checkInTime) : null;
-        const workingHours = checkInTime 
+        const workingHours = checkInTime
           ? (currentTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60)
           : 0;
 
@@ -1952,7 +1952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { user } = req.authenticatedUser;
       const { date } = req.query;
-      
+
       // Only admin/master_admin can view department stats
       if (user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
@@ -1960,19 +1960,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const targetDate = date ? new Date(date as string) : new Date();
       targetDate.setHours(0, 0, 0, 0);
-      
+
       // Get attendance records for the date
       const attendanceRecords = await storage.listAttendanceByDate(targetDate);
-      
+
       // Get all users
       const allUsers = await storage.listUsers();
-      
+
       // Group by department
       const departmentStats = {};
-      
+
       allUsers.forEach(user => {
         if (!user.department) return;
-        
+
         const dept = user.department;
         if (!departmentStats[dept]) {
           departmentStats[dept] = {
@@ -1987,24 +1987,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stillWorking: 0
           };
         }
-        
+
         departmentStats[dept].totalEmployees++;
-        
+
         const userAttendance = attendanceRecords.find(record => record.userId === user.id);
-        
+
         if (userAttendance) {
           departmentStats[dept].present++;
-          
+
           if (userAttendance.isLate) {
             departmentStats[dept].late++;
           } else {
             departmentStats[dept].onTime++;
           }
-          
+
           if (userAttendance.overtimeHours && userAttendance.overtimeHours > 0) {
             departmentStats[dept].overtime++;
           }
-          
+
           if (userAttendance.checkOutTime) {
             departmentStats[dept].checkedOut++;
           } else {
@@ -2026,7 +2026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attendance/policies", verifyAuth, async (req, res) => {
     try {
       const { user } = req.authenticatedUser;
-      
+
       // Only admin/master_admin can view policies
       if (user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
@@ -2046,7 +2046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         },
         {
-          id: "overtime_policy", 
+          id: "overtime_policy",
           name: "Overtime Approval",
           description: "Overtime work requires photo verification and reason",
           enabled: true,
@@ -2094,7 +2094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { user } = req.authenticatedUser;
       const updateData = req.body;
-      
+
       // Only admin/master_admin can update attendance records
       if (user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
@@ -2108,14 +2108,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Prepare update data
       const updates: any = {};
-      
+
       if (updateData.checkInTime) {
         const date = new Date(existingRecord.date);
         const [hours, minutes] = updateData.checkInTime.split(':');
         date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
         updates.checkInTime = date;
       }
-      
+
       if (updateData.checkOutTime) {
         const date = new Date(existingRecord.date);
         const [hours, minutes] = updateData.checkOutTime.split(':');
@@ -2169,7 +2169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { user } = req.authenticatedUser;
       const { action, attendanceIds, data } = req.body;
-      
+
       // Only admin/master_admin can perform bulk actions
       if (user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
@@ -2186,7 +2186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const attendanceId of attendanceIds) {
         try {
           let result = null;
-          
+
           switch (action) {
             case 'approve_overtime':
               result = await storage.updateAttendance(attendanceId, {
@@ -2195,7 +2195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 overtimeApprovedAt: new Date()
               });
               break;
-              
+
             case 'reject_overtime':
               result = await storage.updateAttendance(attendanceId, {
                 overtimeApproved: false,
@@ -2204,23 +2204,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 overtimeRejectionReason: data?.reason || 'No reason provided'
               });
               break;
-              
+
             case 'mark_present':
               result = await storage.updateAttendance(attendanceId, {
                 status: 'present'
               });
               break;
-              
+
             case 'mark_absent':
               result = await storage.updateAttendance(attendanceId, {
                 status: 'absent'
               });
               break;
-              
+
             default:
               throw new Error(`Unknown action: ${action}`);
           }
-          
+
           if (result) {
             results.push({ id: attendanceId, success: true, data: result });
             successCount++;
@@ -2262,7 +2262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.authenticatedUser) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       // Debug authentication data
       console.log("Customer search auth debug:");
       console.log("- User role:", req.authenticatedUser.user.role);
@@ -2270,33 +2270,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("- User designation:", req.authenticatedUser.user.designation);
       console.log("- User permissions:", req.authenticatedUser.permissions);
       console.log("- Permissions length:", req.authenticatedUser.permissions.length);
-      
+
       // Check if user has site visit permissions (allows customer search for site visits)
-      const hasSiteVisitPermission = req.authenticatedUser.permissions.includes("site_visit.view") || 
-                                   req.authenticatedUser.permissions.includes("site_visit.create") ||
-                                   req.authenticatedUser.user.role === "master_admin";
-      
+      const hasSiteVisitPermission = req.authenticatedUser.permissions.includes("site_visit.view") ||
+        req.authenticatedUser.permissions.includes("site_visit.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       console.log("- Has site visit permission:", hasSiteVisitPermission);
-      
+
       if (!hasSiteVisitPermission) {
         console.log("DENIED: User lacks site visit permissions for customer search");
         return res.status(403).json({ message: "Site visit permission required to search customers" });
       }
-      
+
       console.log("Customer search authorized via site visit permissions");
-      
+
       const query = (req.query.q as string) || '';
       const limit = parseInt(req.query.limit as string) || 10;
-      
+
       if (!query || query.length < 2) {
         return res.json([]);
       }
-      
+
       // Get all customers and filter on client side for now
       console.log("Customer search query:", query);
       const customers = await storage.listCustomers();
       console.log("Total customers in database:", customers.length);
-      
+
       // If no customers exist, create some sample ones for testing
       if (customers.length === 0) {
         console.log("No customers found, creating sample customers...");
@@ -2310,7 +2310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             createdFrom: "customers_page"
           });
           await storage.createCustomer({
-            name: "Priya Sharma", 
+            name: "Priya Sharma",
             mobile: "9876543210",
             email: "priya@example.com",
             address: "456 Park Road, Bangalore",
@@ -2319,7 +2319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           await storage.createCustomer({
             name: "Rajesh Patel",
-            mobile: "8765432109", 
+            mobile: "8765432109",
             email: "rajesh@example.com",
             address: "789 Garden Lane, Mumbai",
             profileCompleteness: "full",
@@ -2333,19 +2333,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error creating sample customers:", error);
         }
       }
-      
+
       // Get fresh customer list
       const allCustomers = await storage.listCustomers();
-      
+
       const searchLower = query.toLowerCase();
-      const filteredCustomers = allCustomers.filter((customer: any) => 
+      const filteredCustomers = allCustomers.filter((customer: any) =>
         customer.name?.toLowerCase().includes(searchLower) ||
         customer.mobile?.toLowerCase().includes(searchLower) ||
         customer.email?.toLowerCase().includes(searchLower)
       ).slice(0, limit);
-      
+
       console.log("Filtered customers found:", filteredCustomers.length);
-      
+
       // Return customers with formatted display text for autocomplete
       const results = filteredCustomers.map((customer: any) => ({
         id: customer.id,
@@ -2355,7 +2355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         address: customer.address,
         displayText: `${customer.name}${customer.mobile ? ` (${customer.mobile})` : ''}`
       }));
-      
+
       res.json(results);
     } catch (error) {
       console.error("Error searching customers:", error);
@@ -2366,10 +2366,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Normalize mobile number - remove non-digits, handle +91/0 prefixes
   const normalizeMobileNumber = (mobile: string): string => {
     if (!mobile) return '';
-    
+
     // Remove all non-digit characters
     let normalized = mobile.replace(/\D/g, '');
-    
+
     // Handle Indian mobile formats
     if (normalized.startsWith('91') && normalized.length === 12) {
       // Remove country code +91
@@ -2378,7 +2378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove leading zero
       normalized = normalized.substring(1);
     }
-    
+
     return normalized;
   };
 
@@ -2390,29 +2390,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has site visit permissions (allows customer search for site visits)
-      const hasSiteVisitPermission = req.authenticatedUser.permissions.includes("site_visit.view") || 
-                                   req.authenticatedUser.permissions.includes("site_visit.create") ||
-                                   req.authenticatedUser.user.role === "master_admin";
-      
+      const hasSiteVisitPermission = req.authenticatedUser.permissions.includes("site_visit.view") ||
+        req.authenticatedUser.permissions.includes("site_visit.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasSiteVisitPermission) {
         return res.status(403).json({ message: "Site visit permission required to check customers" });
       }
 
       const mobile = req.params.mobile;
       const normalizedMobile = normalizeMobileNumber(mobile);
-      
+
       if (!normalizedMobile || normalizedMobile.length < 10) {
         return res.json({ exists: false, customer: null });
       }
 
       console.log("Checking for existing customer with mobile:", normalizedMobile);
       const existingCustomer = await storage.findCustomerByMobile(normalizedMobile);
-      
+
       if (existingCustomer) {
         console.log("Found existing customer:", existingCustomer.name, existingCustomer.id);
         // Return minimal customer fields for security
-        res.json({ 
-          exists: true, 
+        res.json({
+          exists: true,
           customer: {
             id: existingCustomer.id,
             name: existingCustomer.name,
@@ -2437,7 +2437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.authenticatedUser) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       console.log("SERVER PERMISSION CHECK:", {
         userPermissions: req.authenticatedUser.permissions,
         hasCustomersView: req.authenticatedUser.permissions.includes("customers.view"),
@@ -2445,46 +2445,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userRole: req.authenticatedUser.user.role,
         isMasterAdmin: req.authenticatedUser.user.role === "master_admin"
       });
-      
-      const hasPermission = req.authenticatedUser.permissions.includes("customers.view") || 
-                           req.authenticatedUser.permissions.includes("customers.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+
+      const hasPermission = req.authenticatedUser.permissions.includes("customers.view") ||
+        req.authenticatedUser.permissions.includes("customers.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       console.log("SERVER PERMISSION RESULT:", hasPermission);
-      
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Parse pagination parameters
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const search = (req.query.search as string) || '';
       const sortBy = (req.query.sortBy as string) || 'name';
       const sortOrder = (req.query.sortOrder as string) || 'asc';
-      
+
       // Get customers
       const customers = await storage.listCustomers();
-      
+
       // Apply search filter if provided
       let filteredCustomers = customers;
       if (search) {
         const searchLower = search.toLowerCase();
-        filteredCustomers = customers.filter((customer: any) => 
+        filteredCustomers = customers.filter((customer: any) =>
           customer.name?.toLowerCase().includes(searchLower) ||
           customer.email?.toLowerCase().includes(searchLower) ||
           customer.mobile?.toLowerCase().includes(searchLower) ||
           customer.address?.toLowerCase().includes(searchLower)
         );
       }
-      
+
       // Sort customers
       filteredCustomers.sort((a: any, b: any) => {
         const aValue = a[sortBy] || '';
         const bValue = b[sortBy] || '';
-        
+
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortOrder === 'asc' 
+          return sortOrder === 'asc'
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         } else {
@@ -2493,16 +2493,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : (bValue > aValue ? 1 : -1);
         }
       });
-      
+
       // Calculate pagination values
       const totalItems = filteredCustomers.length;
       const totalPages = Math.ceil(totalItems / limit);
       const startIndex = (page - 1) * limit;
       const endIndex = Math.min(startIndex + limit, totalItems);
-      
+
       // Get paginated subset
       const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
-      
+
       // Return with pagination metadata
       res.json({
         data: paginatedCustomers,
@@ -2526,10 +2526,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.authenticatedUser) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const hasPermission = req.authenticatedUser.permissions.includes("customers.view") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2549,10 +2549,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.authenticatedUser) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const hasPermission = req.authenticatedUser.permissions.includes("customers.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2573,10 +2573,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.authenticatedUser) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       const hasPermission = req.authenticatedUser.permissions.includes("customers.edit") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2622,42 +2622,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has permission to view products
-      const hasPermission = req.authenticatedUser.permissions.includes("products.view") || 
-                           req.authenticatedUser.permissions.includes("products.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("products.view") ||
+        req.authenticatedUser.permissions.includes("products.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Parse pagination parameters
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const search = (req.query.search as string) || '';
       const sortBy = (req.query.sortBy as string) || 'name';
       const sortOrder = (req.query.sortOrder as string) || 'asc';
-      
+
       // Get products with pagination
       const products = await storage.listProducts();
-      
+
       // Apply search filter if provided
       let filteredProducts = products;
       if (search) {
         const searchLower = search.toLowerCase();
-        filteredProducts = products.filter((product: any) => 
+        filteredProducts = products.filter((product: any) =>
           product.name?.toLowerCase().includes(searchLower) ||
           product.type?.toLowerCase().includes(searchLower) ||
           product.make?.toLowerCase().includes(searchLower)
         );
       }
-      
+
       // Sort products
       filteredProducts.sort((a: any, b: any) => {
         const aValue = a[sortBy] || '';
         const bValue = b[sortBy] || '';
-        
+
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortOrder === 'asc' 
+          return sortOrder === 'asc'
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         } else {
@@ -2666,16 +2666,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : (bValue > aValue ? 1 : -1);
         }
       });
-      
+
       // Calculate pagination values
       const totalItems = filteredProducts.length;
       const totalPages = Math.ceil(totalItems / limit);
       const startIndex = (page - 1) * limit;
       const endIndex = Math.min(startIndex + limit, totalItems);
-      
+
       // Get paginated subset
       const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-      
+
       // Return with pagination metadata
       res.json({
         data: paginatedProducts,
@@ -2790,14 +2790,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has permission to view quotations
-      const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") || 
-                           req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
+        req.authenticatedUser.permissions.includes("quotations.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Parse pagination parameters
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -2805,19 +2805,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sortBy = (req.query.sortBy as string) || 'createdAt';
       const sortOrder = (req.query.sortOrder as string) || 'desc'; // Default newest first
       const status = (req.query.status as string) || '';
-      
+
       // Get quotations
       const quotations = await storage.listQuotations();
-      
+
       // Apply search & status filter if provided
       let filteredQuotations = quotations;
-      
+
       if (status) {
-        filteredQuotations = filteredQuotations.filter((quotation: any) => 
+        filteredQuotations = filteredQuotations.filter((quotation: any) =>
           quotation.status?.toLowerCase() === status.toLowerCase()
         );
       }
-      
+
       if (search) {
         const searchLower = search.toLowerCase();
         // Get customer details for better search
@@ -2826,7 +2826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customers.forEach((customer: any) => {
           customerMap.set(customer.id, customer);
         });
-        
+
         filteredQuotations = filteredQuotations.filter((quotation: any) => {
           const customer = customerMap.get(quotation.customerId);
           // Search by quotation ID, amount, status, or customer name
@@ -2837,20 +2837,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         });
       }
-      
+
       // Sort quotations
       filteredQuotations.sort((a: any, b: any) => {
         let aValue = a[sortBy];
         let bValue = b[sortBy];
-        
+
         // Handle dates for proper sorting
         if (sortBy === 'createdAt') {
           aValue = new Date(aValue).getTime();
           bValue = new Date(bValue).getTime();
         }
-        
+
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortOrder === 'asc' 
+          return sortOrder === 'asc'
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         } else {
@@ -2859,16 +2859,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : (bValue > aValue ? 1 : -1);
         }
       });
-      
+
       // Calculate pagination values
       const totalItems = filteredQuotations.length;
       const totalPages = Math.ceil(totalItems / limit);
       const startIndex = (page - 1) * limit;
       const endIndex = Math.min(startIndex + limit, totalItems);
-      
+
       // Get paginated subset
       const paginatedQuotations = filteredQuotations.slice(startIndex, endIndex);
-      
+
       // Enhance with customer data
       const enhancedQuotations = await Promise.all(
         paginatedQuotations.map(async (quotation: any) => {
@@ -2881,14 +2881,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (error) {
             console.error("Error fetching customer for quotation:", error);
           }
-          
+
           return {
             ...quotation,
             customerName
           };
         })
       );
-      
+
       // Return with pagination metadata
       res.json({
         data: enhancedQuotations,
@@ -2915,10 +2915,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check permissions - use same permission check as PUT endpoint
       const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
-                           req.authenticatedUser.permissions.includes("quotations.edit") ||
-                           req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.permissions.includes("quotations.edit") ||
+        req.authenticatedUser.permissions.includes("quotations.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2944,9 +2944,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check permissions
       const hasPermission = req.authenticatedUser.permissions.includes("quotations.edit") ||
-                           req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.permissions.includes("quotations.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -2959,10 +2959,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import the update schema
       const { updateQuotationSchema } = await import("@shared/schema");
-      
+
       // Validate the request body against update schema (excludes immutable fields)
       const quotationData = updateQuotationSchema.parse(req.body);
-      
+
       // Enforce immutability: override customerId, source, and siteVisitMapping with existing values
       // This prevents client-side tampering and ensures data integrity
       const immutableQuotationData = {
@@ -2971,21 +2971,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: existingQuotation.source, // Locked - cannot change source
         siteVisitMapping: existingQuotation.siteVisitMapping, // Locked - cannot change site visit association
       };
-      
+
       // Update quotation with revision tracking
       const updatedQuotation = await storage.updateQuotation(
         req.params.id,
         immutableQuotationData,
         req.authenticatedUser.uid // Pass the user ID for revision history
       );
-      
+
       // Invalidate caches if needed
       res.json(updatedQuotation);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Validation error",
-          errors: error.errors 
+          errors: error.errors
         });
       }
       console.error("Error updating quotation:", error);
@@ -3047,10 +3047,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check permissions
       const hasPermission = req.authenticatedUser.permissions.includes("quotations.view") ||
-                           req.authenticatedUser.permissions.includes("quotations.edit") ||
-                           req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.permissions.includes("quotations.edit") ||
+        req.authenticatedUser.permissions.includes("quotations.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3117,8 +3117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check permissions
       const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3131,10 +3131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import site visit service and get all site visits
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Create filters to get all site visits that the user can see
       const filters: any = { limit: 1000 }; // Get up to 1000 visits for filtering
-      
+
       // Determine what the user can see based on permissions
       if (user.role === 'master_admin' || await checkSiteVisitPermission(user, 'view_all')) {
         // Can see all site visits - no additional filters needed
@@ -3147,10 +3147,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allSiteVisits = await siteVisitService.getSiteVisitsWithFilters(filters);
-      
+
       console.log(`=== MAPPABLE SITE VISITS DEBUG ===`);
       console.log(`Total site visits fetched: ${allSiteVisits.length}`);
-      
+
       // Log each visit for debugging
       allSiteVisits.forEach((visit: any, index: number) => {
         console.log(`Visit ${index + 1}:`, {
@@ -3163,7 +3163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasMobile: !!visit.customer?.mobile
         });
       });
-      
+
       // Filter for site visits that can be used for quotations
       // Logic: 
       // 1. Must have customer data (name and mobile)
@@ -3171,18 +3171,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 3. If status is 'completed', must have visitOutcome of 'converted' or 'on_process'
       const mappableSiteVisits = allSiteVisits.filter((visit: any) => {
         const hasRequiredCustomerData = visit.customer && visit.customer.name && visit.customer.mobile;
-        
+
         if (!hasRequiredCustomerData) {
           console.log(`Filtered out ${visit.id}: Missing customer data`);
           return false;
         }
-        
+
         // Include in_progress visits regardless of outcome (ongoing work)
         if (visit.status === 'in_progress') {
           console.log(`Including ${visit.id}: In progress status (ongoing)`);
           return true;
         }
-        
+
         // For completed visits, check the outcome
         if (visit.status === 'completed') {
           const hasValidOutcome = visit.visitOutcome === 'converted' || visit.visitOutcome === 'on_process';
@@ -3194,11 +3194,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return false;
           }
         }
-        
+
         console.log(`Filtered out ${visit.id}: Status is ${visit.status}`);
         return false;
       });
-      
+
       console.log(`Mappable site visits after filter: ${mappableSiteVisits.length}`);
       console.log(`=================================`);
 
@@ -3230,8 +3230,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check permissions
       const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3245,17 +3245,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Perform comprehensive data mapping using dedicated service
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, req.authenticatedUser.uid);
-      
+
       res.json(mappingResult);
     } catch (error) {
       console.error("Error mapping site visit data:", error);
-      
+
       // Handle specific mapping errors with actionable responses
       if (error instanceof Error) {
         // Handle completeness analysis failures
         if ((error as any).validationError && (error as any).completenessAnalysis) {
           const analysis = (error as any).completenessAnalysis;
-          return res.status(422).json({ 
+          return res.status(422).json({
             message: "Site visit data incomplete for quotation creation",
             error: error.message,
             recommendedAction: analysis.recommendedAction,
@@ -3270,11 +3270,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             needsAction: true
           });
         }
-        
+
         // Handle project validation failures (now includes completeness analysis)
         if ((error as any).projectValidationError) {
           const analysis = (error as any).completenessAnalysis;
-          return res.status(422).json({ 
+          return res.status(422).json({
             message: "No valid project configurations found in site visit",
             error: error.message,
             recommendedAction: (error as any).recommendedAction || "update_marketing_data",
@@ -3290,9 +3290,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             needsAction: true
           });
         }
-        
+
         // Handle any other mapping failures as 422 with complete context
-        return res.status(422).json({ 
+        return res.status(422).json({
           message: "Site visit data incomplete for quotation creation",
           error: error.message,
           recommendedAction: "collect_missing_data",
@@ -3307,7 +3307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           needsAction: true
         });
       }
-      
+
       res.status(500).json({ message: "Failed to map site visit data" });
     }
   });
@@ -3321,8 +3321,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check permissions
       const hasPermission = req.authenticatedUser.permissions.includes("quotations.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3336,22 +3336,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Map site visit data to quotation format using dedicated service
       const mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, req.authenticatedUser.uid);
-      
+
       // Allow user to override mapped data with request body
       const quotationData = {
         ...mappingResult.quotationData,
         ...req.body, // User can override any mapped values
         source: "site_visit" as const,
         siteVisitMapping: mappingResult.mappingMetadata,
-        preparedBy: req.authenticatedUser.user.displayName || req.authenticatedUser.user.email || req.authenticatedUser.uid
+        // CRITICAL: Use preparedBy from request body (user's form input) first, then fallback
+        preparedBy: req.body.preparedBy || mappingResult.quotationData.preparedBy || req.authenticatedUser.user.displayName || req.authenticatedUser.user.email || req.authenticatedUser.uid
       };
 
       // Validate the quotation data
       const validatedData = insertQuotationSchema.parse(quotationData);
-      
+
       // Create the quotation
       const quotation = await storage.createQuotation(validatedData);
-      
+
       res.status(201).json({
         quotation,
         mappingResult: {
@@ -3364,18 +3365,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Quotation data validation failed",
-          errors: error.errors 
+          errors: error.errors
         });
       }
-      
+
       // Handle specific mapping errors with actionable responses
       if (error instanceof Error) {
         // Handle completeness analysis failures
         if ((error as any).validationError && (error as any).completenessAnalysis) {
           const analysis = (error as any).completenessAnalysis;
-          return res.status(422).json({ 
+          return res.status(422).json({
             message: "Site visit data incomplete for quotation creation",
             error: error.message,
             recommendedAction: analysis.recommendedAction,
@@ -3390,11 +3391,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             needsAction: true
           });
         }
-        
+
         // Handle project validation failures (now includes completeness analysis)
         if ((error as any).projectValidationError) {
           const analysis = (error as any).completenessAnalysis;
-          return res.status(422).json({ 
+          return res.status(422).json({
             message: "No valid project configurations found in site visit",
             error: error.message,
             recommendedAction: (error as any).recommendedAction || "update_marketing_data",
@@ -3410,9 +3411,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             needsAction: true
           });
         }
-        
+
         // Handle any other mapping failures as 422 with complete context
-        return res.status(422).json({ 
+        return res.status(422).json({
           message: "Site visit data incomplete for quotation creation",
           error: error.message,
           recommendedAction: "collect_missing_data",
@@ -3427,7 +3428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           needsAction: true
         });
       }
-      
+
       console.error("Error creating quotation from site visit:", error);
       res.status(500).json({ message: "Failed to create quotation from site visit" });
     }
@@ -3441,14 +3442,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has permission to view invoices
-      const hasPermission = req.authenticatedUser.permissions.includes("invoices.view") || 
-                           req.authenticatedUser.permissions.includes("invoices.create") ||
-                           req.authenticatedUser.user.role === "master_admin";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("invoices.view") ||
+        req.authenticatedUser.permissions.includes("invoices.create") ||
+        req.authenticatedUser.user.role === "master_admin";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Parse pagination parameters
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -3456,19 +3457,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sortBy = (req.query.sortBy as string) || 'createdAt';
       const sortOrder = (req.query.sortOrder as string) || 'desc'; // Default newest first
       const status = (req.query.status as string) || '';
-      
+
       // Get invoices
       const invoices = await storage.listInvoices();
-      
+
       // Apply search & status filter if provided
       let filteredInvoices = invoices;
-      
+
       if (status) {
-        filteredInvoices = filteredInvoices.filter((invoice: any) => 
+        filteredInvoices = filteredInvoices.filter((invoice: any) =>
           invoice.status?.toLowerCase() === status.toLowerCase()
         );
       }
-      
+
       if (search) {
         const searchLower = search.toLowerCase();
         // Get customer details for better search
@@ -3477,7 +3478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customers.forEach((customer: any) => {
           customerMap.set(customer.id, customer);
         });
-        
+
         filteredInvoices = filteredInvoices.filter((invoice: any) => {
           const customer = customerMap.get(invoice.customerId);
           // Search by invoice ID, amount, status, or customer name
@@ -3488,20 +3489,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         });
       }
-      
+
       // Sort invoices
       filteredInvoices.sort((a: any, b: any) => {
         let aValue = a[sortBy];
         let bValue = b[sortBy];
-        
+
         // Handle dates for proper sorting
         if (sortBy === 'createdAt') {
           aValue = new Date(aValue).getTime();
           bValue = new Date(bValue).getTime();
         }
-        
+
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortOrder === 'asc' 
+          return sortOrder === 'asc'
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         } else {
@@ -3510,16 +3511,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : (bValue > aValue ? 1 : -1);
         }
       });
-      
+
       // Calculate pagination values
       const totalItems = filteredInvoices.length;
       const totalPages = Math.ceil(totalItems / limit);
       const startIndex = (page - 1) * limit;
       const endIndex = Math.min(startIndex + limit, totalItems);
-      
+
       // Get paginated subset
       const paginatedInvoices = filteredInvoices.slice(startIndex, endIndex);
-      
+
       // Enhance with customer data
       const enhancedInvoices = await Promise.all(
         paginatedInvoices.map(async (invoice: any) => {
@@ -3532,14 +3533,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (error) {
             console.error("Error fetching customer for invoice:", error);
           }
-          
+
           return {
             ...invoice,
             customerName
           };
         })
       );
-      
+
       // Return with pagination metadata
       res.json({
         data: enhancedInvoices,
@@ -3658,10 +3659,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has permission to view employees (HR module access)
-      const hasPermission = req.authenticatedUser.permissions.includes("users.view") || 
-                           req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("users.view") ||
+        req.authenticatedUser.user.role === "master_admin" ||
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied. HR module access required." });
       }
@@ -3674,7 +3675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.search) filters.search = req.query.search as string;
 
       const employees = await storage.listEmployees(filters);
-      
+
       res.json(employees);
     } catch (error) {
       console.error("Error fetching employees:", error);
@@ -3688,10 +3689,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const hasPermission = req.authenticatedUser.permissions.includes("users.view") || 
-                           req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("users.view") ||
+        req.authenticatedUser.user.role === "master_admin" ||
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3716,8 +3717,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only master_admin and HR can create employees
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied. Only HR can create employees." });
       }
@@ -3729,7 +3730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const employee = await storage.createEmployee(employeeData);
-      
+
       // Log activity
       await storage.createActivityLog({
         type: 'employee_created',
@@ -3757,8 +3758,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3769,7 +3770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const employee = await storage.updateEmployee(req.params.id, updateData);
-      
+
       // Log activity
       await storage.createActivityLog({
         type: 'employee_updated',
@@ -3827,10 +3828,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const hasPermission = req.authenticatedUser.permissions.includes("users.view") || 
-                           req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("users.view") ||
+        req.authenticatedUser.user.role === "master_admin" ||
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3850,8 +3851,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3880,8 +3881,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3901,8 +3902,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3926,10 +3927,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const hasPermission = req.authenticatedUser.permissions.includes("users.view") || 
-                           req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("users.view") ||
+        req.authenticatedUser.user.role === "master_admin" ||
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3959,8 +3960,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -3988,8 +3989,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -4009,16 +4010,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const hasPermission = req.authenticatedUser.permissions.includes("users.view") || 
-                           req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.user.department === "hr";
-      
+      const hasPermission = req.authenticatedUser.permissions.includes("users.view") ||
+        req.authenticatedUser.user.role === "master_admin" ||
+        req.authenticatedUser.user.department === "hr";
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       const { q, department, designation, status } = req.query;
-      
+
       const filters: any = {};
       if (q) filters.search = q as string;
       if (department) filters.department = department as string;
@@ -4026,7 +4027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status) filters.status = status as string;
 
       const employees = await storage.listEmployees(filters);
-      
+
       // Return simplified employee data for search results
       const searchResults = employees.map(emp => ({
         id: emp.id,
@@ -4180,7 +4181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===================== Comprehensive Leave Management System API Routes =====================
-  
+
   // Leave Balance Routes
   app.get("/api/leave-balance/current", verifyAuth, async (req, res) => {
     try {
@@ -4188,7 +4189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const balance = await storage.getCurrentLeaveBalance(user.id);
       if (!balance) {
         // Initialize balance for current month if doesn't exist
@@ -4209,7 +4210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newBalance = await storage.getCurrentLeaveBalance(user.id);
         return res.json(newBalance);
       }
-      
+
       res.json(balance);
     } catch (error) {
       console.error("Error fetching leave balance:", error);
@@ -4223,7 +4224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Check permissions: user can view own balance, managers can view team, HR can view all
       if (req.params.userId !== user.id && user.department !== "hr" && user.role !== "master_admin") {
         // Check if user is the reporting manager
@@ -4232,12 +4233,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Access denied" });
         }
       }
-      
+
       const balance = await storage.getCurrentLeaveBalance(req.params.userId);
       if (!balance) {
         return res.status(404).json({ message: "Leave balance not found" });
       }
-      
+
       res.json(balance);
     } catch (error) {
       console.error("Error fetching leave balance:", error);
@@ -4251,16 +4252,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
         return res.status(403).json({ message: "Access denied - System settings permission required" });
       }
-      
+
       // Validate month and year input
       const resetSchema = z.object({
         month: z.number().min(1).max(12),
         year: z.number().min(2020).max(2100)
       });
-      
+
       const { month, year } = resetSchema.parse(req.body);
       await storage.resetMonthlyLeaveBalances(month, year);
-      
+
       res.json({ message: "Leave balances reset successfully" });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4278,13 +4279,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Get current leave balance
       const balance = await storage.getCurrentLeaveBalance(user.id);
       if (!balance) {
         return res.status(400).json({ message: "Leave balance not found. Please contact HR." });
       }
-      
+
       // Convert date strings to Date objects and handle nullable fields before validation
       const processedBody = {
         ...req.body,
@@ -4292,7 +4293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
         permissionDate: req.body.permissionDate ? new Date(req.body.permissionDate) : undefined,
       };
-      
+
       // Create a validation schema that accepts partial data but handles nullable fields correctly
       const leaveApplicationValidationSchema = insertLeaveApplicationSchema.pick({
         leaveType: true,
@@ -4305,10 +4306,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         permissionHours: true,
         reason: true,
       }).partial();
-      
+
       // Validate request body using schema
       const validatedBody = leaveApplicationValidationSchema.parse(processedBody);
-      
+
       // Prepare leave application data
       const now = new Date();
       const leaveData: any = {
@@ -4330,14 +4331,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: now,
         updatedAt: now,
       };
-      
+
       // Remove undefined fields to avoid Firestore errors
       Object.keys(leaveData).forEach(key => {
         if (leaveData[key] === undefined) {
           delete leaveData[key];
         }
       });
-      
+
       // Validate balance availability
       if (leaveData.leaveType === "casual_leave" && leaveData.totalDays) {
         const available = balance.casualLeaveBalance - balance.casualLeaveUsed;
@@ -4348,12 +4349,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (leaveData.leaveType === "permission" && leaveData.permissionHours) {
         const available = balance.permissionHoursBalance - balance.permissionHoursUsed;
         if (available < leaveData.permissionHours) {
-          return res.status(400).json({ 
-            message: `Insufficient permission hours. Available: ${available} hours` 
+          return res.status(400).json({
+            message: `Insufficient permission hours. Available: ${available} hours`
           });
         }
       }
-      
+
       const leave = await storage.createLeaveApplication(leaveData);
       res.status(201).json(leave);
     } catch (error) {
@@ -4373,7 +4374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const leaves = await storage.listLeaveApplicationsByUser(user.id);
       res.json(leaves);
     } catch (error) {
@@ -4388,7 +4389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       console.log(`Fetching pending manager leaves for user ID: ${user.id}`);
       const leaves = await storage.listLeaveApplicationsByManager(user.id, "pending_manager");
       console.log(`Found ${leaves.length} pending manager leaves`);
@@ -4405,7 +4406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.department !== "hr") {
         return res.status(403).json({ message: "Access denied - HR only" });
       }
-      
+
       console.log("Fetching pending HR leaves...");
       const leaves = await storage.listLeaveApplicationsByHR("pending_hr");
       console.log(`Found ${leaves.length} pending HR leaves`);
@@ -4425,7 +4426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || (user.department !== "hr" && user.role !== "master_admin")) {
         return res.status(403).json({ message: "Access denied - HR or Admin only" });
       }
-      
+
       const { status, month, year } = req.query;
       const leaves = await storage.listAllLeaveApplications({
         status: status as string,
@@ -4445,22 +4446,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const leave = await storage.getLeaveApplication(req.params.id);
       if (!leave) {
         return res.status(404).json({ message: "Leave application not found" });
       }
-      
+
       // Check permissions
-      const canView = leave.userId === user.id || 
-                      leave.reportingManagerId === user.id || 
-                      user.department === "hr" || 
-                      user.role === "master_admin";
-      
+      const canView = leave.userId === user.id ||
+        leave.reportingManagerId === user.id ||
+        user.department === "hr" ||
+        user.role === "master_admin";
+
       if (!canView) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       res.json(leave);
     } catch (error) {
       console.error("Error fetching leave application:", error);
@@ -4474,29 +4475,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.approve"))) {
         return res.status(403).json({ message: "Access denied - Leave approval permission required" });
       }
-      
+
       const leave = await storage.getLeaveApplication(req.params.id);
       if (!leave) {
         return res.status(404).json({ message: "Leave application not found" });
       }
-      
+
       if (leave.reportingManagerId !== user.id) {
         return res.status(403).json({ message: "Access denied - You are not the reporting manager" });
       }
-      
+
       if (leave.status !== "pending_manager") {
         return res.status(400).json({ message: "Leave is not pending manager approval" });
       }
-      
+
       // Validate remarks input
       const approvalSchema = z.object({
         remarks: z.string().optional()
       });
-      
+
       const { remarks } = approvalSchema.parse(req.body);
       const updatedLeave = await storage.approveLeaveByManager(req.params.id, user.id, remarks);
       console.log(`Manager approved leave ${req.params.id}, new status: ${updatedLeave.status}`);
-      
+
       res.json(updatedLeave);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4513,24 +4514,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.approve")) || user.department !== "hr") {
         return res.status(403).json({ message: "Access denied - HR department with leave approval permission required" });
       }
-      
+
       const leave = await storage.getLeaveApplication(req.params.id);
       if (!leave) {
         return res.status(404).json({ message: "Leave application not found" });
       }
-      
+
       if (leave.status !== "pending_hr") {
         return res.status(400).json({ message: "Leave is not pending HR approval" });
       }
-      
+
       // Validate remarks input
       const approvalSchema = z.object({
         remarks: z.string().optional()
       });
-      
+
       const { remarks } = approvalSchema.parse(req.body);
       const updatedLeave = await storage.approveLeaveByHR(req.params.id, user.id, remarks);
-      
+
       res.json(updatedLeave);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4547,12 +4548,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.reject"))) {
         return res.status(403).json({ message: "Access denied - Leave rejection permission required" });
       }
-      
+
       const leave = await storage.getLeaveApplication(req.params.id);
       if (!leave) {
         return res.status(404).json({ message: "Leave application not found" });
       }
-      
+
       // Determine role: manager or hr
       let rejectedByRole: 'manager' | 'hr';
       if (user.department === "hr") {
@@ -4562,15 +4563,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Validate reason input
       const rejectSchema = z.object({
         reason: z.string().min(10, "Rejection reason must be at least 10 characters")
       });
-      
+
       const { reason } = rejectSchema.parse(req.body);
       const updatedLeave = await storage.rejectLeave(req.params.id, user.id, reason, rejectedByRole);
-      
+
       res.json(updatedLeave);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4587,9 +4588,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const updatedLeave = await storage.cancelLeaveApplication(req.params.id, user.id);
-      
+
       res.json(updatedLeave);
     } catch (error: any) {
       console.error("Error cancelling leave:", error);
@@ -4615,15 +4616,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
         return res.status(403).json({ message: "Access denied - System settings permission required" });
       }
-      
+
       // Validate request body using schema
       const validatedBody = insertFixedHolidaySchema.omit({ createdBy: true, createdAt: true }).parse(req.body);
-      
+
       const holidayData = {
         ...validatedBody,
         createdBy: user.id,
       };
-      
+
       const holiday = await storage.createFixedHoliday(holidayData);
       res.status(201).json(holiday);
     } catch (error) {
@@ -4641,10 +4642,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
         return res.status(403).json({ message: "Access denied - System settings permission required" });
       }
-      
+
       // Validate request body using partial schema
       const validatedBody = insertFixedHolidaySchema.partial().parse(req.body);
-      
+
       const holiday = await storage.updateFixedHoliday(req.params.id, validatedBody);
       res.json(holiday);
     } catch (error) {
@@ -4662,7 +4663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
         return res.status(403).json({ message: "Access denied - System settings permission required" });
       }
-      
+
       await storage.deleteFixedHoliday(req.params.id);
       res.json({ message: "Holiday deleted successfully" });
     } catch (error) {
@@ -4677,12 +4678,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
         return res.status(403).json({ message: "Access denied - System settings permission required" });
       }
-      
+
       // Validate year input
       const initializeSchema = z.object({
         year: z.number().min(2020).max(2100)
       });
-      
+
       const { year } = initializeSchema.parse(req.body);
       await storage.initializeFixedHolidays(year, user.id);
       res.json({ message: "Fixed holidays initialized successfully" });
@@ -4737,7 +4738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const roleData = insertRoleSchema.parse(req.body);
       const role = await storage.createRole(roleData);
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
@@ -4748,7 +4749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department: user.department,
         designation: user.designation
       });
-      
+
       res.status(201).json(role);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4767,7 +4768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const roleData = insertRoleSchema.partial().parse(req.body);
       const updatedRole = await storage.updateRole(req.params.id, roleData);
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
@@ -4778,7 +4779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department: user.department,
         designation: user.designation
       });
-      
+
       res.json(updatedRole);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4799,7 +4800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Role not found" });
       }
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
@@ -4809,7 +4810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department: user.department,
         designation: user.designation
       });
-      
+
       res.json({ message: "Role deleted successfully" });
     } catch (error) {
       console.error("Error deleting role:", error);
@@ -4844,7 +4845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedBy: user.id
       });
       const assignment = await storage.assignUserRole(assignmentData);
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
@@ -4855,7 +4856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department: user.department,
         designation: user.designation
       });
-      
+
       res.status(201).json(assignment);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4876,7 +4877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Role assignment not found" });
       }
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
@@ -4887,7 +4888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department: user.department,
         designation: user.designation
       });
-      
+
       res.json({ message: "Role revoked successfully" });
     } catch (error) {
       console.error("Error revoking role:", error);
@@ -4922,22 +4923,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         grantedBy: user.id
       });
       const override = await storage.createPermissionOverride(overrideData);
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
         action: "permission_override_created",
         entityType: "permission_override",
         entityId: override.id,
-        changes: { 
-          targetUserId: req.params.userId, 
-          permission: req.body.permission, 
-          granted: req.body.granted 
+        changes: {
+          targetUserId: req.params.userId,
+          permission: req.body.permission,
+          granted: req.body.granted
         },
         department: user.department,
         designation: user.designation
       });
-      
+
       res.status(201).json(override);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4958,7 +4959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ message: "Permission override not found" });
       }
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
@@ -4968,7 +4969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department: user.department,
         designation: user.designation
       });
-      
+
       res.json({ message: "Permission override revoked successfully" });
     } catch (error) {
       console.error("Error revoking permission override:", error);
@@ -5017,13 +5018,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !["master_admin", "admin"].includes(user.role)) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const filters: any = {};
       if (req.query.userId) filters.userId = req.query.userId as string;
       if (req.query.entityType) filters.entityType = req.query.entityType as string;
       if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
       if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
-      
+
       const logs = await storage.getAuditLogs(filters);
       res.json(logs);
     } catch (error) {
@@ -5036,11 +5037,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/firebase/health-check", async (req, res) => {
     try {
       console.log('\n=== Firebase Admin SDK Health Check Started ===');
-      
+
       // Run comprehensive Firebase tests
       const healthResults = await testFirebaseAdminSDK();
       const userManagementResults = await testUserManagement();
-      
+
       const response = {
         timestamp: new Date().toISOString(),
         firebase_admin_sdk: {
@@ -5060,19 +5061,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           storage_bucket: process.env.FIREBASE_STORAGE_BUCKET ? 'Present' : 'Missing'
         }
       };
-      
+
       console.log('=== Firebase Admin SDK Health Check Complete ===\n');
-      
+
       if (healthResults.overall) {
         res.json({ status: 'healthy', details: response });
       } else {
         res.status(500).json({ status: 'unhealthy', details: response });
       }
-      
+
     } catch (error: any) {
       console.error('Firebase Health Check Error:', error);
-      res.status(500).json({ 
-        status: 'error', 
+      res.status(500).json({
+        status: 'error',
         message: error.message,
         timestamp: new Date().toISOString()
       });
@@ -5083,7 +5084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/firebase/list-users", async (req, res) => {
     try {
       const listResult = await auth.listUsers(100); // Get up to 100 users
-      
+
       const users = listResult.users.map(user => ({
         uid: user.uid,
         email: user.email,
@@ -5094,13 +5095,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         creationTime: user.metadata.creationTime,
         lastSignInTime: user.metadata.lastSignInTime
       }));
-      
+
       res.json(users);
     } catch (error: any) {
       console.error('Error listing Firebase users:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to list users',
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -5119,7 +5120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { month, year, department, status } = req.query;
       const filters: any = {};
-      
+
       if (month) filters.month = parseInt(month as string);
       if (year) filters.year = parseInt(year as string);
       if (department && department !== "all") filters.department = department;
@@ -5142,7 +5143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { month, year, userIds } = req.body;
-      
+
       // Process payroll for all users or specific users
       const usersToProcess = userIds || (await storage.listUsers()).map(u => u.id);
       const processedPayrolls = [];
@@ -5171,8 +5172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         designation: user.designation
       });
 
-      res.json({ 
-        message: "Payroll processed successfully", 
+      res.json({
+        message: "Payroll processed successfully",
         processedCount: processedPayrolls.length,
         payrolls: processedPayrolls
       });
@@ -5191,9 +5192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { month, year } = req.query;
-      const payrolls = await storage.listPayrolls({ 
-        month: parseInt(month as string), 
-        year: parseInt(year as string) 
+      const payrolls = await storage.listPayrolls({
+        month: parseInt(month as string),
+        year: parseInt(year as string)
       });
 
       const stats = {
@@ -5246,7 +5247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const salaryStructure = await storage.createSalaryStructure(salaryData);
-      
+
       await storage.createAuditLog({
         userId: user.id,
         action: "salary_structure_created",
@@ -5305,11 +5306,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const today = new Date();
       const todayString = today.toISOString().split('T')[0];
-      
+
       const attendance = await storage.listAttendance({ date: todayString });
-      
+
       // Filter for active/live records (checked in but not checked out)
-      const liveAttendance = attendance.filter(record => 
+      const liveAttendance = attendance.filter(record =>
         record.checkInTime && !record.checkOutTime && record.status !== 'absent'
       );
 
@@ -5349,7 +5350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use server timezone for consistent date handling
       const serverDate = new Date();
       const dateString = serverDate.toISOString().split('T')[0];
-      
+
       // Get today's attendance using the correct method
       const todayAttendance = await storage.getUserAttendanceForDate(userId as string, dateString);
 
@@ -5379,15 +5380,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body;
 
       const userId = req.authenticatedUser.user.uid;
-      
+
       // Enhanced validation with coordinate range checks
       if (!latitude || !longitude) {
         return res.status(400).json({ message: "Location coordinates are required" });
       }
-      
+
       const lat = parseFloat(latitude);
       const lng = parseFloat(longitude);
-      
+
       if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
         return res.status(400).json({ message: "Invalid coordinate values. Latitude must be between -90 and 90, longitude between -180 and 180" });
       }
@@ -5395,7 +5396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use server timezone for consistent date handling to prevent timezone mismatches
       const serverDate = new Date();
       const dateString = serverDate.toISOString().split('T')[0];
-      
+
       // Check for existing attendance with proper date range to handle timezone issues
       const existingAttendance = await storage.listAttendance({
         userId,
@@ -5404,9 +5405,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           end: new Date(dateString + 'T23:59:59.999Z')
         }
       });
-      
+
       if (existingAttendance && existingAttendance.length > 0 && existingAttendance[0].checkInTime) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "You have already checked in today",
           attendance: existingAttendance[0]
         });
@@ -5432,7 +5433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate attendance type and requirements
       if (attendanceType === "office" && !isWithinRadius) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: `You are ${Math.round(distance)}m away from office. Please select 'Remote' or 'Field Work' and provide a reason.`,
           distance: Math.round(distance),
           allowedRadius: primaryOffice.radius || 100,
@@ -5484,7 +5485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "attendance_check_in",
         entityType: "attendance",
         entityId: attendanceRecord.id,
-        changes: { 
+        changes: {
           attendanceType: checkInData.attendanceType,
           location: `${checkInData.latitude},${checkInData.longitude}`,
           distance: Math.round(distance),
@@ -5494,8 +5495,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         designation: req.authenticatedUser.user.designation
       });
 
-      res.status(201).json({ 
-        message: "Check-in successful", 
+      res.status(201).json({
+        message: "Check-in successful",
         attendance: attendanceRecord,
         location: {
           distance: Math.round(distance),
@@ -5520,8 +5521,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check permission
       const hasPermission = req.authenticatedUser.user.role === "master_admin" ||
-                           req.authenticatedUser.permissions.includes("departments.view");
-      
+        req.authenticatedUser.permissions.includes("departments.view");
+
       if (!hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -5630,7 +5631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/system/health", verifyAuth, async (req, res) => {
     try {
       const { user } = req.authenticatedUser;
-      
+
       // Only admin/master_admin can view system health
       if (user.role !== "master_admin" && user.role !== "admin") {
         return res.status(403).json({ message: "Access denied - Admin privileges required" });
@@ -5656,7 +5657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("System health check error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to retrieve system health",
         error: {
           type: "monitoring_service_error",
@@ -5701,7 +5702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Enterprise analytics error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to generate attendance analytics",
         error: {
           type: "analytics_service_error",
@@ -5718,32 +5719,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { user } = req.authenticatedUser;
       const { refresh } = req.query;
-      
+
       // Only master_admin can view all department timings
       if (user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       console.log('BACKEND: Fetching all department timings');
-      
+
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
-      
+
       // Clear cache if refresh requested
       if (refresh === 'true') {
         console.log('BACKEND: Refreshing all department timing cache');
         EnterpriseTimeService.invalidateTimingCache();
       }
-      
+
       const timings = await EnterpriseTimeService.getAllDepartmentTimings();
-      
+
       // Convert to object format for frontend compatibility
       const timingsObject = timings.reduce((acc, timing) => {
         acc[timing.department] = timing;
         return acc;
       }, {} as Record<string, any>);
-      
+
       console.log('BACKEND: Retrieved all department timings:', Object.keys(timingsObject));
-      
+
       res.json(timingsObject);
     } catch (error) {
       console.error("Error fetching department timings:", error);
@@ -5756,21 +5757,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { department } = req.params;
       const { user } = req.authenticatedUser;
-      
+
       console.log(`BACKEND: Fast-fetching timing for department ${department}`);
-      
+
       // Users can view their own department timing or master_admin can view all
       if (user.role !== "master_admin" && user.department !== department) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       const { AttendanceCacheService } = await import("./services/attendance-cache-service");
-      
+
       const timing = await AttendanceCacheService.getDepartmentTiming(department, async () => {
         const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
         return await EnterpriseTimeService.getDepartmentTiming(department);
       });
-      
+
       res.json(timing);
     } catch (error) {
       console.error(`Error fetching timing for department ${req.params.department}:`, error);
@@ -5783,14 +5784,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { department } = req.params;
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      
+
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
 
       console.log(`BACKEND: Updating timing for department ${department}`);
       console.log('BACKEND: Full timing data received:', req.body);
-      
+
       // Debug policy values specifically
       console.log('BACKEND: Policy values extracted:', {
         allowRemoteWork: req.body.allowRemoteWork,
@@ -5799,33 +5800,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
-      
+
       // Filter out undefined values before updating
       const cleanData = Object.fromEntries(
         Object.entries(req.body).filter(([_, value]) => value !== undefined)
       );
-      
+
       // Update single department timing
       await EnterpriseTimeService.updateDepartmentTimings([{
         department,
         ...cleanData
       }]);
-      
+
       // Clear cache for this specific department and all cache
       console.log(`BACKEND: Clearing cache for department ${department}`);
       EnterpriseTimeService.clearDepartmentCache(department);
       EnterpriseTimeService.invalidateTimingCache();
-      
+
       // Clear performance optimizer cache
       const { AttendanceCacheService } = await import("./services/attendance-cache-service");
       AttendanceCacheService.invalidateDepartmentCache(department);
       AttendanceCacheService.invalidateAttendanceCache();
-      
+
       // Get fresh data from database (not cache)
       const updatedTiming = await EnterpriseTimeService.getDepartmentTiming(department);
-      
+
       console.log(`BACKEND: Updated timing for ${department}:`, updatedTiming);
-      
+
       res.json({
         success: true,
         department,
@@ -5843,7 +5844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { department } = req.params;
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      
+
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
@@ -5851,28 +5852,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`BACKEND: PUT updating timing for department ${department}`);
 
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
-      
+
       // Filter out undefined values before updating
       const cleanData = Object.fromEntries(
         Object.entries(req.body).filter(([_, value]) => value !== undefined)
       );
-      
+
       // Update single department timing
       await EnterpriseTimeService.updateDepartmentTimings([{
         department,
         ...cleanData
       }]);
-      
+
       // Clear cache for this specific department and all cache
       console.log(`BACKEND: PUT clearing cache for department ${department}`);
       EnterpriseTimeService.clearDepartmentCache(department);
       EnterpriseTimeService.invalidateTimingCache();
-      
+
       // Get fresh data from database
       const updatedTiming = await EnterpriseTimeService.getDepartmentTiming(department);
-      
+
       console.log(`BACKEND: PUT updated timing for ${department}:`, updatedTiming);
-      
+
       res.json({
         success: true,
         department,
@@ -5889,17 +5890,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/departments/timings/bulk", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      
+
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
 
       const { timings } = req.body;
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
-      
+
       await EnterpriseTimeService.updateDepartmentTimings(timings);
-      
-      res.json({ 
+
+      res.json({
         message: `Successfully updated timings for ${timings.length} departments`,
         updatedCount: timings.length
       });
@@ -5914,10 +5915,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { department } = req.params;
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
-      
+
       const isBusinessHours = await EnterpriseTimeService.isBusinessHours(department);
       const nextBusinessDay = await EnterpriseTimeService.getNextBusinessDay(department);
-      
+
       res.json({
         department,
         isBusinessHours,
@@ -5938,14 +5939,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/performance/stats", verifyAuth, async (req, res) => {
     try {
       const { user } = req.authenticatedUser;
-      
+
       if (user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const { AttendanceCacheService } = await import("./services/attendance-cache-service");
       const stats = AttendanceCacheService.getCacheStats();
-      
+
       res.json({
         ...stats,
         timestamp: new Date().toISOString(),
@@ -5961,26 +5962,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/departments/timings/refresh-cache", verifyAuth, async (req, res) => {
     try {
       const { user } = req.authenticatedUser;
-      
+
       if (user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       console.log('BACKEND: Manual cache refresh requested by master admin');
-      
+
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
       const { AttendanceCacheService } = await import("./services/attendance-cache-service");
-      
+
       // Clear all caches
       EnterpriseTimeService.invalidateTimingCache();
       AttendanceCacheService.invalidateAttendanceCache();
-      
+
       // Get fresh data for all departments
       const timings = await EnterpriseTimeService.getAllDepartmentTimings();
-      
-      console.log('BACKEND: All caches refreshed, retrieved timings for departments:', 
+
+      console.log('BACKEND: All caches refreshed, retrieved timings for departments:',
         timings.map(t => t.department));
-      
+
       res.json({
         success: true,
         message: "All caches refreshed successfully",
@@ -6003,7 +6004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const fieldConfigs = await storage.listPayrollFieldConfigs();
       res.json(fieldConfigs);
     } catch (error) {
@@ -6018,13 +6019,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const fieldData = {
         ...req.body,
         isSystemField: false,
         isActive: true
       };
-      
+
       const newField = await storage.createPayrollFieldConfig(fieldData);
       res.status(201).json(newField);
     } catch (error) {
@@ -6040,7 +6041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const structures = await storage.listEnhancedSalaryStructures();
       res.json(structures);
     } catch (error) {
@@ -6055,12 +6056,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const structureData = {
         ...req.body,
         isActive: true
       };
-      
+
       const newStructure = await storage.createEnhancedSalaryStructure(structureData);
       res.status(201).json(newStructure);
     } catch (error) {
@@ -6076,15 +6077,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const { month, year, department, status } = req.query;
-      
+
       const filters: any = {};
       if (month) filters.month = parseInt(month as string);
       if (year) filters.year = parseInt(year as string);
       if (department && department !== 'all') filters.department = department as string;
       if (status) filters.status = status as string;
-      
+
       const payrolls = await storage.listEnhancedPayrolls(filters);
       res.json(payrolls);
     } catch (error) {
@@ -6112,7 +6113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       updateData.updatedBy = user.id;
 
       const updatedPayroll = await storage.updateEnhancedPayroll(id, updateData);
-      
+
       // Create audit log
       await storage.createAuditLog({
         userId: user.id,
@@ -6137,10 +6138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const { month, year, userIds } = req.body;
       console.log("PAYROLL_BULK: Starting bulk process:", { month, year, userIds: userIds?.length || 'all' });
-      
+
       // If no userIds provided, get all users with salary structures
       let targetUserIds = userIds;
       if (!targetUserIds || !Array.isArray(targetUserIds)) {
@@ -6148,14 +6149,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetUserIds = allSalaryStructures.map(s => s.userId);
         console.log(`PAYROLL_BULK: Processing all users: ${targetUserIds.length}`);
       }
-      
+
       // Initialize PayrollCalculationService
       const { PayrollCalculationService } = await import('./services/payroll-calculation-service');
       const payrollCalcService = new PayrollCalculationService(storage);
-      
+
       const processedPayrolls = [];
       const skippedUsers = [];
-      
+
       // Process payroll for each user
       for (const userId of targetUserIds) {
         try {
@@ -6166,7 +6167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             skippedUsers.push({ userId, reason: 'already_processed' });
             continue;
           }
-          
+
           // Get user details
           const employee = await storage.getUser(userId);
           if (!employee) {
@@ -6174,7 +6175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             skippedUsers.push({ userId, reason: 'user_not_found' });
             continue;
           }
-          
+
           // Get salary structure
           const salaryStructure = await storage.getEnhancedSalaryStructureByUser(userId);
           if (!salaryStructure) {
@@ -6182,26 +6183,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             skippedUsers.push({ userId, reason: 'no_salary_structure', name: employee.displayName });
             continue;
           }
-          
+
           console.log(`PAYROLL_BULK: Processing ${employee.displayName} (${userId})`);
-          
+
           // Get attendance records with fallback to UID
           let attendanceRecords = await storage.listAttendanceByUser(userId);
-          
+
           // Fallback: Try with UID if no records found with userId
           if (attendanceRecords.length === 0 && employee.uid !== userId) {
             console.log(`PAYROLL_BULK: Trying UID fallback for ${employee.displayName}`);
             attendanceRecords = await storage.listAttendanceByUser(employee.uid);
           }
-          
+
           // Filter attendance records for the specified month/year
           const monthAttendance = attendanceRecords.filter(record => {
             const recordDate = new Date(record.date);
             return recordDate.getMonth() + 1 === month && recordDate.getFullYear() === year;
           });
-          
+
           console.log(`PAYROLL_BULK: ${employee.displayName} - ${monthAttendance.length} attendance records`);
-          
+
           // Use PayrollCalculationService for comprehensive calculation
           const calculation = await payrollCalcService.calculateComprehensivePayroll(
             userId,
@@ -6210,7 +6211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             monthAttendance,
             salaryStructure
           );
-          
+
           // Create payroll record with all calculated values
           const payrollData = {
             userId,
@@ -6247,19 +6248,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             processedBy: user.uid,
             processedAt: new Date()
           };
-          
+
           const newPayroll = await storage.createEnhancedPayroll(payrollData);
           processedPayrolls.push(newPayroll);
-          
+
           console.log(`PAYROLL_BULK: ✓ Successfully processed ${employee.displayName}`);
         } catch (error) {
           console.error(`PAYROLL_BULK: Error processing user ${userId}:`, error);
           skippedUsers.push({ userId, reason: 'processing_error', error: error instanceof Error ? error.message : 'Unknown error' });
         }
       }
-      
+
       console.log(`PAYROLL_BULK: Complete - Processed: ${processedPayrolls.length}, Skipped: ${skippedUsers.length}`);
-      
+
       res.json({
         success: true,
         message: "Payroll processing completed",
@@ -6270,7 +6271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("PAYROLL_BULK: Fatal error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Failed to process payroll",
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -6285,7 +6286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const settings = await storage.getEnhancedPayrollSettings();
       res.json(settings);
     } catch (error) {
@@ -6300,12 +6301,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || user.role !== "master_admin") {
         return res.status(403).json({ message: "Access denied - Master Admin only" });
       }
-      
+
       const settingsData = {
         ...req.body,
         updatedBy: user.uid
       };
-      
+
       const updatedSettings = await storage.updateEnhancedPayrollSettings(settingsData);
       res.json(updatedSettings);
     } catch (error) {
@@ -6320,7 +6321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear Enterprise Time Service cache
       const { clearTimingCache } = await import("./services/enterprise-time-service");
       clearTimingCache();
-      
+
       console.log("Admin cleared timing cache");
       res.json({ message: "Cache cleared successfully" });
     } catch (error) {
@@ -6333,7 +6334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/debug/users", verifyAuth, async (req, res) => {
     try {
       const currentUser = await storage.getUser(req.authenticatedUser?.uid || "");
-      
+
       // Only allow master_admin or admin role to access this debug info
       if (!currentUser || (currentUser.role !== 'master_admin' && currentUser.role !== 'admin')) {
         return res.status(403).json({ message: "Access denied. Debug endpoint requires admin access." });
@@ -6361,43 +6362,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== SITE VISIT MANAGEMENT API ROUTES ==========
-  
+
   // Permission helper for site visit access
   const checkSiteVisitPermission = async (user: any, action: string) => {
     // Only Technical, Marketing, and Admin departments can access Site Visit
     const allowedDepartments = ['technical', 'marketing', 'admin', 'administration', 'operations'];
-    
+
     console.log("=== SITE VISIT PERMISSION DEBUG ===");
     console.log("User role:", user.role);
     console.log("User department:", user.department);
     console.log("Allowed departments:", allowedDepartments);
     console.log("Department check result:", allowedDepartments.includes(user.department?.toLowerCase()));
-    
+
     if (user.role === 'master_admin') {
       console.log("Access granted: master_admin role");
       return true;
     }
-    
+
     // Also allow admin role users regardless of department
     if (user.role === 'admin') {
       console.log("Access granted: admin role");
       return true;
     }
-    
+
     if (!user.department || !allowedDepartments.includes(user.department.toLowerCase())) {
       console.log("Access denied: Department not allowed");
       console.log("=====================================");
       return false;
     }
-    
+
     console.log("Passed department check, now checking permissions...");
-    
+
     // Calculate effective permissions dynamically
     const { getEffectivePermissions } = await import("@shared/schema");
     const effectivePermissions = getEffectivePermissions(user.department, user.designation);
-    
+
     console.log("User effective permissions:", effectivePermissions);
-    
+
     // Check specific permissions based on action
     const requiredPermissions = {
       'view_own': ['site_visit.view_own', 'site_visit.view'],
@@ -6407,16 +6408,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'edit': ['site_visit.edit'],
       'delete': ['site_visit.delete']
     };
-    
+
     console.log("Required permissions for action:", action, "->", requiredPermissions[action]);
-    
-    const hasPermission = effectivePermissions?.some((permission: string) => 
+
+    const hasPermission = effectivePermissions?.some((permission: string) =>
       requiredPermissions[action]?.includes(permission)
     ) || false;
-    
+
     console.log("Final permission result:", hasPermission);
     console.log("=====================================");
-    
+
     return hasPermission;
   };
 
@@ -6426,17 +6427,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("=== SITE VISIT CREATION STARTED ===");
       console.log("User ID:", req.authenticatedUser?.uid);
       console.log("Request body received:", JSON.stringify(req.body, null, 2));
-      
+
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       console.log("User retrieved:", user ? `${user.displayName} (${user.department})` : 'null');
-      
+
       const hasPermission = user ? await checkSiteVisitPermission(user, 'create') : false;
       console.log("Permission check result:", hasPermission);
-      
+
       if (!user || !hasPermission) {
         console.log("SITE VISIT CREATION DENIED - User or permission missing");
-        return res.status(403).json({ 
-          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        return res.status(403).json({
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
       }
 
@@ -6447,10 +6448,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let customerId = null;
       if (req.body.customer && req.body.customer.name && req.body.customer.mobile) {
         const customerData = req.body.customer;
-        
+
         console.log("=== CUSTOMER CREATION ATTEMPT ===");
         console.log("Customer data to create:", JSON.stringify(customerData, null, 2));
-        
+
         // Use unified customer creation with automatic deduplication
         try {
           // Build customer data object, excluding empty/undefined values
@@ -6461,7 +6462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             createdFrom: "site_visit",
             profileCompleteness: "basic"
           };
-          
+
           // Only add optional fields if they have actual values
           if (customerData.email && customerData.email.trim() !== "") {
             customerCreateData.email = customerData.email;
@@ -6478,12 +6479,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (customerData.location && customerData.location.trim() !== "") {
             customerCreateData.location = customerData.location;
           }
-          
+
           console.log("Clean customer data for Firestore:", JSON.stringify(customerCreateData, null, 2));
           const customer = await storage.createCustomer(customerCreateData);
           customerId = customer.id;
           console.log(`✅ Customer creation SUCCESS: ${customer.mobile} -> ID: ${customerId} (${customer.profileCompleteness} profile, created from ${customer.createdFrom})`);
-          
+
           // Verify customer was actually created by checking if it exists
           const verifyCustomer = await storage.findCustomerByMobile(customerData.mobile);
           if (verifyCustomer) {
@@ -6516,9 +6517,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'hr': 'admin', // HR users are admin for site visits
         'housekeeping': 'admin' // Housekeeping users are admin for site visits
       };
-      
+
       const mappedDepartment = departmentMapping[user.department.toLowerCase()] || 'admin';
-      
+
       // Prepare and validate input data
       const requestData = {
         ...req.body,
@@ -6545,7 +6546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const siteVisit = await siteVisitService.createSiteVisit(siteVisitData);
       console.log("Site visit created successfully:", siteVisit.id);
       console.log("===================================");
-      
+
       res.status(201).json({
         message: "Site visit created successfully",
         siteVisit
@@ -6553,9 +6554,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof z.ZodError) {
         console.error("Site visit validation errors:", JSON.stringify(error.errors, null, 2));
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Validation error",
-          errors: error.errors 
+          errors: error.errors
         });
       }
       console.error("Error creating site visit:", error);
@@ -6572,7 +6573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Get existing site visit to check ownership
       const existingSiteVisit = await siteVisitService.getSiteVisitById(req.params.id);
       if (!existingSiteVisit) {
@@ -6580,10 +6581,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user can edit this site visit (own or has permission)
-      const canEdit = existingSiteVisit.userId === user.uid || 
-                     (await checkSiteVisitPermission(user, 'view_all')) ||
-                     user.role === 'master_admin';
-      
+      const canEdit = existingSiteVisit.userId === user.uid ||
+        (await checkSiteVisitPermission(user, 'view_all')) ||
+        user.role === 'master_admin';
+
       if (!canEdit) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -6596,26 +6597,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate known checkout fields including visit outcome fields
       const allowedFields = [
-        'status', 'siteOutTime', 'siteOutLocation', 'siteOutPhotoUrl', 
+        'status', 'siteOutTime', 'siteOutLocation', 'siteOutPhotoUrl',
         'notes', 'updatedAt', 'sitePhotos', 'siteOutPhotos',
         // Visit outcome fields for business classification
-        'visitOutcome', 'outcomeNotes', 'scheduledFollowUpDate', 
+        'visitOutcome', 'outcomeNotes', 'scheduledFollowUpDate',
         'outcomeSelectedAt', 'outcomeSelectedBy'
       ];
-      
-      const invalidFields = Object.keys(req.body).filter(field => 
+
+      const invalidFields = Object.keys(req.body).filter(field =>
         !allowedFields.includes(field) && field !== 'updatedAt'
       );
-      
+
       if (invalidFields.length > 0) {
         console.warn("Invalid fields in update request:", invalidFields);
       }
 
       const updatedSiteVisit = await siteVisitService.updateSiteVisit(req.params.id, req.body);
-      
+
       console.log("Site visit updated successfully:", updatedSiteVisit.id);
       console.log("================================");
-      
+
       res.json({
         message: "Site visit updated successfully",
         siteVisit: updatedSiteVisit
@@ -6636,17 +6637,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { siteVisitService } = await import("./services/site-visit-service");
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.id);
-      
+
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
       // Check if user can view this site visit
-      const canView = siteVisit.userId === user.uid || 
-                     await checkSiteVisitPermission(user, 'view_all') ||
-                     (await checkSiteVisitPermission(user, 'view_team') && siteVisit.department === user.department) ||
-                     user.role === 'master_admin';
-      
+      const canView = siteVisit.userId === user.uid ||
+        await checkSiteVisitPermission(user, 'view_all') ||
+        (await checkSiteVisitPermission(user, 'view_team') && siteVisit.department === user.department) ||
+        user.role === 'master_admin';
+
       if (!canView) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -6663,13 +6664,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
-      
+
       if (!user || !hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Parse query parameters
       const filters: any = {
         limit: parseInt(req.query.limit as string) || 50
@@ -6704,7 +6705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const siteVisits = await siteVisitService.getSiteVisitsWithFilters(filters);
-      
+
       res.json({
         data: siteVisits,
         filters: filters,
@@ -6725,9 +6726,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       const filters: any = {};
-      
+
       // Apply department filter based on permissions
       if (user.role !== 'master_admin' && !(await checkSiteVisitPermission(user, 'view_all'))) {
         filters.department = user.department;
@@ -6737,7 +6738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
 
       const stats = await siteVisitService.getSiteVisitStats(filters);
-      
+
       res.json(stats);
     } catch (error) {
       console.error("Error fetching site visit stats:", error);
@@ -6755,10 +6756,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { siteVisitService } = await import("./services/site-visit-service");
       const activeSiteVisits = await siteVisitService.getActiveSiteVisits();
-      
+
       // Filter based on user permissions
       let filteredSiteVisits = activeSiteVisits;
-      
+
       if (user.role !== 'master_admin' && !(await checkSiteVisitPermission(user, 'view_all'))) {
         if (await checkSiteVisitPermission(user, 'view_team')) {
           filteredSiteVisits = activeSiteVisits.filter(sv => sv.department === user.department);
@@ -6783,7 +6784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Check if user owns the site visit
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.id);
       if (!siteVisit) {
@@ -6795,21 +6796,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { sitePhotoSchema } = await import("@shared/schema");
-      
+
       // Validate photos data
       const photosData = z.array(sitePhotoSchema).parse(req.body.photos);
-      
+
       const updatedSiteVisit = await siteVisitService.addSitePhotos(req.params.id, photosData);
-      
+
       res.json({
         message: "Photos added successfully",
         siteVisit: updatedSiteVisit
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Validation error",
-          errors: error.errors 
+          errors: error.errors
         });
       }
       console.error("Error adding site photos:", error);
@@ -6826,23 +6827,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Check if user owns the site visit or has admin rights
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.id);
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
-      const canDelete = siteVisit.userId === user.uid || 
-                       user.role === 'master_admin' ||
-                       (user.role === 'admin' && siteVisit.department === user.department);
-      
+      const canDelete = siteVisit.userId === user.uid ||
+        user.role === 'master_admin' ||
+        (user.role === 'admin' && siteVisit.department === user.department);
+
       if (!canDelete) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       await siteVisitService.deleteSiteVisit(req.params.id);
-      
+
       res.status(204).end();
     } catch (error) {
       console.error("Error deleting site visit:", error);
@@ -6860,39 +6861,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import and validate the quick update schema
       const { quickUpdateSiteVisitSchema } = await import("@shared/schema");
-      
+
       let validatedData;
       try {
         validatedData = quickUpdateSiteVisitSchema.parse(req.body);
       } catch (zodError: any) {
         console.error("Quick update validation error:", zodError);
-        return res.status(400).json({ 
-          message: "Invalid request data", 
-          errors: zodError.issues || zodError.errors 
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: zodError.issues || zodError.errors
         });
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Check if user owns the site visit or has appropriate permissions
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.id);
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
-      const canUpdate = siteVisit.userId === user.uid || 
-                       user.role === 'master_admin' ||
-                       (user.role === 'admin' && siteVisit.department === user.department) ||
-                       (user.department === siteVisit.department && ['team_leader', 'officer', 'gm'].includes(user.designation || ''));
-      
+      const canUpdate = siteVisit.userId === user.uid ||
+        user.role === 'master_admin' ||
+        (user.role === 'admin' && siteVisit.department === user.department) ||
+        (user.department === siteVisit.department && ['team_leader', 'officer', 'gm'].includes(user.designation || ''));
+
       if (!canUpdate) {
         return res.status(403).json({ message: "Access denied: You can only update your own site visits" });
       }
 
       // Validate action-specific requirements
       if (validatedData.action === 'reschedule' && !validatedData.scheduledFollowUpDate) {
-        return res.status(400).json({ 
-          message: "Scheduled follow-up date is required for reschedule action" 
+        return res.status(400).json({
+          message: "Scheduled follow-up date is required for reschedule action"
         });
       }
 
@@ -6923,9 +6924,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Error in quick update site visit:", error);
-      res.status(500).json({ 
-        message: "Failed to update site visit", 
-        error: (error as Error).message 
+      res.status(500).json({
+        message: "Failed to update site visit",
+        error: (error as Error).message
       });
     }
   });
@@ -6939,18 +6940,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check access - only master admin and HR department
-      const hasAccess = user.role === "master_admin" || 
-                       (user.department && user.department.toLowerCase() === 'hr');
+      const hasAccess = user.role === "master_admin" ||
+        (user.department && user.department.toLowerCase() === 'hr');
 
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied. This endpoint is restricted to Master Admin and HR Department." });
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Get all site visits with enhanced data for monitoring
       const siteVisits = await siteVisitService.getAllSiteVisitsForMonitoring();
-      
+
       res.json(siteVisits);
     } catch (error) {
       console.error("Error fetching site visits for monitoring:", error);
@@ -6963,10 +6964,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'create') : false;
-      
+
       if (!user || !hasPermission) {
-        return res.status(403).json({ 
-          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        return res.status(403).json({
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
       }
 
@@ -6983,10 +6984,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("FOLLOW_UP_CREATE: Found original visit:", originalVisit.id, "for customer:", originalVisit.customer.name);
 
       // Verify user can create follow-up for this visit (own visit or has permission)
-      const canCreateFollowUp = originalVisit.userId === user.uid || 
-                               await checkSiteVisitPermission(user, 'view_all') ||
-                               user.role === 'master_admin';
-      
+      const canCreateFollowUp = originalVisit.userId === user.uid ||
+        await checkSiteVisitPermission(user, 'view_all') ||
+        user.role === 'master_admin';
+
       if (!canCreateFollowUp) {
         return res.status(403).json({ message: "Access denied. You can only create follow-ups for your own visits." });
       }
@@ -6994,12 +6995,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Map user department to site visit schema department
       const departmentMapping: Record<string, string> = {
         'admin': 'admin',
-        'administration': 'admin', 
+        'administration': 'admin',
         'operations': 'admin',
         'technical': 'technical',
         'marketing': 'marketing'
       };
-      
+
       const mappedDepartment = departmentMapping[user.department?.toLowerCase() || ''] || user.department;
 
       // Prepare follow-up data with proper validation
@@ -7032,7 +7033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create follow-up in separate collection
       const createdFollowUp = await followUpService.createFollowUp(followUpData);
 
-      res.status(201).json({ 
+      res.status(201).json({
         data: createdFollowUp,
         message: "Follow-up visit created successfully"
       });
@@ -7048,18 +7049,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
-      
+
       if (!user || !hasPermission) {
-        return res.status(403).json({ 
-          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        return res.status(403).json({
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
       }
 
       const { followUpService } = await import("./services/follow-up-service");
-      
+
       // Get follow-ups by user
       const { userId, department, status } = req.query;
-      
+
       let followUps = [];
       if (userId && userId === user.uid) {
         followUps = await followUpService.getFollowUpsByUser(
@@ -7078,7 +7079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Default to own follow-ups
         followUps = await followUpService.getFollowUpsByUser(user.uid);
       }
-      
+
       res.json({ data: followUps });
     } catch (error) {
       console.error("Error fetching follow-ups:", error);
@@ -7091,25 +7092,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
-      
+
       if (!user || !hasPermission) {
-        return res.status(403).json({ 
-          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        return res.status(403).json({
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
       }
 
       const { followUpService } = await import("./services/follow-up-service");
       const followUp = await followUpService.getFollowUpById(req.params.id);
-      
+
       if (!followUp) {
         return res.status(404).json({ message: "Follow-up visit not found" });
       }
 
       // Check if user can view this follow-up
-      const canView = followUp.userId === user.uid || 
-                     await checkSiteVisitPermission(user, 'view_all') ||
-                     user.role === 'master_admin';
-      
+      const canView = followUp.userId === user.uid ||
+        await checkSiteVisitPermission(user, 'view_all') ||
+        user.role === 'master_admin';
+
       if (!canView) {
         return res.status(403).json({ message: "Access denied. You can only view your own follow-ups." });
       }
@@ -7126,10 +7127,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
-      
+
       if (!user || !hasPermission) {
-        return res.status(403).json({ 
-          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        return res.status(403).json({
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
       }
 
@@ -7142,10 +7143,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Original site visit not found" });
       }
 
-      const canView = originalVisit.userId === user.uid || 
-                     await checkSiteVisitPermission(user, 'view_all') ||
-                     user.role === 'master_admin';
-      
+      const canView = originalVisit.userId === user.uid ||
+        await checkSiteVisitPermission(user, 'view_all') ||
+        user.role === 'master_admin';
+
       if (!canView) {
         return res.status(403).json({ message: "Access denied." });
       }
@@ -7163,13 +7164,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'edit') : false;
-      
+
       if (!user || !hasPermission) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       const { followUpService } = await import("./services/follow-up-service");
-      
+
       // Get existing follow-up to check ownership
       const existingFollowUp = await followUpService.getFollowUpById(req.params.id);
       if (!existingFollowUp) {
@@ -7177,17 +7178,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user can edit this follow-up
-      const canEdit = existingFollowUp.userId === user.uid || 
-                     await checkSiteVisitPermission(user, 'view_all') ||
-                     user.role === 'master_admin';
-      
+      const canEdit = existingFollowUp.userId === user.uid ||
+        await checkSiteVisitPermission(user, 'view_all') ||
+        user.role === 'master_admin';
+
       if (!canEdit) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       // Validate update fields
       const allowedFields = [
-        'status', 'siteOutTime', 'siteOutLocation', 'siteOutPhotoUrl', 
+        'status', 'siteOutTime', 'siteOutLocation', 'siteOutPhotoUrl',
         'notes', 'updatedAt', 'sitePhotos', 'siteOutPhotos'
       ];
 
@@ -7242,20 +7243,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'edit') : false;
-      
+
       if (!user || !hasPermission) {
         console.log("=== PERMISSION DENIED ===");
         console.log("User exists:", !!user);
         console.log("Has permission:", hasPermission);
         console.log("=========================");
-        return res.status(403).json({ 
-          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        return res.status(403).json({
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
       }
 
       const { followUpService } = await import("./services/follow-up-service");
       const followUp = await followUpService.getFollowUpById(req.params.id);
-      
+
       if (!followUp) {
         console.log("=== FOLLOW-UP NOT FOUND ===");
         console.log("Follow-up ID:", req.params.id);
@@ -7270,10 +7271,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("=======================");
 
       // Check if user can checkout this follow-up
-      const canCheckout = followUp.userId === user.uid || 
-                         await checkSiteVisitPermission(user, 'view_all') ||
-                         user.role === 'master_admin';
-      
+      const canCheckout = followUp.userId === user.uid ||
+        await checkSiteVisitPermission(user, 'view_all') ||
+        user.role === 'master_admin';
+
       if (!canCheckout) {
         console.log("=== CHECKOUT ACCESS DENIED ===");
         console.log("User can checkout:", canCheckout);
@@ -7286,7 +7287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate required fields
       if (!req.body.siteOutLocation) {
         console.log("=== VALIDATION ERROR: MISSING LOCATION ===");
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Missing required field: siteOutLocation",
           error: "MISSING_LOCATION"
         });
@@ -7296,17 +7297,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.visitOutcome) {
         const allowedOutcomes = ['completed', 'on_process', 'cancelled'];
         if (!allowedOutcomes.includes(req.body.visitOutcome)) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             message: "Invalid visit outcome. Must be one of: completed, on_process, cancelled",
             error: "INVALID_OUTCOME"
           });
         }
-        
+
         // Validate scheduled follow-up date for on_process outcome
         if (req.body.visitOutcome === 'on_process' && req.body.scheduledFollowUpDate) {
           const followUpDate = new Date(req.body.scheduledFollowUpDate);
           if (followUpDate <= new Date()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
               message: "Scheduled follow-up date must be in the future",
               error: "INVALID_FOLLOWUP_DATE"
             });
@@ -7322,7 +7323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         siteOutPhotos: req.body.siteOutPhotos || [],
         status: 'completed' as const,
         notes: req.body.notes || followUp.notes || '',
-        
+
         // Handle visit outcome fields for follow-ups
         visitOutcome: req.body.visitOutcome || null,
         outcomeNotes: req.body.outcomeNotes || null,
@@ -7330,7 +7331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Security: Set these server-side, don't trust client input
         outcomeSelectedAt: req.body.visitOutcome ? new Date() : null,
         outcomeSelectedBy: req.body.visitOutcome ? user.uid : null,
-        
+
         updatedAt: new Date()
       };
 
@@ -7352,7 +7353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (updatedFollowUp.visitOutcome) {
           const outcomeLabel = {
             completed: 'Completed',
-            on_process: 'Scheduled for Follow-up', 
+            on_process: 'Scheduled for Follow-up',
             cancelled: 'Cancelled'
           }[updatedFollowUp.visitOutcome] || updatedFollowUp.visitOutcome;
 
@@ -7389,7 +7390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Customer:", followUp.customer.name);
       console.log("====================================");
 
-      res.json({ 
+      res.json({
         data: updatedFollowUp,
         message: "Follow-up checkout completed successfully"
       });
@@ -7400,10 +7401,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
       console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
       console.error("================================");
-      
+
       // Return more specific error information
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to checkout follow-up visit",
         error: errorMessage,
         debugInfo: {
@@ -7419,10 +7420,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'view_own') : false;
-      
+
       if (!user || !hasPermission) {
-        return res.status(403).json({ 
-          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments." 
+        return res.status(403).json({
+          message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
       }
 
@@ -7432,20 +7433,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { siteVisitService } = await import("./services/site-visit-service");
-      
+
       // Get all site visits for this customer (by mobile number)
       const allVisits = await siteVisitService.getAllSiteVisits({});
-      
+
       // Filter visits by customer mobile number
-      const customerVisits = allVisits.filter((visit: any) => 
+      const customerVisits = allVisits.filter((visit: any) =>
         visit.customer && visit.customer.mobile === mobile
       );
-      
+
       // Sort by creation date (newest first)
-      customerVisits.sort((a: any, b: any) => 
+      customerVisits.sort((a: any, b: any) =>
         new Date(b.createdAt || b.siteInTime).getTime() - new Date(a.createdAt || a.siteInTime).getTime()
       );
-      
+
       // Return limited data for timeline display
       const timeline = customerVisits.map((visit: any) => ({
         id: visit.id,
@@ -7476,8 +7477,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check access - only master admin and HR department
-      const hasAccess = user.role === "master_admin" || 
-                       (user.department && user.department.toLowerCase() === 'hr');
+      const hasAccess = user.role === "master_admin" ||
+        (user.department && user.department.toLowerCase() === 'hr');
 
       if (!hasAccess) {
         return res.status(403).json({ message: "Access denied. This endpoint is restricted to Master Admin and HR Department." });
@@ -7485,10 +7486,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { siteVisitService } = await import("./services/site-visit-service");
       const { filters } = req.body;
-      
+
       // Generate Excel export
       const excelBuffer = await siteVisitService.exportSiteVisitsToExcel(filters);
-      
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=site-visits-${new Date().toISOString().split('T')[0]}.xlsx`);
       res.send(excelBuffer);
@@ -7505,7 +7506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reverse-geocode", verifyAuth, async (req, res) => {
     try {
       const { lat, lng } = req.query;
-      
+
       if (!lat || !lng) {
         return res.status(400).json({ message: "Latitude and longitude are required" });
       }
@@ -7525,14 +7526,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const data = await response.json();
-      
+
       if (data.status === 'OK' && data.results && data.results.length > 0) {
         const address = data.results[0].formatted_address;
         res.json({ address, fullResponse: data.results[0] });
       } else {
-        res.json({ 
+        res.json({
           address: `${parseFloat(lat as string).toFixed(6)}, ${parseFloat(lng as string).toFixed(6)}`,
-          error: "Address not found" 
+          error: "Address not found"
         });
       }
     } catch (error) {

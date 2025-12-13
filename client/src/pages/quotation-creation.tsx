@@ -4,35 +4,35 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -45,11 +45,11 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Check, 
-  AlertTriangle, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  AlertTriangle,
   Plus,
   Search,
   FileText,
@@ -66,7 +66,8 @@ import {
   Edit2,
   Save,
   X,
-  Table
+  Table,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -74,9 +75,9 @@ import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { roundSystemKW, formatKWForDisplay } from "@shared/utils";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
 import { useAuthContext } from "@/contexts/auth-context";
-import { 
-  insertQuotationSchema, 
-  type InsertQuotation, 
+import {
+  insertQuotationSchema,
+  type InsertQuotation,
   type QuotationProject,
   quotationProjectSchema,
   quotationFollowUpSchema,
@@ -127,33 +128,33 @@ type QuotationFormData = z.infer<typeof quotationFormSchema>;
 
 // Wizard steps configuration
 const WIZARD_STEPS = [
-  { 
-    id: "source", 
-    title: "Source Selection", 
+  {
+    id: "source",
+    title: "Source Selection",
     description: "Choose how to create this quotation",
     icon: Search
   },
-  { 
-    id: "customer", 
-    title: "Customer Details", 
+  {
+    id: "customer",
+    title: "Customer Details",
     description: "Customer information and contact details",
     icon: User
   },
-  { 
-    id: "projects", 
-    title: "Project Configuration", 
+  {
+    id: "projects",
+    title: "Project Configuration",
     description: "Solar systems and project specifications",
     icon: Zap
   },
-  { 
-    id: "pricing", 
-    title: "Pricing & Terms", 
+  {
+    id: "pricing",
+    title: "Pricing & Terms",
     description: "Costs, payments, and delivery terms",
     icon: Calculator
   },
-  { 
-    id: "review", 
-    title: "Review & Submit", 
+  {
+    id: "review",
+    title: "Review & Submit",
     description: "Final review before creating quotation",
     icon: FileText
   }
@@ -214,7 +215,7 @@ const calculateSubsidy = (kw: number, propertyType: string, projectType: string)
 // Helper function to generate project description based on project type and configuration
 const generateProjectDescription = (project: QuotationProject): string => {
   const projectType = project.projectType;
-  
+
   switch (projectType) {
     case 'on_grid': {
       const systemKW = (project as any).systemKW || 0;
@@ -223,7 +224,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const phase = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
       return `Supply and Installation of ${kw} kw Solar Panel ${inverterKW} KW Inverter ${phase} ON-GRID Solar System`;
     }
-    
+
     case 'off_grid': {
       const panelWatts = project.panelWatts || 530;
       const panelCount = project.panelCount || 1;
@@ -231,14 +232,14 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const voltage = project.voltage || 24;
       const batteryCount = project.batteryCount || 1;
       const inverterVolt = (project as any).inverterVolt || (voltage * batteryCount);
-      const inverterMake = project.inverterMake && project.inverterMake.length > 0 
-        ? project.inverterMake[0].toUpperCase() 
+      const inverterMake = project.inverterMake && project.inverterMake.length > 0
+        ? project.inverterMake[0].toUpperCase()
         : 'MPPT';
       const batteryAH = project.batteryAH || 100;
       const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
       return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}v ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount}, ${phase}-Phase Offgrid Solar System`;
     }
-    
+
     case 'hybrid': {
       const systemKW = (project as any).systemKW || 0;
       const totalKW = formatKWForDisplay(systemKW);
@@ -252,7 +253,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const batteryType = (project as any).batteryType === 'lithium' ? 'Lithium Battery' : 'Lead Acid Battery';
       return `Supply and Installation of ${totalKW} KW PANEL, ${inverterKVA}KVA/${inverterVolt}V ${phase} Phase Hybrid Inverter, ${batteryBrand} ${batteryAH}AH ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
     }
-    
+
     case 'water_heater': {
       const brand = (project as any).brand || 'Standard';
       const litres = project.litre || 100;
@@ -261,7 +262,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const gstSuffix = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '\nIncluding GST';
       return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoil}${gstSuffix}`;
     }
-    
+
     case 'water_pump': {
       const driveHPRaw = (project as any).driveHP || (project as any).hp || 1;
       const driveHP = Math.floor(parseFloat(driveHPRaw));
@@ -269,15 +270,15 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const panelCount = project.panelCount || 10;
       const calculatedKW = (panelWattsNum * panelCount) / 1000;
       const totalKW = formatKWForDisplay(calculatedKW);
-      const panelBrand = (project as any).panelBrand && (project as any).panelBrand.length > 0 
-        ? (project as any).panelBrand[0].toUpperCase() 
+      const panelBrand = (project as any).panelBrand && (project as any).panelBrand.length > 0
+        ? (project as any).panelBrand[0].toUpperCase()
         : 'UTL';
       const phase = (project as any).inverterPhase === 'three_phase' ? '3' : '1';
       const lowerHeight = (project as any).gpStructure?.lowerEndHeight || 3;
       const higherHeight = (project as any).gpStructure?.higherEndHeight || 4;
-      
+
       let description = `Supply and Installation solar power System Includes: ${driveHP} hp Drive ${totalKW} kw ${panelWattsNum}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase}-Phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
-      
+
       const conditionalItems = [];
       if ((project as any).earth && (project as any).earth.length > 0) {
         conditionalItems.push('Earth kit');
@@ -291,14 +292,14 @@ const generateProjectDescription = (project: QuotationProject): string => {
       if ((project as any).labourAndTransport) {
         conditionalItems.push('Labour and Transport');
       }
-      
+
       if (conditionalItems.length > 0) {
         description += ' ' + conditionalItems.join(', ');
       }
-      
+
       return description;
     }
-    
+
     default:
       return `Supply and Installation of ${(project as any).projectType || 'Solar'} Solar System`;
   }
@@ -343,13 +344,13 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
   // Extract customer data from site visit mapping with updated structure - be very flexible
   // In edit mode, prioritize existing customer data from the database
   const siteVisitCustomerData = (isEditMode && existingCustomer) ?
-                                existingCustomer :
-                                (siteVisitMapping?.originalSiteVisitData?.customer ?? 
-                                siteVisitMapping?.customer ?? 
-                                siteVisitMapping?.originalSiteVisitData?.customerData ??
-                                fallbackSiteVisitData?.customer ?? 
-                                fallbackSiteVisitData?.customerData ??
-                                {});
+    existingCustomer :
+    (siteVisitMapping?.originalSiteVisitData?.customer ??
+      siteVisitMapping?.customer ??
+      siteVisitMapping?.originalSiteVisitData?.customerData ??
+      fallbackSiteVisitData?.customer ??
+      fallbackSiteVisitData?.customerData ??
+      {});
 
   useEffect(() => {
     // Initialize customer state with site visit data
@@ -365,12 +366,12 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
       location: siteVisitCustomerData.location || "",
       source: "site_visit"
     };
-    
+
     setCustomerState(initialCustomerData);
-    
+
     // Update form with customer data
     form.setValue("customerData", initialCustomerData);
-    
+
     // Set the real customerId from the mapping response, not sentinel values
     if (siteVisitMapping?.quotationData?.customerId) {
       form.setValue("customerId", siteVisitMapping.quotationData.customerId);
@@ -384,7 +385,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
     const updatedCustomerData = { ...customerState, [field]: value };
     setCustomerState(updatedCustomerData);
     form.setValue("customerData", updatedCustomerData);
-    
+
     // Keep the real customerId from mapping response, don't overwrite with sentinel strings
     // The backend will handle customer ID resolution when the quotation is submitted
   };
@@ -479,7 +480,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
             {renderFieldStatus("propertyType")}
           </div>
           <Select value={customerState.propertyType || undefined} onValueChange={(value) => updateCustomerField("propertyType", value)}>
-            <SelectTrigger 
+            <SelectTrigger
               className={isFieldFromSiteVisit("propertyType") ? "bg-green-50 border-green-200" : ""}
               data-testid="select-property-type"
             >
@@ -535,7 +536,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
             {renderFieldStatus("ebSanctionPhase")}
           </div>
           <Select value={customerState.ebSanctionPhase || undefined} onValueChange={(value) => updateCustomerField("ebSanctionPhase", value)}>
-            <SelectTrigger 
+            <SelectTrigger
               className={isFieldFromSiteVisit("ebSanctionPhase") ? "bg-green-50 border-green-200" : ""}
               data-testid="select-eb-sanction-phase"
             >
@@ -585,7 +586,7 @@ function SiteVisitCustomerDetailsForm({ form, siteVisitMapping, fallbackSiteVisi
       <Alert>
         <User className="h-4 w-4" />
         <AlertDescription>
-          Fields with a green background were captured during the site visit. 
+          Fields with a green background were captured during the site visit.
           Please complete any missing required information to proceed.
         </AlertDescription>
       </Alert>
@@ -609,11 +610,11 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
     source: "manual"
   });
   const [isAutoFilled, setIsAutoFilled] = useState(false);
-  
+
   // Watch form's customerData to keep local state in sync
   const formCustomerData = form.watch("customerData");
   const formCustomerId = form.watch("customerId");
-  
+
   // Sync local state with form data when it changes
   useEffect(() => {
     if (formCustomerData && Object.keys(formCustomerData).length > 0) {
@@ -623,12 +624,12 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
         source: formCustomerData.source || "manual"
       };
       setCustomerState(customerDataWithSource);
-      
+
       // Update form if source was missing
       if (!formCustomerData.source) {
         form.setValue("customerData", customerDataWithSource, { shouldValidate: true });
       }
-      
+
       // If there's a customerId, mark as auto-filled
       if (formCustomerId) {
         setIsAutoFilled(true);
@@ -655,7 +656,7 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
   const handleCustomerChange = (customerData: any) => {
     // Update local state
     setCustomerState(customerData);
-    
+
     // Update form's customerData field
     form.setValue("customerData", {
       name: customerData.name || "",
@@ -670,7 +671,7 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
       location: customerData.location || "",
       source: "manual"
     });
-    
+
     // If customer has an ID, set it and mark as auto-filled
     if (customerData.id) {
       form.setValue("customerId", customerData.id);
@@ -682,14 +683,14 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
   };
 
   const updateCustomerField = (field: string, value: any) => {
-    const updatedCustomerData = { 
-      ...customerState, 
+    const updatedCustomerData = {
+      ...customerState,
       [field]: value,
       source: "manual" // Always set source for manual quotations
     };
     setCustomerState(updatedCustomerData);
     form.setValue("customerData", updatedCustomerData);
-    
+
     // Keep the customerId even when editing - the backend will handle the update
     // Just remove the visual "Auto-filled" badge to indicate the field was modified
   };
@@ -798,11 +799,11 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
               </Badge>
             )}
           </div>
-          <Select 
-            value={customerState.propertyType || undefined} 
+          <Select
+            value={customerState.propertyType || undefined}
             onValueChange={(value) => updateCustomerField("propertyType", value)}
           >
-            <SelectTrigger 
+            <SelectTrigger
               className={isAutoFilled && customerState.propertyType ? "bg-green-50 border-green-200" : ""}
               data-testid="select-property-type"
             >
@@ -873,7 +874,7 @@ function ManualCustomerDetailsForm({ form, isEditMode = false }: { form: any; is
             )}
           </div>
           <Select value={customerState.ebSanctionPhase || undefined} onValueChange={(value) => updateCustomerField("ebSanctionPhase", value)}>
-            <SelectTrigger 
+            <SelectTrigger
               className={isAutoFilled && customerState.ebSanctionPhase ? "bg-green-50 border-green-200" : ""}
               data-testid="select-eb-sanction-phase"
             >
@@ -1121,37 +1122,37 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
     // Calculate initial pricing for all project types
     if (["on_grid", "off_grid", "hybrid"].includes(projectType)) {
       newProject.gstPercentage = BUSINESS_RULES.gst.percentage;
-      
+
       // Calculate system kW from panel data (this is the source of truth)
       // Safe parsing: remove non-digit characters, then parse
       const panelWattsStr = String(newProject.panelWatts || '').trim().replace(/[^\d]/g, '');
       const panelWattsNum = parseInt(panelWattsStr, 10) || 0;
       const calculatedKW = (panelWattsNum * newProject.panelCount) / 1000;
       newProject.systemKW = calculatedKW;
-      
+
       // Calculate default project value based on systemKW and default rate
-      const defaultRatePerKW = projectType === 'on_grid' ? BUSINESS_RULES.pricing.onGridPerKW : 
-                               projectType === 'off_grid' ? BUSINESS_RULES.pricing.offGridPerKW : 
-                               BUSINESS_RULES.pricing.hybridPerKW;
-      
+      const defaultRatePerKW = projectType === 'on_grid' ? BUSINESS_RULES.pricing.onGridPerKW :
+        projectType === 'off_grid' ? BUSINESS_RULES.pricing.offGridPerKW :
+          BUSINESS_RULES.pricing.hybridPerKW;
+
       // Calculate total value including GST
       const basePrice = Math.round(calculatedKW * defaultRatePerKW);
       const totalWithGST = Math.round(basePrice * (1 + newProject.gstPercentage / 100));
-      
+
       newProject.projectValue = totalWithGST;
       newProject.basePrice = basePrice;
       newProject.gstAmount = totalWithGST - basePrice;
       newProject.pricePerKW = defaultRatePerKW;
-      
+
       // Get propertyType from form - always use customerData as the source of truth
       const formValues = form.getValues();
       const propertyType = formValues.customerData?.propertyType || 'residential';
-      
+
       // Defensive check: Log warning if propertyType is missing for subsidy calculation
       if (!formValues.customerData?.propertyType && ['on_grid', 'hybrid'].includes(projectType)) {
         console.warn('⚠️ Property type missing during project creation - using default "residential" for subsidy calculation');
       }
-      
+
       // Use the new calculateSubsidy function
       newProject.subsidyAmount = calculateSubsidy(calculatedKW, propertyType, projectType);
       newProject.customerPayment = newProject.projectValue - newProject.subsidyAmount;
@@ -1162,11 +1163,11 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       const defaultBaseValue = newProject.litre * BUSINESS_RULES.pricing.waterHeaterPerLitre;
       newProject.projectValue = Math.round(defaultBaseValue);
       newProject.gstPercentage = 0; // Water heater has 0% GST by default
-      
+
       // For water heater, projectValue = basePrice (since GST is 0%)
       newProject.basePrice = newProject.projectValue;
       newProject.gstAmount = 0;
-      
+
       // No subsidy for water heater
       newProject.subsidyAmount = 0;
       newProject.customerPayment = newProject.projectValue;
@@ -1177,11 +1178,11 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       const defaultBaseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
       newProject.projectValue = Math.round(defaultBaseValue);
       newProject.gstPercentage = 0; // Water pump has 0% GST by default
-      
+
       // For water pump, projectValue = basePrice (since GST is 0%)
       newProject.basePrice = newProject.projectValue;
       newProject.gstAmount = 0;
-      
+
       // No subsidy for water pump
       newProject.subsidyAmount = 0;
       newProject.customerPayment = newProject.projectValue;
@@ -1208,11 +1209,11 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
   const updateProject = (index: number, updatedData: any) => {
     const currentProjects = form.getValues("projects") || [];
     const updatedProjects = [...currentProjects];
-    
+
     // ✅ CRITICAL: Preserve user-entered inverterKW/KVA - these are MANUAL fields
     const previousInverterKW = updatedProjects[index]?.inverterKW;
     const previousInverterKVA = updatedProjects[index]?.inverterKVA;
-    
+
     updatedProjects[index] = { ...updatedProjects[index], ...updatedData };
 
     // ✅ CRITICAL: Restore inverterKW/KVA if not explicitly changed in this update
@@ -1225,34 +1226,34 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
 
     // Defensive check: Ensure we have the latest form values
     const formValues = form.getValues();
-    
+
     // Recalculate pricing for all project types
     const project = updatedProjects[index];
-    
+
     if (["on_grid", "off_grid", "hybrid"].includes(project.projectType)) {
       // STEP 1: Validate and normalize GST percentage
       if (project.gstPercentage === undefined || project.gstPercentage === null) {
         project.gstPercentage = BUSINESS_RULES.gst.percentage;
       }
-      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-        ? BUSINESS_RULES.gst.percentage 
+      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null)
+        ? BUSINESS_RULES.gst.percentage
         : parseFloat(project.gstPercentage) || 0;
-      
+
       // STEP 2: Calculate system kW from panel specifications (source of truth)
       const panelWattsStr = String(project.panelWatts || '').trim().replace(/[^\d]/g, '');
       const panelWattsNum = parseInt(panelWattsStr, 10) || 0;
       const calculatedKW = panelWattsNum > 0 ? (panelWattsNum * (project.panelCount || 1)) / 1000 : 0;
-      
+
       // Store system KW for backend compatibility
       project.systemKW = calculatedKW;
-      
+
       // STEP 3: Calculate rounded kW using centralized utility
       const roundedKW = roundSystemKW(calculatedKW);
-      
+
       // ✅ CRITICAL: DO NOT auto-overwrite inverterKW here!
       // inverterKW is a separate manual field - user enters it explicitly in the form
       // Using roundedKW only for rate calculations, NOT for overwriting user input
-      
+
       // STEP 4: Calculate pricing breakdown (all solar projects follow same logic)
       const validProjectValue = Math.max(0, project.projectValue || 0);
       if (validProjectValue > 0) {
@@ -1266,7 +1267,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         project.gstAmount = 0;
         project.pricePerKW = 0;
       }
-      
+
       // STEP 5: Calculate subsidy based on calculated kW (not rounded)
       const propertyType = formValues.customerData?.propertyType || 'residential';
       if (!formValues.customerData?.propertyType) {
@@ -1279,20 +1280,20 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       if (project.gstPercentage === undefined || project.gstPercentage === null) {
         project.gstPercentage = 0;
       }
-      
+
       // Water heater pricing: projectValue is per-unit price
       // Always recalculate to ensure values are available for PDF generation
       // Use 0% as default GST for water heater
-      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-        ? 0 
+      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null)
+        ? 0
         : parseFloat(project.gstPercentage) || 0;
       const quantity = project.qty || 1;
       const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
       const gstAmount = project.projectValue - basePrice;
-      
+
       project.basePrice = basePrice;
       project.gstAmount = gstAmount;
-      
+
       // No subsidy for water heater
       project.subsidyAmount = 0;
       // customerPayment is total: projectValue (per unit) × quantity
@@ -1302,20 +1303,20 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       if (project.gstPercentage === undefined || project.gstPercentage === null) {
         project.gstPercentage = 0;
       }
-      
+
       // Water pump pricing: projectValue is per-unit price
       // Always recalculate to ensure values are available for PDF generation
       // Use 0% as default GST for water pump
-      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null) 
-        ? 0 
+      const effectiveGST = (project.gstPercentage === '' || project.gstPercentage === undefined || project.gstPercentage === null)
+        ? 0
         : parseFloat(project.gstPercentage) || 0;
       const quantity = project.qty || 1;
       const basePrice = Math.round(project.projectValue / (1 + effectiveGST / 100));
       const gstAmount = project.projectValue - basePrice;
-      
+
       project.basePrice = basePrice;
       project.gstAmount = gstAmount;
-      
+
       // No subsidy for water pump
       project.subsidyAmount = 0;
       // customerPayment is total: projectValue (per unit) × quantity
@@ -1382,55 +1383,54 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       )}
 
       {/* Validation Warnings for Projects */}
-      {projects.length > 0 && projects.some((p: any) => 
-        ['on_grid', 'off_grid', 'hybrid'].includes(p.projectType) && 
+      {projects.length > 0 && projects.some((p: any) =>
+        ['on_grid', 'off_grid', 'hybrid'].includes(p.projectType) &&
         (p.panelCount === 0 || p.projectValue === 0)
       ) && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Warning:</strong> Some solar projects have missing critical data:
-            <ul className="list-disc list-inside mt-2 text-sm">
-              {projects.map((p: any, idx: number) => {
-                if (['on_grid', 'off_grid', 'hybrid'].includes(p.projectType)) {
-                  const issues = [];
-                  if (p.panelCount === 0) issues.push('Panel count is 0');
-                  if (p.projectValue === 0) issues.push('Project value is 0');
-                  if (issues.length > 0) {
-                    return (
-                      <li key={idx}>
-                        Project {idx + 1} ({p.projectType}): {issues.join(', ')}
-                      </li>
-                    );
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Warning:</strong> Some solar projects have missing critical data:
+              <ul className="list-disc list-inside mt-2 text-sm">
+                {projects.map((p: any, idx: number) => {
+                  if (['on_grid', 'off_grid', 'hybrid'].includes(p.projectType)) {
+                    const issues = [];
+                    if (p.panelCount === 0) issues.push('Panel count is 0');
+                    if (p.projectValue === 0) issues.push('Project value is 0');
+                    if (issues.length > 0) {
+                      return (
+                        <li key={idx}>
+                          Project {idx + 1} ({p.projectType}): {issues.join(', ')}
+                        </li>
+                      );
+                    }
                   }
-                }
-                return null;
-              })}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+                  return null;
+                })}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Property Type Warning */}
-      {projects.length > 0 && 
-       projects.some((p: any) => ['on_grid', 'hybrid'].includes(p.projectType)) && 
-       !form.getValues().customerData?.propertyType && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Property Type Missing:</strong> Property type is required to calculate government subsidy for solar projects. Please complete customer details in Step 2.
-          </AlertDescription>
-        </Alert>
-      )}
+      {projects.length > 0 &&
+        projects.some((p: any) => ['on_grid', 'hybrid'].includes(p.projectType)) &&
+        !form.getValues().customerData?.propertyType && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Property Type Missing:</strong> Property type is required to calculate government subsidy for solar projects. Please complete customer details in Step 2.
+            </AlertDescription>
+          </Alert>
+        )}
 
       {projects.length > 0 && (
         <div className="space-y-3 sm:space-y-4">
           <h5 className="font-medium text-sm sm:text-base">Configured Projects ({projects.length})</h5>
           <div className="grid gap-3 sm:gap-4">
             {projects.map((project: any, index: number) => (
-              <Card key={index} className={`border transition-colors ${
-                activeProjectIndex === index ? 'border-primary bg-primary/5' : 'border-border'
-              }`}>
+              <Card key={index} className={`border transition-colors ${activeProjectIndex === index ? 'border-primary bg-primary/5' : 'border-border'
+                }`}>
                 <CardHeader className="p-3 sm:p-4 pb-3 sm:pb-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1527,7 +1527,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   onUpdate: (data: any) => void;
 }) {
   const { toast } = useToast();
-  
+
   const handleFieldChange = (field: string, value: any) => {
     // CRITICAL: Ensure inverterKVA is always STRING for schema validation
     if (field === 'inverterKVA' && value !== undefined && value !== null) {
@@ -1541,11 +1541,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   const calculateBackupWatts = useCallback(() => {
     const batteryAH = parseInt(project.batteryAH) || 100;
     const batteryQty = project.batteryCount || 1;
-    
+
     // Formula: Battery AH × Battery Qty × 10 - 3% loss
     const rawWatts = batteryAH * batteryQty * 10;
     const wattsAfterLoss = rawWatts - (rawWatts * 0.03);
-    
+
     return Math.round(wattsAfterLoss);
   }, [project.batteryAH, project.batteryCount]);
 
@@ -1597,7 +1597,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       const newUsageWatts = currentBackupSolutions.usageWatts || [];
       const newBackupHours = calculateBackupHours(calculatedBackupWatts, newUsageWatts);
 
-      onUpdate({ 
+      onUpdate({
         backupSolutions: {
           backupWatts: calculatedBackupWatts,
           usageWatts: newUsageWatts,
@@ -1606,13 +1606,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
         }
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.projectType, project.batteryAH, project.batteryCount]);
 
   // Auto-calculate system kW from panel data (actual decimal value) - USING SAFE PARSING
   const panelWattsNumber = parsePanelWatts(project.panelWatts);
   const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
-  const actualSystemKW = (panelWattsNumber && panelCountNumber) 
+  const actualSystemKW = (panelWattsNumber && panelCountNumber)
     ? (panelWattsNumber * panelCountNumber) / 1000
     : 0;
 
@@ -1679,7 +1679,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     checked={project.solarPanelMake?.includes(brand) || false}
                     onCheckedChange={(checked) => {
                       const currentMakes = project.solarPanelMake || [];
-                      const newMakes = checked 
+                      const newMakes = checked
                         ? [...currentMakes, brand]
                         : currentMakes.filter((m: string) => m !== brand);
                       handleFieldChange('solarPanelMake', newMakes);
@@ -1845,7 +1845,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     checked={project.inverterMake?.includes(make) || false}
                     onCheckedChange={(checked) => {
                       const currentMakes = project.inverterMake || [];
-                      const newMakes = checked 
+                      const newMakes = checked
                         ? [...currentMakes, make]
                         : currentMakes.filter((m: string) => m !== make);
                       handleFieldChange('inverterMake', newMakes);
@@ -1866,7 +1866,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             <Input
               type="number"
               value={
-                (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
+                (project.projectType === 'off_grid' || project.projectType === 'hybrid')
                   ? (project.inverterKVA ?? '')
                   : (project.inverterKW ?? '')
               }
@@ -1874,14 +1874,14 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 const value = e.target.value;
                 const capacity = parseFloat(value) || 0;
                 const isOffGridOrHybrid = project.projectType === 'off_grid' || project.projectType === 'hybrid';
-                
+
                 if (isOffGridOrHybrid) {
                   // For off-grid and hybrid: 
                   // - inverterKVA as STRING (schema expects z.string())
                   // - inverterKW as NUMBER (for pricing utilities compatibility)
                   handleFieldChange('inverterKVA', value === '' ? undefined : value);
                   handleFieldChange('inverterKW', value === '' ? undefined : capacity);
-                  
+
                   // Auto-select phase based on numeric value
                   if (capacity > 0) {
                     const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
@@ -1890,7 +1890,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 } else {
                   // For on-grid: send as NUMBER (schema expects z.number())
                   handleFieldChange('inverterKW', value === '' ? undefined : capacity);
-                  
+
                   if (capacity > 0) {
                     const autoPhase = capacity < 6 ? 'single_phase' : 'three_phase';
                     handleFieldChange('inverterPhase', autoPhase);
@@ -1900,8 +1900,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               min="0"
               step="0.1"
               placeholder={
-                (project.projectType === 'off_grid' || project.projectType === 'hybrid') 
-                  ? 'Enter inverter KVA rating' 
+                (project.projectType === 'off_grid' || project.projectType === 'hybrid')
+                  ? 'Enter inverter KVA rating'
                   : 'Enter inverter KW rating'
               }
               data-testid={`input-inverter-kw-${projectIndex}`}
@@ -1920,7 +1920,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 } else {
                   const qty = parseInt(value) || 1;
                   handleFieldChange('inverterQty', qty);
-                  
+
                   if (project.electricalAccessories && qty > 0) {
                     handleFieldChange('electricalCount', qty);
                   }
@@ -1934,8 +1934,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Inverter Phase <span className="text-xs text-muted-foreground">(Auto-selected based on KW)</span></label>
-            <Select 
-              value={project.inverterPhase || "single_phase"} 
+            <Select
+              value={project.inverterPhase || "single_phase"}
               onValueChange={(value) => handleFieldChange('inverterPhase', value)}
             >
               <SelectTrigger data-testid={`select-inverter-phase-${projectIndex}`}>
@@ -2027,7 +2027,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     checked={Array.isArray(project.earth) ? project.earth.includes(type) : project.earth === type}
                     onCheckedChange={(checked) => {
                       const currentEarth = Array.isArray(project.earth) ? project.earth : (project.earth ? [project.earth] : []);
-                      const newEarth = checked 
+                      const newEarth = checked
                         ? [...currentEarth, type]
                         : currentEarth.filter((e: string) => e !== type);
                       handleFieldChange('earth', newEarth);
@@ -2082,50 +2082,50 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             </Select>
           </div>
 
-          {(project.structureType === 'gp_structure' || 
+          {(project.structureType === 'gp_structure' ||
             project.structureType === 'gi_structure' ||
             project.structureType === 'gi_round_pipe' ||
             project.structureType === 'ms_square_pipe') && (
-            <>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Lower End Height (ft)</label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 3"
-                  value={project.gpStructure?.lowerEndHeight || ''}
-                  onChange={(e) => handleFieldChange('gpStructure', { 
-                    ...project.gpStructure, 
-                    lowerEndHeight: e.target.value 
-                  })}
-                  data-testid={`input-lower-height-${projectIndex}`}
-                  className="text-base"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Higher End Height (ft)</label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 4"
-                  value={project.gpStructure?.higherEndHeight || ''}
-                  onChange={(e) => handleFieldChange('gpStructure', { 
-                    ...project.gpStructure, 
-                    higherEndHeight: e.target.value 
-                  })}
-                  data-testid={`input-higher-height-${projectIndex}`}
-                  className="text-base"
-                />
-              </div>
-            </>
-          )}
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Lower End Height (ft)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 3"
+                    value={project.gpStructure?.lowerEndHeight || ''}
+                    onChange={(e) => handleFieldChange('gpStructure', {
+                      ...project.gpStructure,
+                      lowerEndHeight: e.target.value
+                    })}
+                    data-testid={`input-lower-height-${projectIndex}`}
+                    className="text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Higher End Height (ft)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g., 4"
+                    value={project.gpStructure?.higherEndHeight || ''}
+                    onChange={(e) => handleFieldChange('gpStructure', {
+                      ...project.gpStructure,
+                      higherEndHeight: e.target.value
+                    })}
+                    data-testid={`input-higher-height-${projectIndex}`}
+                    className="text-base"
+                  />
+                </div>
+              </>
+            )}
 
           {project.structureType === 'mono_rail' && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Mono Rail Type</label>
-              <Select 
-                value={project.monoRail?.type || 'mini_rail'} 
-                onValueChange={(value) => handleFieldChange('monoRail', { 
-                  ...project.monoRail, 
-                  type: value 
+              <Select
+                value={project.monoRail?.type || 'mini_rail'}
+                onValueChange={(value) => handleFieldChange('monoRail', {
+                  ...project.monoRail,
+                  type: value
                 })}
               >
                 <SelectTrigger data-testid={`select-mono-rail-${projectIndex}`}>
@@ -2351,109 +2351,109 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
   );
 
   const renderBatteryFields = () => (
-      <div className="space-y-4 mt-4">
-        <h4 className="font-medium text-sm text-gray-700">Battery Configuration</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Battery Brand</label>
-            <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
-              <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="exide">Exide</SelectItem>
-                <SelectItem value="utl">UTL</SelectItem>
-                <SelectItem value="exide_utl">Exide/UTL</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Battery Type</label>
-            <Select value={project.batteryType || "lead_acid"} onValueChange={(value) => handleFieldChange('batteryType', value)}>
-              <SelectTrigger data-testid={`select-battery-type-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lead_acid">Lead Acid</SelectItem>
-                <SelectItem value="lithium">Lithium</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Battery AH</label>
-            <Select value={project.batteryAH || "100"} onValueChange={(value) => handleFieldChange('batteryAH', value)}>
-              <SelectTrigger data-testid={`select-battery-ah-${projectIndex}`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="100">100 AH</SelectItem>
-                <SelectItem value="120">120 AH</SelectItem>
-                <SelectItem value="150">150 AH</SelectItem>
-                <SelectItem value="200">200 AH</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Voltage (V)</label>
-            <Input
-              type="number"
-              min="0"
-              value={project.voltage ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFieldChange('voltage', value === '' ? '' : parseFloat(value) || 0);
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('voltage', 12);
-                }
-              }}
-              data-testid={`input-voltage-${projectIndex}`}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Battery Count</label>
-            <Input
-              type="number"
-              min="1"
-              value={project.batteryCount ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFieldChange('batteryCount', value === '' ? '' : parseInt(value) || 0);
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('batteryCount', 1);
-                }
-              }}
-              data-testid={`input-battery-count-${projectIndex}`}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Battery Stands</label>
-            <Input
-              type="number"
-              min="1"
-              value={project.batteryStands ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleFieldChange('batteryStands', value === '' ? '' : parseInt(value) || 0);
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('batteryStands', 1);
-                }
-              }}
-              data-testid={`input-battery-stands-${projectIndex}`}
-            />
-          </div>
+    <div className="space-y-4 mt-4">
+      <h4 className="font-medium text-sm text-gray-700">Battery Configuration</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Brand</label>
+          <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
+            <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="exide">Exide</SelectItem>
+              <SelectItem value="utl">UTL</SelectItem>
+              <SelectItem value="exide_utl">Exide/UTL</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Type</label>
+          <Select value={project.batteryType || "lead_acid"} onValueChange={(value) => handleFieldChange('batteryType', value)}>
+            <SelectTrigger data-testid={`select-battery-type-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lead_acid">Lead Acid</SelectItem>
+              <SelectItem value="lithium">Lithium</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery AH</label>
+          <Select value={project.batteryAH || "100"} onValueChange={(value) => handleFieldChange('batteryAH', value)}>
+            <SelectTrigger data-testid={`select-battery-ah-${projectIndex}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="100">100 AH</SelectItem>
+              <SelectItem value="120">120 AH</SelectItem>
+              <SelectItem value="150">150 AH</SelectItem>
+              <SelectItem value="200">200 AH</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Voltage (V)</label>
+          <Input
+            type="number"
+            min="0"
+            value={project.voltage ?? ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleFieldChange('voltage', value === '' ? '' : parseFloat(value) || 0);
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('voltage', 12);
+              }
+            }}
+            data-testid={`input-voltage-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Count</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.batteryCount ?? ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleFieldChange('batteryCount', value === '' ? '' : parseInt(value) || 0);
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('batteryCount', 1);
+              }
+            }}
+            data-testid={`input-battery-count-${projectIndex}`}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Battery Stands</label>
+          <Input
+            type="number"
+            min="1"
+            value={project.batteryStands ?? ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleFieldChange('batteryStands', value === '' ? '' : parseInt(value) || 0);
+            }}
+            onBlur={(e) => {
+              if (e.target.value === '') {
+                handleFieldChange('batteryStands', 1);
+              }
+            }}
+            data-testid={`input-battery-stands-${projectIndex}`}
+          />
         </div>
       </div>
+    </div>
   );
 
   const renderBackupSolutionsFields = () => {
@@ -2719,7 +2719,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Capacity (Litre) *</label>
             <Input
@@ -2739,7 +2739,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               data-testid={`input-litre-${projectIndex}`}
             />
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Heating Coil Type</label>
             <Input
@@ -2749,7 +2749,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               data-testid={`input-heating-coil-${projectIndex}`}
             />
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Floor Level *</label>
             <Select value={project.floor || '0'} onValueChange={(value) => handleFieldChange('floor', value)}>
@@ -2765,7 +2765,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Project Value (₹) <span className="text-xs text-muted-foreground">(Per Unit Price incl. GST)</span></label>
             <Input
@@ -2934,7 +2934,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Drive Type</label>
               <Select value={project.drive || "vfd"} onValueChange={(value) => handleFieldChange('drive', value)}>
@@ -2961,7 +2961,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Quantity *</label>
               <Input
@@ -2994,7 +2994,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                       checked={project.panelBrand?.includes(brand) || false}
                       onCheckedChange={(checked) => {
                         const currentMakes = project.panelBrand || [];
-                        const newMakes = checked 
+                        const newMakes = checked
                           ? [...currentMakes, brand]
                           : currentMakes.filter((m: string) => m !== brand);
                         handleFieldChange('panelBrand', newMakes);
@@ -3158,50 +3158,50 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
               </Select>
             </div>
 
-            {(project.structureType === 'gp_structure' || 
+            {(project.structureType === 'gp_structure' ||
               project.structureType === 'gi_structure' ||
               project.structureType === 'gi_round_pipe' ||
               project.structureType === 'ms_square_pipe') && (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Lower End Height (ft)</label>
-                  <Input
-                    type="number"
-                    placeholder="e.g., 3"
-                    value={project.gpStructure?.lowerEndHeight || ''}
-                    onChange={(e) => handleFieldChange('gpStructure', { 
-                      ...project.gpStructure, 
-                      lowerEndHeight: e.target.value 
-                    })}
-                    data-testid={`input-pump-lower-height-${projectIndex}`}
-                    className="text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Higher End Height (ft)</label>
-                  <Input
-                    type="number"
-                    placeholder="e.g., 4"
-                    value={project.gpStructure?.higherEndHeight || ''}
-                    onChange={(e) => handleFieldChange('gpStructure', { 
-                      ...project.gpStructure, 
-                      higherEndHeight: e.target.value 
-                    })}
-                    data-testid={`input-pump-higher-height-${projectIndex}`}
-                    className="text-base"
-                  />
-                </div>
-              </>
-            )}
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Lower End Height (ft)</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 3"
+                      value={project.gpStructure?.lowerEndHeight || ''}
+                      onChange={(e) => handleFieldChange('gpStructure', {
+                        ...project.gpStructure,
+                        lowerEndHeight: e.target.value
+                      })}
+                      data-testid={`input-pump-lower-height-${projectIndex}`}
+                      className="text-base"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Higher End Height (ft)</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 4"
+                      value={project.gpStructure?.higherEndHeight || ''}
+                      onChange={(e) => handleFieldChange('gpStructure', {
+                        ...project.gpStructure,
+                        higherEndHeight: e.target.value
+                      })}
+                      data-testid={`input-pump-higher-height-${projectIndex}`}
+                      className="text-base"
+                    />
+                  </div>
+                </>
+              )}
 
             {project.structureType === 'mono_rail' && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Mono Rail Type</label>
-                <Select 
-                  value={project.monoRail?.type || 'mini_rail'} 
-                  onValueChange={(value) => handleFieldChange('monoRail', { 
-                    ...project.monoRail, 
-                    type: value 
+                <Select
+                  value={project.monoRail?.type || 'mini_rail'}
+                  onValueChange={(value) => handleFieldChange('monoRail', {
+                    ...project.monoRail,
+                    type: value
                   })}
                 >
                   <SelectTrigger data-testid={`select-pump-mono-rail-${projectIndex}`}>
@@ -3324,7 +3324,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                       checked={Array.isArray(project.earth) ? project.earth.includes(type) : false}
                       onCheckedChange={(checked) => {
                         const currentEarth = Array.isArray(project.earth) ? project.earth : [];
-                        const newEarth = checked 
+                        const newEarth = checked
                           ? [...currentEarth, type]
                           : currentEarth.filter((e: string) => e !== type);
                         handleFieldChange('earth', newEarth);
@@ -3424,9 +3424,9 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       {renderSolarSystemFields()}
       {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && renderBatteryFields()}
       {(project.projectType === 'off_grid' || project.projectType === 'hybrid') && renderBackupSolutionsFields()}
-      
+
       <Separator />
-      
+
       {/* Pricing Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
         <div>
@@ -3462,11 +3462,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 export default function QuotationCreation() {
   const [, setLocation] = useLocation();
   const { user } = useAuthContext();
-  
+
   // Detect edit mode using URL pattern
   const [isEditMode, params] = useRoute("/quotations/:id/edit");
   const quotationId = params?.id;
-  
+
   // Initialize step to 2 (Project Configuration) in edit mode, 0 in create mode
   const [currentStep, setCurrentStep] = useState(isEditMode ? 2 : 0);
   const [quotationSource, setQuotationSource] = useState<"manual" | "site_visit">("manual");
@@ -3481,23 +3481,23 @@ export default function QuotationCreation() {
   const [isFetchingBom, setIsFetchingBom] = useState(false);
   const [editingBomItem, setEditingBomItem] = useState<number | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
-  
+
   // State for editable scope of work sections
-  const [companyScopeItems, setCompanyScopeItems] = useState<{[projectIndex: number]: string[]}>({});
-  const [customerScopeItems, setCustomerScopeItems] = useState<{[projectIndex: number]: string[]}>({});
-  const [editingCompanyScope, setEditingCompanyScope] = useState<{projectIndex: number, itemIndex: number} | null>(null);
-  const [editingCustomerScope, setEditingCustomerScope] = useState<{projectIndex: number, itemIndex: number} | null>(null);
-  const [customFloorText, setCustomFloorText] = useState<{[projectIndex: number]: string}>({});
+  const [companyScopeItems, setCompanyScopeItems] = useState<{ [projectIndex: number]: string[] }>({});
+  const [customerScopeItems, setCustomerScopeItems] = useState<{ [projectIndex: number]: string[] }>({});
+  const [editingCompanyScope, setEditingCompanyScope] = useState<{ projectIndex: number, itemIndex: number } | null>(null);
+  const [editingCustomerScope, setEditingCustomerScope] = useState<{ projectIndex: number, itemIndex: number } | null>(null);
+  const [customFloorText, setCustomFloorText] = useState<{ [projectIndex: number]: string }>({});
   const [editingFloor, setEditingFloor] = useState<number | null>(null);
-  
+
   const { toast } = useToast();
-  
+
   // Fetch existing quotation data if in edit mode (FIX: Use proper URL string)
   const { data: existingQuotation, isLoading: isLoadingQuotation } = useQuery({
     queryKey: [`/api/quotations/${quotationId}`],
     enabled: isEditMode && !!quotationId,
   });
-  
+
   // Fetch customer data for the quotation in edit mode (FIX: Use proper URL string)
   const customerId = (existingQuotation as any)?.customerId;
   const { data: existingCustomer, isLoading: isLoadingCustomer } = useQuery({
@@ -3509,17 +3509,17 @@ export default function QuotationCreation() {
   const filterSiteVisit = useCallback((visit: any) => {
     // Search filter
     const searchLower = siteVisitSearchQuery.toLowerCase();
-    const matchesSearch = !siteVisitSearchQuery || 
+    const matchesSearch = !siteVisitSearchQuery ||
       visit.customer?.name?.toLowerCase().includes(searchLower) ||
       visit.customer?.mobile?.includes(searchLower);
-    
+
     // Date filter
     let matchesDate = true;
     if (dateFilter !== "all" && visit.siteInTime) {
       const visitDate = new Date(visit.siteInTime);
       const now = new Date();
       now.setHours(23, 59, 59, 999);
-      
+
       if (dateFilter === "custom") {
         if (customDateFrom && customDateTo) {
           const fromDate = new Date(customDateFrom);
@@ -3533,7 +3533,7 @@ export default function QuotationCreation() {
       } else {
         const diffTime = now.getTime() - visitDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
+
         switch (dateFilter) {
           case "today":
             matchesDate = diffDays === 0;
@@ -3545,24 +3545,24 @@ export default function QuotationCreation() {
             matchesDate = diffDays <= 30;
             break;
           case "thisMonth":
-            matchesDate = visitDate.getMonth() === now.getMonth() && 
-                         visitDate.getFullYear() === now.getFullYear();
+            matchesDate = visitDate.getMonth() === now.getMonth() &&
+              visitDate.getFullYear() === now.getFullYear();
             break;
           case "lastMonth":
             const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            matchesDate = visitDate.getMonth() === lastMonth.getMonth() && 
-                         visitDate.getFullYear() === lastMonth.getFullYear();
+            matchesDate = visitDate.getMonth() === lastMonth.getMonth() &&
+              visitDate.getFullYear() === lastMonth.getFullYear();
             break;
           default:
             matchesDate = true;
         }
       }
     }
-    
+
     // Department filter
-    const matchesDepartment = departmentFilter === "all" || 
+    const matchesDepartment = departmentFilter === "all" ||
       visit.department === departmentFilter;
-    
+
     return matchesSearch && matchesDate && matchesDepartment;
   }, [siteVisitSearchQuery, dateFilter, customDateFrom, customDateTo, departmentFilter]);
 
@@ -3651,8 +3651,8 @@ export default function QuotationCreation() {
 
   // Check if all projects are water heater or water pump (service-only types)
   const projects = form.watch("projects") || [];
-  const isServiceOnlyQuotation = useMemo(() => 
-    projects.length > 0 && projects.every((p: any) => 
+  const isServiceOnlyQuotation = useMemo(() =>
+    projects.length > 0 && projects.every((p: any) =>
       ['water_heater', 'water_pump'].includes(p.projectType)
     ),
     [projects]
@@ -3674,7 +3674,7 @@ export default function QuotationCreation() {
   // Helper function to get property type for subsidy calculations
   const getPropertyType = (): string => {
     const formValues = form.getValues();
-    
+
     if (quotationSource === "site_visit") {
       return formValues.customerData?.propertyType || 'residential';
     } else {
@@ -3708,9 +3708,9 @@ export default function QuotationCreation() {
       const sanitizedData = sanitizeFormData(data, [
         'email', 'location', 'ebServiceNumber', 'propertyType', 'scope', 'tariffCode', 'ebSanctionPhase', 'ebSanctionKW'
       ]);
-      
+
       let finalCustomerId = sanitizedData.customerId;
-      
+
       // For manual quotations (NOT in edit mode), handle customer creation/lookup
       if (!isEditMode && quotationSource === "manual" && sanitizedData.customerData) {
         // Check if customer already selected via customerId dropdown
@@ -3725,24 +3725,24 @@ export default function QuotationCreation() {
           console.log("New customer created with ID:", finalCustomerId);
         }
       }
-      
+
       // In edit mode, use existing customer ID
       if (isEditMode && existingQuotation) {
         finalCustomerId = (existingQuotation as any).customerId;
       }
-      
+
       // Prepare payload - customerData handling depends on quotation source
       const { totalGSTAmount, totalWithGST, ...basePayload } = sanitizedData;
-      
+
       // Use PUT for edit mode, POST for create mode
       if (isEditMode && quotationId) {
         console.log("Updating quotation with ID:", quotationId);
-        
+
         // For edit mode: remove ALL immutable fields (customerId, source, customerData)
         // The backend will enforce these values from the existing quotation
         // This prevents any client-side tampering and ensures data integrity
         const { customerId, source, siteVisitMapping, customerData, ...editableFields } = basePayload;
-        
+
         console.log("Sending update payload (immutable fields excluded):", editableFields);
         const response = await apiRequest(`/api/quotations/${quotationId}`, "PUT", editableFields);
         return response.json();
@@ -3756,10 +3756,10 @@ export default function QuotationCreation() {
           // Include it in payload so backend can merge overrides: ...mappingResult.quotationData, ...req.body
           customerData: sanitizedData.customerData
         };
-        const url = quotationSource === "site_visit" && selectedSiteVisit 
+        const url = quotationSource === "site_visit" && selectedSiteVisit
           ? `/api/quotations/from-site-visit/${selectedSiteVisit}`
           : "/api/quotations";
-        
+
         console.log("Sending quotation payload:", payloadWithCustomerId);
         const response = await apiRequest(url, "POST", payloadWithCustomerId);
         return response.json();
@@ -3785,7 +3785,7 @@ export default function QuotationCreation() {
       console.error("Error message:", error.message);
       console.error("Error name:", error.name);
       console.error("Full error stringified:", JSON.stringify(error, null, 2));
-      
+
       // Try to extract validation errors from the response
       try {
         if (error.message && error.message.includes("400:")) {
@@ -3802,7 +3802,7 @@ export default function QuotationCreation() {
       } catch (e) {
         console.error("Error while trying to parse error details:", e);
       }
-      
+
       // Handle structured validation errors
       if (error.status === 422 && error.completenessAnalysis) {
         toast({
@@ -3826,6 +3826,87 @@ export default function QuotationCreation() {
     }
   });
 
+  // PDF Preview handler - allows previewing PDF with current form values without saving
+  const [isPreviewingPDF, setIsPreviewingPDF] = useState(false);
+
+  const handlePreviewPDF = async () => {
+    if (!quotationId && !isEditMode) {
+      toast({
+        title: "Save Required",
+        description: "Please save the quotation first before previewing PDF.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsPreviewingPDF(true);
+
+    try {
+      const currentFormValues = form.getValues();
+
+      // Send current form values as overrides to PDF endpoint
+      const response = await apiRequest(
+        `/api/quotations/${quotationId}/generate-pdf`,
+        'POST',
+        {
+          preparedBy: currentFormValues.preparedBy,
+          refName: currentFormValues.refName,
+          contactPerson: currentFormValues.contactPerson,
+          contactNumber: currentFormValues.contactNumber
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Create a temporary iframe to render the HTML
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '-10000px';
+        iframe.style.width = '210mm';
+        iframe.style.height = '297mm';
+        document.body.appendChild(iframe);
+
+        // Write the HTML content to the iframe
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDoc) {
+          iframeDoc.open();
+          iframeDoc.write(data.html);
+          iframeDoc.close();
+
+          // Wait for content to load then trigger print
+          setTimeout(() => {
+            // Set the title so the PDF uses the quotation number as filename
+            iframeDoc.title = `Quotation-${data.quotationNumber || 'Preview'}`;
+            iframe.contentWindow?.print();
+
+            toast({
+              title: "PDF Preview Ready",
+              description: "PDF preview generated with your current changes. Please save or print from the dialog.",
+            });
+
+            // Clean up after a delay
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 1000);
+          }, 500);
+        }
+      } else {
+        throw new Error('Failed to generate PDF preview');
+      }
+    } catch (error: any) {
+      console.error("Error previewing PDF:", error);
+      toast({
+        title: "Preview Failed",
+        description: "Failed to generate PDF preview. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPreviewingPDF(false);
+    }
+  };
+
   // Pre-fill form when in edit mode and quotation data is loaded
   useEffect(() => {
     if (isEditMode && existingQuotation && !isLoadingQuotation && existingCustomer && !isLoadingCustomer) {
@@ -3833,7 +3914,7 @@ export default function QuotationCreation() {
       const customer = existingCustomer as any;
       console.log("📝 Pre-filling form with existing quotation data:", quotation);
       console.log("👤 Customer data:", customer);
-      
+
       // Set the source and skip the source selection step in edit mode
       setQuotationSource(quotation.source || "manual");
       if (quotation.siteVisitMapping?.siteVisitId) {
@@ -3841,10 +3922,10 @@ export default function QuotationCreation() {
         // Important: Also set siteVisitMapping so it's available when navigating back to step 1
         setSiteVisitMapping(quotation.siteVisitMapping);
       }
-      
+
       // Note: currentStep is already initialized to 2 (Project Configuration) for edit mode
       // so we don't need to set it here
-      
+
       // Prepare customer data from the fetched customer
       const customerData = {
         name: customer.name || "",
@@ -3856,7 +3937,7 @@ export default function QuotationCreation() {
         location: customer.location || "",
         source: quotation.source || "manual"
       };
-      
+
       // Reset form with existing quotation data
       form.reset({
         customerId: quotation.customerId || "",
@@ -3929,7 +4010,7 @@ export default function QuotationCreation() {
         contactNumber: quotation.contactNumber || "+91 99949 01500",
         siteVisitMapping: quotation.siteVisitMapping
       });
-      
+
       // Initialize custom scope items from existing quotation data
       if (quotation.customCompanyScopeItems) {
         setCompanyScopeItems(quotation.customCompanyScopeItems);
@@ -3937,12 +4018,12 @@ export default function QuotationCreation() {
       if (quotation.customCustomerScopeItems) {
         setCustomerScopeItems(quotation.customCustomerScopeItems);
       }
-      
+
       // Also load custom BOM if it exists
       if (quotation.customBillOfMaterials && quotation.customBillOfMaterials.length > 0) {
         setBomItems(quotation.customBillOfMaterials);
       }
-      
+
       toast({
         title: "Edit Mode",
         description: `Editing quotation ${quotation.quotationNumber}. Revision: R${quotation.documentVersion || 1}`,
@@ -3956,22 +4037,22 @@ export default function QuotationCreation() {
       const data = (mappingData as any).quotationData;
       const metadata = (mappingData as any).mappingMetadata;
       const originalSiteVisitData = (mappingData as any).originalSiteVisitData;
-      
+
       // Extract customer data from multiple possible paths - be flexible
-      const customerData = originalSiteVisitData?.customer || 
-                          originalSiteVisitData?.customerData || 
-                          metadata?.originalSiteVisitData?.customer ||
-                          metadata?.customer ||
-                          data.customerData ||
-                          {}; // Default to empty object to allow manual entry
-      
+      const customerData = originalSiteVisitData?.customer ||
+        originalSiteVisitData?.customerData ||
+        metadata?.originalSiteVisitData?.customer ||
+        metadata?.customer ||
+        data.customerData ||
+        {}; // Default to empty object to allow manual entry
+
       // Auto-populate form with mapped data, ensuring proper QuotationProject structure
       const mappedProjects: QuotationProject[] = (data.projects || []).map((project: any) => {
         // Extract and normalize array fields first to avoid duplicates
         const earth = Array.isArray(project.earth) ? project.earth : (project.earth ? [project.earth] : []);
         const solarPanelMake = Array.isArray(project.solarPanelMake) ? project.solarPanelMake : (project.solarPanelMake ? [project.solarPanelMake] : []);
         const inverterMake = Array.isArray(project.inverterMake) ? project.inverterMake : (project.inverterMake ? [project.inverterMake] : []);
-        
+
         // Ensure full QuotationProject compliance with all required fields
         return {
           projectType: project.projectType,
@@ -3994,7 +4075,7 @@ export default function QuotationCreation() {
           inverterMake
         } as QuotationProject;
       });
-      
+
       // Set customer data in the form for site visit source
       const customerFormData = {
         name: customerData?.name || "",
@@ -4004,7 +4085,7 @@ export default function QuotationCreation() {
         ebServiceNumber: customerData?.ebServiceNumber || "",
         location: customerData?.location || ""
       };
-      
+
       form.reset({
         ...form.getValues(),
         source: "site_visit", // Ensure source is properly set
@@ -4034,7 +4115,7 @@ export default function QuotationCreation() {
           mappedAt: metadata.mappedAt instanceof Date ? metadata.mappedAt : new Date(metadata.mappedAt)
         } : undefined
       });
-      
+
       // Enhanced mapping data with customer info for SiteVisitCustomerDetailsForm
       const enhancedMapping = {
         ...mappingData,
@@ -4057,11 +4138,11 @@ export default function QuotationCreation() {
         // Include completeness analysis at the top level
         completenessAnalysis: metadata?.completenessAnalysis || (mappingData as any).completenessAnalysis
       };
-      
+
       setSiteVisitMapping(enhancedMapping);
-      
+
       toast({
-        title: "Complete Site Visit Data Mapped", 
+        title: "Complete Site Visit Data Mapped",
         description: `All available data mapped with ${metadata?.completenessAnalysis?.completenessScore || 0}% completeness. Grade: ${metadata?.completenessAnalysis?.qualityGrade || 'Unknown'}`
       });
     }
@@ -4071,10 +4152,10 @@ export default function QuotationCreation() {
   useEffect(() => {
     if (fallbackSiteVisitData && ((mappingError && !mappingData) || isEditMode)) {
       const siteVisit = fallbackSiteVisitData as any;
-      
+
       // Extract customer data - be flexible with missing data
       const customerData = siteVisit.customer || siteVisit.customerData || {};
-      
+
       // Set customer data in the form for fallback case - allow partial data
       const customerFormData = {
         name: customerData?.name || "",
@@ -4084,7 +4165,7 @@ export default function QuotationCreation() {
         ebServiceNumber: customerData?.ebServiceNumber || "",
         location: customerData?.location || ""
       };
-      
+
       // Create basic mapping metadata for partial data
       const partialMapping = {
         sourceVisitId: siteVisit.id,
@@ -4106,7 +4187,7 @@ export default function QuotationCreation() {
           customerData: customerData
         }
       };
-      
+
       // Populate form with customer data only
       form.reset({
         ...form.getValues(),
@@ -4119,9 +4200,9 @@ export default function QuotationCreation() {
           mappedAt: partialMapping.mappedAt instanceof Date ? partialMapping.mappedAt : new Date(partialMapping.mappedAt)
         } : undefined
       });
-      
+
       setSiteVisitMapping(partialMapping);
-      
+
       toast({
         title: "Site Visit Data Retrieved",
         description: "Available customer information loaded. Please complete any missing details below.",
@@ -4134,7 +4215,7 @@ export default function QuotationCreation() {
   useEffect(() => {
     const projects = form.watch("projects");
     if (!projects || projects.length === 0 || currentStep !== 4) return; // Only when on Review & Submit step
-    
+
     // Helper to generate default company scope items for a project
     const generateCompanyScopeItems = (project: any, projectIndex: number): string[] => {
       const items: string[] = [];
@@ -4149,45 +4230,45 @@ export default function QuotationCreation() {
         '4': '4th Floor'
       };
       const floorText = customFloorText[projectIndex] || floorMap[floor] || 'Ground Floor';
-      
-      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' : 
-                              project.projectType === 'off_grid' ? 'Off-Grid' : 
-                              project.projectType === 'hybrid' ? 'Hybrid' :
-                              project.projectType === 'water_heater' ? 'Solar Water Heater' :
-                              project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType;
-      
+
+      const projectTypeName = project.projectType === 'on_grid' ? 'On-Grid' :
+        project.projectType === 'off_grid' ? 'Off-Grid' :
+          project.projectType === 'hybrid' ? 'Hybrid' :
+            project.projectType === 'water_heater' ? 'Solar Water Heater' :
+              project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType;
+
       // Structure item for solar projects
       if (['on_grid', 'off_grid', 'hybrid'].includes(project.projectType)) {
         items.push(`For ${projectTypeName}, South facing slant mounting of lower end height is ${lowerHeight} feet & ${higherHeight} feet at higher end. (${floorText})`);
       }
-      
+
       // Civil work if company scope
       if (project.civilWorkScope === 'company_scope') {
         items.push('Civil work including earth pit digging and chamber construction');
       }
-      
+
       // Net meter if company scope
       if (project.netMeterScope === 'company_scope') {
         items.push('Net (Bi-directional) Meter - Application and Installation');
       }
-      
+
       // Electrical work if company scope
       if (project.electricalWorkScope === 'company_scope') {
         items.push('Complete electrical work and wiring');
       }
-      
+
       // Plumbing work if company scope (for water heater/pump)
       if (project.plumbingWorkScope === 'company_scope') {
         items.push('Plumbing work and water connections');
       }
-      
+
       return items;
     };
-    
+
     // Helper to generate default customer scope items for a project
     const generateCustomerScopeItems = (project: any): string[] => {
       const items: string[] = [];
-      
+
       // Civil work if customer scope
       if (project.civilWorkScope === 'customer_scope') {
         items.push('Earth pit digging');
@@ -4195,25 +4276,25 @@ export default function QuotationCreation() {
           items.push('1 feet chamber and concrete (for Structure)');
         }
       }
-      
+
       // Net meter if customer scope
       if (project.netMeterScope === 'customer_scope') {
         items.push('Application and Installation charges for net meter to be paid by Customer');
       }
-      
+
       // Electrical work if customer scope
       if (project.electricalWorkScope === 'customer_scope') {
         items.push('Electrical work and wiring');
       }
-      
+
       // Plumbing work if customer scope (for water heater/pump)
       if (project.plumbingWorkScope === 'customer_scope') {
         items.push('Plumbing work and water connections');
       }
-      
+
       return items;
     };
-    
+
     // Initialize or update scope items for all projects
     setCompanyScopeItems(prev => {
       const updated = { ...prev };
@@ -4225,7 +4306,7 @@ export default function QuotationCreation() {
       });
       return updated;
     });
-    
+
     setCustomerScopeItems(prev => {
       const updated = { ...prev };
       projects.forEach((project: any, index: number) => {
@@ -4237,7 +4318,7 @@ export default function QuotationCreation() {
       return updated;
     });
   }, [form, currentStep, customFloorText]); // Re-run when projects change or step changes
-  
+
   // Scroll to top when step changes
   useEffect(() => {
     const mainElement = document.querySelector('main.overflow-y-auto');
@@ -4261,20 +4342,20 @@ export default function QuotationCreation() {
 
   const canProceed = () => {
     const values = form.getValues();
-    
+
     if (currentStep === 1) {
       console.log("🔍 CUSTOMER VALIDATION CHECK");
       console.log("Quotation Source:", quotationSource);
       console.log("Customer Data:", values.customerData);
       console.log("Customer ID:", values.customerId);
     }
-    
+
     if (currentStep === 4) {
       console.log("🔍 FINAL STEP VALIDATION CHECK");
       console.log("Can proceed?", true);
       console.log("Form errors:", form.formState.errors);
     }
-    
+
     switch (currentStep) {
       case 0: // Source selection (skipped in edit mode)
         return isEditMode || quotationSource === "manual" || (quotationSource === "site_visit" && selectedSiteVisit);
@@ -4283,44 +4364,44 @@ export default function QuotationCreation() {
         if (isEditMode) {
           return true;
         }
-        
+
         if (quotationSource === "manual") {
           // For manual creation, we ALWAYS need customerData to be properly filled
           // Whether selected from database or entered manually
           const customerData = values.customerData;
-          
+
           if (!customerData) {
             console.log("❌ No customer data - button DISABLED");
             return false;
           }
-          
+
           const isNameValid = customerData.name && customerData.name.trim().length >= 2;
           const isMobileValid = customerData.mobile && customerData.mobile.trim().length >= 10;
           const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
           const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
-          
+
           console.log("Validation:", { isNameValid, isMobileValid, isAddressValid, isPropertyTypeValid });
           const result = isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
           console.log(result ? "✅ All valid - button ENABLED" : "❌ Some invalid - button DISABLED");
-          
+
           return result;
         } else {
           // For site visit source, check that customer data is complete and valid
           const customerData = values.customerData;
           if (!customerData) return false;
-          
+
           const isNameValid = customerData.name && customerData.name.trim().length >= 2;
           const isMobileValid = customerData.mobile && customerData.mobile.trim().length >= 10;
           const isAddressValid = customerData.address && customerData.address.trim().length >= 3;
           const isPropertyTypeValid = customerData.propertyType && customerData.propertyType.trim() !== "";
-          
+
           return isNameValid && isMobileValid && isAddressValid && isPropertyTypeValid;
         }
       case 2: // Projects
         if (!values.projects || values.projects.length === 0) {
           return false;
         }
-        
+
         // Validate each project has required fields
         const hasValidProjects = values.projects.every((project: any) => {
           // For solar projects (on_grid, off_grid, hybrid)
@@ -4334,7 +4415,7 @@ export default function QuotationCreation() {
           // For water_heater and water_pump, just check projectValue
           return project.projectValue > 0;
         });
-        
+
         return hasValidProjects;
       case 3: // Pricing
         return (values.totalCustomerPayment || 0) > 0;
@@ -4352,7 +4433,7 @@ export default function QuotationCreation() {
     const calculateTotals = () => {
       const values = form.getValues();
       const projects = values.projects || [];
-      
+
       // totalSystemCost is now the sum of base prices (before GST)
       const totalSystemCost = projects.reduce((sum: number, project: any) => sum + (project.basePrice || 0), 0);
       const totalGSTAmount = projects.reduce((sum: number, project: any) => sum + (project.gstAmount || 0), 0);
@@ -4382,7 +4463,7 @@ export default function QuotationCreation() {
       if (currentStep === 4 && form.watch("projects").length > 0) {
         console.log("📦 BOM FETCH useEffect triggered - currentStep:", currentStep);
         console.log("⚠️ WARNING: This useEffect should ONLY fetch BOM, NOT create quotation");
-        
+
         // Check if we have custom BOM from edit mode
         if (isEditMode && existingQuotation && (existingQuotation as any).customBillOfMaterials) {
           setBomItems((existingQuotation as any).customBillOfMaterials);
@@ -4394,13 +4475,13 @@ export default function QuotationCreation() {
           // Get the first project for BOM generation (multi-project BOM coming later)
           const project = form.watch("projects")[0];
           const propertyType = getPropertyType();
-          
+
           console.log("📦 Fetching BOM preview only (NOT creating quotation)");
           const response = await apiRequest("/api/quotations/preview-bom", "POST", {
             project,
             propertyType
           });
-          
+
           const data = await response.json();
           setBomItems(data.billOfMaterials || []);
           console.log("✅ BOM preview fetched successfully");
@@ -4441,7 +4522,7 @@ export default function QuotationCreation() {
     const sanitizedData = sanitizeFormData(data, [
       'email', 'location', 'ebServiceNumber', 'propertyType', 'scope', 'tariffCode', 'ebSanctionPhase', 'ebSanctionKW'
     ]);
-    
+
     // CRITICAL: Deep sanitize nested customerData fields
     if (sanitizedData.customerData) {
       sanitizedData.customerData = {
@@ -4453,7 +4534,7 @@ export default function QuotationCreation() {
         propertyType: sanitizedData.customerData.propertyType === "" ? null : sanitizedData.customerData.propertyType,
       };
     }
-    
+
     console.log("═══════════════════════════════════════════");
     console.log("🚀🚀🚀 FORM SUBMIT - onSubmit triggered 🚀🚀🚀");
     console.log("⏰ Timestamp:", new Date().toISOString());
@@ -4463,33 +4544,33 @@ export default function QuotationCreation() {
     console.trace("Form submission trace");
     console.log("═══════════════════════════════════════════");
     console.log("Form data:", JSON.stringify(sanitizedData, null, 2));
-    
+
     // Log each project in detail
     sanitizedData.projects?.forEach((project, idx) => {
       console.log(`\n📦 PROJECT ${idx} - Type: ${project.projectType}`);
       console.log("Project details:", JSON.stringify(project, null, 2));
     });
-    
+
     // GUARD: Only allow submission if we're on the final step (Review & Submit)
     if (currentStep !== WIZARD_STEPS.length - 1) {
       console.log("❌ BLOCKED: Form submission prevented - not on final step");
       console.log("Current step:", currentStep, "Final step:", WIZARD_STEPS.length - 1);
       return;
     }
-    
+
     // Validate business rules before submission
     const totalSystemCost = sanitizedData.projects.reduce((sum, p) => sum + (p.basePrice || 0), 0);
     const totalGSTAmount = sanitizedData.projects.reduce((sum, p) => sum + (p.gstAmount || 0), 0);
     const totalWithGST = sanitizedData.projects.reduce((sum, p) => sum + p.projectValue, 0);
     const totalSubsidyAmount = sanitizedData.projects.reduce((sum, p) => sum + p.subsidyAmount, 0);
     const calculatedCustomerPayment = totalWithGST - totalSubsidyAmount;
-    
+
     console.log("💰 Pricing validation:", {
       totalCustomerPayment: sanitizedData.totalCustomerPayment,
       calculatedCustomerPayment,
       difference: Math.abs(sanitizedData.totalCustomerPayment - calculatedCustomerPayment)
     });
-    
+
     // Ensure all pricing is consistent with business rules
     if (Math.abs(sanitizedData.totalCustomerPayment - calculatedCustomerPayment) > 1) {
       console.log("❌ Pricing validation failed - aborting submission");
@@ -4500,14 +4581,14 @@ export default function QuotationCreation() {
       });
       return;
     }
-    
+
     // Extract EB Sanction fields from customerData and move to quotation top-level
     const ebFields = {
       tariffCode: sanitizedData.customerData?.tariffCode === "" ? null : (sanitizedData.customerData?.tariffCode || null),
       ebSanctionPhase: sanitizedData.customerData?.ebSanctionPhase === "" ? null : (sanitizedData.customerData?.ebSanctionPhase || null),
       ebSanctionKW: sanitizedData.customerData?.ebSanctionKW === "" ? null : (sanitizedData.customerData?.ebSanctionKW || null)
     };
-    
+
     // Prepare final submission with proper QuotationProject validation
     // CRITICAL: Ensure inverterKVA is always STRING for off-grid and hybrid projects before schema validation
     const projectsWithFixedTypes = sanitizedData.projects.map((project: any) => {
@@ -4538,7 +4619,13 @@ export default function QuotationCreation() {
       advanceAmount: Math.round(calculatedCustomerPayment * (sanitizedData.advancePaymentPercentage / 100)),
       balanceAmount: calculatedCustomerPayment - Math.round(calculatedCustomerPayment * (sanitizedData.advancePaymentPercentage / 100))
     };
-    
+
+    console.log("🔍 PREPARED BY DEBUG:");
+    console.log("  Form value (sanitizedData.preparedBy):", sanitizedData.preparedBy);
+    console.log("  User display name:", user?.displayName);
+    console.log("  Final value being sent:", submissionData.preparedBy);
+    console.log("  Ref Name:", submissionData.refName);
+
     createQuotationMutation.mutate(submissionData);
   };
 
@@ -4578,7 +4665,7 @@ export default function QuotationCreation() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             {currentStep > 0 ? "Previous Step" : "Back to Quotations"}
           </Button>
-          
+
           <div className="flex items-start gap-4">
             <div className="hidden sm:flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 shrink-0">
               <FileText className="h-8 w-8 text-primary" />
@@ -4604,17 +4691,16 @@ export default function QuotationCreation() {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
               const IconComponent = step.icon;
-              
+
               return (
                 <div key={step.id} className="flex flex-col items-center flex-1">
-                  <div 
-                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                      isCompleted 
-                        ? "bg-primary border-primary text-primary-foreground" 
-                        : isActive 
-                          ? "border-primary text-primary" 
-                          : "border-muted-foreground text-muted-foreground"
-                    }`}
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${isCompleted
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : isActive
+                        ? "border-primary text-primary"
+                        : "border-muted-foreground text-muted-foreground"
+                      }`}
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
@@ -4641,17 +4727,16 @@ export default function QuotationCreation() {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
               const IconComponent = step.icon;
-              
+
               return (
                 <div key={step.id} className="flex items-center flex-1 min-w-0">
-                  <div 
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${
-                      isCompleted 
-                        ? "bg-primary border-primary text-primary-foreground" 
-                        : isActive 
-                          ? "border-primary text-primary" 
-                          : "border-muted-foreground text-muted-foreground"
-                    }`}
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 shrink-0 ${isCompleted
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : isActive
+                        ? "border-primary text-primary"
+                        : "border-muted-foreground text-muted-foreground"
+                      }`}
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
@@ -4660,7 +4745,7 @@ export default function QuotationCreation() {
                       <IconComponent className="h-5 w-5" />
                     )}
                   </div>
-                  
+
                   <div className="ml-2 min-w-0 flex-1">
                     <p className={`text-sm font-medium truncate ${isActive ? "text-primary" : "text-muted-foreground"}`}>
                       {step.title}
@@ -4669,7 +4754,7 @@ export default function QuotationCreation() {
                       {step.description}
                     </p>
                   </div>
-                  
+
                   {index < WIZARD_STEPS.length - 1 && (
                     <div className={`mx-2 h-px bg-border w-8 shrink-0`} />
                   )}
@@ -4684,17 +4769,16 @@ export default function QuotationCreation() {
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
               const IconComponent = step.icon;
-              
+
               return (
                 <div key={step.id} className="flex flex-col items-center text-center min-w-0">
-                  <div 
-                    className={`flex items-center justify-center w-9 h-9 rounded-full border-2 mb-1.5 shrink-0 ${
-                      isCompleted 
-                        ? "bg-primary border-primary text-primary-foreground" 
-                        : isActive 
-                          ? "border-primary text-primary" 
-                          : "border-muted-foreground text-muted-foreground"
-                    }`}
+                  <div
+                    className={`flex items-center justify-center w-9 h-9 rounded-full border-2 mb-1.5 shrink-0 ${isCompleted
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : isActive
+                        ? "border-primary text-primary"
+                        : "border-muted-foreground text-muted-foreground"
+                      }`}
                     data-testid={`step-indicator-${step.id}`}
                   >
                     {isCompleted ? (
@@ -4713,8 +4797,8 @@ export default function QuotationCreation() {
         </div>
 
         <Form {...form}>
-          <form 
-            onSubmit={form.handleSubmit(onSubmit)} 
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
             onKeyDown={(e) => {
               // Prevent Enter key from submitting form except on the submit button
               if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'BUTTON') {
@@ -4725,231 +4809,226 @@ export default function QuotationCreation() {
             }}
             className="space-y-6"
           >
-          {/* Step 0: Source Selection (skipped in edit mode) */}
-          {currentStep === 0 && !isEditMode && (
-            <Card data-testid="card-source-selection">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="h-5 w-5" />
-                  Choose Quotation Source
-                </CardTitle>
-                <CardDescription>
-                  Select how you want to create this quotation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Manual Creation Option */}
-                  <Card 
-                    className={`cursor-pointer border-2 transition-colors ${
-                      quotationSource === "manual" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => {
-                      setQuotationSource("manual");
-                      form.setValue("source", "manual");
-                      // Clear customer data when switching to manual
-                      form.setValue("customerData", undefined);
-                      form.setValue("customerId", "");
-                      setSelectedSiteVisit(null);
-                      setSiteVisitMapping(null);
-                    }}
-                    data-testid="card-manual-creation"
-                  >
-                    <CardHeader className="p-4 sm:p-6">
-                      <div className="flex items-start sm:items-center gap-3">
-                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600 shrink-0">
-                          <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base sm:text-lg">Manual Creation</CardTitle>
-                          <CardDescription className="text-sm mt-1">
-                            Create quotation from scratch with custom inputs
-                          </CardDescription>
-                        </div>
-                        <div className="shrink-0">
-                          <div className={`w-4 h-4 rounded-full border-2 ${
-                            quotationSource === "manual" ? "border-primary bg-primary" : "border-muted-foreground"
-                          }`} />
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-
-                  {/* Site Visit Integration Option */}
-                  <Card 
-                    className={`cursor-pointer border-2 transition-colors ${
-                      quotationSource === "site_visit" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => {
-                      setQuotationSource("site_visit");
-                      form.setValue("source", "site_visit");
-                      // Clear customer data when switching to site visit
-                      form.setValue("customerData", undefined);
-                      form.setValue("customerId", "");
-                    }}
-                    data-testid="card-site-visit-integration"
-                  >
-                    <CardHeader className="p-4 sm:p-6">
-                      <div className="flex items-start sm:items-center gap-3">
-                        <div className="p-2 rounded-lg bg-green-100 text-green-600 shrink-0">
-                          <Zap className="h-5 w-5 sm:h-6 sm:w-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base sm:text-lg">From Site Visit</CardTitle>
-                          <CardDescription className="text-sm mt-1">
-                            Auto-populate from existing site visit data
-                          </CardDescription>
-                        </div>
-                        <div className="shrink-0">
-                          <div className={`w-4 h-4 rounded-full border-2 ${
-                            quotationSource === "site_visit" ? "border-primary bg-primary" : "border-muted-foreground"
-                          }`} />
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                </div>
-
-                {/* Site Visit Selection */}
-                {quotationSource === "site_visit" && (
-                  <div className="space-y-3 -mt-2">
-                    <Separator />
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium">Select Site Visit</h4>
-                        {(siteVisits as any)?.data?.length > 0 && (
-                          <span className="text-sm text-muted-foreground">
-                            {filteredSiteVisits.length} of {(siteVisits as any)?.data?.length} visits
-                          </span>
-                        )}
-                      </div>
-                      
-                      {isLoadingSiteVisits ? (
-                        <div className="flex items-center justify-center p-8">
-                          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-                        </div>
-                      ) : (siteVisits as any)?.data?.length > 0 ? (
-                        <>
-                          {/* Search Bar */}
-                          <div className="mb-4">
-                            <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                              <Input
-                                placeholder="Search by customer name or mobile..."
-                                value={siteVisitSearchQuery}
-                                onChange={(e) => setSiteVisitSearchQuery(e.target.value)}
-                                className="pl-9"
-                                data-testid="input-site-visit-search"
-                                aria-label="Search site visits by customer name or mobile number"
-                              />
-                            </div>
+            {/* Step 0: Source Selection (skipped in edit mode) */}
+            {currentStep === 0 && !isEditMode && (
+              <Card data-testid="card-source-selection">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Search className="h-5 w-5" />
+                    Choose Quotation Source
+                  </CardTitle>
+                  <CardDescription>
+                    Select how you want to create this quotation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Manual Creation Option */}
+                    <Card
+                      className={`cursor-pointer border-2 transition-colors ${quotationSource === "manual" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                        }`}
+                      onClick={() => {
+                        setQuotationSource("manual");
+                        form.setValue("source", "manual");
+                        // Clear customer data when switching to manual
+                        form.setValue("customerData", undefined);
+                        form.setValue("customerId", "");
+                        setSelectedSiteVisit(null);
+                        setSiteVisitMapping(null);
+                      }}
+                      data-testid="card-manual-creation"
+                    >
+                      <CardHeader className="p-4 sm:p-6">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div className="p-2 rounded-lg bg-blue-100 text-blue-600 shrink-0">
+                            <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-base sm:text-lg">Manual Creation</CardTitle>
+                            <CardDescription className="text-sm mt-1">
+                              Create quotation from scratch with custom inputs
+                            </CardDescription>
+                          </div>
+                          <div className="shrink-0">
+                            <div className={`w-4 h-4 rounded-full border-2 ${quotationSource === "manual" ? "border-primary bg-primary" : "border-muted-foreground"
+                              }`} />
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
 
-                          {/* Filters */}
-                          <div className="mb-4 space-y-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground">Date Range</label>
-                                <Select value={dateFilter} onValueChange={(value) => {
-                                  setDateFilter(value);
-                                  if (value !== "custom") {
-                                    setCustomDateFrom("");
-                                    setCustomDateTo("");
-                                  }
-                                }}>
-                                  <SelectTrigger className="w-full" data-testid="select-date-filter">
-                                    <SelectValue placeholder="All Dates" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">All Dates</SelectItem>
-                                    <SelectItem value="today">Today</SelectItem>
-                                    <SelectItem value="last7days">Last 7 Days</SelectItem>
-                                    <SelectItem value="last30days">Last 30 Days</SelectItem>
-                                    <SelectItem value="thisMonth">This Month</SelectItem>
-                                    <SelectItem value="lastMonth">Last Month</SelectItem>
-                                    <SelectItem value="custom">Custom Range</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                    {/* Site Visit Integration Option */}
+                    <Card
+                      className={`cursor-pointer border-2 transition-colors ${quotationSource === "site_visit" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                        }`}
+                      onClick={() => {
+                        setQuotationSource("site_visit");
+                        form.setValue("source", "site_visit");
+                        // Clear customer data when switching to site visit
+                        form.setValue("customerData", undefined);
+                        form.setValue("customerId", "");
+                      }}
+                      data-testid="card-site-visit-integration"
+                    >
+                      <CardHeader className="p-4 sm:p-6">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div className="p-2 rounded-lg bg-green-100 text-green-600 shrink-0">
+                            <Zap className="h-5 w-5 sm:h-6 sm:w-6" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-base sm:text-lg">From Site Visit</CardTitle>
+                            <CardDescription className="text-sm mt-1">
+                              Auto-populate from existing site visit data
+                            </CardDescription>
+                          </div>
+                          <div className="shrink-0">
+                            <div className={`w-4 h-4 rounded-full border-2 ${quotationSource === "site_visit" ? "border-primary bg-primary" : "border-muted-foreground"
+                              }`} />
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  </div>
 
-                              <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground">Department</label>
-                                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                                  <SelectTrigger className="w-full" data-testid="select-department-filter">
-                                    <SelectValue placeholder="All Departments" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">All Departments</SelectItem>
-                                    <SelectItem value="technical">Technical</SelectItem>
-                                    <SelectItem value="marketing">Marketing</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                  {/* Site Visit Selection */}
+                  {quotationSource === "site_visit" && (
+                    <div className="space-y-3 -mt-2">
+                      <Separator />
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium">Select Site Visit</h4>
+                          {(siteVisits as any)?.data?.length > 0 && (
+                            <span className="text-sm text-muted-foreground">
+                              {filteredSiteVisits.length} of {(siteVisits as any)?.data?.length} visits
+                            </span>
+                          )}
+                        </div>
+
+                        {isLoadingSiteVisits ? (
+                          <div className="flex items-center justify-center p-8">
+                            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                          </div>
+                        ) : (siteVisits as any)?.data?.length > 0 ? (
+                          <>
+                            {/* Search Bar */}
+                            <div className="mb-4">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                                <Input
+                                  placeholder="Search by customer name or mobile..."
+                                  value={siteVisitSearchQuery}
+                                  onChange={(e) => setSiteVisitSearchQuery(e.target.value)}
+                                  className="pl-9"
+                                  data-testid="input-site-visit-search"
+                                  aria-label="Search site visits by customer name or mobile number"
+                                />
                               </div>
                             </div>
 
-                            {/* Custom Date Range Inputs */}
-                            {dateFilter === "custom" && (
-                              <div className="space-y-3 pt-2">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-muted-foreground">From Date</label>
-                                    <Input
-                                      type="date"
-                                      value={customDateFrom}
-                                      onChange={(e) => {
-                                        setCustomDateFrom(e.target.value);
-                                        // Auto-clear "To" date if it's before the new "From" date
-                                        if (customDateTo && e.target.value && new Date(e.target.value) > new Date(customDateTo)) {
-                                          setCustomDateTo("");
-                                        }
-                                      }}
-                                      max={new Date().toISOString().split('T')[0]}
-                                      className="w-full"
-                                      data-testid="input-custom-date-from"
-                                    />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-muted-foreground">To Date</label>
-                                    <Input
-                                      type="date"
-                                      value={customDateTo}
-                                      onChange={(e) => setCustomDateTo(e.target.value)}
-                                      min={customDateFrom || undefined}
-                                      max={new Date().toISOString().split('T')[0]}
-                                      disabled={!customDateFrom}
-                                      className="w-full"
-                                      data-testid="input-custom-date-to"
-                                    />
-                                  </div>
+                            {/* Filters */}
+                            <div className="mb-4 space-y-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-muted-foreground">Date Range</label>
+                                  <Select value={dateFilter} onValueChange={(value) => {
+                                    setDateFilter(value);
+                                    if (value !== "custom") {
+                                      setCustomDateFrom("");
+                                      setCustomDateTo("");
+                                    }
+                                  }}>
+                                    <SelectTrigger className="w-full" data-testid="select-date-filter">
+                                      <SelectValue placeholder="All Dates" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="all">All Dates</SelectItem>
+                                      <SelectItem value="today">Today</SelectItem>
+                                      <SelectItem value="last7days">Last 7 Days</SelectItem>
+                                      <SelectItem value="last30days">Last 30 Days</SelectItem>
+                                      <SelectItem value="thisMonth">This Month</SelectItem>
+                                      <SelectItem value="lastMonth">Last Month</SelectItem>
+                                      <SelectItem value="custom">Custom Range</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                 </div>
-                                {customDateFrom && customDateTo && (
-                                  <div className="text-xs text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                                    Showing site visits from {new Date(customDateFrom).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(customDateTo).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                  </div>
-                                )}
-                                {customDateFrom && !customDateTo && (
-                                  <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
-                                    Please select an end date to complete the range
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
 
-                          {/* Site Visit List */}
-                          <div 
-                            className="max-h-[300px] overflow-y-auto pr-2 space-y-2"
-                            style={{ overscrollBehavior: 'contain' }}
-                            role="list"
-                            aria-label="Site visits list"
-                          >
-                            {filteredSiteVisits.map((visit: SiteVisitMapping) => (
-                                <Card 
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-medium text-muted-foreground">Department</label>
+                                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                                    <SelectTrigger className="w-full" data-testid="select-department-filter">
+                                      <SelectValue placeholder="All Departments" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="all">All Departments</SelectItem>
+                                      <SelectItem value="technical">Technical</SelectItem>
+                                      <SelectItem value="marketing">Marketing</SelectItem>
+                                      <SelectItem value="admin">Admin</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              {/* Custom Date Range Inputs */}
+                              {dateFilter === "custom" && (
+                                <div className="space-y-3 pt-2">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                      <label className="text-xs font-medium text-muted-foreground">From Date</label>
+                                      <Input
+                                        type="date"
+                                        value={customDateFrom}
+                                        onChange={(e) => {
+                                          setCustomDateFrom(e.target.value);
+                                          // Auto-clear "To" date if it's before the new "From" date
+                                          if (customDateTo && e.target.value && new Date(e.target.value) > new Date(customDateTo)) {
+                                            setCustomDateTo("");
+                                          }
+                                        }}
+                                        max={new Date().toISOString().split('T')[0]}
+                                        className="w-full"
+                                        data-testid="input-custom-date-from"
+                                      />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-xs font-medium text-muted-foreground">To Date</label>
+                                      <Input
+                                        type="date"
+                                        value={customDateTo}
+                                        onChange={(e) => setCustomDateTo(e.target.value)}
+                                        min={customDateFrom || undefined}
+                                        max={new Date().toISOString().split('T')[0]}
+                                        disabled={!customDateFrom}
+                                        className="w-full"
+                                        data-testid="input-custom-date-to"
+                                      />
+                                    </div>
+                                  </div>
+                                  {customDateFrom && customDateTo && (
+                                    <div className="text-xs text-muted-foreground bg-muted px-3 py-2 rounded-md">
+                                      Showing site visits from {new Date(customDateFrom).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(customDateTo).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </div>
+                                  )}
+                                  {customDateFrom && !customDateTo && (
+                                    <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md">
+                                      Please select an end date to complete the range
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Site Visit List */}
+                            <div
+                              className="max-h-[300px] overflow-y-auto pr-2 space-y-2"
+                              style={{ overscrollBehavior: 'contain' }}
+                              role="list"
+                              aria-label="Site visits list"
+                            >
+                              {filteredSiteVisits.map((visit: SiteVisitMapping) => (
+                                <Card
                                   key={visit.id}
-                                  className={`cursor-pointer border transition-colors ${
-                                    selectedSiteVisit === visit.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                                  }`}
+                                  className={`cursor-pointer border transition-colors ${selectedSiteVisit === visit.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                                    }`}
                                   onClick={() => setSelectedSiteVisit(visit.id)}
                                   data-testid={`card-site-visit-${visit.id}`}
                                 >
@@ -4958,15 +5037,15 @@ export default function QuotationCreation() {
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center flex-wrap gap-2 mb-2">
                                           <h5 className="font-medium text-sm sm:text-base">{visit.customer.name}</h5>
-                                          <Badge 
+                                          <Badge
                                             variant={(visit as any).status === 'completed' ? 'default' : 'secondary'}
                                             className="text-xs"
                                           >
-                                            {(visit as any).status === 'completed' ? 'Completed' : 
-                                             (visit as any).status === 'in_progress' ? 'In Progress' : 
-                                             (visit as any).status === 'cancelled' ? 'Cancelled' : 'Unknown'}
+                                            {(visit as any).status === 'completed' ? 'Completed' :
+                                              (visit as any).status === 'in_progress' ? 'In Progress' :
+                                                (visit as any).status === 'cancelled' ? 'Cancelled' : 'Unknown'}
                                           </Badge>
-                                          <Badge 
+                                          <Badge
                                             variant={(visit as any).visitOutcome === 'converted' ? 'default' : 'outline'}
                                             className="text-xs"
                                           >
@@ -4977,10 +5056,10 @@ export default function QuotationCreation() {
                                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{visit.customer.address}</p>
                                         {(visit as any).visitDate && (
                                           <p className="text-xs text-muted-foreground mt-1">
-                                            Visit: {new Date((visit as any).visitDate).toLocaleDateString('en-IN', { 
-                                              day: '2-digit', 
-                                              month: 'short', 
-                                              year: 'numeric' 
+                                            Visit: {new Date((visit as any).visitDate).toLocaleDateString('en-IN', {
+                                              day: '2-digit',
+                                              month: 'short',
+                                              year: 'numeric'
                                             })}
                                           </p>
                                         )}
@@ -5003,1614 +5082,1640 @@ export default function QuotationCreation() {
                                   </CardContent>
                                 </Card>
                               ))}
-                          </div>
+                            </div>
 
-                          {/* No Results Message */}
-                          {filteredSiteVisits.length === 0 && (siteVisitSearchQuery || dateFilter !== "all" || departmentFilter !== "all") && (
-                            <Alert className="mt-3">
-                              <AlertTriangle className="h-4 w-4" />
-                              <AlertDescription>
-                                No site visits found matching the selected filters. Try adjusting your search criteria.
-                              </AlertDescription>
-                            </Alert>
-                          )}
-                        </>
-                      ) : (
-                        <Alert>
-                          <AlertTriangle className="h-4 w-4" />
-                          <AlertDescription>
-                            No site visits available for quotation mapping. Please complete site visits first.
-                          </AlertDescription>
-                        </Alert>
-                      )}
+                            {/* No Results Message */}
+                            {filteredSiteVisits.length === 0 && (siteVisitSearchQuery || dateFilter !== "all" || departmentFilter !== "all") && (
+                              <Alert className="mt-3">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertDescription>
+                                  No site visits found matching the selected filters. Try adjusting your search criteria.
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </>
+                        ) : (
+                          <Alert>
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              No site visits available for quotation mapping. Please complete site visits first.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Step 1: Customer Details */}
-          {currentStep === 1 && (
-            <Card data-testid="card-customer-details" className="h-fit">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Customer Information
-                  {isEditMode && <Badge variant="secondary" className="ml-2">Locked</Badge>}
-                </CardTitle>
-                <CardDescription>
-                  {isEditMode 
-                    ? "Customer and source cannot be changed when editing a quotation" 
-                    : quotationSource === "site_visit" && siteVisitMapping 
-                      ? "Review and complete customer details from site visit" 
-                      : "Enter customer details for the quotation"
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {isEditMode && (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Customer and quotation source are locked in edit mode. Only project details, pricing, and terms can be modified. The revision number will be automatically incremented.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {quotationSource === "manual" ? (
-                  <ManualCustomerDetailsForm form={form} isEditMode={isEditMode} />
-                ) : (
-                  <SiteVisitCustomerDetailsForm 
-                    form={form}
-                    siteVisitMapping={siteVisitMapping}
-                    fallbackSiteVisitData={fallbackSiteVisitData}
-                    isEditMode={isEditMode}
-                    existingCustomer={isEditMode ? existingCustomer : undefined}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Project Configuration */}
-          {currentStep === 2 && (
-            <Card data-testid="card-project-configuration">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Project Configuration
-                </CardTitle>
-                <CardDescription>
-                  {quotationSource === "site_visit" && siteVisitMapping ? 
-                    "Review and update project specifications from site visit" :
-                    "Configure solar systems and project specifications"
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Show helpful message for site visit projects */}
-                {quotationSource === "site_visit" && siteVisitMapping && (
-                  <Alert>
-                    <Check className="h-4 w-4" />
-                    <AlertDescription>
-                      Site visit data has been loaded. Review the details below and add any missing information to complete the quotation.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {/* Always show the full editable configuration for both manual and site visit projects */}
-                <ManualProjectConfiguration form={form} isServiceOnlyQuotation={isServiceOnlyQuotation} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 3: Pricing & Terms */}
-          {currentStep === 3 && (
-            <Card data-testid="card-pricing-terms">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
-                  Pricing & Payment Terms
-                </CardTitle>
-                <CardDescription>
-                  Review and edit pricing calculations and payment terms
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Editable Pricing Table - Only shows solar projects (on-grid, off-grid, hybrid) */}
-                {(() => {
-                  const projects = form.watch("projects");
-                  // Filter to get only solar projects (exclude water heater and water pump)
-                  const solarProjects = projects ? projects.filter((p: any) => 
-                    ['on_grid', 'off_grid', 'hybrid'].includes(p.projectType)
-                  ) : [];
-                  
-                  // Hide entire table if there are no solar projects
-                  if (!solarProjects || solarProjects.length === 0) {
-                    return null;
-                  }
-                  
-                  return (
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-base">Quotation Pricing Details</h4>
-                      
-                      {/* Desktop Table View (hidden on mobile) */}
-                  <div className="hidden lg:block border rounded-lg overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="text-left p-3 text-sm font-medium">Description</th>
-                          <th className="text-center p-3 text-sm font-medium w-24">kW</th>
-                          <th className="text-right p-3 text-sm font-medium w-32">Rate/kW (₹)</th>
-                          <th className="text-right p-3 text-sm font-medium w-36">Base Value (₹)</th>
-                          <th className="text-right p-3 text-sm font-medium w-32">GST/kW (₹)</th>
-                          <th className="text-right p-3 text-sm font-medium w-24">GST %</th>
-                          <th className="text-right p-3 text-sm font-medium w-36">GST Amount (₹)</th>
-                          <th className="text-right p-3 text-sm font-medium w-40">Total Value (₹)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {solarProjects.map((project: any, originalIndex: number) => {
-                          // Get the actual index in the full projects array
-                          const index = projects.indexOf(project);
-                          const systemKW = project.systemKW || 0;
-                          const basePrice = project.basePrice || 0;
-                          const gstAmount = project.gstAmount || 0;
-                          const gstPercentage = project.gstPercentage || 18;
-                          const projectValue = project.projectValue || 0;
-                          
-                          // Use centralized rounding utility
-                          const roundedSystemKW = roundSystemKW(systemKW);
-                          
-                          // Calculate Rate/kW and GST/kW using ROUNDED systemKW
-                          const calculatedRatePerKW = basePrice && roundedSystemKW > 0
-                            ? Math.round(basePrice / roundedSystemKW)
-                            : 0;
-                          
-                          const calculatedGSTPerKW = gstAmount && roundedSystemKW > 0
-                            ? Math.round(gstAmount / roundedSystemKW)
-                            : 0;
-                          
-                          // Generate default description if custom one doesn't exist
-                          const defaultDescription = generateProjectDescription(project);
-                          const description = project.customDescription || defaultDescription;
-                          
-                          return (
-                            <tr key={index} className="border-t">
-                              <td className="p-3 text-sm">
-                                <Input 
-                                  type="text" 
-                                  value={description}
-                                  onChange={(e) => {
-                                    form.setValue(`projects.${index}.customDescription`, e.target.value);
-                                  }}
-                                  className="w-full min-w-[300px]"
-                                  data-testid={`input-description-${index}`}
-                                />
-                              </td>
-                              <td className="p-3 text-center">
-                                <Input 
-                                  type="number" 
-                                  step="0.01"
-                                  value={formatKWForDisplay(systemKW)} 
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const newKW = value === '' ? 0 : (parseFloat(value) || 0);
-                                    const newRoundedKW = roundSystemKW(newKW);
-                                    const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
-                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                    const newProjectValue = newBasePrice + newGSTAmount;
-                                    
-                                    // Recalculate subsidy based on new kW
-                                    const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
-                                    const newCustomerPayment = newProjectValue - newSubsidy;
-                                    
-                                    // Update description if user hasn't customized it
-                                    if (!project.customDescription) {
-                                      const updatedProject = { ...project, systemKW: newKW };
-                                      const newDescription = generateProjectDescription(updatedProject);
-                                      form.setValue(`projects.${index}.customDescription`, newDescription);
-                                    }
-                                    
-                                    form.setValue(`projects.${index}.systemKW`, newKW);
-                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                      form.setValue(`projects.${index}.systemKW`, 0);
-                                    }
-                                  }}
-                                  className="w-20 text-center"
-                                  data-testid={`input-systemkw-${index}`}
-                                />
-                              </td>
-                              <td className="p-3 text-right">
-                                <Input 
-                                  type="number" 
-                                  value={calculatedRatePerKW} 
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
-                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                    const newProjectValue = newBasePrice + newGSTAmount;
-                                    
-                                    // Recalculate subsidy (subsidy doesn't change with price, only with kW)
-                                    const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                    const newCustomerPayment = newProjectValue - newSubsidy;
-                                    
-                                    form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
-                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                      form.setValue(`projects.${index}.pricePerKW`, 0);
-                                    }
-                                  }}
-                                  className="w-28 text-right"
-                                  data-testid={`input-priceperkw-${index}`}
-                                />
-                              </td>
-                              <td className="p-3 text-right font-medium">
-                                ₹{basePrice.toLocaleString()}
-                              </td>
-                              <td className="p-3 text-right">
-                                <span className="text-sm">{calculatedGSTPerKW.toLocaleString()}</span>
-                              </td>
-                              <td className="p-3 text-right">
-                                <Input 
-                                  type="number" 
-                                  value={gstPercentage} 
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
-                                    const newProjectValue = basePrice + newGSTAmount;
-                                    
-                                    // Recalculate subsidy (subsidy doesn't change with GST)
-                                    const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                    const newCustomerPayment = newProjectValue - newSubsidy;
-                                    
-                                    form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
-                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                      form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
-                                    }
-                                  }}
-                                  className="w-20 text-right"
-                                  data-testid={`input-gstpercentage-${index}`}
-                                />
-                              </td>
-                              <td className="p-3 text-right font-medium">
-                                ₹{gstAmount.toLocaleString()}
-                              </td>
-                              <td className="p-3 text-right font-medium">
-                                ₹{projectValue.toLocaleString()}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        <tr className="border-t-2 bg-muted/30">
-                          <td colSpan={3} className="p-3 text-sm font-medium">Totals:</td>
-                          <td className="p-3 text-right font-medium">₹{form.watch("totalSystemCost")?.toLocaleString()}</td>
-                          <td colSpan={2} className="p-3 text-sm font-medium text-right">Total GST:</td>
-                          <td className="p-3 text-right font-medium">₹{form.watch("totalGSTAmount")?.toLocaleString()}</td>
-                          <td className="p-3 text-right font-medium">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
-                        </tr>
-                        <tr className="border-t bg-primary/10">
-                          <td colSpan={7} className="p-3 text-sm font-bold">Grand Total (Including GST):</td>
-                          <td className="p-3 text-right font-bold text-lg text-primary">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Mobile/Tablet Card View (hidden on desktop) */}
-                  <div className="lg:hidden space-y-4">
-                    {solarProjects.map((project: any, originalIndex: number) => {
-                      // Get the actual index in the full projects array
-                      const index = projects.indexOf(project);
-                      const systemKW = project.systemKW || 0;
-                      const basePrice = project.basePrice || 0;
-                      const gstAmount = project.gstAmount || 0;
-                      const gstPercentage = project.gstPercentage || 18;
-                      const projectValue = project.projectValue || 0;
-                      
-                      const roundedSystemKW = roundSystemKW(systemKW);
-                      
-                      const calculatedRatePerKW = basePrice && roundedSystemKW > 0
-                        ? Math.round(basePrice / roundedSystemKW)
-                        : 0;
-                      
-                      const calculatedGSTPerKW = gstAmount && roundedSystemKW > 0
-                        ? Math.round(gstAmount / roundedSystemKW)
-                        : 0;
-                      
-                      const defaultDescription = generateProjectDescription(project);
-                      const description = project.customDescription || defaultDescription;
-                      
-                      return (
-                        <Card key={index} className="border-2" data-testid={`card-pricing-project-${index}`}>
-                          <CardContent className="p-4 space-y-4">
-                            {/* Description */}
-                            <div className="space-y-2">
-                              <label className="text-xs font-medium text-muted-foreground">Description</label>
-                              <Input 
-                                type="text" 
-                                value={description}
-                                onChange={(e) => {
-                                  form.setValue(`projects.${index}.customDescription`, e.target.value);
-                                }}
-                                className="w-full"
-                                data-testid={`input-description-${index}`}
-                              />
-                            </div>
-
-                            {/* kW and Rate/kW */}
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground">kW</label>
-                                <Input 
-                                  type="number" 
-                                  step="0.01"
-                                  value={systemKW} 
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const newKW = value === '' ? 0 : (parseFloat(value) || 0);
-                                    const newRoundedKW = roundSystemKW(newKW);
-                                    const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
-                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                    const newProjectValue = newBasePrice + newGSTAmount;
-                                    
-                                    const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
-                                    const newCustomerPayment = newProjectValue - newSubsidy;
-                                    
-                                    if (!project.customDescription) {
-                                      const updatedProject = { ...project, systemKW: newKW };
-                                      const newDescription = generateProjectDescription(updatedProject);
-                                      form.setValue(`projects.${index}.customDescription`, newDescription);
-                                    }
-                                    
-                                    form.setValue(`projects.${index}.systemKW`, newKW);
-                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                      form.setValue(`projects.${index}.systemKW`, 0);
-                                    }
-                                  }}
-                                  className="w-full"
-                                  data-testid={`input-systemkw-${index}`}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground">Rate/kW (₹)</label>
-                                <Input 
-                                  type="number" 
-                                  value={calculatedRatePerKW} 
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
-                                    const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                    const newProjectValue = newBasePrice + newGSTAmount;
-                                    
-                                    const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                    const newCustomerPayment = newProjectValue - newSubsidy;
-                                    
-                                    form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
-                                    form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                      form.setValue(`projects.${index}.pricePerKW`, 0);
-                                    }
-                                  }}
-                                  className="w-full"
-                                  data-testid={`input-priceperkw-${index}`}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Base Value */}
-                            <div className="space-y-2">
-                              <label className="text-xs font-medium text-muted-foreground">Base Value (₹)</label>
-                              <div className="p-2 bg-muted rounded-md font-medium">₹{basePrice.toLocaleString()}</div>
-                            </div>
-
-                            {/* GST Details */}
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground">GST %</label>
-                                <Input 
-                                  type="number" 
-                                  value={gstPercentage} 
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                    const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
-                                    const newProjectValue = basePrice + newGSTAmount;
-                                    
-                                    const propertyType = getPropertyType();
-                                    const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                    const newCustomerPayment = newProjectValue - newSubsidy;
-                                    
-                                    form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
-                                    form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                    form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                    form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                    form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                  }}
-                                  onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                      form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
-                                    }
-                                  }}
-                                  className="w-full"
-                                  data-testid={`input-gstpercentage-${index}`}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground">GST/kW (₹)</label>
-                                <div className="p-2 bg-muted rounded-md text-sm">{calculatedGSTPerKW.toLocaleString()}</div>
-                              </div>
-                            </div>
-
-                            {/* GST Amount */}
-                            <div className="space-y-2">
-                              <label className="text-xs font-medium text-muted-foreground">GST Amount (₹)</label>
-                              <div className="p-2 bg-muted rounded-md font-medium">₹{gstAmount.toLocaleString()}</div>
-                            </div>
-
-                            {/* Total Value */}
-                            <div className="space-y-2 pt-2 border-t">
-                              <label className="text-xs font-medium text-muted-foreground">Total Value (₹)</label>
-                              <div className="p-3 bg-primary/10 rounded-md font-bold text-lg text-primary">₹{projectValue.toLocaleString()}</div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-
-                    {/* Totals Card for Mobile */}
-                    <Card className="border-2 bg-primary/5">
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Total System Cost:</span>
-                          <span className="font-bold">₹{form.watch("totalSystemCost")?.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Total GST:</span>
-                          <span className="font-bold">₹{form.watch("totalGSTAmount")?.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-3 border-t-2">
-                          <span className="text-base font-bold">Grand Total (Including GST):</span>
-                          <span className="font-bold text-lg text-primary">₹{form.watch("totalWithGST")?.toLocaleString()}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  <div className="text-sm text-muted-foreground italic">
-                    Amount in words: <span className="font-medium">Rupees {(() => {
-                      const amount = Math.floor(form.watch("totalWithGST") || 0);
-                      
-                      const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
-                      const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-                      const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-                      
-                      const convertTwoDigit = (num: number): string => {
-                        if (num === 0) return "";
-                        if (num < 10) return ones[num];
-                        if (num < 20) return teens[num - 10];
-                        const tenDigit = Math.floor(num / 10);
-                        const oneDigit = num % 10;
-                        return tens[tenDigit] + (oneDigit > 0 ? " " + ones[oneDigit] : "");
-                      };
-                      
-                      if (amount === 0) return "Zero Only";
-                      
-                      const crores = Math.floor(amount / 10000000);
-                      const lakhs = Math.floor((amount % 10000000) / 100000);
-                      const thousands = Math.floor((amount % 100000) / 1000);
-                      const hundreds = Math.floor((amount % 1000) / 100);
-                      const remainder = amount % 100;
-                      
-                      let result = "";
-                      if (crores > 0) result += convertTwoDigit(crores) + " Crore" + (crores > 1 ? "s" : "") + " ";
-                      if (lakhs > 0) result += convertTwoDigit(lakhs) + " Lakh" + (lakhs > 1 ? "s" : "") + " ";
-                      if (thousands > 0) result += convertTwoDigit(thousands) + " Thousand ";
-                      if (hundreds > 0) result += ones[hundreds] + " Hundred ";
-                      if (remainder > 0) result += convertTwoDigit(remainder) + " ";
-                      
-                      return result.trim() + " Only";
-                    })()}</span>
-                  </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Warranty Details - Hidden for service-only quotations (water heater and water pump) */}
-                {!isServiceOnlyQuotation && (
-                  <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                    <h4 className="font-medium text-base flex items-center gap-2">
+            {/* Step 1: Customer Details */}
+            {currentStep === 1 && (
+              <Card data-testid="card-customer-details" className="h-fit">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Customer Information
+                    {isEditMode && <Badge variant="secondary" className="ml-2">Locked</Badge>}
+                  </CardTitle>
+                  <CardDescription>
+                    {isEditMode
+                      ? "Customer and source cannot be changed when editing a quotation"
+                      : quotationSource === "site_visit" && siteVisitMapping
+                        ? "Review and complete customer details from site visit"
+                        : "Enter customer details for the quotation"
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isEditMode && (
+                    <Alert>
                       <Info className="h-4 w-4" />
-                      Warranty Details
-                    </h4>
-                    <div className="text-sm space-y-2">
-                      <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
-                      <div className="space-y-1">
-                        <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
-                        <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                          <li>15 Years Manufacturing defect Warranty</li>
-                          <li>15 Years Service Warranty</li>
-                          <li>90% Performance Warranty till the end of 15 years</li>
-                          <li>80% Performance Warranty till the end of 15 years</li>
-                        </ul>
+                      <AlertDescription>
+                        Customer and quotation source are locked in edit mode. Only project details, pricing, and terms can be modified. The revision number will be automatically incremented.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {quotationSource === "manual" ? (
+                    <ManualCustomerDetailsForm form={form} isEditMode={isEditMode} />
+                  ) : (
+                    <SiteVisitCustomerDetailsForm
+                      form={form}
+                      siteVisitMapping={siteVisitMapping}
+                      fallbackSiteVisitData={fallbackSiteVisitData}
+                      isEditMode={isEditMode}
+                      existingCustomer={isEditMode ? existingCustomer : undefined}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 2: Project Configuration */}
+            {currentStep === 2 && (
+              <Card data-testid="card-project-configuration">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5" />
+                    Project Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    {quotationSource === "site_visit" && siteVisitMapping ?
+                      "Review and update project specifications from site visit" :
+                      "Configure solar systems and project specifications"
+                    }
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Show helpful message for site visit projects */}
+                  {quotationSource === "site_visit" && siteVisitMapping && (
+                    <Alert>
+                      <Check className="h-4 w-4" />
+                      <AlertDescription>
+                        Site visit data has been loaded. Review the details below and add any missing information to complete the quotation.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Always show the full editable configuration for both manual and site visit projects */}
+                  <ManualProjectConfiguration form={form} isServiceOnlyQuotation={isServiceOnlyQuotation} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 3: Pricing & Terms */}
+            {currentStep === 3 && (
+              <Card data-testid="card-pricing-terms">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5" />
+                    Pricing & Payment Terms
+                  </CardTitle>
+                  <CardDescription>
+                    Review and edit pricing calculations and payment terms
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Editable Pricing Table - Only shows solar projects (on-grid, off-grid, hybrid) */}
+                  {(() => {
+                    const projects = form.watch("projects");
+                    // Filter to get only solar projects (exclude water heater and water pump)
+                    const solarProjects = projects ? projects.filter((p: any) =>
+                      ['on_grid', 'off_grid', 'hybrid'].includes(p.projectType)
+                    ) : [];
+
+                    // Hide entire table if there are no solar projects
+                    if (!solarProjects || solarProjects.length === 0) {
+                      return null;
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-base">Quotation Pricing Details</h4>
+
+                        {/* Desktop Table View (hidden on mobile) */}
+                        <div className="hidden lg:block border rounded-lg overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-muted">
+                              <tr>
+                                <th className="text-left p-3 text-sm font-medium">Description</th>
+                                <th className="text-center p-3 text-sm font-medium w-24">kW</th>
+                                <th className="text-right p-3 text-sm font-medium w-32">Rate/kW (₹)</th>
+                                <th className="text-right p-3 text-sm font-medium w-36">Base Value (₹)</th>
+                                <th className="text-right p-3 text-sm font-medium w-32">GST/kW (₹)</th>
+                                <th className="text-right p-3 text-sm font-medium w-24">GST %</th>
+                                <th className="text-right p-3 text-sm font-medium w-36">GST Amount (₹)</th>
+                                <th className="text-right p-3 text-sm font-medium w-40">Total Value (₹)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {solarProjects.map((project: any, originalIndex: number) => {
+                                // Get the actual index in the full projects array
+                                const index = projects.indexOf(project);
+                                const systemKW = project.systemKW || 0;
+                                const basePrice = project.basePrice || 0;
+                                const gstAmount = project.gstAmount || 0;
+                                const gstPercentage = project.gstPercentage || 18;
+                                const projectValue = project.projectValue || 0;
+
+                                // Use centralized rounding utility
+                                const roundedSystemKW = roundSystemKW(systemKW);
+
+                                // Calculate Rate/kW and GST/kW using ROUNDED systemKW
+                                const calculatedRatePerKW = basePrice && roundedSystemKW > 0
+                                  ? Math.round(basePrice / roundedSystemKW)
+                                  : 0;
+
+                                const calculatedGSTPerKW = gstAmount && roundedSystemKW > 0
+                                  ? Math.round(gstAmount / roundedSystemKW)
+                                  : 0;
+
+                                // Generate default description if custom one doesn't exist
+                                const defaultDescription = generateProjectDescription(project);
+                                const description = project.customDescription || defaultDescription;
+
+                                return (
+                                  <tr key={index} className="border-t">
+                                    <td className="p-3 text-sm">
+                                      <Input
+                                        type="text"
+                                        value={description}
+                                        onChange={(e) => {
+                                          form.setValue(`projects.${index}.customDescription`, e.target.value);
+                                        }}
+                                        className="w-full min-w-[300px]"
+                                        data-testid={`input-description-${index}`}
+                                      />
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={formatKWForDisplay(systemKW)}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const newKW = value === '' ? 0 : (parseFloat(value) || 0);
+                                          const newRoundedKW = roundSystemKW(newKW);
+                                          const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
+                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                          const newProjectValue = newBasePrice + newGSTAmount;
+
+                                          // Recalculate subsidy based on new kW
+                                          const propertyType = getPropertyType();
+                                          const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
+                                          const newCustomerPayment = newProjectValue - newSubsidy;
+
+                                          // Update description if user hasn't customized it
+                                          if (!project.customDescription) {
+                                            const updatedProject = { ...project, systemKW: newKW };
+                                            const newDescription = generateProjectDescription(updatedProject);
+                                            form.setValue(`projects.${index}.customDescription`, newDescription);
+                                          }
+
+                                          form.setValue(`projects.${index}.systemKW`, newKW);
+                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            form.setValue(`projects.${index}.systemKW`, 0);
+                                          }
+                                        }}
+                                        className="w-20 text-center"
+                                        data-testid={`input-systemkw-${index}`}
+                                      />
+                                    </td>
+                                    <td className="p-3 text-right">
+                                      <Input
+                                        type="number"
+                                        value={calculatedRatePerKW}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                          const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
+                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                          const newProjectValue = newBasePrice + newGSTAmount;
+
+                                          // Recalculate subsidy (subsidy doesn't change with price, only with kW)
+                                          const propertyType = getPropertyType();
+                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                          const newCustomerPayment = newProjectValue - newSubsidy;
+
+                                          form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
+                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            form.setValue(`projects.${index}.pricePerKW`, 0);
+                                          }
+                                        }}
+                                        className="w-28 text-right"
+                                        data-testid={`input-priceperkw-${index}`}
+                                      />
+                                    </td>
+                                    <td className="p-3 text-right font-medium">
+                                      ₹{basePrice.toLocaleString()}
+                                    </td>
+                                    <td className="p-3 text-right">
+                                      <span className="text-sm">{calculatedGSTPerKW.toLocaleString()}</span>
+                                    </td>
+                                    <td className="p-3 text-right">
+                                      <Input
+                                        type="number"
+                                        value={gstPercentage}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                          const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
+                                          const newProjectValue = basePrice + newGSTAmount;
+
+                                          // Recalculate subsidy (subsidy doesn't change with GST)
+                                          const propertyType = getPropertyType();
+                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                          const newCustomerPayment = newProjectValue - newSubsidy;
+
+                                          form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
+                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
+                                          }
+                                        }}
+                                        className="w-20 text-right"
+                                        data-testid={`input-gstpercentage-${index}`}
+                                      />
+                                    </td>
+                                    <td className="p-3 text-right font-medium">
+                                      ₹{gstAmount.toLocaleString()}
+                                    </td>
+                                    <td className="p-3 text-right font-medium">
+                                      ₹{projectValue.toLocaleString()}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              <tr className="border-t-2 bg-muted/30">
+                                <td colSpan={3} className="p-3 text-sm font-medium">Totals:</td>
+                                <td className="p-3 text-right font-medium">₹{form.watch("totalSystemCost")?.toLocaleString()}</td>
+                                <td colSpan={2} className="p-3 text-sm font-medium text-right">Total GST:</td>
+                                <td className="p-3 text-right font-medium">₹{form.watch("totalGSTAmount")?.toLocaleString()}</td>
+                                <td className="p-3 text-right font-medium">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
+                              </tr>
+                              <tr className="border-t bg-primary/10">
+                                <td colSpan={7} className="p-3 text-sm font-bold">Grand Total (Including GST):</td>
+                                <td className="p-3 text-right font-bold text-lg text-primary">₹{form.watch("totalWithGST")?.toLocaleString()}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile/Tablet Card View (hidden on desktop) */}
+                        <div className="lg:hidden space-y-4">
+                          {solarProjects.map((project: any, originalIndex: number) => {
+                            // Get the actual index in the full projects array
+                            const index = projects.indexOf(project);
+                            const systemKW = project.systemKW || 0;
+                            const basePrice = project.basePrice || 0;
+                            const gstAmount = project.gstAmount || 0;
+                            const gstPercentage = project.gstPercentage || 18;
+                            const projectValue = project.projectValue || 0;
+
+                            const roundedSystemKW = roundSystemKW(systemKW);
+
+                            const calculatedRatePerKW = basePrice && roundedSystemKW > 0
+                              ? Math.round(basePrice / roundedSystemKW)
+                              : 0;
+
+                            const calculatedGSTPerKW = gstAmount && roundedSystemKW > 0
+                              ? Math.round(gstAmount / roundedSystemKW)
+                              : 0;
+
+                            const defaultDescription = generateProjectDescription(project);
+                            const description = project.customDescription || defaultDescription;
+
+                            return (
+                              <Card key={index} className="border-2" data-testid={`card-pricing-project-${index}`}>
+                                <CardContent className="p-4 space-y-4">
+                                  {/* Description */}
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Description</label>
+                                    <Input
+                                      type="text"
+                                      value={description}
+                                      onChange={(e) => {
+                                        form.setValue(`projects.${index}.customDescription`, e.target.value);
+                                      }}
+                                      className="w-full"
+                                      data-testid={`input-description-${index}`}
+                                    />
+                                  </div>
+
+                                  {/* kW and Rate/kW */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-medium text-muted-foreground">kW</label>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={systemKW}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const newKW = value === '' ? 0 : (parseFloat(value) || 0);
+                                          const newRoundedKW = roundSystemKW(newKW);
+                                          const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
+                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                          const newProjectValue = newBasePrice + newGSTAmount;
+
+                                          const propertyType = getPropertyType();
+                                          const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
+                                          const newCustomerPayment = newProjectValue - newSubsidy;
+
+                                          if (!project.customDescription) {
+                                            const updatedProject = { ...project, systemKW: newKW };
+                                            const newDescription = generateProjectDescription(updatedProject);
+                                            form.setValue(`projects.${index}.customDescription`, newDescription);
+                                          }
+
+                                          form.setValue(`projects.${index}.systemKW`, newKW);
+                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            form.setValue(`projects.${index}.systemKW`, 0);
+                                          }
+                                        }}
+                                        className="w-full"
+                                        data-testid={`input-systemkw-${index}`}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-medium text-muted-foreground">Rate/kW (₹)</label>
+                                      <Input
+                                        type="number"
+                                        value={calculatedRatePerKW}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                          const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
+                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
+                                          const newProjectValue = newBasePrice + newGSTAmount;
+
+                                          const propertyType = getPropertyType();
+                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                          const newCustomerPayment = newProjectValue - newSubsidy;
+
+                                          form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
+                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
+                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            form.setValue(`projects.${index}.pricePerKW`, 0);
+                                          }
+                                        }}
+                                        className="w-full"
+                                        data-testid={`input-priceperkw-${index}`}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Base Value */}
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Base Value (₹)</label>
+                                    <div className="p-2 bg-muted rounded-md font-medium">₹{basePrice.toLocaleString()}</div>
+                                  </div>
+
+                                  {/* GST Details */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-medium text-muted-foreground">GST %</label>
+                                      <Input
+                                        type="number"
+                                        value={gstPercentage}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                          const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
+                                          const newProjectValue = basePrice + newGSTAmount;
+
+                                          const propertyType = getPropertyType();
+                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
+                                          const newCustomerPayment = newProjectValue - newSubsidy;
+
+                                          form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
+                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
+                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
+                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
+                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '') {
+                                            form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
+                                          }
+                                        }}
+                                        className="w-full"
+                                        data-testid={`input-gstpercentage-${index}`}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-medium text-muted-foreground">GST/kW (₹)</label>
+                                      <div className="p-2 bg-muted rounded-md text-sm">{calculatedGSTPerKW.toLocaleString()}</div>
+                                    </div>
+                                  </div>
+
+                                  {/* GST Amount */}
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">GST Amount (₹)</label>
+                                    <div className="p-2 bg-muted rounded-md font-medium">₹{gstAmount.toLocaleString()}</div>
+                                  </div>
+
+                                  {/* Total Value */}
+                                  <div className="space-y-2 pt-2 border-t">
+                                    <label className="text-xs font-medium text-muted-foreground">Total Value (₹)</label>
+                                    <div className="p-3 bg-primary/10 rounded-md font-bold text-lg text-primary">₹{projectValue.toLocaleString()}</div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+
+                          {/* Totals Card for Mobile */}
+                          <Card className="border-2 bg-primary/5">
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Total System Cost:</span>
+                                <span className="font-bold">₹{form.watch("totalSystemCost")?.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Total GST:</span>
+                                <span className="font-bold">₹{form.watch("totalGSTAmount")?.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between items-center pt-3 border-t-2">
+                                <span className="text-base font-bold">Grand Total (Including GST):</span>
+                                <span className="font-bold text-lg text-primary">₹{form.watch("totalWithGST")?.toLocaleString()}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                        <div className="text-sm text-muted-foreground italic">
+                          Amount in words: <span className="font-medium">Rupees {(() => {
+                            const amount = Math.floor(form.watch("totalWithGST") || 0);
+
+                            const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+                            const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+                            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+                            const convertTwoDigit = (num: number): string => {
+                              if (num === 0) return "";
+                              if (num < 10) return ones[num];
+                              if (num < 20) return teens[num - 10];
+                              const tenDigit = Math.floor(num / 10);
+                              const oneDigit = num % 10;
+                              return tens[tenDigit] + (oneDigit > 0 ? " " + ones[oneDigit] : "");
+                            };
+
+                            if (amount === 0) return "Zero Only";
+
+                            const crores = Math.floor(amount / 10000000);
+                            const lakhs = Math.floor((amount % 10000000) / 100000);
+                            const thousands = Math.floor((amount % 100000) / 1000);
+                            const hundreds = Math.floor((amount % 1000) / 100);
+                            const remainder = amount % 100;
+
+                            let result = "";
+                            if (crores > 0) result += convertTwoDigit(crores) + " Crore" + (crores > 1 ? "s" : "") + " ";
+                            if (lakhs > 0) result += convertTwoDigit(lakhs) + " Lakh" + (lakhs > 1 ? "s" : "") + " ";
+                            if (thousands > 0) result += convertTwoDigit(thousands) + " Thousand ";
+                            if (hundreds > 0) result += ones[hundreds] + " Hundred ";
+                            if (remainder > 0) result += convertTwoDigit(remainder) + " ";
+
+                            return result.trim() + " Only";
+                          })()}</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <p className="font-semibold">2. Solar On grid Inverter (15 Years)</p>
-                        <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                          <li>Replacement Warranty for 10 Years</li>
-                          <li>Service Warranty for 5 Years</li>
-                        </ul>
+                    );
+                  })()}
+
+                  {/* Warranty Details - Hidden for service-only quotations (water heater and water pump) */}
+                  {!isServiceOnlyQuotation && (
+                    <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <h4 className="font-medium text-base flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        Warranty Details
+                      </h4>
+                      <div className="text-sm space-y-2">
+                        <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
+                        <div className="space-y-1">
+                          <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
+                          <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                            <li>15 Years Manufacturing defect Warranty</li>
+                            <li>15 Years Service Warranty</li>
+                            <li>90% Performance Warranty till the end of 15 years</li>
+                            <li>80% Performance Warranty till the end of 15 years</li>
+                          </ul>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-semibold">2. Solar On grid Inverter (15 Years)</p>
+                          <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                            <li>Replacement Warranty for 10 Years</li>
+                            <li>Service Warranty for 5 Years</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Payment Details */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Payment Terms */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-base">Payment Details</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <FormField
-                          control={form.control}
-                          name="advancePaymentPercentage"
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormLabel>Advance Percentage</FormLabel>
-                              <FormControl>
-                                <div className="flex items-center gap-2">
-                                  <Input 
-                                    type="number" 
-                                    min="0"
-                                    max="100"
-                                    {...field}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      const percentage = value === '' ? '' : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                      field.onChange(percentage);
-                                      const totalCustomerPayment = form.watch("totalCustomerPayment") || 0;
-                                      const advanceAmount = Math.round(totalCustomerPayment * ((percentage === '' ? 0 : percentage) / 100));
-                                      const balanceAmount = totalCustomerPayment - advanceAmount;
-                                      form.setValue("advanceAmount", advanceAmount);
-                                      form.setValue("balanceAmount", balanceAmount);
-                                    }}
-                                    onBlur={(e) => {
-                                      if (e.target.value === '') {
-                                        field.onChange(90);
+                  {/* Payment Details */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Payment Terms */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-base">Payment Details</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <FormField
+                            control={form.control}
+                            name="advancePaymentPercentage"
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormLabel>Advance Percentage</FormLabel>
+                                <FormControl>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      {...field}
+                                      onChange={(e) => {
+                                        const value = e.target.value;
+                                        const percentage = value === '' ? '' : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                                        field.onChange(percentage);
                                         const totalCustomerPayment = form.watch("totalCustomerPayment") || 0;
-                                        const advanceAmount = Math.round(totalCustomerPayment * 0.9);
+                                        const advanceAmount = Math.round(totalCustomerPayment * ((percentage === '' ? 0 : percentage) / 100));
                                         const balanceAmount = totalCustomerPayment - advanceAmount;
                                         form.setValue("advanceAmount", advanceAmount);
                                         form.setValue("balanceAmount", balanceAmount);
-                                      }
-                                    }}
-                                    className="w-24"
-                                    data-testid="input-advance-percentage"
-                                  />
-                                  <span className="text-sm">%</span>
-                                  <span className="text-sm text-muted-foreground flex-1 text-right">₹{form.watch("advanceAmount")?.toLocaleString() || 0}</span>
-                                </div>
-                              </FormControl>
+                                      }}
+                                      onBlur={(e) => {
+                                        if (e.target.value === '') {
+                                          field.onChange(90);
+                                          const totalCustomerPayment = form.watch("totalCustomerPayment") || 0;
+                                          const advanceAmount = Math.round(totalCustomerPayment * 0.9);
+                                          const balanceAmount = totalCustomerPayment - advanceAmount;
+                                          form.setValue("advanceAmount", advanceAmount);
+                                          form.setValue("balanceAmount", balanceAmount);
+                                        }
+                                      }}
+                                      className="w-24"
+                                      data-testid="input-advance-percentage"
+                                    />
+                                    <span className="text-sm">%</span>
+                                    <span className="text-sm text-muted-foreground flex-1 text-right">₹{form.watch("advanceAmount")?.toLocaleString() || 0}</span>
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {form.watch("advancePaymentPercentage")}% Advance along with Purchase Order
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium mb-2">Balance Percentage</p>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={100 - (form.watch("advancePaymentPercentage") || 0)}
+                                disabled
+                                className="w-24"
+                                data-testid="input-balance-percentage"
+                              />
+                              <span className="text-sm">%</span>
+                              <span className="text-sm text-muted-foreground flex-1 text-right">₹{form.watch("balanceAmount")?.toLocaleString() || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {100 - (form.watch("advancePaymentPercentage") || 0)}% Immediately after completion of work
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bank Details */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-base">Payment Account Details</h4>
+                      <div className="space-y-3">
+                        <FormField
+                          control={form.control}
+                          name="accountDetails.bankName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Select Bank</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  if (value === "ICICI") {
+                                    form.setValue("accountDetails.branch", "Subramanipuram, Madurai");
+                                    form.setValue("accountDetails.accountNumber", "601305021400");
+                                    form.setValue("accountDetails.ifscCode", "ICIC0006013");
+                                  } else if (value === "Axis Bank") {
+                                    form.setValue("accountDetails.branch", "Madurai Main");
+                                    form.setValue("accountDetails.accountNumber", "924020033201767");
+                                    form.setValue("accountDetails.ifscCode", "UTIB0000109");
+                                  }
+                                }}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-bank">
+                                    <SelectValue placeholder="Select bank" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="ICICI">ICICI</SelectItem>
+                                  <SelectItem value="Axis Bank">Axis Bank</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {form.watch("advancePaymentPercentage")}% Advance along with Purchase Order
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium mb-2">Balance Percentage</p>
-                          <div className="flex items-center gap-2">
-                            <Input 
-                              type="number" 
-                              value={100 - (form.watch("advancePaymentPercentage") || 0)}
-                              disabled
-                              className="w-24"
-                              data-testid="input-balance-percentage"
-                            />
-                            <span className="text-sm">%</span>
-                            <span className="text-sm text-muted-foreground flex-1 text-right">₹{form.watch("balanceAmount")?.toLocaleString() || 0}</span>
-                          </div>
+
+                        <div className="border rounded-lg overflow-hidden">
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <tr className="border-b">
+                                <td className="p-2 font-medium bg-muted">Name</td>
+                                <td className="p-2">Prakash Green Energy</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 font-medium bg-muted">Bank</td>
+                                <td className="p-2">{form.watch("accountDetails.bankName") || "ICICI"}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 font-medium bg-muted">Branch</td>
+                                <td className="p-2">{form.watch("accountDetails.branch") || "Subramaniapuram,Madurai"}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 font-medium bg-muted">Acct No</td>
+                                <td className="p-2">{form.watch("accountDetails.accountNumber") || "60130521400"}</td>
+                              </tr>
+                              <tr>
+                                <td className="p-2 font-medium bg-muted">IFS Code</td>
+                                <td className="p-2">{form.watch("accountDetails.ifscCode") || "ICIC0006013"}</td>
+                              </tr>
+                            </tbody>
+                          </table>
                         </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {100 - (form.watch("advancePaymentPercentage") || 0)}% Immediately after completion of work
                       </div>
                     </div>
                   </div>
 
-                  {/* Bank Details */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-base">Payment Account Details</h4>
+                  {/* Delivery Period - Hidden for service-only quotations */}
+                  {!isServiceOnlyQuotation && (
                     <div className="space-y-3">
+                      <h4 className="font-medium text-base">Delivery Period</h4>
                       <FormField
                         control={form.control}
-                        name="accountDetails.bankName"
+                        name="deliveryTimeframe"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Select Bank</FormLabel>
-                            <Select 
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                if (value === "ICICI") {
-                                  form.setValue("accountDetails.branch", "Subramanipuram, Madurai");
-                                  form.setValue("accountDetails.accountNumber", "601305021400");
-                                  form.setValue("accountDetails.ifscCode", "ICIC0006013");
-                                } else if (value === "Axis Bank") {
-                                  form.setValue("accountDetails.branch", "Madurai Main");
-                                  form.setValue("accountDetails.accountNumber", "924020033201767");
-                                  form.setValue("accountDetails.ifscCode", "UTIB0000109");
-                                }
-                              }} 
-                              value={field.value}
-                            >
+                            <FormLabel>Delivery Timeframe</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger data-testid="select-bank">
-                                  <SelectValue placeholder="Select bank" />
+                                <SelectTrigger data-testid="select-delivery-timeframe" className="max-w-xs">
+                                  <SelectValue placeholder="Select delivery timeframe" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="ICICI">ICICI</SelectItem>
-                                <SelectItem value="Axis Bank">Axis Bank</SelectItem>
+                                <SelectItem value="1_2_weeks">1-2 weeks from confirmation</SelectItem>
+                                <SelectItem value="2_3_weeks">2-3 weeks from confirmation</SelectItem>
+                                <SelectItem value="3_4_weeks">3-4 weeks from confirmation</SelectItem>
+                                <SelectItem value="1_month">1 month from confirmation</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
-                      <div className="border rounded-lg overflow-hidden">
-                        <table className="w-full text-sm">
-                          <tbody>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium bg-muted">Name</td>
-                              <td className="p-2">Prakash Green Energy</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium bg-muted">Bank</td>
-                              <td className="p-2">{form.watch("accountDetails.bankName") || "ICICI"}</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium bg-muted">Branch</td>
-                              <td className="p-2">{form.watch("accountDetails.branch") || "Subramaniapuram,Madurai"}</td>
-                            </tr>
-                            <tr className="border-b">
-                              <td className="p-2 font-medium bg-muted">Acct No</td>
-                              <td className="p-2">{form.watch("accountDetails.accountNumber") || "60130521400"}</td>
-                            </tr>
-                            <tr>
-                              <td className="p-2 font-medium bg-muted">IFS Code</td>
-                              <td className="p-2">{form.watch("accountDetails.ifscCode") || "ICIC0006013"}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Delivery Period - Hidden for service-only quotations */}
-                {!isServiceOnlyQuotation && (
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-base">Delivery Period</h4>
-                    <FormField
-                      control={form.control}
-                      name="deliveryTimeframe"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Delivery Timeframe</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-delivery-timeframe" className="max-w-xs">
-                                <SelectValue placeholder="Select delivery timeframe" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="1_2_weeks">1-2 weeks from confirmation</SelectItem>
-                              <SelectItem value="2_3_weeks">2-3 weeks from confirmation</SelectItem>
-                              <SelectItem value="3_4_weeks">3-4 weeks from confirmation</SelectItem>
-                              <SelectItem value="1_month">1 month from confirmation</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      • {form.watch("deliveryTimeframe")?.replace(/_/g, '-') || '2-3 weeks'} from the date of confirmation of order
-                    </p>
-                  </div>
-                )}
-
-                {/* Additional Notes */}
-                <div className="space-y-4">
-                  <h4 className="font-medium">Additional Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="internalNotes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Internal Notes</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Notes for internal team (not visible to customer)" 
-                              className="min-h-[80px]" 
-                              data-testid="textarea-internal-notes"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="customerNotes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Customer Notes</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Special instructions or notes for customer" 
-                              className="min-h-[80px]" 
-                              data-testid="textarea-customer-notes"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 4: Review & Submit */}
-          {currentStep === 4 && (
-            <Card data-testid="card-review-submit">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Review & Submit
-                </CardTitle>
-                <CardDescription>
-                  Final review before creating the quotation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6">
-                {/* Summary - Hidden for service-only quotations */}
-                {!isServiceOnlyQuotation && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="space-y-3 sm:space-y-4">
-                      <h4 className="font-medium text-sm sm:text-base">Quotation Summary</h4>
-                      <div className="space-y-2 text-xs sm:text-sm">
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="text-muted-foreground">Source:</span>
-                          <Badge variant="outline" className="text-xs">
-                            {quotationSource === "site_visit" ? "Site Visit" : "Manual"}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="text-muted-foreground">Projects:</span>
-                          <span className="font-medium">{form.watch("projects").length} system(s)</span>
-                        </div>
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="text-muted-foreground">Total Value:</span>
-                          <span className="font-medium">₹{form.watch("totalWithGST")?.toLocaleString() || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="text-muted-foreground">Delivery:</span>
-                          <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || 'TBD'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Customer EB Details - Display Only */}
-                {(form.watch("customerData")?.tariffCode || form.watch("customerData")?.ebSanctionPhase || form.watch("customerData")?.ebSanctionKW) && (
-                  <div className="space-y-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <h4 className="font-medium text-sm sm:text-base">EB Sanction Details</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      {form.watch("customerData")?.tariffCode && (
-                        <div>
-                          <p className="text-muted-foreground mb-1">Tariff Code</p>
-                          <p className="font-medium">{form.watch("customerData")?.tariffCode}</p>
-                        </div>
-                      )}
-                      {form.watch("customerData")?.ebSanctionPhase && (
-                        <div>
-                          <p className="text-muted-foreground mb-1">Load Phase</p>
-                          <p className="font-medium">{form.watch("customerData")?.ebSanctionPhase === '1_phase' ? '1 Phase' : '3 Phase'}</p>
-                        </div>
-                      )}
-                      {form.watch("customerData")?.ebSanctionKW && (
-                        <div>
-                          <p className="text-muted-foreground mb-1">Sanction Load</p>
-                          <p className="font-medium">{form.watch("customerData")?.ebSanctionKW} KW</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Prepared By & Contact Details - Editable Fields */}
-                <div className="space-y-3">
-                  <h4 className="font-medium text-sm sm:text-base">Quotation Details</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="preparedBy"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Prepared By</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Enter name of person preparing quotation" 
-                              data-testid="input-prepared-by"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            This name will appear as "Prepared by" in the quotation PDF.
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="refName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ref Name</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder={form.watch("preparedBy") || "Enter reference name"} 
-                              data-testid="input-ref-name"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            Name for "Ref: Discussion with" in PDF. Defaults to Prepared By if left empty.
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="contactPerson"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Contact Person</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="M. Selva Prakash" 
-                              data-testid="input-contact-person"
-                              {...field}
-                            />
-                          </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            Name of contact person. Defaults to "M. Selva Prakash" if left empty.
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="contactNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Contact Number</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="+91 99949 01500" 
-                              data-testid="input-contact-number"
-                              {...field}
-                            />
-                          </FormControl>
-                          <p className="text-xs text-muted-foreground">
-                            Contact number for quotation. Defaults to "+91 99949 01500" if left empty.
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Scope of Work */}
-                <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-base">Scope of Work</h4>
-                    <Badge variant="outline" className="text-xs">Company Responsibility</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Click on any item to edit. Items shown are marked as company scope.</p>
-                  
-                  {form.watch("projects").map((project: any, projectIndex: number) => {
-                    const items = companyScopeItems[projectIndex] || [];
-                    
-                    return items.length > 0 ? (
-                      <div key={projectIndex} className="space-y-3">
-                        {projectIndex > 0 && <Separator className="my-3" />}
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">
-                              Project {projectIndex + 1}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {project.projectType === 'on_grid' ? 'On-Grid Solar' : 
-                               project.projectType === 'off_grid' ? 'Off-Grid Solar' : 
-                               project.projectType === 'hybrid' ? 'Hybrid Solar' :
-                               project.projectType === 'water_heater' ? 'Solar Water Heater' :
-                               project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType}
-                            </span>
-                          </div>
-                          
-                          <ul className="space-y-2 text-sm">
-                            {items.map((item, itemIndex) => (
-                              <li key={itemIndex} className="flex items-start gap-2 group">
-                                <span className="text-muted-foreground mt-0.5">•</span>
-                                {editingCompanyScope?.projectIndex === projectIndex && editingCompanyScope?.itemIndex === itemIndex ? (
-                                  <Input
-                                    value={item}
-                                    onChange={(e) => {
-                                      const newItems = [...items];
-                                      newItems[itemIndex] = e.target.value;
-                                      setCompanyScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
-                                    }}
-                                    onBlur={() => setEditingCompanyScope(null)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingCompanyScope(null);
-                                      }
-                                      if (e.key === 'Escape') {
-                                        setEditingCompanyScope(null);
-                                      }
-                                    }}
-                                    autoFocus
-                                    className="flex-1 text-sm"
-                                  />
-                                ) : (
-                                  <>
-                                    <span className="flex-1">{item}</span>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => setEditingCompanyScope({ projectIndex, itemIndex })}
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                  </>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                          
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="text-xs mt-2"
-                            onClick={() => {
-                              const newItems = [...(companyScopeItems[projectIndex] || []), 'New scope item'];
-                              setCompanyScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
-                              setEditingCompanyScope({ projectIndex, itemIndex: newItems.length - 1 });
-                            }}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add Item
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null;
-                  })}
-                </div>
-
-                {/* Customer's Scope of Work */}
-                <div className="space-y-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-base">Customer's Scope of Work</h4>
-                    <Badge variant="outline" className="text-xs">Customer Responsibility</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Click on any item to edit. Items shown are marked as customer scope.</p>
-                  
-                  {form.watch("projects").map((project: any, projectIndex: number) => {
-                    const items = customerScopeItems[projectIndex] || [];
-                    
-                    return items.length > 0 ? (
-                      <div key={projectIndex} className="space-y-3">
-                        {projectIndex > 0 && <Separator className="my-3" />}
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">
-                              Project {projectIndex + 1}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {project.projectType === 'on_grid' ? 'On-Grid Solar' : 
-                               project.projectType === 'off_grid' ? 'Off-Grid Solar' : 
-                               project.projectType === 'hybrid' ? 'Hybrid Solar' :
-                               project.projectType === 'water_heater' ? 'Solar Water Heater' :
-                               project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType}
-                            </span>
-                          </div>
-                          
-                          <ul className="space-y-2 text-sm">
-                            {items.map((item, itemIndex) => (
-                              <li key={itemIndex} className="flex items-start gap-2 group">
-                                <span className="text-muted-foreground mt-0.5">•</span>
-                                {editingCustomerScope?.projectIndex === projectIndex && editingCustomerScope?.itemIndex === itemIndex ? (
-                                  <Input
-                                    value={item}
-                                    onChange={(e) => {
-                                      const newItems = [...items];
-                                      newItems[itemIndex] = e.target.value;
-                                      setCustomerScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
-                                    }}
-                                    onBlur={() => setEditingCustomerScope(null)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingCustomerScope(null);
-                                      }
-                                      if (e.key === 'Escape') {
-                                        setEditingCustomerScope(null);
-                                      }
-                                    }}
-                                    autoFocus
-                                    className="flex-1 text-sm"
-                                  />
-                                ) : (
-                                  <>
-                                    <span className="flex-1">{item}</span>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => setEditingCustomerScope({ projectIndex, itemIndex })}
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                  </>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                          
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="text-xs mt-2"
-                            onClick={() => {
-                              const newItems = [...(customerScopeItems[projectIndex] || []), 'New scope item'];
-                              setCustomerScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
-                              setEditingCustomerScope({ projectIndex, itemIndex: newItems.length - 1 });
-                            }}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add Item
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div key={projectIndex} className="text-sm text-muted-foreground italic">
-                        No customer scope items for Project {projectIndex + 1}. All work is company's responsibility.
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Bill of Materials Preview */}
-                <div className="space-y-4 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-base flex items-center gap-2">
-                      <Table className="h-5 w-5" />
-                      Bill of Materials (BOM)
-                    </h4>
-                    {bomItems.length > 0 && (
-                      <Badge variant="outline" className="text-xs">
-                        {bomItems.length} items
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Review and edit the bill of materials before generating the quotation. Click on any field to edit.
-                  </p>
-                  
-                  {isFetchingBom ? (
-                    <div className="flex items-center justify-center p-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      <span className="ml-2 text-sm">Loading BOM...</span>
-                    </div>
-                  ) : bomItems.length > 0 ? (
-                    (() => {
-                      // Check if all projects are water utilities (water heater/pump)
-                      const projects = form.watch("projects");
-                      const isWaterUtilityOnly = projects && projects.length > 0 && projects.every((p: any) => 
-                        p.projectType === 'water_heater' || p.projectType === 'water_pump'
-                      );
-                      
-                      return (
-                        <div className="overflow-x-auto border rounded-lg">
-                          <table className="w-full text-xs sm:text-sm">
-                            <thead className="bg-green-100 dark:bg-green-900/30">
-                              {isWaterUtilityOnly ? (
-                                // Simplified header for water utilities
-                                <tr>
-                                  <th className="p-2 text-left border-r">Sl.No</th>
-                                  <th className="p-2 text-left border-r">Description</th>
-                                  <th className="p-2 text-right border-r">Price (₹)</th>
-                                  <th className="p-2 text-center border-r">Qty</th>
-                                  <th className="p-2 text-right border-r">Amount (₹)</th>
-                                  <th className="p-2 text-left">Actions</th>
-                                </tr>
-                              ) : (
-                                // Full header for solar projects
-                                <tr>
-                                  <th className="p-2 text-left border-r">Sl.No</th>
-                                  <th className="p-2 text-left border-r">Description</th>
-                                  <th className="p-2 text-left border-r">Type</th>
-                                  <th className="p-2 text-left border-r">Volt</th>
-                                  <th className="p-2 text-left border-r">Rating</th>
-                                  <th className="p-2 text-left border-r">Make</th>
-                                  <th className="p-2 text-left border-r">Qty</th>
-                                  <th className="p-2 text-left border-r">Unit</th>
-                                  <th className="p-2 text-left">Actions</th>
-                                </tr>
-                              )}
-                            </thead>
-                        <tbody>
-                          {bomItems.map((item, index) => (
-                            <tr key={index} className="border-t hover:bg-green-50/50 dark:hover:bg-green-900/10">
-                              <td className="p-2 border-r">{item.slNo}</td>
-                              <td className="p-2 border-r">
-                                {editingBomItem === index ? (
-                                  <Input
-                                    value={item.description}
-                                    onChange={(e) => {
-                                      const updated = [...bomItems];
-                                      updated[index].description = e.target.value;
-                                      setBomItems(updated);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        setEditingBomItem(null);
-                                      }
-                                    }}
-                                    className="min-w-[200px]"
-                                  />
-                                ) : (
-                                  item.description
-                                )}
-                              </td>
-                              
-                              {isWaterUtilityOnly ? (
-                                // Simplified columns for water utilities
-                                <>
-                                  <td className="p-2 border-r text-right">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        type="number"
-                                        value={(item as any).rate || 0}
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          (updated[index] as any).rate = parseFloat(e.target.value) || 0;
-                                          (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[100px] text-right"
-                                      />
-                                    ) : (
-                                      ((item as any).rate || 0).toLocaleString()
-                                    )}
-                                  </td>
-                                  <td className="p-2 border-r text-center">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={item.qty}
-                                        placeholder="-"
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          updated[index].qty = e.target.value;
-                                          (updated[index] as any).amount = (e.target.value === '-' || e.target.value === '') ? 0 : ((updated[index] as any).rate || 0) * (parseInt(e.target.value) || 0);
-                                          setBomItems(updated);
-                                        }}
-                                        onBlur={(e) => {
-                                          const updated = [...bomItems];
-                                          const val = e.target.value === '-' || e.target.value === '' ? '-' : parseInt(e.target.value) || 0;
-                                          updated[index].qty = val;
-                                          (updated[index] as any).amount = (val === '-' || val === 0) ? 0 : ((updated[index] as any).rate || 0) * val;
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            const updated = [...bomItems];
-                                            const val = (e.target as any).value === '-' || (e.target as any).value === '' ? '-' : parseInt((e.target as any).value) || 0;
-                                            updated[index].qty = val;
-                                            (updated[index] as any).amount = (val === '-' || val === 0) ? 0 : ((updated[index] as any).rate || 0) * val;
-                                            setBomItems(updated);
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[80px] text-center"
-                                      />
-                                    ) : (
-                                      item.qty
-                                    )}
-                                  </td>
-                                  <td className="p-2 border-r text-right font-medium">
-                                    ₹{((item as any).amount || 0).toLocaleString()}
-                                  </td>
-                                </>
-                              ) : (
-                                // Full columns for solar projects
-                                <>
-                                  <td className="p-2 border-r">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        value={item.type}
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          updated[index].type = e.target.value;
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[100px]"
-                                      />
-                                    ) : (
-                                      item.type
-                                    )}
-                                  </td>
-                                  <td className="p-2 border-r">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        value={item.volt}
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          updated[index].volt = e.target.value;
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[80px]"
-                                      />
-                                    ) : (
-                                      item.volt
-                                    )}
-                                  </td>
-                                  <td className="p-2 border-r">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        value={item.rating}
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          updated[index].rating = e.target.value;
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[100px]"
-                                      />
-                                    ) : (
-                                      item.rating
-                                    )}
-                                  </td>
-                                  <td className="p-2 border-r">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        value={item.make}
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          updated[index].make = e.target.value;
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[120px]"
-                                      />
-                                    ) : (
-                                      item.make
-                                    )}
-                                  </td>
-                                  <td className="p-2 border-r">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={item.qty}
-                                        placeholder="-"
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          updated[index].qty = e.target.value;
-                                          setBomItems(updated);
-                                        }}
-                                        onBlur={(e) => {
-                                          const updated = [...bomItems];
-                                          const val = e.target.value === '-' || e.target.value === '' ? '-' : parseInt(e.target.value) || 0;
-                                          updated[index].qty = val;
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            const updated = [...bomItems];
-                                            const val = (e.target as any).value === '-' || (e.target as any).value === '' ? '-' : parseInt((e.target as any).value) || 0;
-                                            updated[index].qty = val;
-                                            setBomItems(updated);
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[80px]"
-                                      />
-                                    ) : (
-                                      item.qty
-                                    )}
-                                  </td>
-                                  <td className="p-2 border-r">
-                                    {editingBomItem === index ? (
-                                      <Input
-                                        value={item.unit}
-                                        onChange={(e) => {
-                                          const updated = [...bomItems];
-                                          updated[index].unit = e.target.value;
-                                          setBomItems(updated);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            setEditingBomItem(null);
-                                          }
-                                        }}
-                                        className="min-w-[80px]"
-                                      />
-                                    ) : (
-                                      item.unit
-                                    )}
-                                  </td>
-                                </>
-                              )}
-                              
-                              {/* Actions column - common for both */}
-                              <td className="p-2">
-                                <div className="flex gap-1">
-                                  {editingBomItem === index ? (
-                                    <>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => setEditingBomItem(null)}
-                                        className="h-7 w-7 p-0"
-                                      >
-                                        <Save className="h-4 w-4 text-green-600" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setEditingBomItem(null);
-                                          // Reload BOM to cancel changes (you can store original state if needed)
-                                        }}
-                                        className="h-7 w-7 p-0"
-                                      >
-                                        <X className="h-4 w-4 text-red-600" />
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => setEditingBomItem(index)}
-                                      className="h-7 w-7 p-0"
-                                    >
-                                      <Edit2 className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                      );
-                    })()
-                  ) : (
-                    <div className="text-center p-8 text-muted-foreground">
-                      <Table className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No BOM items available</p>
+                      <p className="text-sm text-muted-foreground">
+                        • {form.watch("deliveryTimeframe")?.replace(/_/g, '-') || '2-3 weeks'} from the date of confirmation of order
+                      </p>
                     </div>
                   )}
-                </div>
 
-                {/* Documents Required - Hidden for service-only quotations */}
-                {!isServiceOnlyQuotation && (
-                  <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                    <h4 className="font-medium text-base">Documents Required for PM Surya Ghar</h4>
-                    <div className="space-y-2 text-sm">
-                      <ol className="list-decimal list-inside space-y-1">
-                        <li>EB Number</li>
-                        <li>EB Register Mobile Number</li>
-                        <li>Email ID</li>
-                        <li>Aadhar Card</li>
-                        <li>PAN Card</li>
-                        <li>Passport Size Photo -1</li>
-                        <li>Property Tax Copy</li>
-                        <li>Bank Passbook</li>
-                        <li>Cancelled Cheque</li>
-                      </ol>
-                      <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded">
-                        <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
-                          *All Required Documents should be in the same name as mention EB Service Number
-                        </p>
-                      </div>
+                  {/* Additional Notes */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Additional Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="internalNotes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Internal Notes</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Notes for internal team (not visible to customer)"
+                                className="min-h-[80px]"
+                                data-testid="textarea-internal-notes"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="customerNotes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Customer Notes</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Special instructions or notes for customer"
+                                className="min-h-[80px]"
+                                data-testid="textarea-customer-notes"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
-                )}
-
-                {/* Warnings and Recommendations */}
-                {quotationSource === "site_visit" && siteVisitMapping && (
-                  (siteVisitMapping as any).businessRuleWarnings?.length > 0 && (
-                    <Alert>
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        <div className="font-medium mb-2">Business Rule Warnings:</div>
-                        <ul className="list-disc list-inside text-sm space-y-1">
-                          {(siteVisitMapping as any).businessRuleWarnings.map((warning: string, index: number) => (
-                            <li key={index}>{warning}</li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
-                  )
-                )}
-
-                <Alert>
-                  <Check className="h-4 w-4" />
-                  <AlertDescription>
-                    Ready to create quotation. The document will be generated with all specifications and can be sent to the customer.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Navigation buttons */}
-          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 pt-4 pb-2 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 0}
-              data-testid="button-previous"
-              className="w-full sm:w-auto order-2 sm:order-1"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-
-            {currentStep === WIZARD_STEPS.length - 1 ? (
-              <Button
-                key="submit-button"
-                type="submit"
-                disabled={!canProceed() || createQuotationMutation.isPending}
-                data-testid="button-submit"
-                className="w-full sm:w-auto order-1 sm:order-2"
-              >
-                {createQuotationMutation.isPending 
-                  ? (isEditMode ? "Updating..." : "Creating...") 
-                  : (isEditMode ? "Update Quotation" : "Create Quotation")
-                }
-              </Button>
-            ) : (
-              <Button
-                key="next-button"
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  nextStep();
-                }}
-                disabled={!canProceed()}
-                data-testid="button-next"
-                className="w-full sm:w-auto order-1 sm:order-2"
-              >
-                Next
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+                </CardContent>
+              </Card>
             )}
-          </div>
+
+            {/* Step 4: Review & Submit */}
+            {currentStep === 4 && (
+              <Card data-testid="card-review-submit">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Review & Submit
+                  </CardTitle>
+                  <CardDescription>
+                    Final review before creating the quotation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 sm:space-y-6">
+                  {/* Summary - Hidden for service-only quotations */}
+                  {!isServiceOnlyQuotation && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="space-y-3 sm:space-y-4">
+                        <h4 className="font-medium text-sm sm:text-base">Quotation Summary</h4>
+                        <div className="space-y-2 text-xs sm:text-sm">
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-muted-foreground">Source:</span>
+                            <Badge variant="outline" className="text-xs">
+                              {quotationSource === "site_visit" ? "Site Visit" : "Manual"}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-muted-foreground">Projects:</span>
+                            <span className="font-medium">{form.watch("projects").length} system(s)</span>
+                          </div>
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-muted-foreground">Total Value:</span>
+                            <span className="font-medium">₹{form.watch("totalWithGST")?.toLocaleString() || 0}</span>
+                          </div>
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-muted-foreground">Delivery:</span>
+                            <span className="font-medium">{form.watch("deliveryTimeframe")?.replace('_', '-') || 'TBD'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Customer EB Details - Display Only */}
+                  {(form.watch("customerData")?.tariffCode || form.watch("customerData")?.ebSanctionPhase || form.watch("customerData")?.ebSanctionKW) && (
+                    <div className="space-y-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <h4 className="font-medium text-sm sm:text-base">EB Sanction Details</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        {form.watch("customerData")?.tariffCode && (
+                          <div>
+                            <p className="text-muted-foreground mb-1">Tariff Code</p>
+                            <p className="font-medium">{form.watch("customerData")?.tariffCode}</p>
+                          </div>
+                        )}
+                        {form.watch("customerData")?.ebSanctionPhase && (
+                          <div>
+                            <p className="text-muted-foreground mb-1">Load Phase</p>
+                            <p className="font-medium">{form.watch("customerData")?.ebSanctionPhase === '1_phase' ? '1 Phase' : '3 Phase'}</p>
+                          </div>
+                        )}
+                        {form.watch("customerData")?.ebSanctionKW && (
+                          <div>
+                            <p className="text-muted-foreground mb-1">Sanction Load</p>
+                            <p className="font-medium">{form.watch("customerData")?.ebSanctionKW} KW</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Prepared By & Contact Details - Editable Fields */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm sm:text-base">Quotation Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="preparedBy"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prepared By</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter name of person preparing quotation"
+                                data-testid="input-prepared-by"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              This name will appear as "Prepared by" in the quotation PDF.
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="refName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ref Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={form.watch("preparedBy") || "Enter reference name"}
+                                data-testid="input-ref-name"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              Name for "Ref: Discussion with" in PDF. Defaults to Prepared By if left empty.
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="contactPerson"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contact Person</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="M. Selva Prakash"
+                                data-testid="input-contact-person"
+                                {...field}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              Name of contact person. Defaults to "M. Selva Prakash" if left empty.
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="contactNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contact Number</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="+91 99949 01500"
+                                data-testid="input-contact-number"
+                                {...field}
+                              />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                              Contact number for quotation. Defaults to "+91 99949 01500" if left empty.
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Scope of Work */}
+                  <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-base">Scope of Work</h4>
+                      <Badge variant="outline" className="text-xs">Company Responsibility</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Click on any item to edit. Items shown are marked as company scope.</p>
+
+                    {form.watch("projects").map((project: any, projectIndex: number) => {
+                      const items = companyScopeItems[projectIndex] || [];
+
+                      return items.length > 0 ? (
+                        <div key={projectIndex} className="space-y-3">
+                          {projectIndex > 0 && <Separator className="my-3" />}
+
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                Project {projectIndex + 1}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {project.projectType === 'on_grid' ? 'On-Grid Solar' :
+                                  project.projectType === 'off_grid' ? 'Off-Grid Solar' :
+                                    project.projectType === 'hybrid' ? 'Hybrid Solar' :
+                                      project.projectType === 'water_heater' ? 'Solar Water Heater' :
+                                        project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType}
+                              </span>
+                            </div>
+
+                            <ul className="space-y-2 text-sm">
+                              {items.map((item, itemIndex) => (
+                                <li key={itemIndex} className="flex items-start gap-2 group">
+                                  <span className="text-muted-foreground mt-0.5">•</span>
+                                  {editingCompanyScope?.projectIndex === projectIndex && editingCompanyScope?.itemIndex === itemIndex ? (
+                                    <Input
+                                      value={item}
+                                      onChange={(e) => {
+                                        const newItems = [...items];
+                                        newItems[itemIndex] = e.target.value;
+                                        setCompanyScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                                      }}
+                                      onBlur={() => setEditingCompanyScope(null)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          setEditingCompanyScope(null);
+                                        }
+                                        if (e.key === 'Escape') {
+                                          setEditingCompanyScope(null);
+                                        }
+                                      }}
+                                      autoFocus
+                                      className="flex-1 text-sm"
+                                    />
+                                  ) : (
+                                    <>
+                                      <span className="flex-1">{item}</span>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => setEditingCompanyScope({ projectIndex, itemIndex })}
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-xs mt-2"
+                              onClick={() => {
+                                const newItems = [...(companyScopeItems[projectIndex] || []), 'New scope item'];
+                                setCompanyScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                                setEditingCompanyScope({ projectIndex, itemIndex: newItems.length - 1 });
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Item
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+
+                  {/* Customer's Scope of Work */}
+                  <div className="space-y-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-base">Customer's Scope of Work</h4>
+                      <Badge variant="outline" className="text-xs">Customer Responsibility</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Click on any item to edit. Items shown are marked as customer scope.</p>
+
+                    {form.watch("projects").map((project: any, projectIndex: number) => {
+                      const items = customerScopeItems[projectIndex] || [];
+
+                      return items.length > 0 ? (
+                        <div key={projectIndex} className="space-y-3">
+                          {projectIndex > 0 && <Separator className="my-3" />}
+
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                Project {projectIndex + 1}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {project.projectType === 'on_grid' ? 'On-Grid Solar' :
+                                  project.projectType === 'off_grid' ? 'Off-Grid Solar' :
+                                    project.projectType === 'hybrid' ? 'Hybrid Solar' :
+                                      project.projectType === 'water_heater' ? 'Solar Water Heater' :
+                                        project.projectType === 'water_pump' ? 'Solar Water Pump' : project.projectType}
+                              </span>
+                            </div>
+
+                            <ul className="space-y-2 text-sm">
+                              {items.map((item, itemIndex) => (
+                                <li key={itemIndex} className="flex items-start gap-2 group">
+                                  <span className="text-muted-foreground mt-0.5">•</span>
+                                  {editingCustomerScope?.projectIndex === projectIndex && editingCustomerScope?.itemIndex === itemIndex ? (
+                                    <Input
+                                      value={item}
+                                      onChange={(e) => {
+                                        const newItems = [...items];
+                                        newItems[itemIndex] = e.target.value;
+                                        setCustomerScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                                      }}
+                                      onBlur={() => setEditingCustomerScope(null)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          setEditingCustomerScope(null);
+                                        }
+                                        if (e.key === 'Escape') {
+                                          setEditingCustomerScope(null);
+                                        }
+                                      }}
+                                      autoFocus
+                                      className="flex-1 text-sm"
+                                    />
+                                  ) : (
+                                    <>
+                                      <span className="flex-1">{item}</span>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => setEditingCustomerScope({ projectIndex, itemIndex })}
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-xs mt-2"
+                              onClick={() => {
+                                const newItems = [...(customerScopeItems[projectIndex] || []), 'New scope item'];
+                                setCustomerScopeItems(prev => ({ ...prev, [projectIndex]: newItems }));
+                                setEditingCustomerScope({ projectIndex, itemIndex: newItems.length - 1 });
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Item
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div key={projectIndex} className="text-sm text-muted-foreground italic">
+                          No customer scope items for Project {projectIndex + 1}. All work is company's responsibility.
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Bill of Materials Preview */}
+                  <div className="space-y-4 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-base flex items-center gap-2">
+                        <Table className="h-5 w-5" />
+                        Bill of Materials (BOM)
+                      </h4>
+                      {bomItems.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {bomItems.length} items
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Review and edit the bill of materials before generating the quotation. Click on any field to edit.
+                    </p>
+
+                    {isFetchingBom ? (
+                      <div className="flex items-center justify-center p-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <span className="ml-2 text-sm">Loading BOM...</span>
+                      </div>
+                    ) : bomItems.length > 0 ? (
+                      (() => {
+                        // Check if all projects are water utilities (water heater/pump)
+                        const projects = form.watch("projects");
+                        const isWaterUtilityOnly = projects && projects.length > 0 && projects.every((p: any) =>
+                          p.projectType === 'water_heater' || p.projectType === 'water_pump'
+                        );
+
+                        return (
+                          <div className="overflow-x-auto border rounded-lg">
+                            <table className="w-full text-xs sm:text-sm">
+                              <thead className="bg-green-100 dark:bg-green-900/30">
+                                {isWaterUtilityOnly ? (
+                                  // Simplified header for water utilities
+                                  <tr>
+                                    <th className="p-2 text-left border-r">Sl.No</th>
+                                    <th className="p-2 text-left border-r">Description</th>
+                                    <th className="p-2 text-right border-r">Price (₹)</th>
+                                    <th className="p-2 text-center border-r">Qty</th>
+                                    <th className="p-2 text-right border-r">Amount (₹)</th>
+                                    <th className="p-2 text-left">Actions</th>
+                                  </tr>
+                                ) : (
+                                  // Full header for solar projects
+                                  <tr>
+                                    <th className="p-2 text-left border-r">Sl.No</th>
+                                    <th className="p-2 text-left border-r">Description</th>
+                                    <th className="p-2 text-left border-r">Type</th>
+                                    <th className="p-2 text-left border-r">Volt</th>
+                                    <th className="p-2 text-left border-r">Rating</th>
+                                    <th className="p-2 text-left border-r">Make</th>
+                                    <th className="p-2 text-left border-r">Qty</th>
+                                    <th className="p-2 text-left border-r">Unit</th>
+                                    <th className="p-2 text-left">Actions</th>
+                                  </tr>
+                                )}
+                              </thead>
+                              <tbody>
+                                {bomItems.map((item, index) => (
+                                  <tr key={index} className="border-t hover:bg-green-50/50 dark:hover:bg-green-900/10">
+                                    <td className="p-2 border-r">{item.slNo}</td>
+                                    <td className="p-2 border-r">
+                                      {editingBomItem === index ? (
+                                        <Input
+                                          value={item.description}
+                                          onChange={(e) => {
+                                            const updated = [...bomItems];
+                                            updated[index].description = e.target.value;
+                                            setBomItems(updated);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.preventDefault();
+                                              setEditingBomItem(null);
+                                            }
+                                          }}
+                                          className="min-w-[200px]"
+                                        />
+                                      ) : (
+                                        item.description
+                                      )}
+                                    </td>
+
+                                    {isWaterUtilityOnly ? (
+                                      // Simplified columns for water utilities
+                                      <>
+                                        <td className="p-2 border-r text-right">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              type="number"
+                                              value={(item as any).rate || 0}
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                (updated[index] as any).rate = parseFloat(e.target.value) || 0;
+                                                (updated[index] as any).amount = ((updated[index] as any).rate || 0) * (updated[index].qty || 0);
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[100px] text-right"
+                                            />
+                                          ) : (
+                                            ((item as any).rate || 0).toLocaleString()
+                                          )}
+                                        </td>
+                                        <td className="p-2 border-r text-center">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              type="text"
+                                              inputMode="numeric"
+                                              value={item.qty}
+                                              placeholder="-"
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                updated[index].qty = e.target.value;
+                                                (updated[index] as any).amount = (e.target.value === '-' || e.target.value === '') ? 0 : ((updated[index] as any).rate || 0) * (parseInt(e.target.value) || 0);
+                                                setBomItems(updated);
+                                              }}
+                                              onBlur={(e) => {
+                                                const updated = [...bomItems];
+                                                const val = e.target.value === '-' || e.target.value === '' ? '-' : parseInt(e.target.value) || 0;
+                                                updated[index].qty = val;
+                                                (updated[index] as any).amount = (val === '-' || val === 0) ? 0 : ((updated[index] as any).rate || 0) * val;
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  const updated = [...bomItems];
+                                                  const val = (e.target as any).value === '-' || (e.target as any).value === '' ? '-' : parseInt((e.target as any).value) || 0;
+                                                  updated[index].qty = val;
+                                                  (updated[index] as any).amount = (val === '-' || val === 0) ? 0 : ((updated[index] as any).rate || 0) * val;
+                                                  setBomItems(updated);
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[80px] text-center"
+                                            />
+                                          ) : (
+                                            item.qty
+                                          )}
+                                        </td>
+                                        <td className="p-2 border-r text-right font-medium">
+                                          ₹{((item as any).amount || 0).toLocaleString()}
+                                        </td>
+                                      </>
+                                    ) : (
+                                      // Full columns for solar projects
+                                      <>
+                                        <td className="p-2 border-r">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              value={item.type}
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                updated[index].type = e.target.value;
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[100px]"
+                                            />
+                                          ) : (
+                                            item.type
+                                          )}
+                                        </td>
+                                        <td className="p-2 border-r">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              value={item.volt}
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                updated[index].volt = e.target.value;
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[80px]"
+                                            />
+                                          ) : (
+                                            item.volt
+                                          )}
+                                        </td>
+                                        <td className="p-2 border-r">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              value={item.rating}
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                updated[index].rating = e.target.value;
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[100px]"
+                                            />
+                                          ) : (
+                                            item.rating
+                                          )}
+                                        </td>
+                                        <td className="p-2 border-r">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              value={item.make}
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                updated[index].make = e.target.value;
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[120px]"
+                                            />
+                                          ) : (
+                                            item.make
+                                          )}
+                                        </td>
+                                        <td className="p-2 border-r">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              type="text"
+                                              inputMode="numeric"
+                                              value={item.qty}
+                                              placeholder="-"
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                updated[index].qty = e.target.value;
+                                                setBomItems(updated);
+                                              }}
+                                              onBlur={(e) => {
+                                                const updated = [...bomItems];
+                                                const val = e.target.value === '-' || e.target.value === '' ? '-' : parseInt(e.target.value) || 0;
+                                                updated[index].qty = val;
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  const updated = [...bomItems];
+                                                  const val = (e.target as any).value === '-' || (e.target as any).value === '' ? '-' : parseInt((e.target as any).value) || 0;
+                                                  updated[index].qty = val;
+                                                  setBomItems(updated);
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[80px]"
+                                            />
+                                          ) : (
+                                            item.qty
+                                          )}
+                                        </td>
+                                        <td className="p-2 border-r">
+                                          {editingBomItem === index ? (
+                                            <Input
+                                              value={item.unit}
+                                              onChange={(e) => {
+                                                const updated = [...bomItems];
+                                                updated[index].unit = e.target.value;
+                                                setBomItems(updated);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  setEditingBomItem(null);
+                                                }
+                                              }}
+                                              className="min-w-[80px]"
+                                            />
+                                          ) : (
+                                            item.unit
+                                          )}
+                                        </td>
+                                      </>
+                                    )}
+
+                                    {/* Actions column - common for both */}
+                                    <td className="p-2">
+                                      <div className="flex gap-1">
+                                        {editingBomItem === index ? (
+                                          <>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => setEditingBomItem(null)}
+                                              className="h-7 w-7 p-0"
+                                            >
+                                              <Save className="h-4 w-4 text-green-600" />
+                                            </Button>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => {
+                                                setEditingBomItem(null);
+                                                // Reload BOM to cancel changes (you can store original state if needed)
+                                              }}
+                                              className="h-7 w-7 p-0"
+                                            >
+                                              <X className="h-4 w-4 text-red-600" />
+                                            </Button>
+                                          </>
+                                        ) : (
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setEditingBomItem(index)}
+                                            className="h-7 w-7 p-0"
+                                          >
+                                            <Edit2 className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="text-center p-8 text-muted-foreground">
+                        <Table className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No BOM items available</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Documents Required - Hidden for service-only quotations */}
+                  {!isServiceOnlyQuotation && (
+                    <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                      <h4 className="font-medium text-base">Documents Required for PM Surya Ghar</h4>
+                      <div className="space-y-2 text-sm">
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>EB Number</li>
+                          <li>EB Register Mobile Number</li>
+                          <li>Email ID</li>
+                          <li>Aadhar Card</li>
+                          <li>PAN Card</li>
+                          <li>Passport Size Photo -1</li>
+                          <li>Property Tax Copy</li>
+                          <li>Bank Passbook</li>
+                          <li>Cancelled Cheque</li>
+                        </ol>
+                        <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded">
+                          <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200">
+                            *All Required Documents should be in the same name as mention EB Service Number
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warnings and Recommendations */}
+                  {quotationSource === "site_visit" && siteVisitMapping && (
+                    (siteVisitMapping as any).businessRuleWarnings?.length > 0 && (
+                      <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          <div className="font-medium mb-2">Business Rule Warnings:</div>
+                          <ul className="list-disc list-inside text-sm space-y-1">
+                            {(siteVisitMapping as any).businessRuleWarnings.map((warning: string, index: number) => (
+                              <li key={index}>{warning}</li>
+                            ))}
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    )
+                  )}
+
+                  <Alert>
+                    <Check className="h-4 w-4" />
+                    <AlertDescription>
+                      Ready to create quotation. The document will be generated with all specifications and can be sent to the customer.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Navigation buttons */}
+            <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 pt-4 pb-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={prevStep}
+                disabled={currentStep === 0}
+                data-testid="button-previous"
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 order-1 sm:order-2">
+                {/* Show Preview PDF button on final step if in edit mode or quotationId exists */}
+                {currentStep === WIZARD_STEPS.length - 1 && (isEditMode || quotationId) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePreviewPDF}
+                    disabled={isPreviewingPDF}
+                    data-testid="button-preview-pdf"
+                    className="w-full sm:w-auto"
+                  >
+                    {isPreviewingPDF ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Preview PDF
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {currentStep === WIZARD_STEPS.length - 1 ? (
+                  <Button
+                    key="submit-button"
+                    type="submit"
+                    disabled={!canProceed() || createQuotationMutation.isPending}
+                    data-testid="button-submit"
+                    className="w-full sm:w-auto"
+                  >
+                    {createQuotationMutation.isPending
+                      ? (isEditMode ? "Updating..." : "Creating...")
+                      : (isEditMode ? "Update Quotation" : "Create Quotation")
+                    }
+                  </Button>
+                ) : (
+                  <Button
+                    key="next-button"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      nextStep();
+                    }}
+                    disabled={!canProceed()}
+                    data-testid="button-next"
+                    className="w-full sm:w-auto"
+                  >
+                    Next
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </form>
         </Form>
       </div>
