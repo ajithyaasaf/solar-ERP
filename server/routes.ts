@@ -6444,6 +6444,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { insertSiteVisitSchema } = await import("@shared/schema");
       const { siteVisitService } = await import("./services/site-visit-service");
 
+      // SOLUTION: Prevent multiple active site visits
+      // Check if user already has an active site visit to prevent "days and days" of open visits
+      const activeVisits = await siteVisitService.getActiveSiteVisits();
+      const userActiveVisit = activeVisits.find(v => v.userId === user.uid);
+
+      if (userActiveVisit) {
+        console.log(`SITE VISIT CREATION BLOCKED - User ${user.displayName} has active visit ${userActiveVisit.id}`);
+        return res.status(400).json({
+          message: "You already have an active site visit. Please end your current visit before starting a new one.",
+          activeVisitId: userActiveVisit.id,
+          activeVisitSince: userActiveVisit.siteInTime
+        });
+      }
+
       // UNIFIED: Automatically create/find customer using deduplication logic
       let customerId = null;
       if (req.body.customer && req.body.customer.name && req.body.customer.mobile) {

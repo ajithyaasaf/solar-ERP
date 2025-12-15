@@ -23,7 +23,7 @@ export class QuotationPDFService {
     format: 'A4',
     margin: {
       top: '1cm',
-      right: '1cm', 
+      right: '1cm',
       bottom: '1cm',
       left: '1cm'
     },
@@ -36,36 +36,36 @@ export class QuotationPDFService {
    */
   private static numberToWords(num: number): string {
     if (num === 0) return 'Zero';
-    
+
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
     const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    
+
     const convertTwoDigit = (n: number): string => {
       if (n < 10) return ones[n];
       if (n >= 10 && n < 20) return teens[n - 10];
       return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
     };
-    
+
     const convertThreeDigit = (n: number): string => {
       if (n === 0) return '';
       if (n < 100) return convertTwoDigit(n);
       return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertTwoDigit(n % 100) : '');
     };
-    
+
     // Indian numbering: ones, thousands, lacs, crores
     let crore = Math.floor(num / 10000000);
     let lakh = Math.floor((num % 10000000) / 100000);
     let thousand = Math.floor((num % 100000) / 1000);
     let remainder = num % 1000;
-    
+
     let result = '';
-    
+
     if (crore > 0) result += convertThreeDigit(crore) + ' Crore ';
     if (lakh > 0) result += convertTwoDigit(lakh) + ' Lacs ';
     if (thousand > 0) result += convertTwoDigit(thousand) + ' Thousand ';
     if (remainder > 0) result += convertThreeDigit(remainder);
-    
+
     return 'Rupees ' + result.trim() + ' Only';
   }
 
@@ -78,7 +78,7 @@ export class QuotationPDFService {
       if (preparedBy && preparedBy.length > 20 && preparedBy.includes('X')) {
         const { userService } = await import("../services/user-service");
         const allUsersResult = await userService.getAllUsers();
-        
+
         // Handle both array and object response formats
         let users: any[] = [];
         if (Array.isArray(allUsersResult)) {
@@ -86,7 +86,7 @@ export class QuotationPDFService {
         } else if (allUsersResult && allUsersResult.success && Array.isArray(allUsersResult.users)) {
           users = allUsersResult.users;
         }
-        
+
         if (users.length > 0) {
           const user = users.find((u: any) => u.uid === preparedBy);
           return user ? (user.displayName || user.email || preparedBy) : preparedBy;
@@ -123,7 +123,7 @@ export class QuotationPDFService {
   static generateHTMLContent(template: QuotationTemplate): string {
     // Check if this is a service-only quotation (water heater or water pump)
     const isWaterUtility = ['water_heater', 'water_pump'].includes(template.projectType);
-    
+
     return `
     <!DOCTYPE html>
     <html>
@@ -680,16 +680,6 @@ export class QuotationPDFService {
             const displayText = isContinuation ? cleanItem : item;
             return `<div style="${isContinuation ? 'margin-left: 20px; margin-top: 0px; line-height: 1.6;' : ''}">${displayText}</div>`;
           }).join('')}
-          ${template.floor !== undefined && template.floor !== null ? `
-          <div style="margin-top: 8px; font-weight: bold;">
-            ${(() => {
-              const floor = template.floor.toString();
-              if (floor === '0') return '   • Installation on Ground Floor';
-              const suffix = floor === '1' ? 'st' : floor === '2' ? 'nd' : floor === '3' ? 'rd' : 'th';
-              return `   • Installation on ${floor}${suffix} Floor`;
-            })()}
-          </div>
-          ` : ''}
         </div>
         
         ${template.scopeOfWork.netBiDirectionalMeter && template.scopeOfWork.netBiDirectionalMeter.length > 0 ? `
@@ -707,10 +697,10 @@ export class QuotationPDFService {
           ${template.scopeOfWork.plumbingWork.map(item => `<div>${item}</div>`).join('')}
         </div>` : ''}
         
-        ${(template.scopeOfWork.customerScope.civilWork.length > 0 || 
-           template.scopeOfWork.customerScope.netBiDirectionalMeter.length > 0 ||
-           template.scopeOfWork.customerScope.electricalWork.length > 0 ||
-           template.scopeOfWork.customerScope.plumbingWork.length > 0) ? `
+        ${(template.scopeOfWork.customerScope.civilWork.length > 0 ||
+          template.scopeOfWork.customerScope.netBiDirectionalMeter.length > 0 ||
+          template.scopeOfWork.customerScope.electricalWork.length > 0 ||
+          template.scopeOfWork.customerScope.plumbingWork.length > 0) ? `
         <div style="margin-top: 20px;">
           <strong>• Customer's Scope of Work:</strong><br>
           <div style="margin-left: 20px;">
@@ -777,10 +767,10 @@ export class QuotationPDFService {
           gstPercentage: (project as any).gstPercentage
         }, null, 2));
       }
-      
+
       // Resolve user name if preparedBy contains a user ID
       const preparedByName = await this.resolveUserName(quotation.preparedBy);
-      
+
       // Generate template
       const template = QuotationTemplateService.generateQuotationTemplate(
         quotation,

@@ -14,7 +14,16 @@ const batteryBrandDisplayMap: Record<string, string> = {
 
 function getBatteryBrandDisplayName(brand: string | undefined): string {
   if (!brand) return 'Exide';
-  return batteryBrandDisplayMap[brand.toLowerCase()] || brand;
+
+  // Check if it's a known brand (case-insensitive)
+  const knownBrand = batteryBrandDisplayMap[brand.toLowerCase()];
+  if (knownBrand) return knownBrand;
+
+  // For custom brands, capitalize each word (split on underscores and spaces)
+  return brand
+    .split(/[_\s]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }
 
 export interface CompanyDetails {
@@ -137,41 +146,76 @@ export class QuotationTemplateService {
   };
 
   // These will be generated dynamically from quotation data
-  private static generateWarrantyDetails(quotation: any) {
+  private static generateWarrantyDetails(quotation: any, projectType?: string) {
     const warranty = quotation.detailedWarrantyTerms;
     const exclusions = quotation.physicalDamageExclusions;
-    
+
     let details = [];
-    
+
     // Physical damage exclusions
     if (exclusions?.enabled) {
       details.push(exclusions.disclaimerText);
     }
-    
-    // Solar panels warranty
-    if (warranty?.solarPanels) {
+
+    if (projectType === 'off_grid') {
+      // Off-Grid specific warranties
+      details.push("1. Solar (PV)Panel Modules (10-15 Years)");
+      details.push("   • 10 Years Manufacturing defect Warranty");
+      details.push("   • 15 Years performance Warranty");
+      details.push("   • 90% Performance Warranty till the end of 10 years");
+      details.push("   • 80% Performance Warranty till the end of 15 years");
+
+      // Off-grid Inverter warranty (2 Years)
+      details.push("2. Solar Off grid Inverter (2 Years)");
+      details.push("   • Replacement Warranty for 2 Years");
+
+      // Battery warranty (5 Years)
+      details.push("3. Solar Battery (5 Years)");
+      details.push("   • Replacement Warranty for 5 Years");
+    } else if (projectType === 'hybrid') {
+      // Hybrid specific warranties
+      // Solar panels warranty (30 Years - same as on-grid)
       details.push("1. Solar (PV)Panel Modules (30 Years)");
-      details.push(`   • ${warranty.solarPanels.manufacturingDefect}`);
-      details.push(`   • ${warranty.solarPanels.serviceWarranty}`);
-      warranty.solarPanels.performanceWarranty?.forEach((item: string) => {
-        details.push(`   • ${item}`);
-      });
+      details.push("   • 15 Years Manufacturing defect Warranty");
+      details.push("   • 15 Years performance Warranty");
+      details.push("   • 90% Performance Warranty till the end of 15 years");
+      details.push("   • 80% Performance Warranty till the end of 15 years");
+
+      // Hybrid Inverter warranty (5 Years)
+      details.push("2. Solar Hybrid Inverter (5 Years)");
+      details.push("   • Warranty for 5 Years");
+
+      // Battery warranty (5 Years - split into replacement and service)
+      details.push("3. Solar Battery (5 Years)");
+      details.push("   • Replacement Warranty for 3 Years");
+      details.push("   • Service Warranty for 2 years");
+    } else {
+      // On-Grid specific warranties
+      // Solar panels warranty (30 Years for on-grid)
+      if (warranty?.solarPanels) {
+        details.push("1. Solar (PV)Panel Modules (30 Years)");
+        details.push(`   • ${warranty.solarPanels.manufacturingDefect}`);
+        details.push(`   • ${warranty.solarPanels.serviceWarranty}`);
+        warranty.solarPanels.performanceWarranty?.forEach((item: string) => {
+          details.push(`   • ${item}`);
+        });
+      }
+
+      // On-grid Inverter warranty (15 Years)
+      if (warranty?.inverter) {
+        details.push("2. Solar On grid Inverter (15 Years)");
+        details.push(`   • ${warranty.inverter.replacementWarranty}`);
+        details.push(`   • ${warranty.inverter.serviceWarranty}`);
+      }
     }
-    
-    // Inverter warranty
-    if (warranty?.inverter) {
-      details.push("2. Solar On grid Inverter (15 Years)");
-      details.push(`   • ${warranty.inverter.replacementWarranty}`);
-      details.push(`   • ${warranty.inverter.serviceWarranty}`);
-    }
-    
+
     return details;
   }
-  
+
   private static generateAccountDetails(quotation: any) {
     const account = quotation.accountDetails;
     if (!account) return null;
-    
+
     return {
       name: account.accountHolderName || "Prakash Green Energy",
       bank: account.bankName || "ICICI",
@@ -213,7 +257,7 @@ export class QuotationTemplateService {
     const projectWithStructure = project as any;
     if (projectWithStructure.structureType) {
       let structureDesc = "1) Structure:";
-      
+
       // Format structure type name
       let structureTypeName = '';
       switch (projectWithStructure.structureType) {
@@ -236,20 +280,33 @@ export class QuotationTemplateService {
           structureTypeName = projectWithStructure.structureType;
       }
 
+      // Helper function to format floor information
+      const getFloorText = () => {
+        const floor = projectWithStructure.floor;
+        if (floor === undefined || floor === null) return '';
+
+        const floorNum = floor.toString();
+        if (floorNum === '0') return ' (Ground Floor)';
+        const suffix = floorNum === '1' ? 'st' : floorNum === '2' ? 'nd' : floorNum === '3' ? 'rd' : 'th';
+        return ` (${floorNum}${suffix} Floor)`;
+      };
+
+      const floorText = getFloorText();
+
       // Add structure type
       scopeOfWork.structure.push(structureDesc);
-      
+
       // Add height details if applicable
       if (projectWithStructure.structureType === 'mono_rail' && projectWithStructure.monoRail) {
         const monoRailType = projectWithStructure.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail';
-        scopeOfWork.structure.push(`   • ${structureTypeName} - ${monoRailType}, South facing slant mounting`);
+        scopeOfWork.structure.push(`   • ${structureTypeName} - ${monoRailType}, South facing slant mounting${floorText}`);
       } else if (projectWithStructure.gpStructure) {
         const lowerHeight = projectWithStructure.gpStructure.lowerEndHeight || '0';
         const higherHeight = projectWithStructure.gpStructure.higherEndHeight || '0';
         scopeOfWork.structure.push(`   • ${structureTypeName}, South facing slant mounting of lower end height in ${lowerHeight} feet`);
-        scopeOfWork.structure.push(`   • and higher end in ${higherHeight} feet`);
+        scopeOfWork.structure.push(`   • and higher end in ${higherHeight} feet${floorText}`);
       } else {
-        scopeOfWork.structure.push(`   • ${structureTypeName}, South facing slant mounting`);
+        scopeOfWork.structure.push(`   • ${structureTypeName}, South facing slant mounting${floorText}`);
       }
     }
 
@@ -338,7 +395,7 @@ export class QuotationTemplateService {
       // Water heater typically has structure installation as company scope
       scopeOfWork.structure.push("   • Installation and mounting on roof/terrace (Company Scope)");
       scopeOfWork.structure.push("   • Piping work up to 15 feet included");
-      
+
       scopeOfWork.customerScope.civilWork.push("1) Additional Work:");
       scopeOfWork.customerScope.civilWork.push("   • Any additional piping beyond 15 feet to be paid by Customer");
       scopeOfWork.customerScope.civilWork.push("   • Roof reinforcement if required to be done by Customer");
@@ -350,7 +407,7 @@ export class QuotationTemplateService {
   private static generateDocumentRequirements(quotation: any) {
     const docs = quotation.documentRequirements;
     if (!docs) return null;
-    
+
     return {
       list: docs.subsidyDocuments?.map((doc: string, index: number) => `${index + 1}) ${doc}`) || [],
       note: docs.note || "*All Required Documents should be in the same name as mention EB Service Number"
@@ -397,26 +454,26 @@ export class QuotationTemplateService {
    * Formula: Backup Watts = (Battery AH × 10 × Qty) - 3%
    * Then calculate backup hours for different usage scenarios
    */
-  static calculateBackupSolutions(project: any): { 
-    backupWatts: number; 
-    usageWatts: number[]; 
-    backupHours: number[] 
+  static calculateBackupSolutions(project: any): {
+    backupWatts: number;
+    usageWatts: number[];
+    backupHours: number[]
   } {
     const batteryAH = parseInt(project.batteryAH || '100');
     const batteryQty = project.batteryCount || 1;
-    
+
     // Calculate backup watts: (AH × 10 × Qty) - 3% loss
     const baseWatts = batteryAH * 10 * batteryQty;
     const backupWatts = Math.round(baseWatts - (baseWatts * 0.03));
-    
+
     // Use provided usage watts or defaults
     const usageWatts = project.backupSolutions?.usageWatts || [800, 750, 550, 450, 200];
-    
+
     // Calculate backup hours for each usage watts
-    const backupHours = usageWatts.map((usage: number) => 
+    const backupHours = usageWatts.map((usage: number) =>
       Math.round((backupWatts / usage) * 100) / 100
     );
-    
+
     return { backupWatts, usageWatts, backupHours };
   }
 
@@ -486,14 +543,14 @@ export class QuotationTemplateService {
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
     // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
     const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
-    
+
     // Inverter kW (for inverter components)
     const inverterKW = project.inverterKW || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
-    const panelType = project.panelType === 'topcon' ? 'Topcon' : 
-                      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
-    
+    const panelType = project.panelType === 'topcon' ? 'Topcon' :
+      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+
     items.push({
       slNo: slNo++,
       description: "Solar Panel (D)",
@@ -527,7 +584,7 @@ export class QuotationTemplateService {
       'ms_square_pipe': 'MS'
     };
     const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'GI';
-    
+
     items.push({
       slNo: slNo++,
       description: "Panel Mounting Structure",
@@ -592,22 +649,22 @@ export class QuotationTemplateService {
     // 8. Earthing - Add if earthing is selected
     if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
       const earthType = structureType; // Use same type as structure
-      
+
       // Determine earthing quantity based on AC/DC cable selection
       // Qty: 2 if both AC and DC are covered (either as 'ac_dc' or separate 'ac'+'dc')
       // Qty: 1 if only one type is selected
       let earthQty = 1;
       if (Array.isArray(project.earth)) {
         // Array format: check if 'ac_dc' is present OR both 'ac' and 'dc' are present
-        if (project.earth.includes('ac_dc') || 
-            (project.earth.includes('ac') && project.earth.includes('dc'))) {
+        if (project.earth.includes('ac_dc') ||
+          (project.earth.includes('ac') && project.earth.includes('dc'))) {
           earthQty = 2;
         }
       } else if (typeof project.earth === 'string') {
         // Single string format (legacy): 'ac_dc' means both
         earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
-      
+
       items.push({
         slNo: slNo++,
         description: "Earthing",
@@ -686,14 +743,14 @@ export class QuotationTemplateService {
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
     // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
     const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
-    
+
     // ✅ CRITICAL: For off-grid, prioritize inverterKVA (user-entered value), then inverterKW
     const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
-    const panelType = project.panelType === 'topcon' ? 'Topcon' : 
-                      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
-    
+    const panelType = project.panelType === 'topcon' ? 'Topcon' :
+      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+
     items.push({
       slNo: slNo++,
       description: "Solar Panel (D)",
@@ -741,7 +798,7 @@ export class QuotationTemplateService {
       'ms_square_pipe': 'MS'
     };
     const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'GI';
-    
+
     items.push({
       slNo: slNo++,
       description: "Panel Mounting Structure",
@@ -807,18 +864,18 @@ export class QuotationTemplateService {
     // 9. Earthing - Add if earthing is selected
     if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
       const earthType = structureType; // Use same type as structure
-      
+
       // Determine earthing quantity based on AC/DC cable selection
       let earthQty = 1;
       if (Array.isArray(project.earth)) {
-        if (project.earth.includes('ac_dc') || 
-            (project.earth.includes('ac') && project.earth.includes('dc'))) {
+        if (project.earth.includes('ac_dc') ||
+          (project.earth.includes('ac') && project.earth.includes('dc'))) {
           earthQty = 2;
         }
       } else if (typeof project.earth === 'string') {
         earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
-      
+
       items.push({
         slNo: slNo++,
         description: "Earthing",
@@ -897,14 +954,14 @@ export class QuotationTemplateService {
     const panelSystemKW = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
     // ✅ CRITICAL: Preserve decimals for sub-1kW systems (e.g., 0.68 kW), only round for >= 1 kW
     const panelMountingRating = panelSystemKW < 1 ? panelSystemKW : Math.round(panelSystemKW);
-    
+
     // ✅ CRITICAL: For hybrid, prioritize inverterKVA (user-entered value), then inverterKW
     const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
     // 1. Solar Panel - Use panel type from form (default to Bifacial)
-    const panelType = project.panelType === 'topcon' ? 'Topcon' : 
-                      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
-    
+    const panelType = project.panelType === 'topcon' ? 'Topcon' :
+      project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+
     items.push({
       slNo: slNo++,
       description: "Solar Panel (D)",
@@ -951,7 +1008,7 @@ export class QuotationTemplateService {
       'ms_square_pipe': 'MS'
     };
     const structureType = structureTypeMap[project.structureType || 'gp_structure'] || 'GI';
-    
+
     items.push({
       slNo: slNo++,
       description: "Panel Mounting Structure",
@@ -1016,18 +1073,18 @@ export class QuotationTemplateService {
     // 9. Earthing - Add if earthing is selected
     if (project.earth && (typeof project.earth === 'string' || project.earth.length > 0)) {
       const earthType = structureType; // Use same type as structure
-      
+
       // Determine earthing quantity based on AC/DC cable selection
       let earthQty = 1;
       if (Array.isArray(project.earth)) {
-        if (project.earth.includes('ac_dc') || 
-            (project.earth.includes('ac') && project.earth.includes('dc'))) {
+        if (project.earth.includes('ac_dc') ||
+          (project.earth.includes('ac') && project.earth.includes('dc'))) {
           earthQty = 2;
         }
       } else if (typeof project.earth === 'string') {
         earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
-      
+
       items.push({
         slNo: slNo++,
         description: "Earthing",
@@ -1101,19 +1158,19 @@ export class QuotationTemplateService {
   private static generateWaterHeaterBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     console.log('🟢 generateWaterHeaterBOM called with project:', JSON.stringify(project, null, 2));
     const items: BillOfMaterialsItem[] = [];
-    
+
     // Get quantity from project (defaults to 1)
     const quantity = project.qty || 1;
-    
+
     // Build description from project details
     const waterHeaterBrand = project.brand || 'Standard';
     const capacityLitres = project.litre || 100;
     const waterHeaterModel = project.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
     const heatingCoilType = project.heatingCoil || 'Heating Coil';
     const gstSuffix = project.labourAndTransport ? ' And Transport Including GST' : ' Including GST';
-    
+
     const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${gstSuffix}`;
-    
+
     // Calculate rate and amount from project values
     // projectValue is per-unit price (including GST)
     console.log('🔍 Water Heater BOM - Project data:', JSON.stringify({
@@ -1122,16 +1179,16 @@ export class QuotationTemplateService {
       basePrice: project.basePrice,
       qty: project.qty
     }, null, 2));
-    
+
     // Try multiple sources for the price value (with fallback chain)
     let projectValueRaw = project.projectValue;
-    
+
     // Fallback 1: If projectValue is not available, try customerPayment / qty
     if ((!projectValueRaw || projectValueRaw === 0) && project.customerPayment && quantity > 0) {
       projectValueRaw = Math.round(project.customerPayment / quantity);
       console.log('🔍 Water Heater BOM - Using customerPayment as fallback:', projectValueRaw);
     }
-    
+
     // Fallback 2: If still not available, calculate from basePrice + gstAmount (only if basePrice > 0)
     if ((!projectValueRaw || projectValueRaw === 0) && project.basePrice && project.basePrice > 0) {
       projectValueRaw = project.basePrice + (project.gstAmount || 0);
@@ -1140,18 +1197,18 @@ export class QuotationTemplateService {
       }
       console.log('🔍 Water Heater BOM - Using basePrice + gstAmount as fallback:', projectValueRaw);
     }
-    
+
     // Parse the value (handle string format)
-    const perUnitPrice = typeof projectValueRaw === 'string' 
+    const perUnitPrice = typeof projectValueRaw === 'string'
       ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
       : projectValueRaw || 0;
-    
+
     console.log('🔍 Water Heater BOM - Final perUnitPrice:', perUnitPrice);
-    
+
     // For Water Heater: projectValue is per-unit price (incl. GST), so rate and amount use this directly
     const rate = Math.round(perUnitPrice);
     const amount = Math.round(perUnitPrice * quantity);
-    
+
     // Single row with full description and pricing
     const bomItem = {
       slNo: startSlNo,
@@ -1165,7 +1222,7 @@ export class QuotationTemplateService {
       rate: rate,
       amount: amount
     };
-    
+
     console.log('🔍 Water Heater BOM - Final BOM Item:', JSON.stringify(bomItem, null, 2));
     items.push(bomItem);
 
@@ -1178,27 +1235,27 @@ export class QuotationTemplateService {
   private static generateWaterPumpBOM(project: any, startSlNo: number): BillOfMaterialsItem[] {
     console.log('🟢 generateWaterPumpBOM called with project:', JSON.stringify(project, null, 2));
     const items: BillOfMaterialsItem[] = [];
-    
+
     // Support both new driveHP and legacy hp field - convert to integer to avoid decimals
     const driveHPRaw = project.driveHP || project.hp || '1';
     const driveHP = Math.floor(parseFloat(driveHPRaw));
     const quantity = project.qty || 1;
-    
+
     // Build description from project details
     const panelWatts = project.panelWatts || '540';
     const panelCount = project.panelCount || 10;
     // Round totalKW to avoid decimals (e.g., 5 instead of 5.3)
     const totalKW = Math.round((parseInt(panelWatts) * panelCount) / 1000);
-    const panelBrand = project.panelBrand && project.panelBrand.length > 0 
-      ? project.panelBrand[0].toUpperCase() 
+    const panelBrand = project.panelBrand && project.panelBrand.length > 0
+      ? project.panelBrand[0].toUpperCase()
       : 'UTL';
     const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
     const lowerHeight = project.gpStructure?.lowerEndHeight || '3';
     const higherHeight = project.gpStructure?.higherEndHeight || '4';
-    
+
     // Build full description
     let fullDescription = `Supply and Installation solar power System Includes:${driveHP} hp Drive ${totalKW} kw ${panelWatts}Wp x ${panelCount} Nos ${panelBrand} Panel, ${phase} phase, ${totalKW} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
-    
+
     // Add conditional items based on checkboxes
     const conditionalItems = [];
     if (project.earth && project.earth.length > 0) {
@@ -1208,8 +1265,8 @@ export class QuotationTemplateService {
       conditionalItems.push('Lighting Arrester');
     }
     // Check if DC is selected in earth connection to add DC Cable
-    if (project.earth && Array.isArray(project.earth) && 
-        (project.earth.includes('dc') || project.earth.includes('ac_dc'))) {
+    if (project.earth && Array.isArray(project.earth) &&
+      (project.earth.includes('dc') || project.earth.includes('ac_dc'))) {
       conditionalItems.push('DC Cable');
     }
     if (project.electricalAccessories) {
@@ -1218,11 +1275,11 @@ export class QuotationTemplateService {
     if (project.labourAndTransport) {
       conditionalItems.push('Labour and Transport');
     }
-    
+
     if (conditionalItems.length > 0) {
       fullDescription += ', ' + conditionalItems.join(', ');
     }
-    
+
     // Calculate rate and amount from project values
     // projectValue is per-unit price (including GST)
     console.log('🔍 Water Pump BOM - Project data:', JSON.stringify({
@@ -1231,16 +1288,16 @@ export class QuotationTemplateService {
       basePrice: project.basePrice,
       qty: project.qty
     }, null, 2));
-    
+
     // Try multiple sources for the price value (with fallback chain)
     let projectValueRaw = project.projectValue;
-    
+
     // Fallback 1: If projectValue is not available, try customerPayment / qty
     if ((!projectValueRaw || projectValueRaw === 0) && project.customerPayment && quantity > 0) {
       projectValueRaw = Math.round(project.customerPayment / quantity);
       console.log('🔍 Water Pump BOM - Using customerPayment as fallback:', projectValueRaw);
     }
-    
+
     // Fallback 2: If still not available, calculate from basePrice + gstAmount (only if basePrice > 0)
     if ((!projectValueRaw || projectValueRaw === 0) && project.basePrice && project.basePrice > 0) {
       projectValueRaw = project.basePrice + (project.gstAmount || 0);
@@ -1249,18 +1306,18 @@ export class QuotationTemplateService {
       }
       console.log('🔍 Water Pump BOM - Using basePrice + gstAmount as fallback:', projectValueRaw);
     }
-    
+
     // Parse the value (handle string format)
-    const perUnitPrice = typeof projectValueRaw === 'string' 
+    const perUnitPrice = typeof projectValueRaw === 'string'
       ? parseFloat(projectValueRaw.replace(/[,₹\s]/g, '')) || 0
       : projectValueRaw || 0;
-    
+
     console.log('🔍 Water Pump BOM - Final perUnitPrice:', perUnitPrice);
-    
+
     // For Water Pump: projectValue is per-unit price (incl. GST), so rate and amount use this directly
     const rate = Math.round(perUnitPrice);
     const amount = Math.round(perUnitPrice * quantity);
-    
+
     // Single row with full description and pricing
     const bomItem = {
       slNo: startSlNo,
@@ -1274,7 +1331,7 @@ export class QuotationTemplateService {
       rate: rate,
       amount: amount
     };
-    
+
     console.log('🔍 Water Pump BOM - Final BOM Item:', JSON.stringify(bomItem, null, 2));
     items.push(bomItem);
 
@@ -1305,7 +1362,7 @@ export class QuotationTemplateService {
       case 'on_grid':
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-        
+
         // Use projectValue for accurate roundoff calculation
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
@@ -1320,11 +1377,11 @@ export class QuotationTemplateService {
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
-        
+
         // FIXED: Use rounded kW for rate calculation (matching frontend logic)
         const roundedKW_onGrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_onGrid > 0 ? Math.round(basePrice / roundedKW_onGrid) : 0;
-        
+
         // NEW: Include inverter KW in description
         const inverterKW_onGrid = project.inverterKW || kw;
         const phase_onGrid = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
@@ -1334,7 +1391,7 @@ export class QuotationTemplateService {
       case 'off_grid':
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-        
+
         // Use projectValue for accurate roundoff calculation
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
@@ -1349,30 +1406,30 @@ export class QuotationTemplateService {
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
-        
+
         // ✅ CRITICAL: Conditional rounding for sub-1kW support
         const roundedKW_offGrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_offGrid > 0 ? Math.round(basePrice / roundedKW_offGrid) : 0;
-        
+
         // NEW: Updated description format based on specification
         const panelWatts_offGrid = project.panelWatts || '530';
         const panelCount_offGrid = project.panelCount || 1;
         const inverterKVA_offGrid = (project as any).inverterKVA || project.inverterKW || '1';
         const inverterVolt_offGrid = (project as any).inverterVolt || (project.voltage * project.batteryCount);
-        const inverterMake_offGrid = (project as any).inverterMake && (project as any).inverterMake.length > 0 
-          ? (project as any).inverterMake[0].toUpperCase() 
+        const inverterMake_offGrid = (project as any).inverterMake && (project as any).inverterMake.length > 0
+          ? (project as any).inverterMake[0].toUpperCase()
           : 'MPPT';
         const batteryAH_offGrid = project.batteryAH || '100';
         const batteryCount_offGrid = project.batteryCount || 1;
         const phase_offGrid = project.inverterPhase === 'three_phase' ? '3' : '1';
-        
-        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}AH X ${batteryCount_offGrid}, ${phase_offGrid}-Phase Offgrid Solar System`;
+
+        description = `Supply and Installation of ${panelWatts_offGrid}W X ${panelCount_offGrid} Nos Panel, ${inverterKVA_offGrid}KVA/${inverterVolt_offGrid}V ${inverterMake_offGrid} Inverter, ${batteryAH_offGrid}Ah Battery * ${batteryCount_offGrid} nos, ${phase_offGrid}-Phase Offgrid Solar System`;
         break;
 
       case 'hybrid':
         // Calculate actual kW from panel data (for subsidy calculation)
         kw = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
-        
+
         // Use projectValue for accurate roundoff calculation
         // projectValue is the total including GST (may have decimals from user input or calculations)
         if (project.projectValue) {
@@ -1387,11 +1444,11 @@ export class QuotationTemplateService {
           basePrice = Math.round(totalWithGST / (1 + actualGstPercentage / 100));
           gstAmount = totalWithGST - basePrice;
         }
-        
+
         // ✅ CRITICAL: Conditional rounding for sub-1kW support
         const roundedKW_hybrid = this.roundSystemKWForRateCalculation(kw);
         ratePerKw = roundedKW_hybrid > 0 ? Math.round(basePrice / roundedKW_hybrid) : 0;
-        
+
         // NEW: Updated description format based on specification
         const calculatedKW_hybrid = this.calculateSystemKW(project.panelWatts || 530, project.panelCount || 1);
         const totalKW_hybrid = QuotationTemplateService.formatKWForDisplay(calculatedKW_hybrid);
@@ -1406,71 +1463,71 @@ export class QuotationTemplateService {
         };
         const batteryType_hybrid = (project as any).batteryType ? batteryTypeMap[(project as any).batteryType] : 'Lead Acid Battery';
         const batteryCount_hybrid = project.batteryCount || 1;
-        
+
         description = `Supply and Installation of ${totalKW_hybrid} KW PANEL, ${inverterKVA_hybrid}KVA/${inverterVolt_hybrid}V ${phase_hybrid} Phase Hybrid Inverter, ${batteryBrand_hybrid} ${batteryAH_hybrid}AH ${batteryType_hybrid}-${batteryCount_hybrid} Nos, Hybrid Solar System`;
         break;
 
       case 'water_heater':
         const litres = project.litre || 100;
         const quantity_heater = (project as any).qty || 1;
-        
+
         // projectValue is per-unit price (including GST)
         const perUnitPrice_heater = project.projectValue || (litres * 350 * (1 + actualGstPercentage / 100));
         const perUnitBasePrice_heater = Math.round(perUnitPrice_heater / (1 + actualGstPercentage / 100));
         const perUnitGstAmount_heater = perUnitPrice_heater - perUnitBasePrice_heater;
-        
+
         // Calculate totals for all units
         basePrice = Math.round(perUnitBasePrice_heater * quantity_heater);
         gstAmount = Math.round(perUnitGstAmount_heater * quantity_heater);
         totalWithGST = Math.round(perUnitPrice_heater * quantity_heater);
-        
+
         // For water heater, rate per kW is per-unit base price
         ratePerKw = perUnitBasePrice_heater;
         kw = quantity_heater; // Use quantity as kw for proper calculation
-        
+
         // NEW: Updated description format based on specification
         const waterHeaterBrand = (project as any).brand || 'Standard';
         const capacityLitres = litres;
         const waterHeaterModel = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
         const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
         const gstSuffix = (project as any).labourAndTransport ? ' And Transport Including GST' : ' Including GST';
-        
+
         description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${gstSuffix}`;
         break;
 
       case 'water_pump':
         const driveHP_pump = (project as any).driveHP || project.hp || '1'; // Support both new and old field names
         const quantity_pump = (project as any).qty || 1;
-        
+
         // projectValue is per-unit price (including GST)
         const perUnitPrice_pump = project.projectValue || (parseInt(driveHP_pump) * 45000 * (1 + actualGstPercentage / 100));
         const perUnitBasePrice_pump = Math.round(perUnitPrice_pump / (1 + actualGstPercentage / 100));
         const perUnitGstAmount_pump = perUnitPrice_pump - perUnitBasePrice_pump;
-        
+
         // Calculate totals for all units
         basePrice = Math.round(perUnitBasePrice_pump * quantity_pump);
         gstAmount = Math.round(perUnitGstAmount_pump * quantity_pump);
         totalWithGST = Math.round(perUnitPrice_pump * quantity_pump);
-        
+
         // For water pump, rate per kW is per-unit base price
         ratePerKw = perUnitBasePrice_pump;
         kw = quantity_pump; // Use quantity as kw for proper calculation
-        
+
         // NEW: Updated description format based on specification
         const panelWatts_pump = project.panelWatts || '540';
         const panelCount_pump = project.panelCount || 10;
         const calculatedKW_pump = (parseInt(panelWatts_pump) * panelCount_pump) / 1000;
         const totalKW_pump = QuotationTemplateService.formatKWForDisplay(calculatedKW_pump);
-        const panelBrand_pump = (project as any).panelBrand && (project as any).panelBrand.length > 0 
-          ? (project as any).panelBrand[0].toUpperCase() 
+        const panelBrand_pump = (project as any).panelBrand && (project as any).panelBrand.length > 0
+          ? (project as any).panelBrand[0].toUpperCase()
           : 'UTL';
         const phase_pump = (project as any).inverterPhase === 'three_phase' ? '3' : '1';
         const lowerHeight = (project as any).gpStructure?.lowerEndHeight || '3';
         const higherHeight = (project as any).gpStructure?.higherEndHeight || '4';
-        
+
         // Build description in single line format with conditional items
         let pumpDescription = `Supply and Installation solar power System Includes:${driveHP_pump} hp Drive ${totalKW_pump} kw ${panelWatts_pump}Wp x ${panelCount_pump} Nos ${panelBrand_pump} Panel, ${phase_pump} phase, ${totalKW_pump} kw Structure ${lowerHeight} feet lower to ${higherHeight} feet higher`;
-        
+
         // Add conditional items based on checkboxes
         const conditionalItems = [];
         if ((project as any).earth && (project as any).earth.length > 0) {
@@ -1488,21 +1545,21 @@ export class QuotationTemplateService {
         if ((project as any).labourAndTransport) {
           conditionalItems.push('Labour and Transport');
         }
-        
+
         if (conditionalItems.length > 0) {
           pumpDescription += ', ' + conditionalItems.join(', ');
         }
-        
+
         description = pumpDescription;
         break;
 
       default:
         return null;
     }
-    
+
     // Calculate subsidy (only for residential properties with on_grid or hybrid projects)
     const subsidyAmount = this.calculateSubsidy(kw, propertyType || '', project.projectType);
-    
+
     // Calculate customer payment
     const customerPayment = totalWithGST - subsidyAmount;
 
@@ -1542,58 +1599,58 @@ export class QuotationTemplateService {
    * Generate complete quotation template
    */
   static generateQuotationTemplate(
-    quotation: Quotation, 
+    quotation: Quotation,
     project: QuotationProject,
     customer: any,
     preparedByName?: string
   ): QuotationTemplate {
     const pricingBreakdown = this.calculatePricingBreakdown(project, customer.propertyType);
-    
+
     // Use custom BOM if provided, otherwise generate default BOM
     const hasCustomBOM = (quotation as any).customBillOfMaterials && (quotation as any).customBillOfMaterials.length > 0;
     console.log(`🔍 BOM Source for ${project.projectType}: ${hasCustomBOM ? 'Using stored customBillOfMaterials' : 'Generating fresh BOM'}`);
     if (hasCustomBOM) {
       console.log('🔍 Custom BOM Data:', JSON.stringify((quotation as any).customBillOfMaterials, null, 2));
     }
-    
+
     const billOfMaterials = hasCustomBOM
       ? (quotation as any).customBillOfMaterials
       : this.generateBillOfMaterials(project, customer.propertyType);
-    
+
     // Generate dynamic quote validity based on quotation settings
-    const validityDays = quotation.validUntil ? 
+    const validityDays = quotation.validUntil ?
       Math.ceil((new Date(quotation.validUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 7;
-    
+
     // Generate proper project type name for reference
     const projectTypeName = this.getProjectTypeDisplayName(project.projectType);
-    
+
     // Generate dynamic content from quotation data
-    const warrantyDetails = this.generateWarrantyDetails(quotation);
+    const warrantyDetails = this.generateWarrantyDetails(quotation, project.projectType);
     const accountDetails = this.generateAccountDetails(quotation);
     const documentRequirements = this.generateDocumentRequirements(quotation);
-    
+
     // Generate BOM summary based on project type
-    let bomSummary: { 
-      phase: string; 
-      inverterKW?: number; 
+    let bomSummary: {
+      phase: string;
+      inverterKW?: number;
       inverterKVA?: string;
       panelWatts: number;
       batteryAH?: string;
       dcVolt?: number;
     } | undefined = undefined;
-    
-    let backupSolutions: { 
-      backupWatts: number; 
-      usageWatts: number[]; 
-      backupHours: number[] 
+
+    let backupSolutions: {
+      backupWatts: number;
+      usageWatts: number[];
+      backupHours: number[]
     } | undefined = undefined;
-    
+
     if (project.projectType === 'on_grid') {
       const calculatedKW = this.calculateSystemKW((project as any).panelWatts || 530, (project as any).panelCount || 1);
       const inverterKW = (project as any).inverterKW || calculatedKW;
       const phase = (project as any).inverterPhase === 'three_phase' ? '3' : '1';
       const totalPanelWatts = parseInt((project as any).panelWatts || '530') * ((project as any).panelCount || 1);
-      
+
       bomSummary = {
         phase,
         inverterKW,
@@ -1607,7 +1664,7 @@ export class QuotationTemplateService {
       const batteryVolt = (project as any).voltage || 12;
       const batteryQty = (project as any).batteryCount || 1;
       const dcVolt = batteryVolt * batteryQty;
-      
+
       bomSummary = {
         phase,
         inverterKVA,
@@ -1615,11 +1672,11 @@ export class QuotationTemplateService {
         batteryAH,
         dcVolt
       };
-      
+
       // Calculate backup solutions for off-grid and hybrid
       backupSolutions = this.calculateBackupSolutions(project);
     }
-    
+
     // Generate appropriate reference based on project type
     let reference = '';
     if (project.projectType === 'water_heater') {
@@ -1631,7 +1688,7 @@ export class QuotationTemplateService {
     } else {
       reference = `${this.formatKWForDisplay(pricingBreakdown?.kw || 0)} kW ${projectTypeName} Solar Power Generation System`;
     }
-    
+
     return {
       header: this.COMPANY_DETAILS,
       quotationNumber: quotation.quotationNumber || this.generateQuotationNumber(),
@@ -1704,7 +1761,7 @@ export class QuotationTemplateService {
       default: return 'Solar';
     }
   }
-  
+
   /**
    * Convert delivery timeframe enum to readable text
    */

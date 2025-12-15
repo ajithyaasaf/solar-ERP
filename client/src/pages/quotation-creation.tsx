@@ -74,6 +74,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { sanitizeFormData } from "@shared/utils/form-sanitizer";
 import { roundSystemKW, formatKWForDisplay } from "@shared/utils";
 import CustomerAutocomplete from "@/components/ui/customer-autocomplete";
+import { BatteryBrandCombobox } from "@/components/ui/battery-brand-combobox";
 import { useAuthContext } from "@/contexts/auth-context";
 import {
   insertQuotationSchema,
@@ -237,7 +238,7 @@ const generateProjectDescription = (project: QuotationProject): string => {
         : 'MPPT';
       const batteryAH = project.batteryAH || 100;
       const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
-      return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}v ${inverterMake} Inverter, ${batteryAH}AH X ${batteryCount}, ${phase}-Phase Offgrid Solar System`;
+      return `Supply and Installation of ${panelWatts}W X ${panelCount} Nos Panel, ${inverterKVA}KVA/${inverterVolt}v ${inverterMake} Inverter, ${batteryAH}Ah Battery * ${batteryCount} nos, ${phase}-Phase Offgrid Solar System`;
     }
 
     case 'hybrid': {
@@ -2356,16 +2357,11 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Battery Brand</label>
-          <Select value={project.batteryBrand || "exide"} onValueChange={(value) => handleFieldChange('batteryBrand', value)}>
-            <SelectTrigger data-testid={`select-battery-brand-${projectIndex}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="exide">Exide</SelectItem>
-              <SelectItem value="utl">UTL</SelectItem>
-              <SelectItem value="exide_utl">Exide/UTL</SelectItem>
-            </SelectContent>
-          </Select>
+          <BatteryBrandCombobox
+            value={project.batteryBrand || "exide"}
+            onValueChange={(value) => handleFieldChange('batteryBrand', value)}
+            placeholder="Select or type battery brand..."
+          />
         </div>
 
         <div className="space-y-2">
@@ -5595,8 +5591,8 @@ export default function QuotationCreation() {
                             </CardContent>
                           </Card>
                         </div>
-                        <div className="text-sm text-muted-foreground italic">
-                          Amount in words: <span className="font-medium">Rupees {(() => {
+                        <div className="text-sm font-bold">
+                          Amount in words: <span className="font-bold">Rupees {(() => {
                             const amount = Math.floor(form.watch("totalWithGST") || 0);
 
                             const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
@@ -5635,33 +5631,97 @@ export default function QuotationCreation() {
                   })()}
 
                   {/* Warranty Details - Hidden for service-only quotations (water heater and water pump) */}
-                  {!isServiceOnlyQuotation && (
-                    <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                      <h4 className="font-medium text-base flex items-center gap-2">
-                        <Info className="h-4 w-4" />
-                        Warranty Details
-                      </h4>
-                      <div className="text-sm space-y-2">
-                        <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
-                        <div className="space-y-1">
-                          <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
-                          <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                            <li>15 Years Manufacturing defect Warranty</li>
-                            <li>15 Years Service Warranty</li>
-                            <li>90% Performance Warranty till the end of 15 years</li>
-                            <li>80% Performance Warranty till the end of 15 years</li>
-                          </ul>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="font-semibold">2. Solar On grid Inverter (15 Years)</p>
-                          <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                            <li>Replacement Warranty for 10 Years</li>
-                            <li>Service Warranty for 5 Years</li>
-                          </ul>
+                  {!isServiceOnlyQuotation && (() => {
+                    // Check project types in quotation
+                    const projects = form.watch("projects") || [];
+                    const hasOffGrid = projects.some((p: any) => p.projectType === 'off_grid');
+                    const hasHybrid = projects.some((p: any) => p.projectType === 'hybrid');
+
+                    return (
+                      <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <h4 className="font-medium text-base flex items-center gap-2">
+                          <Info className="h-4 w-4" />
+                          Warranty Details
+                        </h4>
+                        <div className="text-sm space-y-2">
+                          <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
+
+                          {hasOffGrid ? (
+                            // Off-Grid warranties
+                            <>
+                              <div className="space-y-1">
+                                <p className="font-semibold">1. Solar (PV)Panel Modules (10-15 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>10 Years Manufacturing defect Warranty</li>
+                                  <li>15 Years performance Warranty</li>
+                                  <li>90% Performance Warranty till the end of 10 years</li>
+                                  <li>80% Performance Warranty till the end of 15 years</li>
+                                </ul>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="font-semibold">2. Solar Off grid Inverter (2 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>Replacement Warranty for 2 Years</li>
+                                </ul>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="font-semibold">3. Solar Battery (5 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>Replacement Warranty for 5 Years</li>
+                                </ul>
+                              </div>
+                            </>
+                          ) : hasHybrid ? (
+                            // Hybrid warranties
+                            <>
+                              <div className="space-y-1">
+                                <p className="font-semibold">1. Solar (PV)Panel Modules (30 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>15 Years Manufacturing defect Warranty</li>
+                                  <li>15 Years performance Warranty</li>
+                                  <li>90% Performance Warranty till the end of 15 years</li>
+                                  <li>80% Performance Warranty till the end of 15 years</li>
+                                </ul>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="font-semibold">2. Solar Hybrid Inverter (5 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>Warranty for 5 Years</li>
+                                </ul>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="font-semibold">3. Solar Battery (5 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>Replacement Warranty for 3 Years</li>
+                                  <li>Service Warranty for 2 years</li>
+                                </ul>
+                              </div>
+                            </>
+                          ) : (
+                            // On-Grid warranties
+                            <>
+                              <div className="space-y-1">
+                                <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>15 Years Manufacturing defect Warranty</li>
+                                  <li>15 Years Service Warranty</li>
+                                  <li>90% Performance Warranty till the end of 15 years</li>
+                                  <li>80% Performance Warranty till the end of 15 years</li>
+                                </ul>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="font-semibold">2. Solar On grid Inverter (15 Years)</p>
+                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                  <li>Replacement Warranty for 10 Years</li>
+                                  <li>Service Warranty for 5 Years</li>
+                                </ul>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Payment Details */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -5993,7 +6053,7 @@ export default function QuotationCreation() {
                             <FormLabel>Ref Name</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder={form.watch("preparedBy") || "Enter reference name"}
+                                placeholder="Ref name"
                                 data-testid="input-ref-name"
                                 {...field}
                                 value={field.value || ""}

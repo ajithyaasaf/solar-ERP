@@ -4,12 +4,12 @@
  */
 
 import { storage } from "../storage";
-import { 
-  QuotationProject, 
-  SiteVisitMapping, 
+import {
+  QuotationProject,
+  SiteVisitMapping,
   InsertQuotation,
   QuotationSource,
-  QuotationStatus 
+  QuotationStatus
 } from "@shared/schema";
 
 // Comprehensive field mapping matrix as defined in the directive
@@ -17,12 +17,12 @@ const FIELD_MAPPING_MATRIX = {
   // Critical fields - Must be present for quotation creation
   critical: [
     'customer.name',
-    'customer.mobile', 
+    'customer.mobile',
     'customer.address',
     'marketingData.projectType',
     'visitOutcome' // Must be 'converted' for quotation creation
   ],
-  
+
   // Important fields - Significantly impact quotation quality
   important: [
     'customer.propertyType',
@@ -40,7 +40,7 @@ const FIELD_MAPPING_MATRIX = {
     'adminData.bankProcess',
     'adminData.ebProcess'
   ],
-  
+
   // Optional fields - Enhance quotation completeness
   optional: [
     'customer.location',
@@ -185,12 +185,12 @@ export class DataCompletenessAnalyzer {
     const hasValidMarketingConfig = this.hasValidMarketingProjectConfig(siteVisit);
     const hasBasicCustomerInfo = siteVisit.customer?.name && siteVisit.customer?.mobile && siteVisit.customer?.address;
     const hasAnyCustomerInfo = siteVisit.customer?.name || siteVisit.customer?.mobile; // At least name or mobile
-    
+
     const canCreateQuotation = (
       // Traditional strict path
-      (missing.critical.length === 0 && 
-       siteVisit.visitOutcome === 'converted' &&
-       siteVisit.status === 'completed') ||
+      (missing.critical.length === 0 &&
+        siteVisit.visitOutcome === 'converted' &&
+        siteVisit.status === 'completed') ||
       // Marketing flexible path - allow when marketing data is complete
       (hasValidMarketingConfig && hasBasicCustomerInfo) ||
       // Partial data path - allow even with minimal customer info (let user complete the rest)
@@ -238,43 +238,43 @@ export class DataCompletenessAnalyzer {
     // Legacy: Check for complete configurations (kept for backward compatibility)
     switch (marketingData.projectType) {
       case 'on_grid':
-        return marketingData.onGridConfig && 
-               marketingData.onGridConfig.solarPanelMake && 
-               marketingData.onGridConfig.solarPanelMake.length > 0 &&
-               marketingData.onGridConfig.inverterMake &&
-               marketingData.onGridConfig.inverterMake.length > 0 &&
-               (marketingData.onGridConfig.panelCount || 0) > 0;
-      
+        return marketingData.onGridConfig &&
+          marketingData.onGridConfig.solarPanelMake &&
+          marketingData.onGridConfig.solarPanelMake.length > 0 &&
+          marketingData.onGridConfig.inverterMake &&
+          marketingData.onGridConfig.inverterMake.length > 0 &&
+          (marketingData.onGridConfig.panelCount || 0) > 0;
+
       case 'off_grid':
         return marketingData.offGridConfig &&
-               marketingData.offGridConfig.solarPanelMake &&
-               marketingData.offGridConfig.solarPanelMake.length > 0 &&
-               marketingData.offGridConfig.inverterMake &&
-               marketingData.offGridConfig.inverterMake.length > 0 &&
-               marketingData.offGridConfig.batteryBrand &&
-               (marketingData.offGridConfig.panelCount || 0) > 0;
-      
+          marketingData.offGridConfig.solarPanelMake &&
+          marketingData.offGridConfig.solarPanelMake.length > 0 &&
+          marketingData.offGridConfig.inverterMake &&
+          marketingData.offGridConfig.inverterMake.length > 0 &&
+          marketingData.offGridConfig.batteryBrand &&
+          (marketingData.offGridConfig.panelCount || 0) > 0;
+
       case 'hybrid':
         return marketingData.hybridConfig &&
-               marketingData.hybridConfig.solarPanelMake &&
-               marketingData.hybridConfig.solarPanelMake.length > 0 &&
-               marketingData.hybridConfig.inverterMake &&
-               marketingData.hybridConfig.inverterMake.length > 0 &&
-               marketingData.hybridConfig.batteryBrand &&
-               (marketingData.hybridConfig.panelCount || 0) > 0;
-      
+          marketingData.hybridConfig.solarPanelMake &&
+          marketingData.hybridConfig.solarPanelMake.length > 0 &&
+          marketingData.hybridConfig.inverterMake &&
+          marketingData.hybridConfig.inverterMake.length > 0 &&
+          marketingData.hybridConfig.batteryBrand &&
+          (marketingData.hybridConfig.panelCount || 0) > 0;
+
       case 'water_heater':
         return marketingData.waterHeaterConfig &&
-               marketingData.waterHeaterConfig.brand &&
-               (marketingData.waterHeaterConfig.litre || 0) > 0;
-      
+          marketingData.waterHeaterConfig.brand &&
+          (marketingData.waterHeaterConfig.litre || 0) > 0;
+
       case 'water_pump':
         return marketingData.waterPumpConfig &&
-               marketingData.waterPumpConfig.hp &&
-               marketingData.waterPumpConfig.panelBrand &&
-               marketingData.waterPumpConfig.panelBrand.length > 0 &&
-               (marketingData.waterPumpConfig.panelCount || 0) > 0;
-      
+          marketingData.waterPumpConfig.hp &&
+          marketingData.waterPumpConfig.panelBrand &&
+          marketingData.waterPumpConfig.panelBrand.length > 0 &&
+          (marketingData.waterPumpConfig.panelCount || 0) > 0;
+
       default:
         return false;
     }
@@ -285,7 +285,7 @@ export class DataCompletenessAnalyzer {
    */
   private static getNestedValue(obj: any, path: string): any {
     if (!obj || !path) return undefined;
-    
+
     return path.split('.').reduce((current, key) => {
       return current && typeof current === 'object' ? current[key] : undefined;
     }, obj);
@@ -299,7 +299,7 @@ export class SiteVisitDataMapper {
   static async mapToQuotation(siteVisit: any, userId: string): Promise<MappingResult> {
     // Analyze data completeness first
     const completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
-    
+
     if (!completenessAnalysis.canCreateQuotation) {
       const error = new Error(`Site visit cannot be converted to quotation: ${completenessAnalysis.recommendedAction}`);
       (error as any).completenessAnalysis = completenessAnalysis;
@@ -308,7 +308,7 @@ export class SiteVisitDataMapper {
     }
 
     const warnings: string[] = [];
-    const transformations: Array<{field: string; originalValue: any; transformedValue: any; reason: string}> = [];
+    const transformations: Array<{ field: string; originalValue: any; transformedValue: any; reason: string }> = [];
 
     // Generate unique quotation number with proper format
     const quotationNumber = await this.generateQuotationNumber();
@@ -318,7 +318,7 @@ export class SiteVisitDataMapper {
 
     // Map projects with comprehensive business rules
     const projects = await this.mapProjects(siteVisit.marketingData, warnings, transformations);
-    
+
     if (projects.length === 0) {
       const error = new Error("No valid projects found in site visit marketing data");
       (error as any).projectValidationError = true;
@@ -345,10 +345,10 @@ export class SiteVisitDataMapper {
 
     // Extract ALL attachments from site visit - photos, documents, etc.
     const attachments = this.extractAllAttachments(siteVisit);
-    
+
     // Build comprehensive internal notes from ALL departments and data sources
     const comprehensiveInternalNotes = this.buildComprehensiveInternalNotes(siteVisit);
-    
+
     // Build comprehensive quotation data with ALL site visit data preserved
     const quotationData: Partial<InsertQuotation> = {
       quotationNumber,
@@ -451,15 +451,15 @@ export class SiteVisitDataMapper {
 
     // Map on-grid project if configured - be more flexible with partial data
     if (marketingData.onGridConfig && (
-        marketingData.onGridConfig.inverterKW ||
-        marketingData.onGridConfig.solarPanelMake?.length > 0 ||
-        marketingData.onGridConfig.inverterMake?.length > 0 ||
-        marketingData.onGridConfig.panelCount ||
-        marketingData.onGridConfig.projectValue ||
-        marketingData.onGridConfig.structureType ||
-        marketingData.onGridConfig.civilWorkScope ||
-        marketingData.onGridConfig.netMeterScope
-      )) {
+      marketingData.onGridConfig.inverterKW ||
+      marketingData.onGridConfig.solarPanelMake?.length > 0 ||
+      marketingData.onGridConfig.inverterMake?.length > 0 ||
+      marketingData.onGridConfig.panelCount ||
+      marketingData.onGridConfig.projectValue ||
+      marketingData.onGridConfig.structureType ||
+      marketingData.onGridConfig.civilWorkScope ||
+      marketingData.onGridConfig.netMeterScope
+    )) {
       projects.push(this.mapOnGridProject(marketingData.onGridConfig, warnings, transformations));
       transformations.push({
         field: 'projects.on_grid',
@@ -468,16 +468,16 @@ export class SiteVisitDataMapper {
         reason: 'On-grid configuration found and mapped from detailed site visit data'
       });
     }
-    
+
     // Map off-grid project if configured - be more flexible with partial data
     if (marketingData.offGridConfig && (
-        marketingData.offGridConfig.inverterKW ||
-        marketingData.offGridConfig.solarPanelMake?.length > 0 ||
-        marketingData.offGridConfig.inverterMake?.length > 0 ||
-        marketingData.offGridConfig.batteryCount ||
-        marketingData.offGridConfig.projectValue ||
-        marketingData.offGridConfig.structureType
-      )) {
+      marketingData.offGridConfig.inverterKW ||
+      marketingData.offGridConfig.solarPanelMake?.length > 0 ||
+      marketingData.offGridConfig.inverterMake?.length > 0 ||
+      marketingData.offGridConfig.batteryCount ||
+      marketingData.offGridConfig.projectValue ||
+      marketingData.offGridConfig.structureType
+    )) {
       projects.push(this.mapOffGridProject(marketingData.offGridConfig, warnings, transformations));
       transformations.push({
         field: 'projects.off_grid',
@@ -486,16 +486,16 @@ export class SiteVisitDataMapper {
         reason: 'Off-grid configuration found and mapped from detailed site visit data'
       });
     }
-    
+
     // Map hybrid project if configured - be more flexible with partial data
     if (marketingData.hybridConfig && (
-        marketingData.hybridConfig.inverterKW ||
-        marketingData.hybridConfig.solarPanelMake?.length > 0 ||
-        marketingData.hybridConfig.inverterMake?.length > 0 ||
-        marketingData.hybridConfig.batteryCount ||
-        marketingData.hybridConfig.projectValue ||
-        marketingData.hybridConfig.structureType
-      )) {
+      marketingData.hybridConfig.inverterKW ||
+      marketingData.hybridConfig.solarPanelMake?.length > 0 ||
+      marketingData.hybridConfig.inverterMake?.length > 0 ||
+      marketingData.hybridConfig.batteryCount ||
+      marketingData.hybridConfig.projectValue ||
+      marketingData.hybridConfig.structureType
+    )) {
       projects.push(this.mapHybridProject(marketingData.hybridConfig, warnings, transformations));
       transformations.push({
         field: 'projects.hybrid',
@@ -504,7 +504,7 @@ export class SiteVisitDataMapper {
         reason: 'Hybrid configuration found and mapped from detailed site visit data'
       });
     }
-    
+
     // Map water heater project if configured
     if (marketingData.waterHeaterConfig && marketingData.waterHeaterConfig.litre) {
       projects.push(this.mapWaterHeaterProject(marketingData.waterHeaterConfig, warnings, transformations));
@@ -515,7 +515,7 @@ export class SiteVisitDataMapper {
         reason: 'Water heater configuration found and mapped'
       });
     }
-    
+
     // Map water pump project if configured
     if (marketingData.waterPumpConfig && marketingData.waterPumpConfig.hp) {
       projects.push(this.mapWaterPumpProject(marketingData.waterPumpConfig, warnings, transformations));
@@ -531,7 +531,7 @@ export class SiteVisitDataMapper {
     // This happens when marketing team starts form but doesn't complete all details
     if (projects.length === 0 && marketingData.projectType) {
       warnings.push(`Project type '${marketingData.projectType}' selected but detailed configuration missing. Creating default project.`);
-      
+
       // Create default project based on selected project type
       switch (marketingData.projectType) {
         case 'on_grid':
@@ -543,7 +543,7 @@ export class SiteVisitDataMapper {
             reason: 'Default on-grid project created due to incomplete marketing data'
           });
           break;
-        
+
         case 'off_grid':
           projects.push(this.mapOffGridProject({}, warnings, transformations));
           transformations.push({
@@ -553,7 +553,7 @@ export class SiteVisitDataMapper {
             reason: 'Default off-grid project created due to incomplete marketing data'
           });
           break;
-        
+
         case 'hybrid':
           projects.push(this.mapHybridProject({}, warnings, transformations));
           transformations.push({
@@ -563,7 +563,7 @@ export class SiteVisitDataMapper {
             reason: 'Default hybrid project created due to incomplete marketing data'
           });
           break;
-        
+
         case 'water_heater':
           projects.push(this.mapWaterHeaterProject({ litre: 100 }, warnings, transformations));
           transformations.push({
@@ -573,7 +573,7 @@ export class SiteVisitDataMapper {
             reason: 'Default water heater project created due to incomplete marketing data'
           });
           break;
-        
+
         case 'water_pump':
           projects.push(this.mapWaterPumpProject({ hp: '1' }, warnings, transformations));
           transformations.push({
@@ -607,7 +607,7 @@ export class SiteVisitDataMapper {
   private static mapOnGridProject(config: any, warnings: string[], transformations: any[]): QuotationProject {
     // Extract inverter KW from multiple possible sources
     let systemKW = config.inverterKW || 3;
-    
+
     // If inverterKW is 0 or missing, try to extract from inverterWatts
     if (!systemKW || systemKW === 0) {
       if (config.inverterWatts) {
@@ -625,7 +625,7 @@ export class SiteVisitDataMapper {
         }
       }
     }
-    
+
     // Final fallback to 3kW if still no valid value
     if (!systemKW || systemKW === 0) {
       systemKW = 3;
@@ -651,24 +651,24 @@ export class SiteVisitDataMapper {
         reason: `Calculated project value: ${systemKW}kW × ₹${defaultPricePerKW}/kW = ₹${projectValue}`
       });
     }
-    
+
     const subsidyAmount = systemKW * subsidyPerKW;
     const customerPayment = projectValue - subsidyAmount;
 
     const panelWatts = config.panelWatts || "530";
     const panelWattsNum = parseFloat(panelWatts) || 530;
-    
+
     // Auto-select inverter phase based on KW
     const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
-    
+
     // Calculate GST fields
     const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
-    
+
     // Calculate actual pricePerKW from basePrice (this reflects the actual rate, not the business rule)
     const pricePerKW = systemKW > 0 ? Math.round(basePrice / systemKW) : defaultPricePerKW;
-    
+
     return {
       projectType: 'on_grid',
       systemKW,
@@ -721,18 +721,18 @@ export class SiteVisitDataMapper {
 
     const panelWatts = config.panelWatts || "530";
     const panelWattsNum = parseFloat(panelWatts) || 530;
-    
+
     // Auto-select inverter phase based on KW
     const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
-    
+
     // Calculate GST fields
     const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
-    
+
     // Calculate actual pricePerKW from basePrice (this reflects the actual rate, not the business rule)
     const pricePerKW = systemKW > 0 ? Math.round(basePrice / systemKW) : defaultPricePerKW;
-    
+
     return {
       projectType: 'off_grid',
       systemKW,
@@ -795,18 +795,18 @@ export class SiteVisitDataMapper {
 
     const panelWatts = config.panelWatts || "530";
     const panelWattsNum = parseFloat(panelWatts) || 530;
-    
+
     // Auto-select inverter phase based on KW
     const autoPhase = systemKW < 6 ? "single_phase" : "three_phase";
-    
+
     // Calculate GST fields
     const gstPercentage = 8.9; // Default GST percentage
     const basePrice = Math.round(projectValue / (1 + gstPercentage / 100));
     const gstAmount = projectValue - basePrice;
-    
+
     // Calculate actual pricePerKW from basePrice (this reflects the actual rate, not the business rule)
     const pricePerKW = systemKW > 0 ? Math.round(basePrice / systemKW) : defaultPricePerKW;
-    
+
     return {
       projectType: 'hybrid',
       systemKW,
@@ -957,7 +957,7 @@ export class SiteVisitDataMapper {
     const totalWithGST = projects.reduce((sum, project) => sum + (project.projectValue || 0), 0);
     const totalSubsidyAmount = projects.reduce((sum, project) => sum + (project.subsidyAmount || 0), 0);
     const totalCustomerPayment = totalWithGST - totalSubsidyAmount;
-    
+
     const advanceAmount = Math.round(totalCustomerPayment * (BUSINESS_RULES.payment.advancePercentage / 100));
     const balanceAmount = totalCustomerPayment - advanceAmount;
 
@@ -993,11 +993,11 @@ export class SiteVisitDataMapper {
    */
   private static extractCustomerNotes(siteVisit: any): string {
     const notes: string[] = [];
-    
+
     if (siteVisit.notes) {
       notes.push(siteVisit.notes);
     }
-    
+
     if (siteVisit.outcomeNotes) {
       notes.push(`Visit outcome: ${siteVisit.outcomeNotes}`);
     }
@@ -1093,7 +1093,7 @@ export class SiteVisitDataMapper {
     notesSections.push(`Purpose: ${siteVisit.visitPurpose || 'Unknown'}`);
     notesSections.push(`Status: ${siteVisit.status || 'Unknown'}`);
     notesSections.push(`Visit Outcome: ${siteVisit.visitOutcome || 'Not specified'}`);
-    
+
     if (siteVisit.siteInTime && siteVisit.siteOutTime) {
       const duration = new Date(siteVisit.siteOutTime).getTime() - new Date(siteVisit.siteInTime).getTime();
       const hours = Math.floor(duration / (1000 * 60 * 60));
@@ -1120,15 +1120,15 @@ export class SiteVisitDataMapper {
       notesSections.push(`Service Types: ${siteVisit.technicalData.serviceTypes ? siteVisit.technicalData.serviceTypes.join(', ') : 'None specified'}`);
       notesSections.push(`Work Type: ${siteVisit.technicalData.workType || 'Not specified'}`);
       notesSections.push(`Working Status: ${siteVisit.technicalData.workingStatus || 'Not assessed'}`);
-      
+
       if (siteVisit.technicalData.teamMembers && siteVisit.technicalData.teamMembers.length > 0) {
         notesSections.push(`Team Members: ${siteVisit.technicalData.teamMembers.join(', ')}`);
       }
-      
+
       if (siteVisit.technicalData.pendingRemarks) {
         notesSections.push(`Pending Remarks: ${siteVisit.technicalData.pendingRemarks}`);
       }
-      
+
       if (siteVisit.technicalData.description) {
         notesSections.push(`Technical Description: ${siteVisit.technicalData.description}`);
       }
@@ -1142,7 +1142,7 @@ export class SiteVisitDataMapper {
       notesSections.push("\n=== MARKETING PROJECT DETAILS ===");
       notesSections.push(`Update Requirements: ${siteVisit.marketingData.updateRequirements ? 'Yes' : 'No'}`);
       notesSections.push(`Project Type: ${siteVisit.marketingData.projectType || 'Not specified'}`);
-      
+
       // On-Grid Configuration
       if (siteVisit.marketingData.onGridConfig) {
         const config = siteVisit.marketingData.onGridConfig;
@@ -1168,7 +1168,7 @@ export class SiteVisitDataMapper {
           notesSections.push(`Net Meter Scope: ${config.netMeterScope}`);
         }
       }
-      
+
       // Off-Grid Configuration
       if (siteVisit.marketingData.offGridConfig) {
         const config = siteVisit.marketingData.offGridConfig;
@@ -1180,16 +1180,16 @@ export class SiteVisitDataMapper {
         notesSections.push(`Battery AH: ${config.batteryAH || 'Not specified'}`);
         notesSections.push(`Battery Count: ${config.batteryCount || 'Not specified'}`);
       }
-      
+
       // Hybrid Configuration
       if (siteVisit.marketingData.hybridConfig) {
         const config = siteVisit.marketingData.hybridConfig;
         notesSections.push("--- Hybrid System Configuration ---");
         notesSections.push(`Project Value: ₹${config.projectValue || 0}`);
         notesSections.push(`Inverter KW: ${config.inverterKW || 'Not specified'}`);
-        notesSections.push(`Battery Configuration: ${config.batteryBrand || 'Unknown'} ${config.batteryAH || ''}AH x${config.batteryCount || 0}`);
+        notesSections.push(`Battery Configuration: ${config.batteryBrand || 'Unknown'} ${config.batteryAH || ''}Ah Battery * ${config.batteryCount || 0} nos`);
       }
-      
+
       // Water Heater Configuration
       if (siteVisit.marketingData.waterHeaterConfig) {
         const config = siteVisit.marketingData.waterHeaterConfig;
@@ -1198,7 +1198,7 @@ export class SiteVisitDataMapper {
         notesSections.push(`Capacity: ${config.litre || 'Not specified'} liters`);
         notesSections.push(`Floor Level: ${config.floor || 'Not specified'}`);
       }
-      
+
       // Water Pump Configuration  
       if (siteVisit.marketingData.waterPumpConfig) {
         const config = siteVisit.marketingData.waterPumpConfig;
@@ -1215,37 +1215,37 @@ export class SiteVisitDataMapper {
     // === ADMINISTRATIVE DETAILS ===
     if (siteVisit.adminData) {
       notesSections.push("\n=== ADMINISTRATIVE DETAILS ===");
-      
+
       if (siteVisit.adminData.bankProcess) {
         notesSections.push(`Bank Process: ${siteVisit.adminData.bankProcess.step || 'Not specified'}`);
         if (siteVisit.adminData.bankProcess.description) {
           notesSections.push(`Bank Process Details: ${siteVisit.adminData.bankProcess.description}`);
         }
       }
-      
+
       if (siteVisit.adminData.ebProcess) {
         notesSections.push(`EB Process: ${siteVisit.adminData.ebProcess.type || 'Not specified'}`);
         if (siteVisit.adminData.ebProcess.description) {
           notesSections.push(`EB Process Details: ${siteVisit.adminData.ebProcess.description}`);
         }
       }
-      
+
       if (siteVisit.adminData.purchase) {
         notesSections.push(`Purchase Information: ${siteVisit.adminData.purchase}`);
       }
-      
+
       if (siteVisit.adminData.driving) {
         notesSections.push(`Driving Information: ${siteVisit.adminData.driving}`);
       }
-      
+
       if (siteVisit.adminData.officialCashTransactions) {
         notesSections.push(`Official Cash Transactions: ${siteVisit.adminData.officialCashTransactions}`);
       }
-      
+
       if (siteVisit.adminData.officialPersonalWork) {
         notesSections.push(`Official Personal Work: ${siteVisit.adminData.officialPersonalWork}`);
       }
-      
+
       if (siteVisit.adminData.others) {
         notesSections.push(`Other Administrative Details: ${siteVisit.adminData.others}`);
       }
@@ -1264,7 +1264,7 @@ export class SiteVisitDataMapper {
     } else {
       notesSections.push("No check-in location recorded");
     }
-    
+
     if (siteVisit.siteOutLocation) {
       notesSections.push(`Check-out Location: Lat ${siteVisit.siteOutLocation.latitude}, Lng ${siteVisit.siteOutLocation.longitude}`);
       if (siteVisit.siteOutLocation.address) {
@@ -1276,8 +1276,8 @@ export class SiteVisitDataMapper {
 
     // === PHOTO DOCUMENTATION ===
     const totalPhotos = (siteVisit.sitePhotos?.length || 0) + (siteVisit.siteOutPhotos?.length || 0) +
-                       (siteVisit.siteInPhotoUrl ? 1 : 0) + (siteVisit.siteOutPhotoUrl ? 1 : 0);
-    
+      (siteVisit.siteInPhotoUrl ? 1 : 0) + (siteVisit.siteOutPhotoUrl ? 1 : 0);
+
     notesSections.push("\n=== PHOTO DOCUMENTATION ===");
     notesSections.push(`Total Photos Captured: ${totalPhotos}`);
     if (siteVisit.siteInPhotoUrl) notesSections.push("✓ Check-in selfie captured");
@@ -1306,7 +1306,7 @@ export class SiteVisitDataMapper {
 
     const comprehensiveNotes = notesSections.join('\n');
     console.log(`COMPREHENSIVE_NOTES: Generated ${notesSections.length} note sections with ${comprehensiveNotes.length} characters`);
-    
+
     return comprehensiveNotes;
   }
 }
