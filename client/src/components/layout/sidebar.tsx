@@ -32,10 +32,10 @@ export function Sidebar() {
     "Administration": true,
     "System": true
   });
-  
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const groupRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  
+
   // Remove legacy permission hook - now using enterprise RBAC
 
   // Handle responsive window resizing
@@ -43,20 +43,20 @@ export function Sidebar() {
     const handleResize = () => {
       setIsMd(window.innerWidth >= 768);
     };
-    
+
     // Set initial state
     handleResize();
-    
+
     // Add event listener
     window.addEventListener('resize', handleResize);
-    
+
     // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const toggleGroup = (category: string, event: React.MouseEvent<HTMLButtonElement>) => {
     const isExpanding = !expandedGroups[category];
-    
+
     setExpandedGroups(prev => ({
       ...prev,
       [category]: !prev[category]
@@ -66,21 +66,21 @@ export function Sidebar() {
     if (isExpanding && scrollContainerRef.current) {
       const button = event.currentTarget;
       const container = scrollContainerRef.current;
-      
+
       // Wait for expansion animation to start
       setTimeout(() => {
         const buttonRect = button.getBoundingClientRect();
         const containerRect = container.getBoundingClientRect();
-        
+
         // Calculate if expanded content would be below viewport
         const buttonBottom = buttonRect.bottom;
         const containerBottom = containerRect.bottom;
         const estimatedContentHeight = 200; // Approximate height of expanded group
-        
+
         // If content would overflow, scroll to keep it visible
         if (buttonBottom + estimatedContentHeight > containerBottom) {
           const scrollAmount = (buttonBottom + estimatedContentHeight) - containerBottom + 20; // 20px padding
-          
+
           container.scrollTo({
             top: container.scrollTop + scrollAmount,
             behavior: 'smooth'
@@ -108,33 +108,33 @@ export function Sidebar() {
     {
       category: "Business",
       items: [
-        { 
-          href: "/dashboard", 
-          label: "Dashboard", 
+        {
+          href: "/dashboard",
+          label: "Dashboard",
           icon: <i className="ri-dashboard-line mr-3 text-xl"></i>,
           requiredPermissions: "dashboard.view"
         },
-        { 
-          href: "/customers", 
-          label: "Customers", 
+        {
+          href: "/customers",
+          label: "Customers",
           icon: <i className="ri-user-3-line mr-3 text-xl"></i>,
           requiredPermissions: ["customers.view", "customers.create"]
         },
-        { 
-          href: "/products", 
-          label: "Products", 
+        {
+          href: "/products",
+          label: "Products",
           icon: <i className="ri-store-2-line mr-3 text-xl"></i>,
           requiredPermissions: ["products.view", "products.create"]
         },
-        { 
-          href: "/quotations", 
-          label: "Quotations", 
+        {
+          href: "/quotations",
+          label: "Quotations",
           icon: <i className="ri-file-list-3-line mr-3 text-xl"></i>,
           requiredPermissions: ["quotations.view", "quotations.create"]
         },
-        { 
-          href: "/invoices", 
-          label: "Invoices", 
+        {
+          href: "/invoices",
+          label: "Invoices",
           icon: <i className="ri-bill-line mr-3 text-xl"></i>,
           requiredPermissions: ["invoices.view", "invoices.create"]
         },
@@ -143,66 +143,78 @@ export function Sidebar() {
     {
       category: "Workforce",
       items: [
-        { 
-          href: "/attendance", 
-          label: "Attendance", 
+        {
+          href: "/attendance",
+          label: "Attendance",
           icon: <i className="ri-time-line mr-3 text-xl"></i>,
           requiredPermissions: ["attendance.view_own", "attendance.view_team", "attendance.view_all"]
         },
-        { 
-          href: "/leave", 
-          label: "Leave Management", 
+        {
+          href: "/leave",
+          label: "Leave Management",
           icon: <i className="ri-calendar-check-line mr-3 text-xl"></i>,
           requiredPermissions: ["leave.view_own", "leave.view_team", "leave.view_all"]
         },
-        { 
-          href: "/site-visit", 
-          label: "Site Visit", 
+        {
+          href: "/site-visit",
+          label: "Site Visit",
           icon: <i className="ri-map-pin-line mr-3 text-xl"></i>,
           requiredPermissions: ["site_visit.view", "site_visit.create"]
         },
-        { 
-          href: "/site-visit-monitoring", 
-          label: "Site Visit Monitoring", 
+        {
+          href: "/site-visit-monitoring",
+          label: "Site Visit Monitoring",
           icon: <i className="ri-dashboard-line mr-3 text-xl"></i>,
           roles: ["master_admin", "admin"],
           requiredPermissions: ["site_visit.view_all", "site_visit.reports"]
+        },
+        {
+          href: "/employee-ot",
+          label: "Overtime (OT)",
+          icon: <i className="ri-timer-flash-line mr-3 text-xl"></i>,
+          requiredPermissions: "attendance.view_own"
+        },
+        {
+          href: "/ot-administration",
+          label: "OT Administration",
+          icon: <i className="ri-settings-3-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"]
         },
       ]
     },
     {
       category: "Administration",
       items: [
-        { 
-          href: "/user-management", 
-          label: "User Management", 
+        {
+          href: "/user-management",
+          label: "User Management",
           icon: <i className="ri-user-settings-line mr-3 text-xl"></i>,
           roles: ["master_admin", "admin"],
           requiredPermissions: ["users.view", "users.create"]
         },
-        { 
-          href: "/hr-management", 
-          label: "Employee Management", 
+        {
+          href: "/hr-management",
+          label: "Employee Management",
           icon: <i className="ri-team-line mr-3 text-xl"></i>,
           roles: ["master_admin", "admin"],
           requiredPermissions: ["users.view"]
         },
-        { 
-          href: "/departments", 
-          label: "Departments", 
+        {
+          href: "/departments",
+          label: "Departments",
           icon: <i className="ri-building-line mr-3 text-xl"></i>,
           roles: ["master_admin"],
           requiredPermissions: ["departments.view", "departments.create"]
         },
-        { 
-          href: "/attendance-management", 
-          label: "Attendance Management", 
+        {
+          href: "/attendance-management",
+          label: "Attendance Management",
           icon: <i className="ri-shield-user-line mr-3 text-xl"></i>,
           roles: ["master_admin"]
         },
-        { 
-          href: "/payroll-management", 
-          label: "Payroll Management", 
+        {
+          href: "/payroll-management",
+          label: "Payroll Management",
           icon: <i className="ri-money-dollar-circle-line mr-3 text-xl"></i>,
           roles: ["master_admin"]
         },
@@ -211,16 +223,16 @@ export function Sidebar() {
     {
       category: "System",
       items: [
-        { 
-          href: "/office-locations", 
-          label: "Office Locations", 
+        {
+          href: "/office-locations",
+          label: "Office Locations",
           icon: <i className="ri-map-pin-line mr-3 text-xl"></i>,
           roles: ["master_admin"],
           requiredPermissions: "system.settings"
         },
-        { 
-          href: "/settings", 
-          label: "Settings", 
+        {
+          href: "/settings",
+          label: "Settings",
           icon: <i className="ri-settings-4-line mr-3 text-xl"></i>
         },
       ]
@@ -231,19 +243,19 @@ export function Sidebar() {
   const filterItem = (item: NavItem) => {
     // Always show items with no restrictions
     if (!item.roles && !item.requiredPermissions && !item.requiresApproval) return true;
-    
+
     // If no user, don't show restricted items
     if (!user) return false;
-    
+
     // Check role-based access if specified
     if (item.roles && !hasRole(item.roles)) return false;
-    
+
     // Check enterprise permissions
     if (item.requiredPermissions && !hasPermission(item.requiredPermissions)) return false;
-    
+
     // Check approval permissions if required
     if (item.requiresApproval && !canApprove) return false;
-    
+
     return true;
   };
 
@@ -255,7 +267,7 @@ export function Sidebar() {
     .filter(group => group.items.length > 0);
 
   return (
-    <aside 
+    <aside
       className={cn(
         "hidden md:flex flex-col bg-white border-r border-gray-200 h-full transition-all duration-300 ease-in-out",
         isCollapsed ? "md:w-[70px] lg:w-20" : "md:w-56 lg:w-64",
@@ -266,9 +278,9 @@ export function Sidebar() {
           "flex items-center gap-2",
           isCollapsed ? "justify-center w-full" : "justify-center w-full"
         )}>
-          <img 
-            src={logoPath} 
-            alt="Prakash Green Energy" 
+          <img
+            src={logoPath}
+            alt="Prakash Green Energy"
             className={cn(
               "object-contain",
               isCollapsed ? "h-16 w-16" : "h-20 w-auto max-w-[280px]"
@@ -276,7 +288,7 @@ export function Sidebar() {
           />
         </div>
         {isMd && (
-          <button 
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -285,26 +297,26 @@ export function Sidebar() {
           </button>
         )}
       </div>
-      
+
       <div ref={scrollContainerRef} className="overflow-y-auto flex-grow p-1 md:p-2">
         <nav className={cn("space-y-3 md:space-y-4", isCollapsed && "space-y-2")}>
           {filteredNavGroups.map((group, groupIndex) => {
             const isActive = isCategoryActive(group);
-            
+
             return (
               <div key={groupIndex}>
                 {/* Visual separator between categories */}
                 {groupIndex > 0 && !isCollapsed && (
                   <div className="h-px bg-gray-200 my-3 md:my-4" />
                 )}
-                
+
                 {!isCollapsed ? (
                   <button
                     onClick={(e) => toggleGroup(group.category, e)}
                     className={cn(
                       "w-full flex items-center justify-between px-3 md:px-4 py-2 mb-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 rounded-md group",
-                      isActive 
-                        ? "text-primary bg-primary/5 hover:bg-primary/10" 
+                      isActive
+                        ? "text-primary bg-primary/5 hover:bg-primary/10"
                         : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                     )}
                     data-testid={`toggle-${group.category.toLowerCase()}`}
@@ -325,36 +337,36 @@ export function Sidebar() {
                   </button>
                 ) : null}
                 <div className={cn(
-                "overflow-hidden transition-all duration-300 ease-in-out",
-                isCollapsed && "flex flex-col items-center",
-                !isCollapsed && expandedGroups[group.category] ? "max-h-[2000px] opacity-100" : !isCollapsed ? "max-h-0 opacity-0" : ""
-              )}>
-                <div className={cn("space-y-0.5 md:space-y-1", isCollapsed && "flex flex-col items-center")}>
-                  {group.items.map((item, itemIndex) => (
-                    <Link 
-                      key={itemIndex} 
-                      href={item.href}
-                      className={cn(
-                        "sidebar-item flex items-center px-3 py-2.5 md:px-4 md:py-3 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200",
-                        isCollapsed && "justify-center px-2",
-                        location === item.href && "active bg-primary/10",
-                        !isCollapsed && location === item.href && "border-l-4 border-primary"
-                      )}
-                      title={isCollapsed ? item.label : undefined}
-                      data-testid={`nav-${item.href.substring(1)}`}
-                    >
-                      <div className={isCollapsed ? "mx-auto" : ""}>{item.icon}</div>
-                      {!isCollapsed && <span className="text-sm md:text-base truncate">{item.label}</span>}
-                    </Link>
-                  ))}
-                </div>
+                  "overflow-hidden transition-all duration-300 ease-in-out",
+                  isCollapsed && "flex flex-col items-center",
+                  !isCollapsed && expandedGroups[group.category] ? "max-h-[2000px] opacity-100" : !isCollapsed ? "max-h-0 opacity-0" : ""
+                )}>
+                  <div className={cn("space-y-0.5 md:space-y-1", isCollapsed && "flex flex-col items-center")}>
+                    {group.items.map((item, itemIndex) => (
+                      <Link
+                        key={itemIndex}
+                        href={item.href}
+                        className={cn(
+                          "sidebar-item flex items-center px-3 py-2.5 md:px-4 md:py-3 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200",
+                          isCollapsed && "justify-center px-2",
+                          location === item.href && "active bg-primary/10",
+                          !isCollapsed && location === item.href && "border-l-4 border-primary"
+                        )}
+                        title={isCollapsed ? item.label : undefined}
+                        data-testid={`nav-${item.href.substring(1)}`}
+                      >
+                        <div className={isCollapsed ? "mx-auto" : ""}>{item.icon}</div>
+                        {!isCollapsed && <span className="text-sm md:text-base truncate">{item.label}</span>}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
             );
           })}
         </nav>
       </div>
-      
+
       <div className={cn(
         "p-3 md:p-4 border-t border-gray-200",
         isCollapsed && "flex justify-center"
@@ -363,20 +375,20 @@ export function Sidebar() {
           <div className="flex items-center">
             <div className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
               {user?.photoURL ? (
-                <img 
-                  src={user.photoURL} 
-                  alt={user.displayName || "User"} 
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || "User"}
                   className="h-9 w-9 md:h-10 md:w-10 rounded-full object-cover"
                 />
               ) : (
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   className="h-5 w-5 text-gray-500"
                 >
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -392,14 +404,14 @@ export function Sidebar() {
                 {user?.role === "master_admin" ? "Master Admin" : user?.role === "admin" ? "Admin" : "Employee"}
               </p>
             </div>
-            <button 
+            <button
               onClick={() => {
                 import("@/lib/firebase").then(({ logoutUser }) => {
                   logoutUser().then(() => {
                     window.location.href = "/login";
                   });
                 });
-              }} 
+              }}
               className="ml-auto text-gray-500 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50/50"
               aria-label="Logout"
             >
@@ -407,14 +419,14 @@ export function Sidebar() {
             </button>
           </div>
         ) : (
-          <button 
+          <button
             onClick={() => {
               import("@/lib/firebase").then(({ logoutUser }) => {
                 logoutUser().then(() => {
                   window.location.href = "/login";
                 });
               });
-            }} 
+            }}
             className="text-gray-500 hover:text-red-500 p-1.5 rounded-full hover:bg-red-50/50"
             aria-label="Logout"
           >

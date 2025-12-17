@@ -2,8 +2,15 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import cors from "cors";
 
 const app = express();
+
+// Configure CORS
+app.use(cors({
+  origin: process.env.VITE_CLIENT_URL || true, // Allow all origins if not specified, or restrict to Vercel app
+  credentials: true,
+}));
 
 // Increase payload size limits for photo uploads
 // Set to 50MB to handle multiple high-resolution photos

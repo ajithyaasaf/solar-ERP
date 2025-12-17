@@ -7556,6 +7556,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Register OT System routes
+  const otRoutes = await import('./routes/ot-routes');
+  app.use('/api/ot', otRoutes.default);
+
   const httpServer = createServer(app);
   return httpServer;
 }

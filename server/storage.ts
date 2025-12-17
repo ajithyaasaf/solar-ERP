@@ -55,13 +55,13 @@ export const insertUserSchema = z.object({
   joinDate: z.date().optional(),
   isActive: z.boolean().default(true),
   photoURL: z.string().nullable().optional(),
-  
+
   // Statutory Information
   esiNumber: z.string().optional(),
   epfNumber: z.string().optional(),
   aadharNumber: z.string().optional(),
   panNumber: z.string().optional(),
-  
+
   // Personal Details
   fatherName: z.string().optional(),
   spouseName: z.string().optional(),
@@ -70,20 +70,20 @@ export const insertUserSchema = z.object({
   gender: z.enum(["male", "female", "other"]).optional(),
   maritalStatus: z.enum(sharedMaritalStatus).optional(),
   bloodGroup: z.enum(sharedBloodGroups).optional(),
-  
+
   // Employee Document URLs
   profilePhotoUrl: z.string().optional(),
   aadharCardUrl: z.string().optional(),
   panCardUrl: z.string().optional(),
-  
+
   // Professional Information
   educationalQualification: z.string().optional(),
   experienceYears: z.number().min(0).optional(),
-  
+
   // Employment Lifecycle
   dateOfLeaving: z.date().optional(),
   employeeStatus: z.enum(sharedEmployeeStatus).default("active"),
-  
+
   // Contact Information
   contactNumber: z.string().optional(),
   emergencyContactPerson: z.string().optional(),
@@ -91,13 +91,13 @@ export const insertUserSchema = z.object({
   permanentAddress: z.string().optional(),
   presentAddress: z.string().optional(),
   location: z.string().optional(),
-  
+
   // Payroll Information
   paymentMode: z.enum(paymentModes).optional(),
   bankAccountNumber: z.string().optional(),
   bankName: z.string().optional(),
   ifscCode: z.string().optional(),
-  
+
   // Document Management
   documents: z.object({
     marksheets: z.array(z.string()).optional(),
@@ -170,25 +170,25 @@ export interface User {
   displayName: string;
   role: "master_admin" | "admin" | "employee";
   department:
-    | "operations"
-    | "admin"
-    | "hr"
-    | "marketing"
-    | "sales"
-    | "technical"
-    | "housekeeping"
-    | null;
+  | "operations"
+  | "admin"
+  | "hr"
+  | "marketing"
+  | "sales"
+  | "technical"
+  | "housekeeping"
+  | null;
   designation:
-    | "ceo"
-    | "gm"
-    | "officer"
-    | "executive"
-    | "cre"
-    | "team_leader"
-    | "technician"
-    | "welder"
-    | "house_man"
-    | null;
+  | "ceo"
+  | "gm"
+  | "officer"
+  | "executive"
+  | "cre"
+  | "team_leader"
+  | "technician"
+  | "welder"
+  | "house_man"
+  | null;
   employeeId?: string;
   reportingManagerId?: string | null;
   payrollGrade?: "A1" | "A2" | "B1" | "B2" | "C1" | "C2" | "D1" | "D2" | null;
@@ -196,13 +196,13 @@ export interface User {
   isActive: boolean;
   createdAt: Date;
   photoURL?: string;
-  
+
   // Statutory Information
   esiNumber?: string;
   epfNumber?: string;
   aadharNumber?: string;
   panNumber?: string;
-  
+
   // Personal Details
   fatherName?: string;
   spouseName?: string;
@@ -210,15 +210,15 @@ export interface User {
   gender?: "male" | "female" | "other";
   maritalStatus?: "single" | "married" | "divorced" | "widowed" | "separated";
   bloodGroup?: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | "unknown";
-  
+
   // Professional Information
   educationalQualification?: string;
   experienceYears?: number;
-  
+
   // Employment Lifecycle
   dateOfLeaving?: Date;
   employeeStatus?: "active" | "inactive" | "probation" | "notice_period" | "terminated" | "on_leave";
-  
+
   // Contact Information
   contactNumber?: string;
   emergencyContactPerson?: string;
@@ -226,13 +226,13 @@ export interface User {
   permanentAddress?: string;
   presentAddress?: string;
   location?: string;
-  
+
   // Payroll Information
   paymentMode?: "cash" | "bank" | "cheque";
   bankAccountNumber?: string;
   bankName?: string;
   ifscCode?: string;
-  
+
   // Document Management
   documents?: {
     marksheets?: string[];
@@ -414,7 +414,7 @@ export interface Employee {
   id: string;
   employeeId: string;
   systemUserId?: string; // Links to User Management system
-  
+
   // Personal Information
   personalInfo: {
     firstName: string;
@@ -522,9 +522,9 @@ export interface Employee {
 export interface EmployeeDocument {
   id: string;
   employeeId: string;
-  documentType: "aadhar_card" | "pan_card" | "passport" | "driving_license" | "voter_id" | 
-               "resume" | "offer_letter" | "joining_letter" | "salary_certificate" |
-               "experience_certificate" | "education_certificate" | "photo" | "other";
+  documentType: "aadhar_card" | "pan_card" | "passport" | "driving_license" | "voter_id" |
+  "resume" | "offer_letter" | "joining_letter" | "salary_certificate" |
+  "experience_certificate" | "education_certificate" | "photo" | "other";
   documentName: string;
   documentUrl: string;
   documentNumber?: string;
@@ -592,7 +592,7 @@ export interface Payroll {
   absentDays: number;
   overtimeHours: number;
   leaveDays: number;
-  
+
   // Salary Components
   fixedSalary: number;
   basicSalary: number;
@@ -601,7 +601,7 @@ export interface Payroll {
   variableComponent: number;
   overtimePay: number;
   grossSalary: number;
-  
+
   // Deductions
   pfDeduction: number;
   esiDeduction: number;
@@ -610,10 +610,10 @@ export interface Payroll {
   loanDeduction: number;
   otherDeductions: number;
   totalDeductions: number;
-  
+
   // Net Salary
   netSalary: number;
-  
+
   // Status and Processing
   status: "draft" | "pending" | "approved" | "paid" | "cancelled";
   processedBy: string;
@@ -621,7 +621,7 @@ export interface Payroll {
   paidOn?: Date;
   paymentReference?: string;
   remarks?: string;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -800,7 +800,7 @@ export interface IStorage {
   listUsers(): Promise<User[]>;
   createUser(data: z.infer<typeof insertUserSchema>): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
-  
+
   // Department management
   getDepartment(id: string): Promise<Department | undefined>;
   getDepartmentByName(name: string): Promise<Department | undefined>;
@@ -813,7 +813,7 @@ export interface IStorage {
     data: Partial<z.infer<typeof insertDepartmentSchema>>,
   ): Promise<Department>;
   deleteDepartment(id: string): Promise<boolean>;
-  
+
   // Designation management
   getDesignation(id: string): Promise<Designation | undefined>;
   getDesignationByName(name: string): Promise<Designation | undefined>;
@@ -821,7 +821,7 @@ export interface IStorage {
   createDesignation(data: z.infer<typeof insertDesignationSchema>): Promise<Designation>;
   updateDesignation(id: string, data: Partial<z.infer<typeof insertDesignationSchema>>): Promise<Designation>;
   deleteDesignation(id: string): Promise<boolean>;
-  
+
   // Permission management
   getPermissionGroup(id: string): Promise<PermissionGroup | undefined>;
   getPermissionsByDepartmentAndDesignation(department: string, designation: string): Promise<PermissionGroup | undefined>;
@@ -829,12 +829,12 @@ export interface IStorage {
   createPermissionGroup(data: z.infer<typeof insertPermissionGroupSchema>): Promise<PermissionGroup>;
   updatePermissionGroup(id: string, data: Partial<z.infer<typeof insertPermissionGroupSchema>>): Promise<PermissionGroup>;
   deletePermissionGroup(id: string): Promise<boolean>;
-  
+
   // User permission utilities (Phase 1 - backward compatible)
   getUserPermissions(userId: string): Promise<string[]>;
   checkUserPermission(userId: string, permission: string): Promise<boolean>;
   getUserApprovalLimits(userId: string): Promise<{ canApprove: boolean; maxAmount: number | null }>;
-  
+
   // Enterprise HR Management methods
   // Employee management
   getEmployee(id: string): Promise<Employee | undefined>;
@@ -853,7 +853,7 @@ export interface IStorage {
   createEmployee(data: z.infer<typeof insertEmployeeSchema>): Promise<Employee>;
   updateEmployee(id: string, data: Partial<z.infer<typeof insertEmployeeSchema>>): Promise<Employee>;
   deleteEmployee(id: string): Promise<boolean>;
-  
+
   // Employee Document management
   getEmployeeDocument(id: string): Promise<EmployeeDocument | undefined>;
   getEmployeeDocuments(employeeId: string): Promise<EmployeeDocument[]>;
@@ -861,7 +861,7 @@ export interface IStorage {
   createEmployeeDocument(data: z.infer<typeof insertEmployeeDocumentSchema>): Promise<EmployeeDocument>;
   updateEmployeeDocument(id: string, data: Partial<z.infer<typeof insertEmployeeDocumentSchema>>): Promise<EmployeeDocument>;
   deleteEmployeeDocument(id: string): Promise<boolean>;
-  
+
   // Performance Review management
   getPerformanceReview(id: string): Promise<PerformanceReview | undefined>;
   getEmployeePerformanceReviews(employeeId: string): Promise<PerformanceReview[]>;
@@ -879,27 +879,27 @@ export interface IStorage {
   createRole(data: z.infer<typeof insertRoleSchema>): Promise<Role>;
   updateRole(id: string, data: Partial<z.infer<typeof insertRoleSchema>>): Promise<Role>;
   deleteRole(id: string): Promise<boolean>;
-  
+
   // User role assignments
   getUserRoleAssignments(userId: string): Promise<UserRoleAssignment[]>;
   getRoleAssignment(id: string): Promise<UserRoleAssignment | undefined>;
   assignUserRole(data: z.infer<typeof insertUserRoleAssignmentSchema>): Promise<UserRoleAssignment>;
   revokeUserRole(userId: string, roleId: string): Promise<boolean>;
-  
+
   // Permission overrides
   getUserPermissionOverrides(userId: string): Promise<PermissionOverride[]>;
   createPermissionOverride(data: z.infer<typeof insertPermissionOverrideSchema>): Promise<PermissionOverride>;
   revokePermissionOverride(id: string): Promise<boolean>;
-  
+
   // Enterprise permission resolution
   getEffectiveUserPermissions(userId: string): Promise<string[]>;
   checkEffectiveUserPermission(userId: string, permission: string): Promise<boolean>;
   getEffectiveUserApprovalLimits(userId: string): Promise<{ canApprove: boolean; maxAmount: Record<string, number | null> }>;
-  
+
   // Audit logging
   createAuditLog(data: z.infer<typeof insertAuditLogSchema>): Promise<AuditLog>;
   getAuditLogs(filters?: { userId?: string; entityType?: string; startDate?: Date; endDate?: Date }): Promise<AuditLog[]>;
-  
+
   // Payroll System Methods
   // Salary Structure Management
   getSalaryStructure(id: string): Promise<SalaryStructure | undefined>;
@@ -907,7 +907,7 @@ export interface IStorage {
   createSalaryStructure(data: z.infer<typeof insertSalaryStructureSchema>): Promise<SalaryStructure>;
   updateSalaryStructure(id: string, data: Partial<z.infer<typeof insertSalaryStructureSchema>>): Promise<SalaryStructure>;
   listSalaryStructures(): Promise<SalaryStructure[]>;
-  
+
   // Payroll Management
   getPayroll(id: string): Promise<Payroll | undefined>;
   getPayrollByUserAndMonth(userId: string, month: number, year: number): Promise<Payroll | undefined>;
@@ -915,17 +915,17 @@ export interface IStorage {
   updatePayroll(id: string, data: Partial<z.infer<typeof insertPayrollSchema>>): Promise<Payroll>;
   listPayrolls(filters?: { month?: number; year?: number; department?: string; status?: string }): Promise<Payroll[]>;
   listPayrollsByUser(userId: string): Promise<Payroll[]>;
-  
+
   // Payroll Settings
   getPayrollSettings(): Promise<PayrollSettings | undefined>;
   updatePayrollSettings(data: z.infer<typeof insertPayrollSettingsSchema>): Promise<PayrollSettings>;
-  
+
   // Salary Advances
   getSalaryAdvance(id: string): Promise<SalaryAdvance | undefined>;
   createSalaryAdvance(data: z.infer<typeof insertSalaryAdvanceSchema>): Promise<SalaryAdvance>;
   updateSalaryAdvance(id: string, data: Partial<z.infer<typeof insertSalaryAdvanceSchema>>): Promise<SalaryAdvance>;
   listSalaryAdvances(filters?: { userId?: string; status?: string }): Promise<SalaryAdvance[]>;
-  
+
   // Attendance Policies
   getAttendancePolicy(id: string): Promise<AttendancePolicy | undefined>;
   getAttendancePolicyByDepartment(department: string, designation?: string): Promise<AttendancePolicy | undefined>;
@@ -937,7 +937,7 @@ export interface IStorage {
   getDepartmentTiming(department: string): Promise<any | undefined>;
   updateDepartmentTiming(department: string, data: any): Promise<any>;
   listDepartmentTimings(): Promise<any[]>;
-  
+
   // Payroll Calculation Utilities
   calculatePayroll(userId: string, month: number, year: number): Promise<z.infer<typeof insertPayrollSchema>>;
   getMonthlyAttendanceSummary(userId: string, month: number, year: number): Promise<{
@@ -955,25 +955,25 @@ export interface IStorage {
   updateEnhancedPayroll(id: string, data: Partial<EnhancedPayroll>): Promise<EnhancedPayroll>;
   listEnhancedPayrolls(filters?: { month?: number; year?: number; department?: string; status?: string }): Promise<EnhancedPayroll[]>;
   listEnhancedPayrollsByUser(userId: string): Promise<EnhancedPayroll[]>;
-  
+
   // Enhanced Salary Structure Management
   getEnhancedSalaryStructure(id: string): Promise<EnhancedSalaryStructure | undefined>;
   getEnhancedSalaryStructureByUser(userId: string): Promise<EnhancedSalaryStructure | undefined>;
   createEnhancedSalaryStructure(data: any): Promise<EnhancedSalaryStructure>;
   updateEnhancedSalaryStructure(id: string, data: Partial<EnhancedSalaryStructure>): Promise<EnhancedSalaryStructure>;
   listEnhancedSalaryStructures(): Promise<EnhancedSalaryStructure[]>;
-  
+
   // Enhanced Payroll Settings
   getEnhancedPayrollSettings(): Promise<EnhancedPayrollSettings | undefined>;
   updateEnhancedPayrollSettings(data: any): Promise<EnhancedPayrollSettings>;
-  
+
   // Payroll Field Configuration
   getPayrollFieldConfig(id: string): Promise<PayrollFieldConfig | undefined>;
   listPayrollFieldConfigs(): Promise<PayrollFieldConfig[]>;
   createPayrollFieldConfig(data: any): Promise<PayrollFieldConfig>;
   updatePayrollFieldConfig(id: string, data: Partial<PayrollFieldConfig>): Promise<PayrollFieldConfig>;
   deletePayrollFieldConfig(id: string): Promise<boolean>;
-  
+
   listOfficeLocations(): Promise<OfficeLocation[]>;
   getOfficeLocation(id: string): Promise<OfficeLocation | undefined>;
   createOfficeLocation(
@@ -1050,7 +1050,7 @@ export interface IStorage {
     id: string,
     data: Partial<z.infer<typeof insertLeaveSchema>>,
   ): Promise<Leave>;
-  
+
   // Comprehensive Leave Management System
   // Leave Balance Management
   getLeaveBalance(userId: string, month: number, year: number): Promise<LeaveBalance | undefined>;
@@ -1059,7 +1059,7 @@ export interface IStorage {
   updateLeaveBalance(id: string, data: Partial<z.infer<typeof insertLeaveBalanceSchema>>): Promise<LeaveBalance>;
   listLeaveBalancesByYear(year: number): Promise<LeaveBalance[]>;
   resetMonthlyLeaveBalances(month: number, year: number): Promise<void>;
-  
+
   // Leave Application Management
   getLeaveApplication(id: string): Promise<LeaveApplication | undefined>;
   createLeaveApplication(data: z.infer<typeof insertLeaveApplicationSchema>): Promise<LeaveApplication>;
@@ -1072,7 +1072,7 @@ export interface IStorage {
   approveLeaveByHR(leaveId: string, hrId: string, remarks?: string): Promise<LeaveApplication>;
   rejectLeave(leaveId: string, rejectedBy: string, reason: string, rejectedByRole: 'manager' | 'hr'): Promise<LeaveApplication>;
   cancelLeaveApplication(leaveId: string, userId: string): Promise<LeaveApplication>;
-  
+
   // Fixed Holidays Management
   getFixedHoliday(id: string): Promise<FixedHoliday | undefined>;
   createFixedHoliday(data: z.infer<typeof insertFixedHolidaySchema>): Promise<FixedHoliday>;
@@ -1080,20 +1080,41 @@ export interface IStorage {
   deleteFixedHoliday(id: string): Promise<boolean>;
   listFixedHolidays(year?: number): Promise<FixedHoliday[]>;
   initializeFixedHolidays(year: number, createdBy: string): Promise<void>;
-  
+
   // Activity logs
   createActivityLog(data: z.infer<typeof insertActivityLogSchema>): Promise<ActivityLog>;
   listActivityLogs(limit?: number): Promise<ActivityLog[]>;
+
+  // OT System Methods
+  // Holiday Management
+  getHolidaysByDate(date: Date): Promise<any[]>;
+  getHolidaysByDateRange(startDate: Date, endDate: Date): Promise<any[]>;
+  createHoliday(holiday: any): Promise<void>;
+  updateHoliday(id: string, updates: any): Promise<void>;
+  deleteHoliday(id: string): Promise<boolean>;
+
+  // Company Settings (Singleton)
+  getCompanySettings(): Promise<any | undefined>;
+  updateCompanySettings(settings: any): Promise<void>;
+
+  // Payroll Periods
+  getPayrollPeriod(month: number, year: number): Promise<any | undefined>;
+  createPayrollPeriod(period: any): Promise<void>;
+  updatePayrollPeriod(id: string, updates: any): Promise<void>;
+  getPayrollPeriodsByYear(year: number): Promise<any[]>;
+
+  // Attendance - Date Range Query (for payroll locking)
+  listAttendanceByDateRange(startDate: Date, endDate: Date): Promise<Attendance[]>;
 }
 
 export class FirestoreStorage implements IStorage {
   private db: Firestore;
-  
+
   constructor() {
     // Use the db imported at the top of the file
     this.db = db;
   }
-  
+
   // Activity logs implementation
   async createActivityLog(data: z.infer<typeof insertActivityLogSchema>): Promise<ActivityLog> {
     const id = this.db.collection("activity_logs").doc().id;
@@ -1107,25 +1128,25 @@ export class FirestoreStorage implements IStorage {
       userId: data.userId,
       createdAt: new Date()
     };
-    
+
     await this.db.collection("activity_logs").doc(id).set({
       ...activityLog,
       createdAt: Timestamp.fromDate(activityLog.createdAt)
     });
-    
+
     return activityLog;
   }
-  
+
   async listActivityLogs(limit = 10): Promise<ActivityLog[]> {
     const snapshot = await this.db.collection("activity_logs")
       .orderBy("createdAt", "desc")
       .limit(limit)
       .get();
-    
+
     if (snapshot.empty) {
       return [];
     }
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -1193,7 +1214,7 @@ export class FirestoreStorage implements IStorage {
         // Fallback
         createdAt = new Date();
       }
-      
+
       return {
         id: doc.id,
         uid: data.uid,
@@ -1216,17 +1237,17 @@ export class FirestoreStorage implements IStorage {
   async createUser(data: z.infer<typeof insertUserSchema>): Promise<User> {
     const validatedData = insertUserSchema.parse(data);
     const userDoc = this.db.collection("users").doc(validatedData.uid);
-    
+
     await userDoc.set({
       ...validatedData,
       id: validatedData.uid,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    
-    return { 
+
+    return {
       id: validatedData.uid,
-      ...validatedData, 
+      ...validatedData,
       createdAt: new Date(),
       isActive: validatedData.isActive || true
     } as User;
@@ -1307,17 +1328,17 @@ export class FirestoreStorage implements IStorage {
   async updateUser(id: string, data: Partial<User>): Promise<User> {
     const userDoc = this.db.collection("users").doc(id);
     const updateData: any = { ...data, updatedAt: Timestamp.now() };
-    
+
     if (data.createdAt) {
       updateData.createdAt = Timestamp.fromDate(data.createdAt);
     }
-    
+
     await userDoc.update(updateData);
     const updatedDoc = await userDoc.get();
-    
+
     if (!updatedDoc.exists) throw new Error("User not found");
     const updatedData = updatedDoc.data() || {};
-    
+
     return {
       id: updatedDoc.id,
       uid: updatedData.uid,
@@ -1367,7 +1388,7 @@ export class FirestoreStorage implements IStorage {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    
+
     return { id: deptDoc.id, ...validatedData } as Department;
   }
 
@@ -1377,15 +1398,15 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Department> {
     const deptDoc = this.db.collection("departments").doc(id);
     const validatedData = insertDepartmentSchema.partial().parse(data);
-    
-    await deptDoc.update({ 
-      ...validatedData, 
-      updatedAt: Timestamp.now() 
+
+    await deptDoc.update({
+      ...validatedData,
+      updatedAt: Timestamp.now()
     });
-    
+
     const updatedDoc = await deptDoc.get();
     if (!updatedDoc.exists) throw new Error("Department not found");
-    
+
     const docData = updatedDoc.data() || {};
     return { id: updatedDoc.id, name: docData.name } as Department;
   }
@@ -1447,14 +1468,14 @@ export class FirestoreStorage implements IStorage {
   async createDesignation(data: z.infer<typeof insertDesignationSchema>): Promise<Designation> {
     const validatedData = insertDesignationSchema.parse(data);
     const designationRef = this.db.collection("designations").doc();
-    
+
     const designationData = {
       ...validatedData,
       createdAt: Timestamp.now()
     };
-    
+
     await designationRef.set(designationData);
-    
+
     return {
       id: designationRef.id,
       ...validatedData,
@@ -1465,13 +1486,13 @@ export class FirestoreStorage implements IStorage {
   async updateDesignation(id: string, data: Partial<z.infer<typeof insertDesignationSchema>>): Promise<Designation> {
     const designationDoc = this.db.collection("designations").doc(id);
     const updateData = { ...data, updatedAt: Timestamp.now() };
-    
+
     await designationDoc.update(updateData);
     const updatedDoc = await designationDoc.get();
-    
+
     if (!updatedDoc.exists) throw new Error("Designation not found");
     const updatedData = updatedDoc.data() || {};
-    
+
     return {
       id: updatedDoc.id,
       name: updatedData.name,
@@ -1512,11 +1533,11 @@ export class FirestoreStorage implements IStorage {
       .where("department", "==", department)
       .where("designation", "==", designation)
       .get();
-    
+
     if (snapshot.empty) return undefined;
     const doc = snapshot.docs[0];
     const data = doc.data();
-    
+
     return {
       id: doc.id,
       name: data.name,
@@ -1550,14 +1571,14 @@ export class FirestoreStorage implements IStorage {
   async createPermissionGroup(data: z.infer<typeof insertPermissionGroupSchema>): Promise<PermissionGroup> {
     const validatedData = insertPermissionGroupSchema.parse(data);
     const permissionRef = this.db.collection("permission_groups").doc();
-    
+
     const permissionData = {
       ...validatedData,
       createdAt: Timestamp.now()
     };
-    
+
     await permissionRef.set(permissionData);
-    
+
     return {
       id: permissionRef.id,
       ...validatedData,
@@ -1568,13 +1589,13 @@ export class FirestoreStorage implements IStorage {
   async updatePermissionGroup(id: string, data: Partial<z.infer<typeof insertPermissionGroupSchema>>): Promise<PermissionGroup> {
     const permissionDoc = this.db.collection("permission_groups").doc(id);
     const updateData = { ...data, updatedAt: Timestamp.now() };
-    
+
     await permissionDoc.update(updateData);
     const updatedDoc = await permissionDoc.get();
-    
+
     if (!updatedDoc.exists) throw new Error("Permission group not found");
     const updatedData = updatedDoc.data() || {};
-    
+
     return {
       id: updatedDoc.id,
       name: updatedData.name,
@@ -1597,7 +1618,7 @@ export class FirestoreStorage implements IStorage {
   async getUserPermissions(userId: string): Promise<string[]> {
     const user = await this.getUser(userId);
     if (!user || !user.department || !user.designation) return [];
-    
+
     const permissionGroup = await this.getPermissionsByDepartmentAndDesignation(user.department, user.designation);
     return permissionGroup?.permissions || [];
   }
@@ -1612,7 +1633,7 @@ export class FirestoreStorage implements IStorage {
     if (!user || !user.department || !user.designation) {
       return { canApprove: false, maxAmount: null };
     }
-    
+
     const permissionGroup = await this.getPermissionsByDepartmentAndDesignation(user.department, user.designation);
     return {
       canApprove: permissionGroup?.canApprove || false,
@@ -1629,28 +1650,28 @@ export class FirestoreStorage implements IStorage {
         console.log(`SERVER PERMISSION CHECK: User '${userId}' not found`);
         return false;
       }
-      
+
       console.log(`SERVER PERMISSION CHECK: User found - role: ${user.role}, department: ${user.department}, designation: ${user.designation}`);
-      
+
       // Master admin has all permissions
       if (user.role === "master_admin") {
         console.log(`SERVER PERMISSION CHECK: Master admin detected, granting permission '${permission}'`);
         return true;
       }
-      
+
       // If user doesn't have department or designation, deny access
       if (!user.department || !user.designation) {
         console.log(`SERVER PERMISSION CHECK: User missing department or designation, denying access`);
         return false;
       }
-      
+
       // Import permission calculation logic from shared schema
       const { getEffectivePermissions } = await import("@shared/schema");
       const effectivePermissions = getEffectivePermissions(user.department, user.designation);
-      
+
       const hasPermission = effectivePermissions.includes(permission);
       console.log(`SERVER PERMISSION CHECK: Effective permissions check result: ${hasPermission} for permission '${permission}'`);
-      
+
       return hasPermission;
     } catch (error) {
       console.error("SERVER PERMISSION CHECK ERROR:", error);
@@ -1667,19 +1688,19 @@ export class FirestoreStorage implements IStorage {
       timestamp: new Date(),
       createdAt: new Date()
     };
-    
+
     await auditDoc.set({
       ...auditLog,
       timestamp: Timestamp.fromDate(auditLog.timestamp),
       createdAt: Timestamp.fromDate(auditLog.createdAt)
     });
-    
+
     return auditLog as AuditLog;
   }
 
   async getAuditLogs(filters?: { userId?: string; entityType?: string; startDate?: Date; endDate?: Date }): Promise<AuditLog[]> {
     let query: Query = this.db.collection("audit_logs");
-    
+
     if (filters?.userId) {
       query = query.where("userId", "==", filters.userId);
     }
@@ -1692,9 +1713,9 @@ export class FirestoreStorage implements IStorage {
     if (filters?.endDate) {
       query = query.where("timestamp", "<=", Timestamp.fromDate(filters.endDate));
     }
-    
+
     const snapshot = await query.orderBy("timestamp", "desc").limit(100).get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -1709,7 +1730,7 @@ export class FirestoreStorage implements IStorage {
   async listOfficeLocations(): Promise<OfficeLocation[]> {
     const locationsCollection = this.db.collection("office_locations");
     const snapshot = await locationsCollection.get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -1736,16 +1757,16 @@ export class FirestoreStorage implements IStorage {
   ): Promise<OfficeLocation> {
     const validatedData = insertOfficeLocationSchema.parse(data);
     const locationsRef = this.db.collection("office_locations");
-    
+
     const locationDoc = await locationsRef.add({
       ...validatedData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    
-    return { 
+
+    return {
       id: locationDoc.id,
-      ...validatedData 
+      ...validatedData
     } as OfficeLocation;
   }
 
@@ -1755,18 +1776,18 @@ export class FirestoreStorage implements IStorage {
   ): Promise<OfficeLocation> {
     const validatedData = insertOfficeLocationSchema.partial().parse(data);
     const locationDoc = this.db.collection("office_locations").doc(id);
-    
+
     await locationDoc.update({
       ...validatedData,
       updatedAt: Timestamp.now(),
     });
-    
+
     const updatedDoc = await locationDoc.get();
     if (!updatedDoc.exists) throw new Error("Office location not found");
-    
+
     const docData = updatedDoc.data() || {};
-    return { 
-      id: updatedDoc.id, 
+    return {
+      id: updatedDoc.id,
       name: docData.name,
       latitude: docData.latitude,
       longitude: docData.longitude,
@@ -1782,7 +1803,7 @@ export class FirestoreStorage implements IStorage {
   async listCustomers(): Promise<Customer[]> {
     const customersCollection = this.db.collection("customers");
     const snapshot = await customersCollection.get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -1806,9 +1827,9 @@ export class FirestoreStorage implements IStorage {
   async getCustomer(id: string): Promise<Customer | undefined> {
     const customerDoc = this.db.collection("customers").doc(id);
     const docSnap = await customerDoc.get();
-    
+
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -1831,9 +1852,9 @@ export class FirestoreStorage implements IStorage {
   async findCustomerByMobile(mobile: string): Promise<Customer | undefined> {
     const customersCollection = this.db.collection("customers");
     const snapshot = await customersCollection.where("mobile", "==", mobile).limit(1).get();
-    
+
     if (snapshot.empty) return undefined;
-    
+
     const doc = snapshot.docs[0];
     const data = doc.data() || {};
     return {
@@ -1858,18 +1879,18 @@ export class FirestoreStorage implements IStorage {
     data: z.infer<typeof insertCustomerSchema>,
   ): Promise<Customer> {
     const validatedData = insertCustomerSchema.parse(data);
-    
+
     // CRITICAL: Check if customer already exists by mobile number
     const existingCustomer = await this.findCustomerByMobile(validatedData.mobile);
-    
+
     if (existingCustomer) {
       // Customer exists - merge data without overwriting existing values with empty strings
       console.log(`Customer with mobile ${validatedData.mobile} already exists. Merging data.`);
-      
+
       // Helper function to clean and merge fields (only add non-empty, defined values)
       const cleanMerge = (existing: any, incoming: any) => {
         const merged = { ...existing };
-        
+
         Object.keys(incoming).forEach(key => {
           const value = incoming[key];
           // Only update if value is meaningful (not empty string, null, or undefined)
@@ -1877,13 +1898,13 @@ export class FirestoreStorage implements IStorage {
             merged[key] = value;
           }
         });
-        
+
         return merged;
       };
-      
+
       // Merge only meaningful data, preserving existing values
       const mergedData = cleanMerge(existingCustomer, validatedData);
-      
+
       // Promote profile completeness (full > basic) and keep original creation source
       const finalData = {
         ...mergedData,
@@ -1894,7 +1915,7 @@ export class FirestoreStorage implements IStorage {
         ),
         updatedAt: Timestamp.now()
       };
-      
+
       // Helper function to prune undefined values in-place while preserving Firestore types
       const deepPruneUndefined = (obj: any): void => {
         if (!obj || typeof obj !== 'object') return;
@@ -1905,7 +1926,7 @@ export class FirestoreStorage implements IStorage {
           }
           return;
         }
-        
+
         for (const key of Object.keys(obj)) {
           const value = obj[key];
           if (value === undefined) {
@@ -1915,15 +1936,15 @@ export class FirestoreStorage implements IStorage {
           }
         }
       };
-      
+
       // Remove read-only fields (id, createdAt) and clean undefined values for Firestore update
       const { id, createdAt, ...updateDataForFirestore } = finalData;
       deepPruneUndefined(updateDataForFirestore);
-      
+
       // Update existing customer
       const customerDoc = this.db.collection("customers").doc(existingCustomer.id);
       await customerDoc.update(updateDataForFirestore);
-      
+
       // Return updated customer with proper data structure
       return {
         ...finalData,
@@ -1931,11 +1952,11 @@ export class FirestoreStorage implements IStorage {
         createdAt: existingCustomer.createdAt,
         updatedAt: new Date()
       } as Customer;
-      
+
     } else {
       // No existing customer - create new record
       console.log(`Creating new customer with mobile ${validatedData.mobile}`);
-      
+
       const customersRef = this.db.collection("customers");
       const newCustomerData = {
         ...validatedData,
@@ -1943,9 +1964,9 @@ export class FirestoreStorage implements IStorage {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       };
-      
+
       const customerDoc = await customersRef.add(newCustomerData);
-      
+
       return {
         id: customerDoc.id,
         ...validatedData,
@@ -1961,18 +1982,18 @@ export class FirestoreStorage implements IStorage {
     const hasBasicInfo = customerData.name && customerData.mobile;
     const hasExtendedInfo = customerData.email || customerData.address || customerData.scope;
     const hasSiteVisitInfo = customerData.propertyType || customerData.ebServiceNumber;
-    
+
     // Consider "full" if has basic info plus either extended info or site visit info
     if (hasBasicInfo && (hasExtendedInfo || hasSiteVisitInfo)) {
       return "full";
     }
-    
+
     return "basic";
   }
 
   // Helper method to promote profile completeness (full > basic)
   private promoteProfileCompleteness(
-    existing: "basic" | "full", 
+    existing: "basic" | "full",
     incoming: "basic" | "full"
   ): "basic" | "full" {
     // Always promote to the higher level (full > basic)
@@ -1988,20 +2009,20 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Customer> {
     const validatedData = insertCustomerSchema.partial().parse(data);
     const customerDoc = this.db.collection("customers").doc(id);
-    
+
     // Get current customer to merge with updates
     const currentDoc = await customerDoc.get();
     if (!currentDoc.exists) throw new Error("Customer not found");
-    
+
     const currentData = currentDoc.data() || {};
     const mergedData = { ...currentData, ...validatedData };
-    
+
     await customerDoc.update({
       ...validatedData,
       profileCompleteness: this.determineProfileCompleteness(mergedData),
       updatedAt: Timestamp.now(),
     });
-    
+
     const updatedDoc = await customerDoc.get();
     const updatedData = updatedDoc.data() || {};
     return {
@@ -2029,7 +2050,7 @@ export class FirestoreStorage implements IStorage {
   async listProducts(): Promise<Product[]> {
     const productsCollection = this.db.collection("products");
     const snapshot = await productsCollection.get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2045,9 +2066,9 @@ export class FirestoreStorage implements IStorage {
   async getProduct(id: string): Promise<Product | undefined> {
     const productDoc = this.db.collection("products").doc(id);
     const docSnap = await productDoc.get();
-    
+
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -2063,13 +2084,13 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Product> {
     const validatedData = insertProductSchema.parse(data);
     const productsRef = this.db.collection("products");
-    
+
     const productDoc = await productsRef.add({
       ...validatedData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    
+
     return {
       id: productDoc.id,
       ...validatedData,
@@ -2083,15 +2104,15 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Product> {
     const validatedData = insertProductSchema.partial().parse(data);
     const productDoc = this.db.collection("products").doc(id);
-    
+
     await productDoc.update({
       ...validatedData,
       updatedAt: Timestamp.now(),
     });
-    
+
     const updatedDoc = await productDoc.get();
     if (!updatedDoc.exists) throw new Error("Product not found");
-    
+
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
@@ -2108,7 +2129,7 @@ export class FirestoreStorage implements IStorage {
   async listQuotations(): Promise<Quotation[]> {
     const quotationsCollection = this.db.collection("quotations");
     const snapshot = await quotationsCollection.get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2123,9 +2144,9 @@ export class FirestoreStorage implements IStorage {
   async getQuotation(id: string): Promise<Quotation | undefined> {
     const quotationDoc = this.db.collection("quotations").doc(id);
     const docSnap = await quotationDoc.get();
-    
+
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -2142,24 +2163,24 @@ export class FirestoreStorage implements IStorage {
       console.log("\n\n🎯🎯🎯 STORAGE.CREATE_QUOTATION CALLED 🎯🎯🎯");
       console.log("📥 Input data keys:", Object.keys(data));
       console.log("📥 Full input data:", JSON.stringify(data, null, 2));
-      
+
       console.log("\n🔍 Starting schema validation...");
       const validatedData = insertQuotationSchema.parse(data);
-      
+
       console.log("✅ Schema validation passed!");
       console.log("📤 Validated data keys:", Object.keys(validatedData));
       console.log("📤 Validated data:", JSON.stringify(validatedData, null, 2));
-      
+
       const quotationsRef = this.db.collection("quotations");
-      
+
       const quotationDoc = await quotationsRef.add({
         ...validatedData,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
-      
+
       console.log("✅ Quotation saved to Firestore:", quotationDoc.id);
-      
+
       return {
         id: quotationDoc.id,
         ...validatedData,
@@ -2169,7 +2190,7 @@ export class FirestoreStorage implements IStorage {
       console.error("\n❌ ERROR IN STORAGE.CREATE_QUOTATION ❌");
       console.error("Error type:", error instanceof z.ZodError ? "ZodError" : error.constructor.name);
       console.error("Error message:", error instanceof Error ? error.message : String(error));
-      
+
       if (error instanceof z.ZodError) {
         console.error("\n🔴 ZOD VALIDATION ERRORS DETAILED:");
         error.errors.forEach((err, idx) => {
@@ -2180,7 +2201,7 @@ export class FirestoreStorage implements IStorage {
           console.error(`   Full error object:`, JSON.stringify(err, null, 2));
         });
       }
-      
+
       console.error("Full error stack:", error instanceof Error ? error.stack : "No stack");
       throw error;
     }
@@ -2193,14 +2214,14 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Quotation> {
     const validatedData = insertQuotationSchema.partial().parse(data);
     const quotationDoc = this.db.collection("quotations").doc(id);
-    
+
     // Fetch current quotation to create revision history
     const currentDoc = await quotationDoc.get();
     if (!currentDoc.exists) throw new Error("Quotation not found");
-    
+
     const currentData = currentDoc.data() || {};
     const currentVersion = currentData.documentVersion || 1;
-    
+
     // Create revision history entry with snapshot of current state
     const revisionEntry = {
       version: currentVersion,
@@ -2208,16 +2229,16 @@ export class FirestoreStorage implements IStorage {
       updatedBy,
       changeNote: `Revision ${currentVersion + 1}`
     };
-    
+
     // Append to existing revision history or create new array
     const existingHistory = currentData.revisionHistory || [];
     const updatedHistory = [...existingHistory, revisionEntry];
-    
+
     // Remove undefined values from validatedData (Firestore doesn't accept undefined)
     const cleanedData = Object.fromEntries(
       Object.entries(validatedData).filter(([_, value]) => value !== undefined)
     );
-    
+
     // Update quotation with incremented version and revision history
     await quotationDoc.update({
       ...cleanedData,
@@ -2225,10 +2246,10 @@ export class FirestoreStorage implements IStorage {
       revisionHistory: updatedHistory,
       updatedAt: Timestamp.now(),
     });
-    
+
     const updatedDoc = await quotationDoc.get();
     if (!updatedDoc.exists) throw new Error("Quotation not found after update");
-    
+
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
@@ -2250,7 +2271,7 @@ export class FirestoreStorage implements IStorage {
   async listInvoices(): Promise<Invoice[]> {
     const invoicesCollection = this.db.collection("invoices");
     const snapshot = await invoicesCollection.get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2267,9 +2288,9 @@ export class FirestoreStorage implements IStorage {
   async getInvoice(id: string): Promise<Invoice | undefined> {
     const invoiceDoc = this.db.collection("invoices").doc(id);
     const docSnap = await invoiceDoc.get();
-    
+
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -2286,13 +2307,13 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Invoice> {
     const validatedData = insertInvoiceSchema.parse(data);
     const invoicesRef = this.db.collection("invoices");
-    
+
     const invoiceDoc = await invoicesRef.add({
       ...validatedData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    
+
     return {
       id: invoiceDoc.id,
       ...validatedData,
@@ -2306,15 +2327,15 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Invoice> {
     const validatedData = insertInvoiceSchema.partial().parse(data);
     const invoiceDoc = this.db.collection("invoices").doc(id);
-    
+
     await invoiceDoc.update({
       ...validatedData,
       updatedAt: Timestamp.now(),
     });
-    
+
     const updatedDoc = await invoiceDoc.get();
     if (!updatedDoc.exists) throw new Error("Invoice not found");
-    
+
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
@@ -2334,14 +2355,14 @@ export class FirestoreStorage implements IStorage {
     const userDoc = await this.db.collection("users").doc(data.userId).get();
     const attendanceDate = data.date ? new Date(data.date) : new Date();
     const dateString = attendanceDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-    
+
     const validatedData = insertAttendanceSchema.parse({
       ...data,
       date: data.date || new Date(),
       checkInTime: data.checkInTime || new Date(),
       checkOutTime: data.checkOutTime,
     });
-    
+
     // Filter out undefined values to prevent Firestore errors
     const cleanData = Object.fromEntries(
       Object.entries(validatedData).filter(([_, value]) => value !== undefined)
@@ -2360,7 +2381,7 @@ export class FirestoreStorage implements IStorage {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    
+
     return {
       id: attendanceDoc.id,
       ...validatedData,
@@ -2378,7 +2399,7 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Attendance> {
     // Handle data type conversions before validation
     const processedData = { ...data };
-    
+
     // Convert latitude/longitude from numbers to strings if they exist
     if (typeof processedData.checkOutLatitude === 'number') {
       processedData.checkOutLatitude = String(processedData.checkOutLatitude);
@@ -2392,16 +2413,16 @@ export class FirestoreStorage implements IStorage {
     if (typeof processedData.checkInLongitude === 'number') {
       processedData.checkInLongitude = String(processedData.checkInLongitude);
     }
-    
+
     // Now validate the processed data
     const validatedData = insertAttendanceSchema.partial().parse(processedData);
-    
+
     // Then prepare for Firestore with timestamp conversion
     const firestoreData: any = {
       ...validatedData,
       updatedAt: Timestamp.now(),
     };
-    
+
     // Convert dates to Firestore timestamps, only if they exist
     if (validatedData.date) {
       firestoreData.date = Timestamp.fromDate(validatedData.date);
@@ -2418,21 +2439,21 @@ export class FirestoreStorage implements IStorage {
     if (validatedData.otEndTime) {
       firestoreData.otEndTime = Timestamp.fromDate(validatedData.otEndTime);
     }
-    
+
     // Remove undefined values to avoid Firestore errors
     Object.keys(firestoreData).forEach(key => {
       if (firestoreData[key] === undefined) {
         delete firestoreData[key];
       }
     });
-    
+
     const attendanceDoc = this.db.collection("attendance").doc(id);
-    
+
     await attendanceDoc.update(firestoreData);
-    
+
     const updatedDoc = await attendanceDoc.get();
     if (!updatedDoc.exists) throw new Error("Attendance not found");
-    
+
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
@@ -2450,19 +2471,19 @@ export class FirestoreStorage implements IStorage {
     date: Date,
   ): Promise<Attendance | undefined> {
     const dateStr = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-    
+
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
       .where("userId", "==", userId)
       .where("dateString", "==", dateStr)
       .limit(1)
       .get();
-    
+
     if (snapshot.empty) return undefined;
-    
+
     const record = snapshot.docs[0];
     const data = record.data() || {};
-    
+
     return {
       id: record.id,
       ...data,
@@ -2481,9 +2502,9 @@ export class FirestoreStorage implements IStorage {
       const snapshot = await attendanceRef
         .where("userId", "==", userId)
         .get();
-      
+
       console.log(`STORAGE: Found ${snapshot.docs.length} attendance records for userId: ${userId}`);
-      
+
       const attendanceRecords = snapshot.docs.map(doc => {
         const data = doc.data() || {};
         const record = {
@@ -2495,11 +2516,11 @@ export class FirestoreStorage implements IStorage {
           otStartTime: data.otStartTime?.toDate() || undefined,
           otEndTime: data.otEndTime?.toDate() || undefined,
         } as Attendance;
-        
+
         console.log(`STORAGE: Record ${doc.id} - Date: ${record.date?.toISOString()}, Status: ${record.status}, UserID: ${record.userId}`);
         return record;
       });
-      
+
       return attendanceRecords;
     } catch (error) {
       console.error(`STORAGE: Error querying attendance for userId ${userId}:`, error);
@@ -2512,13 +2533,13 @@ export class FirestoreStorage implements IStorage {
     const endOfDay = Timestamp.fromDate(
       new Date(date.setHours(23, 59, 59, 999)),
     );
-    
+
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
       .where("date", ">=", startOfDay)
       .where("date", "<=", endOfDay)
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2541,13 +2562,13 @@ export class FirestoreStorage implements IStorage {
     const endTimestamp = Timestamp.fromDate(
       new Date(endDate.setHours(23, 59, 59, 999)),
     );
-    
+
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
       .where("date", ">=", startTimestamp)
       .where("date", "<=", endTimestamp)
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2571,14 +2592,14 @@ export class FirestoreStorage implements IStorage {
     const endTimestamp = Timestamp.fromDate(
       new Date(endDate.setHours(23, 59, 59, 999)),
     );
-    
+
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
       .where("userId", "==", userId)
       .where("date", ">=", startTimestamp)
       .where("date", "<=", endTimestamp)
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2597,7 +2618,7 @@ export class FirestoreStorage implements IStorage {
     const attendanceDoc = this.db.collection("attendance").doc(id);
     const docSnap = await attendanceDoc.get();
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -2621,13 +2642,13 @@ export class FirestoreStorage implements IStorage {
   ): Promise<Attendance[]> {
     const start = Timestamp.fromDate(startDate);
     const end = Timestamp.fromDate(endDate);
-    
+
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
       .where("date", ">=", start)
       .where("date", "<=", end)
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2645,9 +2666,9 @@ export class FirestoreStorage implements IStorage {
   async getLeave(id: string): Promise<Leave | undefined> {
     const leaveDoc = this.db.collection("leaves").doc(id);
     const docSnap = await leaveDoc.get();
-    
+
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -2663,7 +2684,7 @@ export class FirestoreStorage implements IStorage {
     const snapshot = await leavesRef
       .where("userId", "==", userId)
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2681,7 +2702,7 @@ export class FirestoreStorage implements IStorage {
     const snapshot = await leavesRef
       .where("status", "==", "pending")
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -2700,14 +2721,14 @@ export class FirestoreStorage implements IStorage {
       startDate: Timestamp.fromDate(data.startDate),
       endDate: Timestamp.fromDate(data.endDate),
     });
-    
+
     const leavesRef = this.db.collection("leaves");
     const leaveDoc = await leavesRef.add({
       ...validatedData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    
+
     return {
       id: leaveDoc.id,
       ...validatedData,
@@ -2728,17 +2749,17 @@ export class FirestoreStorage implements IStorage {
         : undefined,
       endDate: data.endDate ? Timestamp.fromDate(data.endDate) : undefined,
     });
-    
+
     const leaveDoc = this.db.collection("leaves").doc(id);
-    
-    await leaveDoc.update({ 
-      ...validatedData, 
-      updatedAt: Timestamp.now() 
+
+    await leaveDoc.update({
+      ...validatedData,
+      updatedAt: Timestamp.now()
     });
-    
+
     const updatedDoc = await leaveDoc.get();
     if (!updatedDoc.exists) throw new Error("Leave not found");
-    
+
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
@@ -2750,7 +2771,7 @@ export class FirestoreStorage implements IStorage {
   }
 
   // ===================== Comprehensive Leave Management System =====================
-  
+
   // Leave Balance Management
   async getLeaveBalance(userId: string, month: number, year: number): Promise<LeaveBalance | undefined> {
     const balanceRef = this.db.collection("leave_balances");
@@ -2759,9 +2780,9 @@ export class FirestoreStorage implements IStorage {
       .where("month", "==", month)
       .where("year", "==", year)
       .get();
-    
+
     if (snapshot.empty) return undefined;
-    
+
     const doc = snapshot.docs[0];
     const data = doc.data();
     return {
@@ -2798,7 +2819,7 @@ export class FirestoreStorage implements IStorage {
   async createLeaveBalance(data: z.infer<typeof insertLeaveBalanceSchema>): Promise<LeaveBalance> {
     // Validate the input data
     const validatedData = insertLeaveBalanceSchema.parse(data);
-    
+
     const balanceRef = this.db.collection("leave_balances").doc();
     const balanceData = {
       ...validatedData,
@@ -2816,9 +2837,9 @@ export class FirestoreStorage implements IStorage {
       createdAt: Timestamp.fromDate(validatedData.createdAt),
       updatedAt: Timestamp.fromDate(validatedData.updatedAt),
     };
-    
+
     await balanceRef.set(balanceData);
-    
+
     return {
       id: balanceRef.id,
       ...validatedData,
@@ -2828,13 +2849,13 @@ export class FirestoreStorage implements IStorage {
   async updateLeaveBalance(id: string, data: Partial<z.infer<typeof insertLeaveBalanceSchema>>): Promise<LeaveBalance> {
     // Validate the partial input data
     const validatedData = insertLeaveBalanceSchema.partial().parse(data);
-    
+
     const balanceDoc = this.db.collection("leave_balances").doc(id);
-    const updateData: any = { 
-      ...validatedData, 
-      updatedAt: Timestamp.now() 
+    const updateData: any = {
+      ...validatedData,
+      updatedAt: Timestamp.now()
     };
-    
+
     // Convert date fields to Timestamp if present
     if (validatedData.casualLeaveHistory) {
       updateData.casualLeaveHistory = validatedData.casualLeaveHistory.map(h => ({
@@ -2853,12 +2874,12 @@ export class FirestoreStorage implements IStorage {
     if (validatedData.lastResetDate) {
       updateData.lastResetDate = Timestamp.fromDate(validatedData.lastResetDate);
     }
-    
+
     await balanceDoc.update(updateData);
-    
+
     const updatedDoc = await balanceDoc.get();
     if (!updatedDoc.exists) throw new Error("Leave balance not found");
-    
+
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
@@ -2889,7 +2910,7 @@ export class FirestoreStorage implements IStorage {
   async listLeaveBalancesByYear(year: number): Promise<LeaveBalance[]> {
     const balanceRef = this.db.collection("leave_balances");
     const snapshot = await balanceRef.where("year", "==", year).get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -2921,14 +2942,14 @@ export class FirestoreStorage implements IStorage {
 
   async resetMonthlyLeaveBalances(month: number, year: number): Promise<void> {
     const usersSnapshot = await this.db.collection("users").where("isActive", "!=", false).get();
-    
+
     for (const userDoc of usersSnapshot.docs) {
       const userId = userDoc.id;
       const userData = userDoc.data();
-      
+
       // Check if balance already exists for this month
       const existingBalance = await this.getLeaveBalance(userId, month, year);
-      
+
       if (!existingBalance) {
         // Create new balance for the month
         await this.createLeaveBalance({
@@ -2954,9 +2975,9 @@ export class FirestoreStorage implements IStorage {
   async getLeaveApplication(id: string): Promise<LeaveApplication | undefined> {
     const leaveDoc = this.db.collection("leave_applications").doc(id);
     const docSnap = await leaveDoc.get();
-    
+
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -2998,7 +3019,7 @@ export class FirestoreStorage implements IStorage {
   async createLeaveApplication(data: z.infer<typeof insertLeaveApplicationSchema>): Promise<LeaveApplication> {
     // Validate the input data
     const validatedData = insertLeaveApplicationSchema.parse(data);
-    
+
     const leaveRef = this.db.collection("leave_applications").doc();
     const leaveData: any = {
       ...validatedData,
@@ -3012,16 +3033,16 @@ export class FirestoreStorage implements IStorage {
       createdAt: Timestamp.fromDate(validatedData.createdAt),
       updatedAt: Timestamp.fromDate(validatedData.updatedAt),
     };
-    
+
     // Remove undefined fields to avoid Firestore errors
     Object.keys(leaveData).forEach(key => {
       if (leaveData[key] === undefined) {
         delete leaveData[key];
       }
     });
-    
+
     await leaveRef.set(leaveData);
-    
+
     return {
       id: leaveRef.id,
       ...validatedData,
@@ -3031,13 +3052,13 @@ export class FirestoreStorage implements IStorage {
   async updateLeaveApplication(id: string, data: Partial<z.infer<typeof insertLeaveApplicationSchema>>): Promise<LeaveApplication> {
     // Validate the partial input data
     const validatedData = insertLeaveApplicationSchema.partial().parse(data);
-    
+
     const leaveDoc = this.db.collection("leave_applications").doc(id);
-    const updateData: any = { 
-      ...validatedData, 
-      updatedAt: Timestamp.now() 
+    const updateData: any = {
+      ...validatedData,
+      updatedAt: Timestamp.now()
     };
-    
+
     // Convert optional date fields to Timestamp if present
     if (validatedData.startDate) updateData.startDate = Timestamp.fromDate(validatedData.startDate);
     if (validatedData.endDate) updateData.endDate = Timestamp.fromDate(validatedData.endDate);
@@ -3046,16 +3067,16 @@ export class FirestoreStorage implements IStorage {
     if (validatedData.hrApprovedAt) updateData.hrApprovedAt = Timestamp.fromDate(validatedData.hrApprovedAt);
     if (validatedData.rejectedAt) updateData.rejectedAt = Timestamp.fromDate(validatedData.rejectedAt);
     if (validatedData.applicationDate) updateData.applicationDate = Timestamp.fromDate(validatedData.applicationDate);
-    
+
     // Remove undefined fields to avoid Firestore errors
     Object.keys(updateData).forEach(key => {
       if (updateData[key] === undefined) {
         delete updateData[key];
       }
     });
-    
+
     await leaveDoc.update(updateData);
-    
+
     const result = await this.getLeaveApplication(id);
     if (!result) throw new Error("Leave application not found after update");
     return result;
@@ -3067,7 +3088,7 @@ export class FirestoreStorage implements IStorage {
       .where("userId", "==", userId)
       .orderBy("applicationDate", "desc")
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -3111,13 +3132,13 @@ export class FirestoreStorage implements IStorage {
   async listLeaveApplicationsByManager(managerId: string, status?: string): Promise<LeaveApplication[]> {
     const leaveRef = this.db.collection("leave_applications");
     let query: any = leaveRef.where("reportingManagerId", "==", managerId);
-    
+
     if (status) {
       query = query.where("status", "==", status);
     }
-    
+
     const snapshot = await query.orderBy("applicationDate", "desc").get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -3161,13 +3182,13 @@ export class FirestoreStorage implements IStorage {
   async listLeaveApplicationsByHR(status?: string): Promise<LeaveApplication[]> {
     const leaveRef = this.db.collection("leave_applications");
     let query: any = leaveRef;
-    
+
     if (status) {
       query = query.where("status", "==", status);
     }
-    
+
     const snapshot = await query.orderBy("applicationDate", "desc").get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -3211,13 +3232,13 @@ export class FirestoreStorage implements IStorage {
   async listAllLeaveApplications(filters?: { status?: string; month?: number; year?: number }): Promise<LeaveApplication[]> {
     const leaveRef = this.db.collection("leave_applications");
     let query: any = leaveRef;
-    
+
     if (filters?.status) {
       query = query.where("status", "==", filters.status);
     }
-    
+
     const snapshot = await query.orderBy("applicationDate", "desc").get();
-    
+
     let results = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -3256,7 +3277,7 @@ export class FirestoreStorage implements IStorage {
         updatedAt: data.updatedAt?.toDate() || new Date(),
       } as LeaveApplication;
     });
-    
+
     // Filter by month/year if provided
     if (filters?.month && filters?.year) {
       results = results.filter(leave => {
@@ -3267,17 +3288,17 @@ export class FirestoreStorage implements IStorage {
         return false;
       });
     }
-    
+
     return results;
   }
 
   async approveLeaveByManager(leaveId: string, managerId: string, remarks?: string): Promise<LeaveApplication> {
     const leave = await this.getLeaveApplication(leaveId);
     if (!leave) throw new Error("Leave application not found");
-    
+
     const manager = await this.getUser(managerId);
     if (!manager) throw new Error("Manager not found");
-    
+
     await this.updateLeaveApplication(leaveId, {
       status: "pending_hr",
       managerApprovedAt: new Date(),
@@ -3285,7 +3306,7 @@ export class FirestoreStorage implements IStorage {
       managerRemarks: remarks,
       reportingManagerName: manager.displayName,
     });
-    
+
     const result = await this.getLeaveApplication(leaveId);
     if (!result) throw new Error("Leave application not found after approval");
     return result;
@@ -3294,14 +3315,14 @@ export class FirestoreStorage implements IStorage {
   async approveLeaveByHR(leaveId: string, hrId: string, remarks?: string): Promise<LeaveApplication> {
     const leave = await this.getLeaveApplication(leaveId);
     if (!leave) throw new Error("Leave application not found");
-    
+
     // Get current leave balance
     const balance = await this.getCurrentLeaveBalance(leave.userId);
     if (!balance) throw new Error("Leave balance not found");
-    
+
     console.log(`[HR Approval] Leave type: ${leave.leaveType}, Days: ${leave.totalDays}, Hours: ${leave.permissionHours}`);
     console.log(`[HR Approval] Before - Casual used: ${balance.casualLeaveUsed}, Permission used: ${balance.permissionHoursUsed}`);
-    
+
     // Update leave application
     await this.updateLeaveApplication(leaveId, {
       status: "approved",
@@ -3309,7 +3330,7 @@ export class FirestoreStorage implements IStorage {
       hrApprovedBy: hrId,
       hrRemarks: remarks,
     });
-    
+
     // Update leave balance based on leave type
     if (leave.leaveType === "casual_leave" && leave.totalDays) {
       const newCasualUsed = balance.casualLeaveUsed + leave.totalDays;
@@ -3340,7 +3361,7 @@ export class FirestoreStorage implements IStorage {
         ]
       });
     }
-    
+
     const result = await this.getLeaveApplication(leaveId);
     if (!result) throw new Error("Leave application not found after approval");
     return result;
@@ -3348,14 +3369,14 @@ export class FirestoreStorage implements IStorage {
 
   async rejectLeave(leaveId: string, rejectedBy: string, reason: string, rejectedByRole: 'manager' | 'hr'): Promise<LeaveApplication> {
     const status = rejectedByRole === 'manager' ? 'rejected_by_manager' : 'rejected_by_hr';
-    
+
     await this.updateLeaveApplication(leaveId, {
       status,
       rejectedAt: new Date(),
       rejectedBy,
       rejectionReason: reason,
     });
-    
+
     const result = await this.getLeaveApplication(leaveId);
     if (!result) throw new Error("Leave application not found after rejection");
     return result;
@@ -3364,19 +3385,19 @@ export class FirestoreStorage implements IStorage {
   async cancelLeaveApplication(leaveId: string, userId: string): Promise<LeaveApplication> {
     const leave = await this.getLeaveApplication(leaveId);
     if (!leave) throw new Error("Leave application not found");
-    
+
     if (leave.userId !== userId) {
       throw new Error("Unauthorized: You can only cancel your own leave applications");
     }
-    
+
     if (leave.status === "approved") {
       throw new Error("Cannot cancel approved leave. Please contact HR.");
     }
-    
+
     await this.updateLeaveApplication(leaveId, {
       status: "cancelled",
     });
-    
+
     const result = await this.getLeaveApplication(leaveId);
     if (!result) throw new Error("Leave application not found after cancellation");
     return result;
@@ -3386,9 +3407,9 @@ export class FirestoreStorage implements IStorage {
   async getFixedHoliday(id: string): Promise<FixedHoliday | undefined> {
     const holidayDoc = this.db.collection("fixed_holidays").doc(id);
     const docSnap = await holidayDoc.get();
-    
+
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -3408,16 +3429,16 @@ export class FirestoreStorage implements IStorage {
   async createFixedHoliday(data: z.infer<typeof insertFixedHolidaySchema>): Promise<FixedHoliday> {
     // Validate the input data
     const validatedData = insertFixedHolidaySchema.parse(data);
-    
+
     const holidayRef = this.db.collection("fixed_holidays").doc();
     const holidayData = {
       ...validatedData,
       date: Timestamp.fromDate(validatedData.date),
       createdAt: Timestamp.fromDate(validatedData.createdAt),
     };
-    
+
     await holidayRef.set(holidayData);
-    
+
     return {
       id: holidayRef.id,
       ...validatedData,
@@ -3427,16 +3448,16 @@ export class FirestoreStorage implements IStorage {
   async updateFixedHoliday(id: string, data: Partial<z.infer<typeof insertFixedHolidaySchema>>): Promise<FixedHoliday> {
     // Validate the partial input data
     const validatedData = insertFixedHolidaySchema.partial().parse(data);
-    
+
     const holidayDoc = this.db.collection("fixed_holidays").doc(id);
     const updateData: any = { ...validatedData };
-    
+
     // Convert date field to Timestamp if present
     if (validatedData.date) updateData.date = Timestamp.fromDate(validatedData.date);
     if (validatedData.createdAt) updateData.createdAt = Timestamp.fromDate(validatedData.createdAt);
-    
+
     await holidayDoc.update(updateData);
-    
+
     const result = await this.getFixedHoliday(id);
     if (!result) throw new Error("Fixed holiday not found after update");
     return result;
@@ -3451,13 +3472,13 @@ export class FirestoreStorage implements IStorage {
   async listFixedHolidays(year?: number): Promise<FixedHoliday[]> {
     const holidayRef = this.db.collection("fixed_holidays");
     let query: any = holidayRef;
-    
+
     if (year) {
       query = query.where("year", "==", year);
     }
-    
+
     const snapshot = await query.orderBy("date", "asc").get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -3483,13 +3504,13 @@ export class FirestoreStorage implements IStorage {
       { name: "Gandhi Jayanti", month: 10, day: 2 },
       { name: "Republic Day", month: 1, day: 26 }
     ];
-    
+
     for (const holiday of FIXED_ANNUAL_HOLIDAYS) {
       const existingHolidays = await this.listFixedHolidays(year);
-      const alreadyExists = existingHolidays.some(h => 
+      const alreadyExists = existingHolidays.some(h =>
         h.name === holiday.name && h.year === year
       );
-      
+
       if (!alreadyExists) {
         await this.createFixedHoliday({
           name: holiday.name,
@@ -3512,7 +3533,7 @@ export class FirestoreStorage implements IStorage {
     const roleDoc = this.db.collection("roles").doc(id);
     const docSnap = await roleDoc.get();
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -3526,7 +3547,7 @@ export class FirestoreStorage implements IStorage {
     const rolesRef = this.db.collection("roles");
     const snapshot = await rolesRef.where("name", "==", name).get();
     if (snapshot.empty) return undefined;
-    
+
     const doc = snapshot.docs[0];
     const data = doc.data() || {};
     return {
@@ -3540,7 +3561,7 @@ export class FirestoreStorage implements IStorage {
   async listRoles(): Promise<Role[]> {
     const rolesRef = this.db.collection("roles");
     const snapshot = await rolesRef.get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -3555,15 +3576,15 @@ export class FirestoreStorage implements IStorage {
   async createRole(data: z.infer<typeof insertRoleSchema>): Promise<Role> {
     const validatedData = insertRoleSchema.parse(data);
     const roleDoc = this.db.collection("roles").doc();
-    
+
     const roleData = {
       ...validatedData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
-    
+
     await roleDoc.set(roleData);
-    
+
     return {
       id: roleDoc.id,
       ...validatedData,
@@ -3575,15 +3596,15 @@ export class FirestoreStorage implements IStorage {
   async updateRole(id: string, data: Partial<z.infer<typeof insertRoleSchema>>): Promise<Role> {
     const validatedData = insertRoleSchema.partial().parse(data);
     const roleDoc = this.db.collection("roles").doc(id);
-    
-    await roleDoc.update({ 
-      ...validatedData, 
-      updatedAt: Timestamp.now() 
+
+    await roleDoc.update({
+      ...validatedData,
+      updatedAt: Timestamp.now()
     });
-    
+
     const updatedDoc = await roleDoc.get();
     if (!updatedDoc.exists) throw new Error("Role not found");
-    
+
     const updatedData = updatedDoc.data() || {};
     return {
       id: updatedDoc.id,
@@ -3610,7 +3631,7 @@ export class FirestoreStorage implements IStorage {
       .where("userId", "==", userId)
       .where("isActive", "==", true)
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -3627,7 +3648,7 @@ export class FirestoreStorage implements IStorage {
     const assignmentDoc = this.db.collection("user_role_assignments").doc(id);
     const docSnap = await assignmentDoc.get();
     if (!docSnap.exists) return undefined;
-    
+
     const data = docSnap.data() || {};
     return {
       id: docSnap.id,
@@ -3641,16 +3662,16 @@ export class FirestoreStorage implements IStorage {
   async assignUserRole(data: z.infer<typeof insertUserRoleAssignmentSchema>): Promise<UserRoleAssignment> {
     const validatedData = insertUserRoleAssignmentSchema.parse(data);
     const assignmentDoc = this.db.collection("user_role_assignments").doc();
-    
+
     const assignmentData = {
       ...validatedData,
       effectiveFrom: Timestamp.fromDate(validatedData.effectiveFrom),
       effectiveTo: validatedData.effectiveTo ? Timestamp.fromDate(validatedData.effectiveTo) : null,
       createdAt: Timestamp.now(),
     };
-    
+
     await assignmentDoc.set(assignmentData);
-    
+
     return {
       id: assignmentDoc.id,
       ...validatedData,
@@ -3665,12 +3686,12 @@ export class FirestoreStorage implements IStorage {
         .where("roleId", "==", roleId)
         .where("isActive", "==", true)
         .get();
-      
+
       const batch = this.db.batch();
       snapshot.docs.forEach(doc => {
         batch.update(doc.ref, { isActive: false, updatedAt: Timestamp.now() });
       });
-      
+
       await batch.commit();
       return true;
     } catch (error) {
@@ -3685,7 +3706,7 @@ export class FirestoreStorage implements IStorage {
     const snapshot = await overridesRef
       .where("userId", "==", userId)
       .get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -3701,16 +3722,16 @@ export class FirestoreStorage implements IStorage {
   async createPermissionOverride(data: z.infer<typeof insertPermissionOverrideSchema>): Promise<PermissionOverride> {
     const validatedData = insertPermissionOverrideSchema.parse(data);
     const overrideDoc = this.db.collection("permission_overrides").doc();
-    
+
     const overrideData = {
       ...validatedData,
       effectiveFrom: Timestamp.fromDate(validatedData.effectiveFrom),
       effectiveTo: validatedData.effectiveTo ? Timestamp.fromDate(validatedData.effectiveTo) : null,
       createdAt: Timestamp.now(),
     };
-    
+
     await overrideDoc.set(overrideData);
-    
+
     return {
       id: overrideDoc.id,
       ...validatedData,
@@ -3759,7 +3780,7 @@ export class FirestoreStorage implements IStorage {
         console.error("Error loading schema functions:", error);
         // Fallback to permission groups
         const permissionGroup = await this.getPermissionsByDepartmentAndDesignation(
-          user.department, 
+          user.department,
           user.designation
         );
         if (permissionGroup) {
@@ -3780,11 +3801,11 @@ export class FirestoreStorage implements IStorage {
     // Permission overrides (can grant or revoke specific permissions)
     const overrides = await this.getUserPermissionOverrides(userId);
     const currentDate = new Date();
-    
+
     for (const override of overrides) {
       const isActive = (!override.effectiveTo || override.effectiveTo > currentDate) &&
-                      override.effectiveFrom <= currentDate;
-      
+        override.effectiveFrom <= currentDate;
+
       if (isActive) {
         if (override.granted) {
           permissions.add(override.permission);
@@ -3827,7 +3848,7 @@ export class FirestoreStorage implements IStorage {
       const role = await this.getRole(assignment.roleId);
       if (role?.approvalLimits) {
         canApprove = true;
-        
+
         if (role.approvalLimits.quotations !== undefined) {
           maxAmount.quotations = Math.max(maxAmount.quotations || 0, role.approvalLimits.quotations || 0);
         }
@@ -3847,14 +3868,14 @@ export class FirestoreStorage implements IStorage {
   async createAuditLog(data: z.infer<typeof insertAuditLogSchema>): Promise<AuditLog> {
     const validatedData = insertAuditLogSchema.parse(data);
     const auditDoc = this.db.collection("audit_logs").doc();
-    
+
     const auditData = {
       ...validatedData,
       createdAt: Timestamp.now(),
     };
-    
+
     await auditDoc.set(auditData);
-    
+
     return {
       id: auditDoc.id,
       ...validatedData,
@@ -3864,7 +3885,7 @@ export class FirestoreStorage implements IStorage {
 
   async getAuditLogs(filters?: { userId?: string; entityType?: string; startDate?: Date; endDate?: Date }): Promise<AuditLog[]> {
     let query = this.db.collection("audit_logs").orderBy("createdAt", "desc");
-    
+
     if (filters?.userId) {
       query = query.where("userId", "==", filters.userId);
     }
@@ -3877,9 +3898,9 @@ export class FirestoreStorage implements IStorage {
     if (filters?.endDate) {
       query = query.where("createdAt", "<=", Timestamp.fromDate(filters.endDate));
     }
-    
+
     const snapshot = await query.limit(1000).get();
-    
+
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
       return {
@@ -3898,7 +3919,7 @@ export class FirestoreStorage implements IStorage {
   async getSalaryStructure(id: string): Promise<SalaryStructure | undefined> {
     const doc = await this.db.collection('salaryStructures').doc(id).get();
     if (!doc.exists) return undefined;
-    
+
     const data = doc.data()!;
     return {
       id: doc.id,
@@ -3917,9 +3938,9 @@ export class FirestoreStorage implements IStorage {
       .orderBy('effectiveFrom', 'desc')
       .limit(1)
       .get();
-    
+
     if (querySnapshot.empty) return undefined;
-    
+
     const doc = querySnapshot.docs[0];
     const data = doc.data();
     return {
@@ -3940,7 +3961,7 @@ export class FirestoreStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     await doc.set(salaryData);
     return salaryData as SalaryStructure;
   }
@@ -3951,9 +3972,9 @@ export class FirestoreStorage implements IStorage {
       ...data,
       updatedAt: new Date(),
     };
-    
+
     await doc.update(updateData);
-    
+
     const updated = await doc.get();
     const updatedData = updated.data()!;
     return {
@@ -3970,7 +3991,7 @@ export class FirestoreStorage implements IStorage {
     const querySnapshot = await this.db.collection('salaryStructures')
       .orderBy('createdAt', 'desc')
       .get();
-    
+
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -3988,7 +4009,7 @@ export class FirestoreStorage implements IStorage {
   async getPayroll(id: string): Promise<Payroll | undefined> {
     const doc = await this.db.collection('payrolls').doc(id).get();
     if (!doc.exists) return undefined;
-    
+
     const data = doc.data()!;
     return {
       id: doc.id,
@@ -4006,9 +4027,9 @@ export class FirestoreStorage implements IStorage {
       .where('year', '==', year)
       .limit(1)
       .get();
-    
+
     if (querySnapshot.empty) return undefined;
-    
+
     const doc = querySnapshot.docs[0];
     const data = doc.data();
     return {
@@ -4028,7 +4049,7 @@ export class FirestoreStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     await doc.set(payrollData);
     return payrollData as Payroll;
   }
@@ -4039,9 +4060,9 @@ export class FirestoreStorage implements IStorage {
       ...data,
       updatedAt: new Date(),
     };
-    
+
     await doc.update(updateData);
-    
+
     const updated = await doc.get();
     const updatedData = updated.data()!;
     return {
@@ -4055,7 +4076,7 @@ export class FirestoreStorage implements IStorage {
 
   async listPayrolls(filters?: { month?: number; year?: number; department?: string; status?: string }): Promise<Payroll[]> {
     let query = this.db.collection('payrolls').orderBy('createdAt', 'desc') as any;
-    
+
     if (filters?.month) {
       query = query.where('month', '==', filters.month);
     }
@@ -4065,9 +4086,9 @@ export class FirestoreStorage implements IStorage {
     if (filters?.status) {
       query = query.where('status', '==', filters.status);
     }
-    
+
     const querySnapshot = await query.get();
-    
+
     return querySnapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
@@ -4086,7 +4107,7 @@ export class FirestoreStorage implements IStorage {
       .orderBy('year', 'desc')
       .orderBy('month', 'desc')
       .get();
-    
+
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -4105,9 +4126,9 @@ export class FirestoreStorage implements IStorage {
       .orderBy('updatedAt', 'desc')
       .limit(1)
       .get();
-    
+
     if (querySnapshot.empty) return undefined;
-    
+
     const doc = querySnapshot.docs[0];
     const data = doc.data();
     return {
@@ -4122,7 +4143,7 @@ export class FirestoreStorage implements IStorage {
       ...data,
       updatedAt: new Date(),
     };
-    
+
     // Check if settings exist
     const existing = await this.getPayrollSettings();
     if (existing) {
@@ -4144,7 +4165,7 @@ export class FirestoreStorage implements IStorage {
   async getSalaryAdvance(id: string): Promise<SalaryAdvance | undefined> {
     const doc = await this.db.collection('salaryAdvances').doc(id).get();
     if (!doc.exists) return undefined;
-    
+
     const data = doc.data()!;
     return {
       id: doc.id,
@@ -4164,7 +4185,7 @@ export class FirestoreStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     await doc.set(advanceData);
     return advanceData as SalaryAdvance;
   }
@@ -4175,9 +4196,9 @@ export class FirestoreStorage implements IStorage {
       ...data,
       updatedAt: new Date(),
     };
-    
+
     await doc.update(updateData);
-    
+
     const updated = await doc.get();
     const updatedData = updated.data()!;
     return {
@@ -4192,16 +4213,16 @@ export class FirestoreStorage implements IStorage {
 
   async listSalaryAdvances(filters?: { userId?: string; status?: string }): Promise<SalaryAdvance[]> {
     let query = this.db.collection('salaryAdvances').orderBy('requestDate', 'desc') as any;
-    
+
     if (filters?.userId) {
       query = query.where('userId', '==', filters.userId);
     }
     if (filters?.status) {
       query = query.where('status', '==', filters.status);
     }
-    
+
     const querySnapshot = await query.get();
-    
+
     return querySnapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
@@ -4219,7 +4240,7 @@ export class FirestoreStorage implements IStorage {
   async getAttendancePolicy(id: string): Promise<AttendancePolicy | undefined> {
     const doc = await this.db.collection('attendancePolicies').doc(id).get();
     if (!doc.exists) return undefined;
-    
+
     const data = doc.data()!;
     return {
       id: doc.id,
@@ -4233,15 +4254,15 @@ export class FirestoreStorage implements IStorage {
     let query = this.db.collection('attendancePolicies')
       .where('department', '==', department)
       .where('isActive', '==', true) as any;
-    
+
     if (designation) {
       query = query.where('designation', '==', designation);
     }
-    
+
     const querySnapshot = await query.limit(1).get();
-    
+
     if (querySnapshot.empty) return undefined;
-    
+
     const doc = querySnapshot.docs[0];
     const data = doc.data();
     return {
@@ -4260,7 +4281,7 @@ export class FirestoreStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     await doc.set(policyData);
     return policyData as AttendancePolicy;
   }
@@ -4271,9 +4292,9 @@ export class FirestoreStorage implements IStorage {
       ...data,
       updatedAt: new Date(),
     };
-    
+
     await doc.update(updateData);
-    
+
     const updated = await doc.get();
     const updatedData = updated.data()!;
     return {
@@ -4288,7 +4309,7 @@ export class FirestoreStorage implements IStorage {
     const querySnapshot = await this.db.collection('attendancePolicies')
       .orderBy('createdAt', 'desc')
       .get();
-    
+
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -4304,7 +4325,7 @@ export class FirestoreStorage implements IStorage {
   async getDepartmentTiming(department: string): Promise<any | undefined> {
     const doc = await this.db.collection('departmentTimings').doc(department).get();
     if (!doc.exists) return undefined;
-    
+
     const data = doc.data()!;
     return {
       id: doc.id,
@@ -4321,9 +4342,9 @@ export class FirestoreStorage implements IStorage {
       department,
       updatedAt: new Date(),
     };
-    
+
     await doc.set(updateData, { merge: true });
-    
+
     const updated = await doc.get();
     const updatedData = updated.data()!;
     return {
@@ -4338,7 +4359,7 @@ export class FirestoreStorage implements IStorage {
     const querySnapshot = await this.db.collection('departmentTimings')
       .orderBy('department', 'asc')
       .get();
-    
+
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -4360,7 +4381,7 @@ export class FirestoreStorage implements IStorage {
 
     // Get attendance summary for the month
     const attendanceSummary = await this.getMonthlyAttendanceSummary(userId, month, year);
-    
+
     // Get payroll settings
     const settings = await this.getPayrollSettings();
     const defaultSettings = {
@@ -4378,35 +4399,35 @@ export class FirestoreStorage implements IStorage {
 
     // Calculate salary components
     const { workingDays, presentDays, absentDays, overtimeHours, leaveDays } = attendanceSummary;
-    
+
     // Base salary calculations
     const dailySalary = salaryStructure.fixedSalary / payrollSettings.standardWorkingDays;
     const adjustedSalary = dailySalary * presentDays;
-    
+
     // Overtime calculation
-    const overtimePay = (salaryStructure.fixedSalary / (payrollSettings.standardWorkingDays * payrollSettings.standardWorkingHours)) * 
-                       overtimeHours * payrollSettings.overtimeMultiplier;
-    
+    const overtimePay = (salaryStructure.fixedSalary / (payrollSettings.standardWorkingDays * payrollSettings.standardWorkingHours)) *
+      overtimeHours * payrollSettings.overtimeMultiplier;
+
     // Gross salary
-    const grossSalary = adjustedSalary + (salaryStructure.hra || 0) + (salaryStructure.allowances || 0) + 
-                       (salaryStructure.variableComponent || 0) + overtimePay;
-    
+    const grossSalary = adjustedSalary + (salaryStructure.hra || 0) + (salaryStructure.allowances || 0) +
+      (salaryStructure.variableComponent || 0) + overtimePay;
+
     // Deductions
-    const pfDeduction = grossSalary >= payrollSettings.pfApplicableFromSalary ? 
-                       (salaryStructure.basicSalary * payrollSettings.pfRate) / 100 : 0;
-    
+    const pfDeduction = grossSalary >= payrollSettings.pfApplicableFromSalary ?
+      (salaryStructure.basicSalary * payrollSettings.pfRate) / 100 : 0;
+
     // FIXED: Use correct ESI rate (0.75%) consistent with routes.ts
     const esiDeduction = grossSalary >= payrollSettings.esiApplicableFromSalary ? 0 :
-                        (grossSalary * 0.75) / 100;
-    
+      (grossSalary * 0.75) / 100;
+
     const tdsDeduction = (grossSalary * payrollSettings.tdsRate) / 100;
-    
+
     // Get salary advances
-    const advances = await this.listSalaryAdvances({ 
-      userId, 
-      status: 'approved' 
+    const advances = await this.listSalaryAdvances({
+      userId,
+      status: 'approved'
     });
-    
+
     const advanceDeduction = advances
       .filter(advance => {
         const startDate = new Date(advance.deductionStartYear, advance.deductionStartMonth - 1);
@@ -4414,7 +4435,7 @@ export class FirestoreStorage implements IStorage {
         return startDate <= currentDate && advance.remainingAmount > 0;
       })
       .reduce((total, advance) => total + advance.monthlyDeduction, 0);
-    
+
     const totalDeductions = pfDeduction + esiDeduction + tdsDeduction + advanceDeduction;
     const netSalary = grossSalary - totalDeductions;
 
@@ -4458,14 +4479,14 @@ export class FirestoreStorage implements IStorage {
   }> {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
-    
+
     // Get attendance records for the month
     const attendanceRecords = await this.listAttendance({
       userId,
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0]
     });
-    
+
     // Calculate working days (excluding weekends)
     let workingDays = 0;
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -4474,12 +4495,12 @@ export class FirestoreStorage implements IStorage {
         workingDays++;
       }
     }
-    
+
     const presentDays = attendanceRecords.filter(r => r.status === 'present' || r.status === 'late').length;
     const absentDays = workingDays - presentDays;
     const overtimeHours = attendanceRecords.reduce((total, r) => total + (r.overtimeHours || 0), 0);
     const leaveDays = attendanceRecords.filter(r => r.status === 'leave').length;
-    
+
     return {
       workingDays,
       presentDays,
@@ -4788,7 +4809,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const doc = await this.db.collection('enhanced_payrolls').doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data()!;
       return {
         id: doc.id,
@@ -4835,7 +4856,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = this.db.collection('enhanced_payrolls').doc().id;
       const now = new Date();
-      
+
       const payrollData = {
         ...data,
         id,
@@ -4858,7 +4879,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const doc = await this.db.collection('employees').doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data()!;
       return {
         id: doc.id,
@@ -5117,7 +5138,7 @@ export class FirestoreStorage implements IStorage {
       // Apply search filter client-side for better text matching
       if (filters?.search) {
         const searchTerm = filters.search.toLowerCase();
-        employees = employees.filter(emp => 
+        employees = employees.filter(emp =>
           emp.personalInfo.displayName.toLowerCase().includes(searchTerm) ||
           emp.employeeId.toLowerCase().includes(searchTerm) ||
           emp.contactInfo.primaryEmail.toLowerCase().includes(searchTerm) ||
@@ -5137,7 +5158,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = this.db.collection('employees').doc().id;
       const now = new Date();
-      
+
       const employeeData = {
         ...data,
         id,
@@ -5161,7 +5182,7 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('employees').doc(id).update(updateData);
-      
+
       // Return updated employee
       const updated = await this.getEmployee(id);
       if (!updated) throw new Error('Employee not found after update');
@@ -5192,7 +5213,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const doc = await this.db.collection('employee_documents').doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data()!;
       return {
         id: doc.id,
@@ -5261,7 +5282,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = this.db.collection('employee_documents').doc().id;
       const now = new Date();
-      
+
       const documentData = {
         ...data,
         id,
@@ -5285,7 +5306,7 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('employee_documents').doc(id).update(updateData);
-      
+
       const updated = await this.getEmployeeDocument(id);
       if (!updated) throw new Error('Employee document not found after update');
       return updated;
@@ -5310,7 +5331,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const doc = await this.db.collection('performance_reviews').doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data()!;
       return {
         id: doc.id,
@@ -5387,7 +5408,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const now = new Date();
       const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
+
       const querySnapshot = await this.db.collection('performance_reviews')
         .where('nextReviewDate', '>=', now)
         .where('nextReviewDate', '<=', nextMonth)
@@ -5418,7 +5439,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = this.db.collection('performance_reviews').doc().id;
       const now = new Date();
-      
+
       const reviewData = {
         ...data,
         id,
@@ -5442,7 +5463,7 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('performance_reviews').doc(id).update(updateData);
-      
+
       const updated = await this.getPerformanceReview(id);
       if (!updated) throw new Error('Performance review not found after update');
       return updated;
@@ -5467,7 +5488,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = this.db.collection('enhanced_payrolls').doc().id;
       const now = new Date();
-      
+
       const payrollData = {
         ...data,
         id,
@@ -5476,7 +5497,7 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('enhanced_payrolls').doc(id).set(payrollData);
-      
+
       return {
         ...payrollData,
         createdAt: now,
@@ -5496,10 +5517,10 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('enhanced_payrolls').doc(id).update(updateData);
-      
+
       const updated = await this.getEnhancedPayroll(id);
       if (!updated) throw new Error('Failed to retrieve updated payroll');
-      
+
       return updated;
     } catch (error) {
       console.error("Error updating enhanced payroll:", error);
@@ -5567,7 +5588,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const doc = await this.db.collection('enhanced_salary_structures').doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data()!;
       return {
         id: doc.id,
@@ -5614,11 +5635,11 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = this.db.collection('enhanced_salary_structures').doc().id;
       const now = new Date();
-      
+
       // Ensure dates are properly converted
       const effectiveFromDate = data.effectiveFrom instanceof Date ? data.effectiveFrom : new Date(data.effectiveFrom || now);
       const effectiveToDate = data.effectiveTo ? (data.effectiveTo instanceof Date ? data.effectiveTo : new Date(data.effectiveTo)) : null;
-      
+
       const structureData = {
         ...data,
         id,
@@ -5629,7 +5650,7 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('enhanced_salary_structures').doc(id).set(structureData);
-      
+
       return {
         ...data,
         id,
@@ -5659,10 +5680,10 @@ export class FirestoreStorage implements IStorage {
       }
 
       await this.db.collection('enhanced_salary_structures').doc(id).update(updateData);
-      
+
       const updated = await this.getEnhancedSalaryStructure(id);
       if (!updated) throw new Error('Failed to retrieve updated salary structure');
-      
+
       return updated;
     } catch (error) {
       console.error("Error updating enhanced salary structure:", error);
@@ -5745,7 +5766,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = data.id || 'default';
       const now = new Date();
-      
+
       const settingsData = {
         ...data,
         id,
@@ -5753,7 +5774,7 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('enhanced_payroll_settings').doc(id).set(settingsData, { merge: true });
-      
+
       return {
         ...data,
         id,
@@ -5770,7 +5791,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const doc = await this.db.collection('payroll_field_configs').doc(id).get();
       if (!doc.exists) return undefined;
-      
+
       const data = doc.data()!;
       return {
         id: doc.id,
@@ -5844,7 +5865,7 @@ export class FirestoreStorage implements IStorage {
     try {
       const id = this.db.collection('payroll_field_configs').doc().id;
       const now = new Date();
-      
+
       const configData = {
         ...data,
         id,
@@ -5853,7 +5874,7 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('payroll_field_configs').doc(id).set(configData);
-      
+
       return {
         ...data,
         id,
@@ -5874,10 +5895,10 @@ export class FirestoreStorage implements IStorage {
       };
 
       await this.db.collection('payroll_field_configs').doc(id).update(updateData);
-      
+
       const updated = await this.getPayrollFieldConfig(id);
       if (!updated) throw new Error('Failed to retrieve updated field config');
-      
+
       return updated;
     } catch (error) {
       console.error("Error updating payroll field config:", error);
@@ -5895,6 +5916,259 @@ export class FirestoreStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting payroll field config:", error);
       return false;
+    }
+  }
+
+  // ============================================
+  // OT SYSTEM STORAGE METHODS
+  // ============================================
+
+  /**
+   * GET HOLIDAYS BY DATE
+   */
+  async getHolidaysByDate(date: Date): Promise<any[]> {
+    try {
+      const normalizedDate = new Date(date);
+      normalizedDate.setHours(0, 0, 0, 0);
+
+      const snapshot = await this.db.collection('holidays')
+        .where('date', '==', Timestamp.fromDate(normalizedDate))
+        .where('isActive', '==', true)
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date?.toDate(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      }));
+    } catch (error) {
+      console.error('Error getting holidays by date:', error);
+      return [];
+    }
+  }
+
+  /**
+   * GET HOLIDAYS BY DATE RANGE
+   */
+  async getHolidaysByDateRange(startDate: Date, endDate: Date): Promise<any[]> {
+    try {
+      const snapshot = await this.db.collection('holidays')
+        .where('date', '>=', Timestamp.fromDate(startDate))
+        .where('date', '<=', Timestamp.fromDate(endDate))
+        .where('isActive', '==', true)
+        .orderBy('date', 'asc')
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date?.toDate(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      }));
+    } catch (error) {
+      console.error('Error getting holidays by date range:', error);
+      return [];
+    }
+  }
+
+  /**
+   * CREATE HOLIDAY
+   */
+  async createHoliday(holiday: any): Promise<void> {
+    try {
+      const holidayData = {
+        ...holiday,
+        date: Timestamp.fromDate(holiday.date),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+
+      await this.db.collection('holidays').doc(holiday.id).set(holidayData);
+    } catch (error) {
+      console.error('Error creating holiday:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * UPDATE HOLIDAY
+   */
+  async updateHoliday(id: string, updates: any): Promise<void> {
+    try {
+      const updateData: any = { ...updates };
+
+      if (updates.date) {
+        updateData.date = Timestamp.fromDate(updates.date);
+      }
+
+      updateData.updatedAt = Timestamp.now();
+
+      await this.db.collection('holidays').doc(id).update(updateData);
+    } catch (error) {
+      console.error('Error updating holiday:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DELETE HOLIDAY (soft delete)
+   */
+  async deleteHoliday(id: string): Promise<boolean> {
+    try {
+      await this.db.collection('holidays').doc(id).update({
+        isActive: false,
+        updatedAt: Timestamp.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting holiday:', error);
+      return false;
+    }
+  }
+
+  /**
+   * GET COMPANY SETTINGS (Singleton)
+   */
+  async getCompanySettings(): Promise<any | undefined> {
+    try {
+      const doc = await this.db.collection('company_settings').doc('1').get();
+
+      if (!doc.exists) {
+        return undefined;
+      }
+
+      return {
+        id: doc.id,
+        ...doc.data(),
+        updatedAt: doc.data()?.updatedAt?.toDate()
+      };
+    } catch (error) {
+      console.error('Error getting company settings:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * UPDATE COMPANY SETTINGS (Singleton)
+   */
+  async updateCompanySettings(settings: any): Promise<void> {
+    try {
+      const updateData = {
+        ...settings,
+        updatedAt: Timestamp.now()
+      };
+
+      // Upsert (create if doesn't exist)
+      await this.db.collection('company_settings').doc('1').set(updateData, { merge: true });
+    } catch (error) {
+      console.error('Error updating company settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * GET PAYROLL PERIOD
+   */
+  async getPayrollPeriod(month: number, year: number): Promise<any | undefined> {
+    try {
+      const snapshot = await this.db.collection('payroll_periods')
+        .where('month', '==', month)
+        .where('year', '==', year)
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return undefined;
+      }
+
+      const doc = snapshot.docs[0];
+      return {
+        id: doc.id,
+        ...doc.data(),
+        lockedAt: doc.data().lockedAt?.toDate()
+      };
+    } catch (error) {
+      console.error('Error getting payroll period:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * CREATE PAYROLL PERIOD
+   */
+  async createPayrollPeriod(period: any): Promise<void> {
+    try {
+      const periodData = {
+        ...period,
+        lockedAt: period.lockedAt ? Timestamp.fromDate(period.lockedAt) : null
+      };
+
+      await this.db.collection('payroll_periods').doc(period.id).set(periodData);
+    } catch (error) {
+      console.error('Error creating payroll period:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * UPDATE PAYROLL PERIOD
+   */
+  async updatePayrollPeriod(id: string, updates: any): Promise<void> {
+    try {
+      const updateData: any = { ...updates };
+
+      if (updates.lockedAt) {
+        updateData.lockedAt = Timestamp.fromDate(updates.lockedAt);
+      }
+
+      await this.db.collection('payroll_periods').doc(id).update(updateData);
+    } catch (error) {
+      console.error('Error updating payroll period:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * GET PAYROLL PERIODS BY YEAR
+   */
+  async getPayrollPeriodsByYear(year: number): Promise<any[]> {
+    try {
+      const snapshot = await this.db.collection('payroll_periods')
+        .where('year', '==', year)
+        .orderBy('month', 'asc')
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        lockedAt: doc.data().lockedAt?.toDate()
+      }));
+    } catch (error) {
+      console.error('Error getting payroll periods by year:', error);
+      return [];
+    }
+  }
+
+  /**
+   * LIST ATTENDANCE BY DATE RANGE (for payroll locking)
+   */
+  async listAttendanceByDateRange(startDate: Date, endDate: Date): Promise<Attendance[]> {
+    try {
+      const snapshot = await this.db.collection('attendance')
+        .where('date', '>=', Timestamp.fromDate(startDate))
+        .where('date', '<=', Timestamp.fromDate(endDate))
+        .get();
+
+      return snapshot.docs.map(doc => this.convertFirestoreToAttendance({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error listing attendance by date range:', error);
+      return [];
     }
   }
 }

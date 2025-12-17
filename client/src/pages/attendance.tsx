@@ -13,8 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { 
-  CalendarIcon, Search, Loader2, UserCheck, Clock, 
+import {
+  CalendarIcon, Search, Loader2, UserCheck, Clock,
   MapPin, Timer, Users, TrendingUp, Activity, Zap, RefreshCw,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from "lucide-react";
@@ -24,24 +24,25 @@ import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-
 import { SmartUnifiedCheckout } from "@/components/attendance/smart-unified-checkout";
 import { ManualOTStart } from "@/components/attendance/manual-ot-start";
 import { ManualOTEnd } from "@/components/attendance/manual-ot-end";
+import { Link } from "wouter";
 
 export default function Attendance() {
   const { user } = useAuthContext();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [date, setDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("today");
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   // Check-in/out modal states
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showUnifiedCheckoutModal, setShowUnifiedCheckoutModal] = useState(false);
-  
+
   // Manual OT modal states
   const [showOTStartModal, setShowOTStartModal] = useState(false);
   const [showOTEndModal, setShowOTEndModal] = useState(false);
@@ -51,17 +52,17 @@ export default function Attendance() {
     queryKey: ["/api/attendance", { userId: user?.uid }],
     queryFn: async () => {
       if (!user?.uid) return [];
-      
+
       // For regular employees, fetch only their own attendance data
       // For admins/master_admins, they can still see all data if needed
       const attendanceResponse = await apiRequest(`/api/attendance?userId=${user.uid}`, 'GET');
-      
+
       if (!attendanceResponse.ok) {
         throw new Error('Failed to fetch attendance records');
       }
-      
+
       const attendanceData = await attendanceResponse.json();
-      
+
       // Enrich attendance records with user info (current user's info)
       return attendanceData.map((record: any) => ({
         ...record,
@@ -143,7 +144,7 @@ export default function Attendance() {
   const refreshAttendance = () => {
     console.log('ATTENDANCE: Refreshing all attendance data');
     // Invalidate all attendance-related queries including OT status
-    queryClient.invalidateQueries({ 
+    queryClient.invalidateQueries({
       predicate: (query) => {
         const queryKey = query.queryKey[0];
         if (typeof queryKey === 'string') {
@@ -152,7 +153,7 @@ export default function Attendance() {
         return false;
       }
     });
-    
+
     // Force immediate refetch of critical data
     refetchTiming();
     refetch();
@@ -162,7 +163,7 @@ export default function Attendance() {
   const refreshTiming = () => {
     console.log('ATTENDANCE: Refreshing department timing');
     // Invalidate timing cache (keeps old data visible until new data arrives)
-    queryClient.invalidateQueries({ 
+    queryClient.invalidateQueries({
       predicate: (query) => {
         const queryKey = query.queryKey[0];
         if (typeof queryKey === 'string') {
@@ -171,7 +172,7 @@ export default function Attendance() {
         return false;
       }
     });
-    
+
     // Force immediate refetch
     refetchTiming();
   };
@@ -182,17 +183,17 @@ export default function Attendance() {
       console.log('ATTENDANCE: Window focused, refreshing timing');
       refreshTiming();
     };
-    
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'department_timing_updated') {
         console.log('ATTENDANCE: Department timing updated in another tab');
         refreshTiming();
       }
     };
-    
+
     window.addEventListener('focus', handleFocus);
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('storage', handleStorageChange);
@@ -207,7 +208,7 @@ export default function Attendance() {
         refreshTiming();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
@@ -255,7 +256,7 @@ export default function Attendance() {
     const absent = records.filter(r => r.status === 'absent').length;
     const late = records.filter(r => r.status === 'late').length;
     const overtime = records.filter(r => r.overtimeHours && r.overtimeHours > 0).length;
-    
+
     return { total, present, absent, late, overtime };
   };
 
@@ -267,20 +268,20 @@ export default function Attendance() {
     if (!departmentTiming || !departmentTiming.checkInTime || !departmentTiming.checkOutTime) {
       return { state: 'no_timing', canCheckIn: false, canCheckOut: false, validTiming: false };
     }
-    
+
     // Additional validation: Check if timing values are properly formatted (must contain AM/PM)
     const checkInTime = departmentTiming.checkInTime;
     const checkOutTime = departmentTiming.checkOutTime;
-    
+
     // Validate that timing values are proper 12-hour format (contain AM or PM)
     const isValidTimeFormat = (time: string) => {
       return time && typeof time === 'string' && (time.includes('AM') || time.includes('PM') || time.includes('am') || time.includes('pm'));
     };
-    
+
     if (!isValidTimeFormat(checkInTime) || !isValidTimeFormat(checkOutTime)) {
       return { state: 'no_timing', canCheckIn: false, canCheckOut: false, validTiming: false };
     }
-    
+
     if (!todayAttendance) return { state: 'not_started', canCheckIn: true, canCheckOut: false, validTiming: true };
     if (todayAttendance.checkInTime && !todayAttendance.checkOutTime) return { state: 'checked_in', canCheckIn: false, canCheckOut: true, validTiming: true };
     if (todayAttendance.checkInTime && todayAttendance.checkOutTime) return { state: 'completed', canCheckIn: false, canCheckOut: false, validTiming: true };
@@ -298,10 +299,10 @@ export default function Attendance() {
     const renderPageNumbers = () => {
       const pages = [];
       const maxVisiblePages = 5;
-      
+
       let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
       let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-      
+
       if (endPage - startPage < maxVisiblePages - 1) {
         startPage = Math.max(1, endPage - maxVisiblePages + 1);
       }
@@ -422,7 +423,7 @@ export default function Attendance() {
                     <p className="text-xs text-muted-foreground truncate">{todayAttendance.attendanceType || 'Office'}</p>
                   </div>
                 </div>
-                
+
                 {todayAttendance.checkOutTime ? (
                   <div className="flex items-center gap-3 p-3 border rounded-lg">
                     <div className="p-2 bg-muted rounded-full flex-shrink-0">
@@ -496,7 +497,7 @@ export default function Attendance() {
                       {!departmentTiming ? "Department Timing Not Configured" : "Invalid Timing Format"}
                     </div>
                     <div className="text-sm text-orange-600 mb-3">
-                      {!departmentTiming 
+                      {!departmentTiming
                         ? "Your department's working hours must be configured before you can check in."
                         : "Department timing must be in 12-hour format (e.g., 9:00 AM - 6:00 PM)."
                       }
@@ -522,8 +523,8 @@ export default function Attendance() {
               ) : (
                 <>
                   {canCheckIn && (
-                    <Button 
-                      onClick={() => setShowCheckInModal(true)} 
+                    <Button
+                      onClick={() => setShowCheckInModal(true)}
                       className="bg-green-600 hover:bg-green-700 h-12 sm:col-span-1"
                       size="lg"
                     >
@@ -533,8 +534,8 @@ export default function Attendance() {
                     </Button>
                   )}
                   {canCheckOut && !otStatus?.hasActiveOT && (
-                    <Button 
-                      onClick={() => setShowUnifiedCheckoutModal(true)} 
+                    <Button
+                      onClick={() => setShowUnifiedCheckoutModal(true)}
                       className="bg-red-600 hover:bg-red-700 h-12 sm:col-span-1"
                       size="lg"
                     >
@@ -556,63 +557,60 @@ export default function Attendance() {
               )}
             </div>
 
-            {/* Manual OT Section */}
+            {/* OT Management - Smart Redirect to New System */}
             {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
-              <div className="mt-4 p-4 border border-orange-200 rounded-lg bg-orange-50">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+              <div className="mt-4 p-4 border border-blue-200 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-orange-600" />
-                    <span className="font-medium text-orange-800 text-sm sm:text-base">Manual Overtime</span>
+                    <Zap className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold text-blue-900 text-sm sm:text-base">Overtime Management</span>
                     {otStatus?.hasActiveOT && (
-                      <Badge variant="destructive" className="animate-pulse text-xs">
+                      <Badge variant="default" className="bg-blue-600 animate-pulse text-xs">
                         Active
                       </Badge>
                     )}
                   </div>
                   {otStatus?.currentOTHours && otStatus.currentOTHours > 0 && (
-                    <Badge variant="outline" className="text-orange-700 border-orange-300 text-xs w-fit">
+                    <Badge variant="outline" className="text-blue-700 border-blue-400 font-semibold text-xs">
                       {otStatus.currentOTHours.toFixed(1)}h
                     </Badge>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  {!otStatus?.hasActiveOT ? (
-                    <Button
-                      onClick={() => setShowOTStartModal(true)}
-                      disabled={!otStatus?.buttonAvailable}
-                      variant="outline"
-                      className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
-                      size="lg"
-                    >
-                      <Zap className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Start Overtime</span>
-                      <span className="sm:hidden">Start OT</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => setShowOTEndModal(true)}
-                      disabled={!otStatus?.canEndOT}
-                      variant="destructive"
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Timer className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">End Overtime</span>
-                      <span className="sm:hidden">End OT</span>
-                    </Button>
-                  )}
-                  
-                  {!otStatus?.buttonAvailable && otStatus?.buttonReason && (
-                    <div className="p-2 bg-orange-100 rounded text-center">
-                      <p className="text-xs text-orange-600">{otStatus.buttonReason}</p>
-                      {otStatus.nextAvailableTime && (
-                        <p className="text-xs text-orange-500 mt-1">
-                          Available after {otStatus.nextAvailableTime}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                <p className="text-sm text-blue-800 mb-4 leading-relaxed">
+                  {otStatus?.hasActiveOT
+                    ? "🎯 You have an active OT session. Track your time and manage your session on the dedicated OT page."
+                    : "⚡ Track overtime with photo verification, live timer, and session history."
+                  }
+                </p>
+
+                <Link href="/employee-ot">
+                  <Button
+                    className={cn(
+                      "w-full font-medium shadow-sm",
+                      otStatus?.hasActiveOT
+                        ? "bg-orange-600 hover:bg-orange-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    )}
+                    size="lg"
+                  >
+                    {otStatus?.hasActiveOT ? (
+                      <>
+                        <Timer className="h-5 w-5 mr-2" />
+                        <span>Manage Active OT Session</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-5 w-5 mr-2" />
+                        <span>Go to OT Dashboard</span>
+                      </>
+                    )}
+                  </Button>
+                </Link>
+
+                <div className="mt-3 flex items-center justify-center gap-2 text-xs text-blue-600">
+                  <Activity className="h-3 w-3" />
+                  <span>New enhanced OT system with full tracking</span>
                 </div>
               </div>
             )}
@@ -645,7 +643,7 @@ export default function Attendance() {
             </div>
           </CardContent>
         </Card>
-        
+
         {departmentTiming && departmentTiming.checkInTime && departmentTiming.checkOutTime && (
           <Card>
             <CardHeader>
@@ -702,76 +700,76 @@ export default function Attendance() {
                 </div>
               </div>
             </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : filteredAttendance.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No attendance records found for the selected date
-            </div>
-          ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Check In</TableHead>
-                      <TableHead>Check Out</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedAttendance.map((record: any) => (
-                    <TableRow key={record.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{formatDate(record.checkInTime || record.date)}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(record.checkInTime || record.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {record.workingHours ? (
-                            <>
-                              <span className="font-medium">{record.workingHours.toFixed(1)}h</span>
-                              {record.overtimeHours && record.overtimeHours > 0 && (
-                                <span className="text-xs text-orange-600">
-                                  +{record.overtimeHours.toFixed(1)}h OT
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : filteredAttendance.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No attendance records found for the selected date
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Check In</TableHead>
+                          <TableHead>Check Out</TableHead>
+                          <TableHead>Hours</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedAttendance.map((record: any) => (
+                          <TableRow key={record.id}>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{formatDate(record.checkInTime || record.date)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(record.checkInTime || record.date).toLocaleDateString('en-US', { weekday: 'short' })}
                                 </span>
-                              )}
-                            </>
-                          ) : '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-sm capitalize">{record.status}</span>
-                          <span className="text-xs text-muted-foreground capitalize">
-                            {record.attendanceType === 'field_work' ? 'Field Work' : record.attendanceType}
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <PaginationControls />
-            </>
-          )}
-        </CardContent>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                {record.workingHours ? (
+                                  <>
+                                    <span className="font-medium">{record.workingHours.toFixed(1)}h</span>
+                                    {record.overtimeHours && record.overtimeHours > 0 && (
+                                      <span className="text-xs text-orange-600">
+                                        +{record.overtimeHours.toFixed(1)}h OT
+                                      </span>
+                                    )}
+                                  </>
+                                ) : '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm capitalize">{record.status}</span>
+                                <span className="text-xs text-muted-foreground capitalize">
+                                  {record.attendanceType === 'field_work' ? 'Field Work' : record.attendanceType}
+                                </span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <PaginationControls />
+                </>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
@@ -796,38 +794,38 @@ export default function Attendance() {
                 <>
                   <div className="space-y-4">
                     {paginatedAttendance.map((record: any) => (
-                    <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{formatDate(record.checkInTime)}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(record.checkInTime).toLocaleDateString('en-US', { weekday: 'short' })}
-                          </span>
+                      <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{formatDate(record.checkInTime)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(record.checkInTime).toLocaleDateString('en-US', { weekday: 'short' })}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-green-600" />
+                            <span className="text-sm"><TimeDisplay time={record.checkInTime} format12Hour={true} /></span>
+                            {record.checkOutTime && (
+                              <>
+                                <span className="text-muted-foreground">→</span>
+                                <Timer className="h-4 w-4 text-red-600" />
+                                <span className="text-sm"><TimeDisplay time={record.checkOutTime} format12Hour={true} /></span>
+                              </>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-green-600" />
-                          <span className="text-sm"><TimeDisplay time={record.checkInTime} format12Hour={true} /></span>
-                          {record.checkOutTime && (
-                            <>
-                              <span className="text-muted-foreground">→</span>
-                              <Timer className="h-4 w-4 text-red-600" />
-                              <span className="text-sm"><TimeDisplay time={record.checkOutTime} format12Hour={true} /></span>
-                            </>
+                          <Badge variant={record.status === 'present' ? 'default' : record.status === 'late' ? 'secondary' : 'destructive'}>
+                            {record.status}
+                          </Badge>
+                          {record.overtimeHours && record.overtimeHours > 0 && (
+                            <Badge variant="outline" className="text-orange-600">
+                              <Zap className="h-3 w-3 mr-1" />
+                              {record.overtimeHours.toFixed(1)}h OT
+                            </Badge>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={record.status === 'present' ? 'default' : record.status === 'late' ? 'secondary' : 'destructive'}>
-                          {record.status}
-                        </Badge>
-                        {record.overtimeHours && record.overtimeHours > 0 && (
-                          <Badge variant="outline" className="text-orange-600">
-                            <Zap className="h-3 w-3 mr-1" />
-                            {record.overtimeHours.toFixed(1)}h OT
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
                     ))}
                   </div>
                   <PaginationControls />
@@ -889,44 +887,44 @@ export default function Attendance() {
                       </TableHeader>
                       <TableBody>
                         {paginatedAttendance.map((record: any) => (
-                        <TableRow key={record.id}>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{formatDate(record.checkInTime || record.date)}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(record.checkInTime || record.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              {record.workingHours ? (
-                                <>
-                                  <span className="font-medium">{record.workingHours.toFixed(1)}h</span>
-                                  {record.overtimeHours && record.overtimeHours > 0 && (
-                                    <span className="text-xs text-orange-600">
-                                      +{record.overtimeHours.toFixed(1)}h OT
-                                    </span>
-                                  )}
-                                </>
-                              ) : '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-sm capitalize">{record.status}</span>
-                              <span className="text-xs text-muted-foreground capitalize">
-                                {record.attendanceType === 'field_work' ? 'Field Work' : record.attendanceType}
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                          <TableRow key={record.id}>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{formatDate(record.checkInTime || record.date)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(record.checkInTime || record.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                {record.workingHours ? (
+                                  <>
+                                    <span className="font-medium">{record.workingHours.toFixed(1)}h</span>
+                                    {record.overtimeHours && record.overtimeHours > 0 && (
+                                      <span className="text-xs text-orange-600">
+                                        +{record.overtimeHours.toFixed(1)}h OT
+                                      </span>
+                                    )}
+                                  </>
+                                ) : '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm capitalize">{record.status}</span>
+                                <span className="text-xs text-muted-foreground capitalize">
+                                  {record.attendanceType === 'field_work' ? 'Field Work' : record.attendanceType}
+                                </span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         ))}
                       </TableBody>
                     </Table>

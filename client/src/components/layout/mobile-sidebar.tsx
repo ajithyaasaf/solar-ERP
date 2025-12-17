@@ -20,7 +20,7 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
     const handleResize = () => {
       setScreenWidth(window.innerWidth);
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -51,6 +51,8 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
     { href: "/leave", label: "Leave", icon: "ri-calendar-check-line", requiredPermissions: ["leave.view_own", "leave.view_team", "leave.view_all"] },
     { href: "/site-visit", label: "Site Visit", icon: "ri-map-pin-line", requiredPermissions: ["site_visit.view", "site_visit.create"] },
     { href: "/site-visit-monitoring", label: "Visit Monitor", icon: "ri-dashboard-line", roles: ["master_admin", "admin"], requiredPermissions: ["site_visit.view_all", "site_visit.reports"] },
+    { href: "/employee-ot", label: "Overtime (OT)", icon: "ri-time-line", requiredPermissions: "attendance.view_own" },
+    { href: "/ot-administration", label: "OT Admin", icon: "ri-settings-3-line", roles: ["master_admin", "admin"] },
     { href: "/user-management", label: "Users", icon: "ri-user-settings-line", roles: ["master_admin", "admin"], requiredPermissions: ["users.view", "users.create"] },
     { href: "/hr-management", label: "HR Mgmt", icon: "ri-team-line", roles: ["master_admin", "admin"], requiredPermissions: ["users.view"] },
     { href: "/departments", label: "Departments", icon: "ri-building-line", roles: ["master_admin"], requiredPermissions: ["departments.view", "departments.create"] },
@@ -64,19 +66,19 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
   const filteredNavItems = navItems.filter(item => {
     // Always show items with no restrictions
     if (!item.roles && !item.requiredPermissions && !item.requiresApproval) return true;
-    
+
     // If no user, don't show restricted items
     if (!user) return false;
-    
+
     // Check role-based access if specified
     if (item.roles && !hasRole(item.roles)) return false;
-    
+
     // Check enterprise permissions
     if (item.requiredPermissions && !hasPermission(item.requiredPermissions)) return false;
-    
+
     // Check approval permissions if required
     if (item.requiresApproval && !canApprove) return false;
-    
+
     return true;
   });
 
@@ -84,14 +86,14 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
     <>
       {/* Mobile menu overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-30 z-20 md:hidden"
           onClick={() => setIsOpen(false)}
         ></div>
       )}
-      
+
       {/* Mobile menu drawer */}
-      <div 
+      <div
         className={cn(
           "fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 transition-all duration-300 ease-in-out transform md:hidden",
           isOpen ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none",
@@ -100,7 +102,7 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
       >
         <div className="sticky top-0 z-10 p-4 border-b border-gray-200 flex justify-between items-center bg-white">
           <h2 className="font-bold text-lg">Menu</h2>
-          <button 
+          <button
             onClick={() => setIsOpen(false)}
             className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
             aria-label="Close menu"
@@ -108,12 +110,12 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
             <i className="ri-close-line text-xl"></i>
           </button>
         </div>
-        
+
         <div className="p-3">
           <nav className={cn("grid gap-3", getGridCols())}>
             {filteredNavItems.map((item, index) => (
-              <Link 
-                key={index} 
+              <Link
+                key={index}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
                 className={cn(
@@ -127,15 +129,15 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
             ))}
           </nav>
         </div>
-        
+
         {user && (
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center">
               <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                 {user?.photoURL ? (
-                  <img 
-                    src={user.photoURL} 
-                    alt={user.displayName || "User"} 
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || "User"}
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
@@ -156,14 +158,14 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
                   )}
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   import("@/lib/firebase").then(({ logoutUser }) => {
                     logoutUser().then(() => {
                       window.location.href = "/login";
                     });
                   });
-                }} 
+                }}
                 className="ml-auto text-gray-500 hover:text-gray-700 cursor-pointer"
                 aria-label="Logout"
               >

@@ -31,6 +31,8 @@ const Departments = lazy(() => import("@/pages/departments"));
 const OfficeLocations = lazy(() => import("@/pages/office-locations"));
 const SiteVisit = lazy(() => import("@/pages/site-visit"));
 const SiteVisitMonitoring = lazy(() => import("@/pages/site-visit-monitoring"));
+const EmployeeOT = lazy(() => import("@/pages/employee-ot"));
+const OTAdministration = lazy(() => import("@/pages/ot-administration"));
 
 // Simple loading fallback component
 const PageLoader = () => (
@@ -51,7 +53,7 @@ function Router() {
       {/* Public routes - no auth required */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      
+
       {/* Root route - intelligent redirect based on auth state */}
       <Route path="/" component={RootHandler} />
       <Route path="/dashboard">
@@ -61,10 +63,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Customer management - enterprise permission based */}
       <Route path="/customers">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["customers.view", "customers.create"]}
         >
           <DashboardLayout>
@@ -74,10 +76,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Product management - enterprise permission based */}
       <Route path="/products">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["products.view", "products.create"]}
         >
           <DashboardLayout>
@@ -87,10 +89,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Quotation management - enterprise permission based */}
       <Route path="/quotations">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["quotations.view", "quotations.create"]}
         >
           <DashboardLayout>
@@ -100,10 +102,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Quotation Creation - enterprise permission based */}
       <Route path="/quotations/new">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["quotations.create"]}
         >
           <DashboardLayout>
@@ -113,10 +115,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Quotation Edit - enterprise permission based */}
       <Route path="/quotations/:id/edit">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["quotations.edit", "quotations.create"]}
         >
           <DashboardLayout>
@@ -126,10 +128,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Invoice management - enterprise permission based */}
       <Route path="/invoices">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["invoices.view", "invoices.create"]}
         >
           <DashboardLayout>
@@ -139,10 +141,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Attendance management - enterprise permission based */}
       <Route path="/attendance">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["attendance.view_own", "attendance.view_team", "attendance.view_all"]}
         >
           <DashboardLayout>
@@ -152,10 +154,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Leave management - enterprise permission based */}
       <Route path="/leave">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["leave.view_own", "leave.view_team", "leave.view_all"]}
         >
           <DashboardLayout>
@@ -165,10 +167,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Site Visit Management - Technical, Marketing, Admin departments only */}
       <Route path="/site-visit">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["site_visit.view", "site_visit.create"]}
           requiredDepartment={["technical", "marketing", "admin"]}
           allowMasterAdmin={true}
@@ -183,7 +185,7 @@ function Router() {
 
       {/* Site Visit Monitoring - Master Admin and HR only */}
       <Route path="/site-visit-monitoring">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["site_visit.view_all", "site_visit.reports"]}
           requiredDepartment={["hr"]}
           allowMasterAdmin={true}
@@ -195,10 +197,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* User management - enterprise permission based */}
       <Route path="/user-management">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["users.view"]}
         >
           <DashboardLayout>
@@ -208,10 +210,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* HR Management - enterprise employee management */}
       <Route path="/hr-management">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["users.view"]}
           requiredDepartment={["hr", "admin"]}
           allowMasterAdmin={true}
@@ -223,10 +225,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Department management - enterprise permission based */}
       <Route path="/departments">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions={["departments.view", "departments.create"]}
           requiredRole="master_admin"
         >
@@ -237,10 +239,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Office Locations - enterprise system administration */}
       <Route path="/office-locations">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredPermissions="system.settings"
           requiredRole="master_admin"
         >
@@ -251,10 +253,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Attendance Management - master admin only */}
       <Route path="/attendance-management">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredRole="master_admin"
         >
           <DashboardLayout>
@@ -264,10 +266,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Attendance Reports - master admin only */}
       <Route path="/attendance-reports">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredRole="master_admin"
         >
           <DashboardLayout>
@@ -277,10 +279,10 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Payroll Management - master admin only */}
       <Route path="/payroll-management">
-        <ProtectedRoute 
+        <ProtectedRoute
           requiredRole="master_admin"
         >
           <DashboardLayout>
@@ -290,7 +292,33 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      
+
+      {/* Employee OT - All authenticated users */}
+      <Route path="/employee-ot">
+        <ProtectedRoute
+          requiredPermissions={["attendance.view_own"]}
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <EmployeeOT />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* OT Administration - Admin and Master Admin only */}
+      <Route path="/ot-administration">
+        <ProtectedRoute
+          requiredRole={["admin", "master_admin"]}
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <OTAdministration />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
@@ -310,12 +338,12 @@ function App() {
 // This component sits inside the AuthProvider
 function AppContent() {
   const { loading } = useAuthContext();
-  
+
   // Prevent login screen flash by showing a loading screen during auth check
   if (loading) {
     return <AppLoader />;
   }
-  
+
   // Only wrap in these providers when the auth state is determined
   return (
     <TooltipProvider>
