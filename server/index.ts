@@ -71,9 +71,11 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
-  } else {
+  } else if (!process.env.API_ONLY) {
+    // Only serve static files if not in API-only mode (split deployment)
     serveStatic(app);
   }
+  // If API_ONLY=true, we don't serve static files (backend runs separately)
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
