@@ -101,8 +101,9 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 setTotalOTToday(total);
             }
 
-            // Check if attendance exists for today (using same 'today' variable from above)
-            const attendanceRes = await fetch(`/api/attendance/today?userId=${userId}`, {
+            // Check if attendance exists for today
+            const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const attendanceRes = await fetch(`/api/user/attendance?userId=${userId}&date=${todayStr}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -110,9 +111,16 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
 
             if (attendanceRes.ok) {
                 const attendanceData = await attendanceRes.json();
-                const attendance = Array.isArray(attendanceData) ? attendanceData[0] : attendanceData;
-                setHasAttendanceToday(!!(attendance && attendance.checkInTime));
+                // attendanceData is an array of attendance records
+                const todayAttendance = Array.isArray(attendanceData)
+                    ? attendanceData.find((a: any) => {
+                        const attDate = new Date(a.date);
+                        return attDate.toISOString().split('T')[0] === todayStr;
+                    })
+                    : null;
+                setHasAttendanceToday(!!(todayAttendance && todayAttendance.checkInTime));
             } else {
+                console.warn('Failed to fetch attendance, assuming no attendance:', attendanceRes.statusText);
                 setHasAttendanceToday(false);
             }
         } catch (error) {
@@ -198,6 +206,9 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
             }
 
             const token = await getOTAuthToken();
+
+            console.log('[OT START] Sending request with data:', locationData);
+
             const response = await fetch('/api/ot/sessions/start', {
                 method: 'POST',
                 headers: {
@@ -207,7 +218,10 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 body: JSON.stringify(locationData)
             });
 
+            console.log('[OT START] Response status:', response.status);
+
             const result = await response.json();
+            console.log('[OT START] Result:', result);
 
             if (result.success) {
                 toast({
@@ -217,6 +231,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 await fetchOTSessions();
                 onSuccess?.();
             } else {
+                console.error('[OT START] Failed:', result.message);
                 toast({
                     variant: 'destructive',
                     title: 'Failed to Start OT',
@@ -224,6 +239,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 });
             }
         } catch (error) {
+            console.error('[OT START] Error:', error);
             toast({
                 variant: 'destructive',
                 title: 'Error',
