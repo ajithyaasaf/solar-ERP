@@ -76,7 +76,11 @@ export default function Attendance() {
   });
 
   // Fetch current user's attendance for today - Fixed timezone issue
+<<<<<<< HEAD
   const { data: todayAttendance, refetch: refetchTodayAttendance } = useQuery({
+=======
+  const { data: todayAttendance } = useQuery({
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     queryKey: ["/api/attendance/today", user?.uid],
     queryFn: async () => {
       if (!user?.uid) return null;
@@ -157,7 +161,10 @@ export default function Attendance() {
     // Force immediate refetch of critical data
     refetchTiming();
     refetch();
+<<<<<<< HEAD
     refetchTodayAttendance(); // **CRITICAL: Refetch today's attendance**
+=======
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   };
 
   // Enhanced timing refresh - keeps old data visible while fetching

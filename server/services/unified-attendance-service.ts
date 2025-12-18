@@ -56,7 +56,11 @@ export interface AttendanceCheckOutResponse {
 }
 
 export class UnifiedAttendanceService {
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   /**
    * Process attendance check-in with enterprise location validation
    */
@@ -137,6 +141,7 @@ export class UnifiedAttendanceService {
         };
       }
 
+<<<<<<< HEAD
       // **CRITICAL FIX: Use UTC date to avoid timezone issues**
       // When using local time with setHours(0,0,0,0), the ISO string conversion
       // causes date mismatch in timezones ahead of UTC (e.g., IST +5:30)
@@ -200,16 +205,52 @@ export class UnifiedAttendanceService {
             userId: request.userId
           });
         }
+=======
+      // Check for duplicate check-in
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const existingAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
+      
+      if (existingAttendance) {
+        return {
+          success: false,
+          message: 'You have already checked in today',
+          locationValidation: {
+            isValid: false,
+            confidence: 0,
+            distance: 0,
+            detectedOffice: null,
+            validationType: 'failed',
+            message: 'Duplicate check-in attempt',
+            recommendations: ['You can only check in once per day'],
+            metadata: {
+              accuracy: request.accuracy,
+              effectiveRadius: 0,
+              indoorDetection: false,
+              confidenceFactors: ['duplicate_checkin']
+            }
+          }
+        };
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       }
 
       // Simplified location validation - accept any location
       console.log('UNIFIED SERVICE: Processing simplified attendance with location data...');
+<<<<<<< HEAD
       console.log('Location coordinates:', {
         latitude: request.latitude,
         longitude: request.longitude,
         accuracy: request.accuracy
       });
 
+=======
+      console.log('Location coordinates:', { 
+        latitude: request.latitude, 
+        longitude: request.longitude, 
+        accuracy: request.accuracy 
+      });
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       const locationValidation = {
         isValid: true,
         confidence: 1.0,
@@ -228,7 +269,11 @@ export class UnifiedAttendanceService {
 
       // Calculate timing information using Enterprise Time Service
       const timingInfo = await this.calculateTimingInfo(user, new Date());
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Handle photo upload to Cloudinary if provided
       let cloudinaryImageUrl = request.imageUrl;
       if (request.imageUrl && request.imageUrl.startsWith('data:')) {
@@ -238,7 +283,11 @@ export class UnifiedAttendanceService {
           request.userId,
           new Date()
         );
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         if (uploadResult.success) {
           cloudinaryImageUrl = uploadResult.url;
           console.log('ATTENDANCE: Photo uploaded successfully:', uploadResult.url);
@@ -247,7 +296,11 @@ export class UnifiedAttendanceService {
           // Continue without failing the check-in - photo upload is not critical
         }
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Create attendance record
       const attendanceData = {
         userId: request.userId,
@@ -264,7 +317,11 @@ export class UnifiedAttendanceService {
         breakHours: 0,
         isWithinOfficeRadius: true, // Simplified - no office restrictions
         remarks: `Attendance recorded with location verification`,
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         // Enhanced metadata for enterprise tracking
         locationAccuracy: request.accuracy,
         locationValidationType: locationValidation.validationType,
@@ -273,7 +330,11 @@ export class UnifiedAttendanceService {
         distanceFromOffice: locationValidation.distance,
         isManualOT: false,
         otStatus: 'not_started' as const,
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         // Optional fields
         ...(request.customerName && { customerName: request.customerName }),
         ...(cloudinaryImageUrl && { checkInImageUrl: cloudinaryImageUrl })
@@ -295,7 +356,11 @@ export class UnifiedAttendanceService {
       });
 
       const actualCheckInTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       return {
         success: true,
         attendanceId: newAttendance.id,
@@ -367,18 +432,30 @@ export class UnifiedAttendanceService {
       // Get user for department timing
       const user = await storage.getUser(request.userId);
       const { EnterpriseTimeService } = await import('./enterprise-time-service');
+<<<<<<< HEAD
 
       // Calculate comprehensive time metrics using Enterprise Time Service
       const checkOutTime = new Date();
       const checkInTime = attendance.checkInTime ? new Date(attendance.checkInTime) : new Date();
 
+=======
+      
+      // Calculate comprehensive time metrics using Enterprise Time Service
+      const checkOutTime = new Date();
+      const checkInTime = attendance.checkInTime ? new Date(attendance.checkInTime) : new Date();
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       const timeMetrics = await EnterpriseTimeService.calculateTimeMetrics(
         request.userId,
         user?.department || 'operations',
         checkInTime,
         checkOutTime
       );
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       const { workingHours, overtimeHours } = timeMetrics;
 
       // Update attendance record
@@ -445,7 +522,11 @@ export class UnifiedAttendanceService {
           recommendations: ['Please check in from office location', 'Contact your supervisor for remote work approval']
         };
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       if (!request.reason || request.reason.trim().length < 10) {
         return {
           isValid: false,
@@ -464,7 +545,11 @@ export class UnifiedAttendanceService {
           recommendations: ['Please check in from office location', 'Contact your supervisor for field work approval']
         };
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       if (!request.customerName || request.customerName.trim().length < 3) {
         return {
           isValid: false,
@@ -472,7 +557,11 @@ export class UnifiedAttendanceService {
           recommendations: ['Provide the customer or site name', 'Include project or visit details in reason']
         };
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       if (!request.imageUrl) {
         return {
           isValid: false,
@@ -537,6 +626,7 @@ export class UnifiedAttendanceService {
     expectedCheckInTime: string;
   }> {
     const { EnterpriseTimeService } = await import('./enterprise-time-service');
+<<<<<<< HEAD
 
     const department = user?.department || 'operations';
     const timing = await EnterpriseTimeService.getDepartmentTiming(department);
@@ -547,6 +637,18 @@ export class UnifiedAttendanceService {
 
     const isLate = checkInTime > expectedTime;
     const lateMinutes = isLate ?
+=======
+    
+    const department = user?.department || 'operations';
+    const timing = await EnterpriseTimeService.getDepartmentTiming(department);
+    
+    // Parse expected check-in time for today
+    const today = new Date(checkInTime);
+    const expectedTime = this.parseTime12ToDate(timing.checkInTime, today);
+    
+    const isLate = checkInTime > expectedTime;
+    const lateMinutes = isLate ? 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       Math.floor((checkInTime.getTime() - expectedTime.getTime()) / (1000 * 60)) : 0;
 
     return {
@@ -563,7 +665,11 @@ export class UnifiedAttendanceService {
     console.warn('DEPRECATED: Use EnterpriseTimeService.parseTimeToDate instead');
     const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
     const match = timeStr.match(timeRegex);
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     if (!match) {
       console.error('UNIFIED_ATTENDANCE: Invalid time format:', timeStr);
       // Return safe fallback
@@ -642,7 +748,11 @@ export class UnifiedAttendanceService {
   static async generateAttendanceMetrics(userId: string, dateRange?: { start: Date; end: Date }) {
     try {
       const attendanceRecords = await storage.getAttendance(userId);
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       if (!Array.isArray(attendanceRecords)) {
         console.error('ATTENDANCE METRICS: Expected array, got:', typeof attendanceRecords);
         return {
@@ -655,6 +765,7 @@ export class UnifiedAttendanceService {
           records: []
         };
       }
+<<<<<<< HEAD
 
       // Filter by date range if provided
       const filteredRecords = dateRange
@@ -662,13 +773,26 @@ export class UnifiedAttendanceService {
           const checkInDate = new Date(record.checkInTime);
           return checkInDate >= dateRange.start && checkInDate <= dateRange.end;
         })
+=======
+      
+      // Filter by date range if provided
+      const filteredRecords = dateRange 
+        ? attendanceRecords.filter((record: any) => {
+            const checkInDate = new Date(record.checkInTime);
+            return checkInDate >= dateRange.start && checkInDate <= dateRange.end;
+          })
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         : attendanceRecords;
 
       const totalDays = filteredRecords.length;
       const totalWorkingHours = filteredRecords.reduce((sum: number, record: any) => sum + (record.workingHours || 0), 0);
       const totalOvertimeHours = filteredRecords.reduce((sum: number, record: any) => sum + (record.overtimeHours || 0), 0);
       const lateArrivals = filteredRecords.filter((record: any) => record.isLate).length;
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       return {
         totalDays,
         totalWorkingHours: Math.round(totalWorkingHours * 100) / 100,
@@ -702,7 +826,11 @@ export class UnifiedAttendanceService {
     workingHours: number;
   } {
     console.warn('DEPRECATED: Using legacy getDepartmentTiming - migrate to EnterpriseTimeService');
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     // Legacy fallback with 12-hour format
     const defaultTimings = {
       'operations': { checkInTime: '9:00 AM', checkOutTime: '6:00 PM', workingHours: 8 },

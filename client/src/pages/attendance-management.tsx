@@ -20,9 +20,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+<<<<<<< HEAD
 import {
   CalendarIcon, Search, Loader2, FileText, BarChart, UserCheck, Clock,
   Plus, Edit, Trash2, Eye, Download, Upload, Settings, Users,
+=======
+import { 
+  CalendarIcon, Search, Loader2, FileText, BarChart, UserCheck, Clock, 
+  Plus, Edit, Trash2, Eye, Download, Upload, Settings, Users, 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   CheckCircle, XCircle, AlertCircle, MapPin, Camera, TrendingUp
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -38,6 +44,7 @@ export default function AttendanceManagement() {
   const { user } = useAuthContext();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+<<<<<<< HEAD
 
   // Undo management
   const { actions, addAction, executeUndo, clearActions } = useUndoManager();
@@ -45,6 +52,15 @@ export default function AttendanceManagement() {
   // Offline handling
   const offlineHandler = useOfflineHandler();
 
+=======
+  
+  // Undo management
+  const { actions, addAction, executeUndo, clearActions } = useUndoManager();
+  
+  // Offline handling
+  const offlineHandler = useOfflineHandler();
+  
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -52,7 +68,11 @@ export default function AttendanceManagement() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
@@ -110,7 +130,11 @@ export default function AttendanceManagement() {
   const handleDatePreset = (preset: string) => {
     const today = new Date();
     let newDate = new Date();
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     switch (preset) {
       case 'today':
         newDate = today;
@@ -128,7 +152,11 @@ export default function AttendanceManagement() {
       default:
         newDate = today;
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     setSelectedDate(newDate);
   };
 
@@ -151,11 +179,19 @@ export default function AttendanceManagement() {
       const dateParam = selectedDate.toISOString().split('T')[0];
       const attendanceResponse = await apiRequest(`/api/attendance?date=${dateParam}`, 'GET');
       const attendanceData = await attendanceResponse.json();
+<<<<<<< HEAD
 
       // Enrich with user details
       const usersResponse = await apiRequest('/api/users', 'GET');
       const users = await usersResponse.json();
 
+=======
+      
+      // Enrich with user details
+      const usersResponse = await apiRequest('/api/users', 'GET');
+      const users = await usersResponse.json();
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       return attendanceData.map((record: any) => {
         const userDetails = users.find((u: any) => u.id === record.userId);
         return {
@@ -199,7 +235,10 @@ export default function AttendanceManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+<<<<<<< HEAD
       queryClient.invalidateQueries({ queryKey: ['/api/attendance/incomplete'] });
+=======
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       refetchLive();
       refetchDaily();
       setShowEditModal(false);
@@ -219,10 +258,17 @@ export default function AttendanceManagement() {
 
   // Enhanced bulk actions mutation with undo capabilities
   const bulkActionMutation = useMutation({
+<<<<<<< HEAD
     mutationFn: async ({ action, attendanceIds, data }: {
       action: string;
       attendanceIds: string[];
       data?: any
+=======
+    mutationFn: async ({ action, attendanceIds, data }: { 
+      action: string; 
+      attendanceIds: string[]; 
+      data?: any 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     }) => {
       return await callWithOfflineHandling(
         async () => {
@@ -237,15 +283,25 @@ export default function AttendanceManagement() {
     },
     onSuccess: (result, variables) => {
       const { action, attendanceIds } = variables;
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Add undo action for bulk operations
       if (action === 'approve' || action === 'reject' || action === 'update_status') {
         addAction({
           description: `${getUserFriendlyMessage(action, 'attendance')} ${attendanceIds.length} attendance records`,
           undoFunction: async () => {
+<<<<<<< HEAD
             await apiRequest('/api/attendance/bulk-undo', 'POST', {
               actionId: result.actionId,
               attendanceIds
+=======
+            await apiRequest('/api/attendance/bulk-undo', 'POST', { 
+              actionId: result.actionId,
+              attendanceIds 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
             });
             queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
             refetchLive();
@@ -256,7 +312,11 @@ export default function AttendanceManagement() {
           canUndo: true
         });
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
       refetchLive();
       refetchDaily();
@@ -278,29 +338,48 @@ export default function AttendanceManagement() {
   const isIncompleteRecord = (record: any) => {
     // Record is incomplete if there's check-in but no check-out time
     // Also check for empty strings and null values
+<<<<<<< HEAD
     return record.checkInTime &&
       record.checkInTime !== '' &&
       (!record.checkOutTime || record.checkOutTime === '');
+=======
+    return record.checkInTime && 
+           record.checkInTime !== '' && 
+           (!record.checkOutTime || record.checkOutTime === '');
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   };
 
   // Helper function to get suggested checkout time for department
   const getSuggestedCheckoutTime = (record: any) => {
     if (!record.userDepartment) return "6:00 PM";
+<<<<<<< HEAD
 
     // Get department closing time (default to 6:00 PM)
     const departmentClosingTimes = {
       'technical': '6:00 PM',
       'marketing': '6:00 PM',
+=======
+    
+    // Get department closing time (default to 6:00 PM)
+    const departmentClosingTimes = {
+      'technical': '6:00 PM',
+      'marketing': '6:00 PM', 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       'admin': '5:30 PM',
       'hr': '5:30 PM',
       'sales': '7:00 PM'
     };
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     return departmentClosingTimes[record.userDepartment as keyof typeof departmentClosingTimes] || "6:00 PM";
   };
 
   // Filter attendance records
   const filteredDailyAttendance = dailyAttendance.filter((record: any) => {
+<<<<<<< HEAD
     const matchesSearch = !searchQuery ||
       record.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.userEmail?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -328,6 +407,23 @@ export default function AttendanceManagement() {
   // Complete records are those in filteredDailyAttendance but not in incompleteRecords
   const incompleteRecordIds = new Set(incompleteRecords.map((r: any) => r.id));
   const completeRecords = filteredDailyAttendance.filter((record: any) => !incompleteRecordIds.has(record.id));
+=======
+    const matchesSearch = !searchQuery || 
+      record.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      record.userEmail?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesDepartment = selectedDepartment === "all" || 
+      record.userDepartment === selectedDepartment;
+    
+    const matchesStatus = selectedStatus === "all" || record.status === selectedStatus;
+    
+    return matchesSearch && matchesDepartment && matchesStatus;
+  });
+
+  // Separate incomplete records for easy identification
+  const incompleteRecords = filteredDailyAttendance.filter((record: any) => isIncompleteRecord(record));
+  const completeRecords = filteredDailyAttendance.filter((record: any) => !isIncompleteRecord(record));
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
 
   // Calculate KPI metrics
   const kpiMetrics = {
@@ -341,19 +437,31 @@ export default function AttendanceManagement() {
   const trendData = useMemo(() => {
     const today = new Date();
     const data = [];
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const dateKey = date.toISOString().split('T')[0];
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Count actual attendance records for this date
       const recordsForDate = dailyAttendance.filter((record: any) => {
         const recordDate = new Date(record.date).toISOString().split('T')[0];
         return recordDate === dateKey;
       });
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       data.push({
         date: dateStr,
         present: recordsForDate.filter((r: any) => r.status === 'present').length,
@@ -373,7 +481,11 @@ export default function AttendanceManagement() {
         count: dept.present + dept.absent + dept.late,
       }));
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     // Fallback: Calculate from daily attendance if department stats aren't available
     const deptCounts: { [key: string]: number } = {};
     dailyAttendance.forEach((record: any) => {
@@ -422,12 +534,21 @@ export default function AttendanceManagement() {
 
   // Filter live attendance - Fix TypeScript error
   const filteredLiveAttendance = (Array.isArray(liveAttendance) ? liveAttendance : []).filter((record: any) => {
+<<<<<<< HEAD
     const matchesSearch = !searchQuery ||
       record.userName.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesDepartment = selectedDepartment === "all" ||
       record.userDepartment === selectedDepartment;
 
+=======
+    const matchesSearch = !searchQuery || 
+      record.userName.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesDepartment = selectedDepartment === "all" || 
+      record.userDepartment === selectedDepartment;
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     return matchesSearch && matchesDepartment;
   });
 
@@ -435,6 +556,7 @@ export default function AttendanceManagement() {
   const handleEditAttendance = (record: any) => {
     const isIncomplete = isIncompleteRecord(record);
     const suggestedCheckout = isIncomplete ? getSuggestedCheckoutTime(record) : '';
+<<<<<<< HEAD
 
     setEditingAttendance(record);
     setEditForm({
@@ -445,6 +567,18 @@ export default function AttendanceManagement() {
       checkOutTime: record.checkOutTime ?
         (typeof record.checkOutTime === 'string' ?
           new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) :
+=======
+    
+    setEditingAttendance(record);
+    setEditForm({
+      checkInTime: record.checkInTime ? 
+        (typeof record.checkInTime === 'string' ? 
+          new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 
+          record.checkInTime) : '',
+      checkOutTime: record.checkOutTime ? 
+        (typeof record.checkOutTime === 'string' ? 
+          new Date(record.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           record.checkOutTime) : suggestedCheckout,
       status: record.status || 'present',
       overtimeHours: record.overtimeHours || 0,
@@ -456,11 +590,16 @@ export default function AttendanceManagement() {
   // Quick fix for incomplete checkout
   const handleQuickFixCheckout = (record: any) => {
     const suggestedTime = getSuggestedCheckoutTime(record);
+<<<<<<< HEAD
 
     // **SIMPLIFIED: Just send the time - backend will merge with original date**
     // Backend's mergeDateAndTime() handles parsing and preserves the original date
     const checkOutDate = new Date(record.checkInTime || record.date);
 
+=======
+    const checkOutDate = new Date(record.date);
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     // Parse suggested time (e.g., "6:00 PM")
     const timeMatch = suggestedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (timeMatch) {
@@ -472,11 +611,18 @@ export default function AttendanceManagement() {
     }
 
     const updateData = {
+<<<<<<< HEAD
       checkOutTime: checkOutDate.toISOString(), // Send ISO string - backend extracts time
       status: 'present',
       remarks: `Auto-corrected checkout at department closing time (${suggestedTime}) by admin`,
       approvedBy: user?.uid
       // **NO 'date' field - backend enforces immutability**
+=======
+      checkOutTime: checkOutDate.toISOString(),
+      status: 'present',
+      remarks: `Auto-corrected checkout at department closing time (${suggestedTime}) by admin`,
+      approvedBy: user?.uid
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     };
 
     updateAttendanceMutation.mutate({
@@ -488,7 +634,11 @@ export default function AttendanceManagement() {
   // Handle save edit
   const handleSaveEdit = () => {
     if (!editingAttendance) return;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     const updateData: any = {
       status: editForm.status,
       overtimeHours: editForm.overtimeHours,
@@ -547,8 +697,13 @@ export default function AttendanceManagement() {
         'Overtime Hours': record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '0h',
         'Status': record.status || 'Unknown',
         'Late Minutes': record.lateMinutes || 0,
+<<<<<<< HEAD
         'Attendance Type': record.attendanceType === 'field_work' ? 'Field Work' :
           record.attendanceType === 'remote' ? 'Remote Work' : 'Office',
+=======
+        'Attendance Type': record.attendanceType === 'field_work' ? 'Field Work' : 
+                           record.attendanceType === 'remote' ? 'Remote Work' : 'Office',
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         'Customer Name': record.customerName || '',
         'Location': record.location || '',
         'Remarks': record.remarks || ''
@@ -611,23 +766,40 @@ export default function AttendanceManagement() {
       });
       return;
     }
+<<<<<<< HEAD
 
     setImageLoading(true);
     setShowImageModal(true);
     setSelectedImage(null); // Reset previous image
 
+=======
+    
+    setImageLoading(true);
+    setShowImageModal(true);
+    setSelectedImage(null); // Reset previous image
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     // Prepare image metadata
     const imageData = {
       url: record.checkInImageUrl,
       employeeName: record.userName || 'Unknown Employee',
       date: formatDate(new Date(record.date)),
       time: record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'Unknown Time',
+<<<<<<< HEAD
       attendanceType: record.attendanceType === 'field_work' ? 'Field Work' :
         record.attendanceType === 'remote' ? 'Remote Work' : 'Office',
       customerName: record.customerName,
       location: record.location
     };
 
+=======
+      attendanceType: record.attendanceType === 'field_work' ? 'Field Work' : 
+                     record.attendanceType === 'remote' ? 'Remote Work' : 'Office',
+      customerName: record.customerName,
+      location: record.location
+    };
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     // Preload image with timeout for better UX
     const img = new Image();
     const timeout = setTimeout(() => {
@@ -638,13 +810,21 @@ export default function AttendanceManagement() {
         variant: "destructive",
       });
     }, 10000); // 10 second timeout
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     img.onload = () => {
       clearTimeout(timeout);
       setSelectedImage(imageData);
       setImageLoading(false);
     };
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     img.onerror = () => {
       clearTimeout(timeout);
       setImageLoading(false);
@@ -655,7 +835,11 @@ export default function AttendanceManagement() {
         variant: "destructive",
       });
     };
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     img.src = record.checkInImageUrl;
   };
 
@@ -684,7 +868,11 @@ export default function AttendanceManagement() {
   const getStatusBadge = (record: any) => {
     const status = record?.status;
     const isIncomplete = isIncompleteRecord(record);
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     // Handle incomplete records (missing checkout)
     if (isIncomplete) {
       return (
@@ -714,6 +902,7 @@ export default function AttendanceManagement() {
       holiday: "bg-blue-100 text-blue-800 border-blue-200",
       half_day: "bg-purple-100 text-purple-800 border-purple-200"
     };
+<<<<<<< HEAD
 
     return (
       <Badge
@@ -735,6 +924,29 @@ export default function AttendanceManagement() {
                 status === 'leave' ? '#a16207' :
                   status === 'holiday' ? '#1e40af' :
                     status === 'half_day' ? '#7c3aed' : '#374151'
+=======
+    
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn(
+          "font-medium capitalize border", 
+          styles[status as keyof typeof styles] || "bg-gray-100 text-gray-800 border-gray-200"
+        )}
+        style={{
+          backgroundColor: status === 'present' ? '#dcfce7' : 
+                          status === 'absent' ? '#fee2e2' :
+                          status === 'late' ? '#fed7aa' :
+                          status === 'leave' ? '#fef3c7' :
+                          status === 'holiday' ? '#dbeafe' :
+                          status === 'half_day' ? '#e9d5ff' : '#f3f4f6',
+          color: status === 'present' ? '#166534' : 
+                status === 'absent' ? '#991b1b' :
+                status === 'late' ? '#c2410c' :
+                status === 'leave' ? '#a16207' :
+                status === 'holiday' ? '#1e40af' :
+                status === 'half_day' ? '#7c3aed' : '#374151'
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         }}
       >
         {status.replace('_', ' ')}
@@ -769,7 +981,11 @@ export default function AttendanceManagement() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
+<<<<<<< HEAD
             <Button
+=======
+            <Button 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
               onClick={() => setShowPolicyModal(true)}
               variant="outline"
               className="gap-2"
@@ -779,7 +995,11 @@ export default function AttendanceManagement() {
               <span className="hidden sm:inline">Policies</span>
             </Button>
             <Link href="/attendance-reports">
+<<<<<<< HEAD
               <Button
+=======
+              <Button 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                 variant="outline"
                 className="gap-2 w-full sm:w-auto"
                 data-testid="link-reports"
@@ -853,7 +1073,11 @@ export default function AttendanceManagement() {
               )}
             </TabsTrigger>
           </TabsList>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
             <div className="relative w-full sm:w-64">
@@ -865,7 +1089,11 @@ export default function AttendanceManagement() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="All Departments" />
@@ -923,6 +1151,7 @@ export default function AttendanceManagement() {
           </div>
 
           {/* Dashboard Tab - New Professional Overview */}
+<<<<<<< HEAD
           <TabsContent value="dashboard" className="space-y-6">
             {/* KPI Cards */}
             <KPICards
@@ -978,11 +1207,154 @@ export default function AttendanceManagement() {
                                 <div className="text-xs text-gray-500">Total</div>
                               </div>
                             </div>
+=======
+        <TabsContent value="dashboard" className="space-y-6">
+          {/* KPI Cards */}
+          <KPICards
+            totalPresent={kpiMetrics.totalPresent}
+            totalAbsent={kpiMetrics.totalAbsent}
+            totalLate={kpiMetrics.totalLate}
+            totalIncomplete={kpiMetrics.totalIncomplete}
+          />
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            <AttendanceTrendChart data={trendData} />
+            <DepartmentBreakdownChart data={departmentData} />
+          </div>
+
+          {/* Department Stats Quick View */}
+          {departmentStats.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Department Summary
+                </CardTitle>
+                <CardDescription>Real-time attendance status by department</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {departmentStats.map((dept: any) => (
+                    <Card key={dept.department} className="border-2">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <h3 className="font-semibold text-base capitalize">{dept.department}</h3>
+                          <div className="flex justify-between items-center">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 bg-green-500 rounded-full" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Present:</span>
+                                <span className="font-semibold text-green-600">{dept.present}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 bg-red-500 rounded-full" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Absent:</span>
+                                <span className="font-semibold text-red-600">{dept.absent}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 bg-amber-500 rounded-full" />
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Late:</span>
+                                <span className="font-semibold text-amber-600">{dept.late}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold">{dept.present + dept.absent + dept.late}</div>
+                              <div className="text-xs text-gray-500">Total</div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Live Tracking Tab */}
+        <TabsContent value="live" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                Live Attendance Tracking
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Real-time monitoring of employee check-ins and check-outs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLive ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <p className="text-muted-foreground mt-2">Loading live data...</p>
+                </div>
+              ) : filteredLiveAttendance.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No active attendance records found</p>
+                </div>
+              ) : (
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block md:hidden space-y-4">
+                    {filteredLiveAttendance.map((record: any) => (
+                      <Card key={record.id} className="border shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-medium text-base">{record.userName}</p>
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  {record.userDepartment?.toUpperCase() || 'N/A'}
+                                </Badge>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Check In</p>
+                                <p className="font-medium mt-1">
+                                  {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Location</p>
+                                <p className="font-medium mt-1 capitalize">{record.location || 'office'}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t">
+                              {getStatusBadge(record)}
+                            </div>
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                           </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
+<<<<<<< HEAD
                 </CardContent>
               </Card>
             )}
@@ -1367,18 +1739,29 @@ export default function AttendanceManagement() {
                   </div>
 
                   <div className="overflow-x-auto">
+=======
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Employee</TableHead>
                           <TableHead>Department</TableHead>
                           <TableHead>Check In</TableHead>
+<<<<<<< HEAD
                           <TableHead>Missing Checkout</TableHead>
                           <TableHead>Suggested Time</TableHead>
+=======
+                          <TableHead>Location</TableHead>
+                          <TableHead>Status</TableHead>
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
+<<<<<<< HEAD
                         {incompleteRecords.map((record: any) => (
                           <TableRow key={record.id} className="bg-amber-50/30">
                             <TableCell className="font-medium">
@@ -1386,11 +1769,18 @@ export default function AttendanceManagement() {
                                 <div>{record.userName}</div>
                                 <div className="text-xs text-gray-500">{record.userEmail}</div>
                               </div>
+=======
+                        {filteredLiveAttendance.map((record: any) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="font-medium">
+                              {record.userName}
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                             </TableCell>
                             <TableCell className="capitalize">
                               {record.userDepartment || 'N/A'}
                             </TableCell>
                             <TableCell>
+<<<<<<< HEAD
                               <TimeDisplay time={record.checkInTime} format12Hour={true} />
                             </TableCell>
                             <TableCell>
@@ -1404,12 +1794,22 @@ export default function AttendanceManagement() {
                                 <Clock className="h-3 w-3 mr-1" />
                                 {getSuggestedCheckoutTime(record)}
                               </Badge>
+=======
+                              {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {record.location || 'office'}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(record)}
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
+<<<<<<< HEAD
                                   onClick={() => handleQuickFixCheckout(record)}
                                   disabled={updateAttendanceMutation.isPending}
                                   className="border-green-300 text-green-700 hover:bg-green-100"
@@ -1426,6 +1826,22 @@ export default function AttendanceManagement() {
                                 >
                                   <Edit className="h-3 w-3" />
                                 </Button>
+=======
+                                  onClick={() => handleEditAttendance(record)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-3 w-3" />
+                                  </Button>
+                                )}
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1433,6 +1849,7 @@ export default function AttendanceManagement() {
                       </TableBody>
                     </Table>
                   </div>
+<<<<<<< HEAD
                 </CardContent>
               </Card>
             )}
@@ -1448,6 +1865,128 @@ export default function AttendanceManagement() {
               <CardContent>
                 {filteredDailyAttendance.length > 0 ? (
                   <div className="overflow-x-auto">
+=======
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Daily Records Tab */}
+        <TabsContent value="daily" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl">Attendance Records - {formatDate(selectedDate)}</CardTitle>
+              <CardDescription className="text-sm">
+                Comprehensive view of all employee attendance for the selected date
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingDaily ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <p className="text-muted-foreground mt-2">Loading attendance data...</p>
+                </div>
+              ) : filteredDailyAttendance.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No attendance records found for this date</p>
+                </div>
+              ) : (
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block md:hidden space-y-4">
+                    {filteredDailyAttendance.map((record: any) => (
+                      <Card key={record.id} className={`border shadow-sm ${isIncompleteRecord(record) ? 'border-amber-300 bg-amber-50/30' : ''}`}>
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-medium text-base">{record.userName}</p>
+                                <p className="text-sm text-muted-foreground">{record.userEmail}</p>
+                                <Badge variant="outline" className="text-xs mt-1">
+                                  {record.userDepartment?.toUpperCase() || 'N/A'}
+                                </Badge>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                  title="Edit Attendance"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Check In</p>
+                                <p className="font-medium mt-1">
+                                  {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Check Out</p>
+                                <p className="font-medium mt-1">
+                                  {record.checkOutTime ? (
+                                    <TimeDisplay time={record.checkOutTime} format12Hour={true} />
+                                  ) : (
+                                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                                      Missing
+                                    </Badge>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Working Hours</p>
+                                <p className="font-medium mt-1">
+                                  {record.workingHours ? (
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {record.workingHours.toFixed(1)}h
+                                    </div>
+                                  ) : '-'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Overtime</p>
+                                <p className="font-medium mt-1">
+                                  {record.overtimeHours && record.overtimeHours > 0 ? (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {record.overtimeHours.toFixed(1)}h OT
+                                    </Badge>
+                                  ) : '-'}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t">
+                              {getStatusBadge(record)}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1455,6 +1994,11 @@ export default function AttendanceManagement() {
                           <TableHead>Department</TableHead>
                           <TableHead>Check In</TableHead>
                           <TableHead>Check Out</TableHead>
+<<<<<<< HEAD
+=======
+                          <TableHead>Working Hours</TableHead>
+                          <TableHead>Overtime</TableHead>
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                           <TableHead>Status</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
@@ -1472,6 +2016,7 @@ export default function AttendanceManagement() {
                               {record.userDepartment || 'N/A'}
                             </TableCell>
                             <TableCell>
+<<<<<<< HEAD
                               {record.checkInTime ? (
                                 <TimeDisplay time={record.checkInTime} format12Hour={true} />
                               ) : (
@@ -1503,12 +2048,58 @@ export default function AttendanceManagement() {
                                 <Edit className="h-3 w-3 mr-1" />
                                 Edit
                               </Button>
+=======
+                              {record.checkInTime ? <TimeDisplay time={record.checkInTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkOutTime ? <TimeDisplay time={record.checkOutTime} format12Hour={true} /> : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.workingHours ? `${record.workingHours.toFixed(1)}h` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.overtimeHours ? `${record.overtimeHours.toFixed(1)}h` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(record)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditAttendance(record)}
+                                  title="Edit Attendance"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {record.checkInImageUrl && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleViewImage(record)}
+                                    title="View Field Work Photo"
+                                  >
+                                    <Camera className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleViewDetails(record)}
+                                  title="View Details"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </div>
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                             </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
+<<<<<<< HEAD
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1518,6 +2109,205 @@ export default function AttendanceManagement() {
               </CardContent>
             </Card>
           </TabsContent>
+=======
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
+
+        {/* Corrections Tab - Now includes incomplete records */}
+        <TabsContent value="corrections" className="space-y-4">
+          {/* Incomplete Records Section */}
+          {incompleteRecords.length > 0 && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-800">
+                  <AlertCircle className="h-5 w-5" />
+                  Incomplete Records - Urgent Action Required
+                </CardTitle>
+                <CardDescription className="text-amber-700">
+                  {incompleteRecords.length} employee(s) forgot to check out in the selected date range. 
+                  These records need immediate correction to maintain data accuracy.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex justify-between items-center">
+                  <p className="text-sm text-amber-700">
+                    Click "Quick Fix" to use department closing times, or "Edit" for custom times.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      incompleteRecords.forEach((record: any) => handleQuickFixCheckout(record));
+                    }}
+                    disabled={updateAttendanceMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {updateAttendanceMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Clock className="h-4 w-4 mr-2" />
+                    )}
+                    Quick Fix All
+                  </Button>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Check In</TableHead>
+                        <TableHead>Missing Checkout</TableHead>
+                        <TableHead>Suggested Time</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incompleteRecords.map((record: any) => (
+                        <TableRow key={record.id} className="bg-amber-50/30">
+                          <TableCell className="font-medium">
+                            <div>
+                              <div>{record.userName}</div>
+                              <div className="text-xs text-gray-500">{record.userEmail}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {record.userDepartment || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Missing
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {getSuggestedCheckoutTime(record)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleQuickFixCheckout(record)}
+                                disabled={updateAttendanceMutation.isPending}
+                                className="border-green-300 text-green-700 hover:bg-green-100"
+                                title="Quick fix with suggested time"
+                              >
+                                <Clock className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditAttendance(record)}
+                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                title="Edit with custom time"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* General Corrections Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>General Attendance Corrections</CardTitle>
+              <CardDescription>
+                All attendance records for selected date range - Edit any record as needed
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {filteredDailyAttendance.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Check In</TableHead>
+                        <TableHead>Check Out</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDailyAttendance.map((record: any) => (
+                        <TableRow key={record.id} className={isIncompleteRecord(record) ? "bg-amber-50/30" : ""}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div>{record.userName}</div>
+                              <div className="text-xs text-gray-500">{record.userEmail}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {record.userDepartment || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {record.checkInTime ? (
+                              <TimeDisplay time={record.checkInTime} format12Hour={true} />
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-50 text-gray-500">No check-in</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {record.checkOutTime ? (
+                              <TimeDisplay time={record.checkOutTime} format12Hour={true} />
+                            ) : (
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Missing
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={record.status === 'present' ? 'default' : record.status === 'absent' ? 'destructive' : 'secondary'}>
+                              {record.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditAttendance(record)}
+                              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No attendance records found for selected date range</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
 
         </Tabs>
       </div>
@@ -1534,7 +2324,11 @@ export default function AttendanceManagement() {
               {selectedImage ? `Photo taken by ${selectedImage.employeeName} on ${selectedImage.date} at ${selectedImage.time}` : 'Loading...'}
             </DialogDescription>
           </DialogHeader>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Image Container */}
             <div className="flex-1 relative bg-gray-50 flex items-center justify-center overflow-hidden">
@@ -1569,7 +2363,11 @@ export default function AttendanceManagement() {
                 </div>
               )}
             </div>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
             {/* Image Metadata */}
             {selectedImage && (
               <div className="p-6 border-t bg-white">
@@ -1596,7 +2394,11 @@ export default function AttendanceManagement() {
                     </div>
                   )}
                 </div>
+<<<<<<< HEAD
 
+=======
+                
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                 <div className="flex justify-between items-center mt-4 pt-4 border-t">
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <CheckCircle className="h-3 w-3" />
@@ -1664,7 +2466,11 @@ export default function AttendanceManagement() {
               )}
             </DialogDescription>
           </DialogHeader>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1718,7 +2524,11 @@ export default function AttendanceManagement() {
                 )}
               </div>
             </div>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
             <div>
               <Label htmlFor="status">Status</Label>
               <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
@@ -1735,7 +2545,11 @@ export default function AttendanceManagement() {
                 </SelectContent>
               </Select>
             </div>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
             <div>
               <Label htmlFor="overtimeHours">Overtime Hours</Label>
               <Input
@@ -1747,7 +2561,11 @@ export default function AttendanceManagement() {
                 onChange={(e) => setEditForm({ ...editForm, overtimeHours: parseFloat(e.target.value) || 0 })}
               />
             </div>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
             <div>
               <Label htmlFor="remarks">Remarks</Label>
               <Textarea
@@ -1758,12 +2576,20 @@ export default function AttendanceManagement() {
               />
             </div>
           </div>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditModal(false)}>
               Cancel
             </Button>
+<<<<<<< HEAD
             <Button
+=======
+            <Button 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
               onClick={handleSaveEdit}
               disabled={updateAttendanceMutation.isPending}
             >
@@ -1786,7 +2612,11 @@ export default function AttendanceManagement() {
               {selectedAttendanceRecord && `Complete details for ${selectedAttendanceRecord.userName} on ${formatDate(new Date(selectedAttendanceRecord.date))}`}
             </DialogDescription>
           </DialogHeader>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           {selectedAttendanceRecord && (
             <div className="space-y-6">
               {/* Employee Information */}
@@ -1850,8 +2680,13 @@ export default function AttendanceManagement() {
                     <div>
                       <Label className="text-xs text-gray-500 uppercase tracking-wide">Working Hours</Label>
                       <p className="font-medium">
+<<<<<<< HEAD
                         {selectedAttendanceRecord.workingHours ?
                           `${selectedAttendanceRecord.workingHours.toFixed(1)}h` :
+=======
+                        {selectedAttendanceRecord.workingHours ? 
+                          `${selectedAttendanceRecord.workingHours.toFixed(1)}h` : 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                           `${calculateTotalTime(selectedAttendanceRecord).toFixed(1)}h`
                         }
                       </p>
@@ -1859,13 +2694,21 @@ export default function AttendanceManagement() {
                     <div>
                       <Label className="text-xs text-gray-500 uppercase tracking-wide">Overtime Hours</Label>
                       <p className="font-medium">
+<<<<<<< HEAD
                         {selectedAttendanceRecord.overtimeHours ?
+=======
+                        {selectedAttendanceRecord.overtimeHours ? 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                           `${selectedAttendanceRecord.overtimeHours.toFixed(1)}h` : '0h'
                         }
                       </p>
                     </div>
                   </div>
+<<<<<<< HEAD
 
+=======
+                  
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                     <div>
                       <Label className="text-xs text-gray-500 uppercase tracking-wide">Status</Label>
@@ -1876,7 +2719,11 @@ export default function AttendanceManagement() {
                     <div>
                       <Label className="text-xs text-gray-500 uppercase tracking-wide">Late Minutes</Label>
                       <p className="font-medium">
+<<<<<<< HEAD
                         {selectedAttendanceRecord.lateMinutes ?
+=======
+                        {selectedAttendanceRecord.lateMinutes ? 
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                           `${selectedAttendanceRecord.lateMinutes} minutes` : 'On Time'
                         }
                       </p>
@@ -1884,8 +2731,13 @@ export default function AttendanceManagement() {
                     <div>
                       <Label className="text-xs text-gray-500 uppercase tracking-wide">Attendance Type</Label>
                       <Badge variant="outline" className="mt-1">
+<<<<<<< HEAD
                         {selectedAttendanceRecord.attendanceType === 'field_work' ? 'Field Work' :
                           selectedAttendanceRecord.attendanceType === 'remote' ? 'Remote Work' : 'Office'}
+=======
+                        {selectedAttendanceRecord.attendanceType === 'field_work' ? 'Field Work' : 
+                         selectedAttendanceRecord.attendanceType === 'remote' ? 'Remote Work' : 'Office'}
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                       </Badge>
                     </div>
                   </div>
@@ -1912,7 +2764,11 @@ export default function AttendanceManagement() {
               </Card>
             </div>
           )}
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           <DialogFooter className="sticky bottom-0 bg-white border-t pt-4">
             <Button
               variant="outline"
@@ -1940,7 +2796,11 @@ export default function AttendanceManagement() {
               Configure attendance policies, working hours, and system settings
             </DialogDescription>
           </DialogHeader>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           <div className="space-y-6">
             {/* Current Policies */}
             <Card>
@@ -2042,7 +2902,11 @@ export default function AttendanceManagement() {
                       </Button>
                     </div>
                   </div>
+<<<<<<< HEAD
 
+=======
+                  
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                   <div className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <h4 className="font-medium">Overtime Threshold</h4>
@@ -2055,7 +2919,11 @@ export default function AttendanceManagement() {
                       </Button>
                     </div>
                   </div>
+<<<<<<< HEAD
 
+=======
+                  
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                   <div className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <h4 className="font-medium">Photo Verification</h4>
@@ -2068,7 +2936,11 @@ export default function AttendanceManagement() {
                       </Button>
                     </div>
                   </div>
+<<<<<<< HEAD
 
+=======
+                  
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                   <div className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <h4 className="font-medium">Location Verification</h4>
@@ -2112,7 +2984,11 @@ export default function AttendanceManagement() {
               </CardContent>
             </Card>
           </div>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           <DialogFooter className="sticky bottom-0 bg-white border-t pt-4">
             <Button variant="outline" onClick={() => setShowPolicyModal(false)}>
               Close
@@ -2124,7 +3000,11 @@ export default function AttendanceManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       {/* Undo Manager */}
       <UndoManager
         actions={actions}
