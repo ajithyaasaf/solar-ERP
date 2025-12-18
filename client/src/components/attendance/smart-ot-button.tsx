@@ -1,0 +1,463 @@
+/**
+ * Smart OT Button Component
+ * Field-worker friendly interface with intelligent state management
+ * 
+ * Features:
+ * - Shows only START or END based on active session
+ * - Live timer for in-progress sessions
+ * - Clear visual states
+ * - No confusion about session numbers
+ */
+
+import { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Clock, Zap, StopCircle, MapPin, Camera, AlertCircle, CheckCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { format, differenceInMinutes, differenceInHours } from 'date-fns';
+import { CameraCaptureModal } from '@/components/ui/camera-capture-modal';
+import { getOTAuthToken } from '@/hooks/use-ot-auth';
+
+interface OTSession {
+    sessionId: string;
+    sessionNumber: number;
+    otType: 'regular' | 'weekend' | 'holiday' | 'early_arrival' | 'late_departure';
+    startTime: string;
+    endTime?: string;
+    otHours: number;
+    startImageUrl: string;
+    endImageUrl?: string;
+    startLatitude: string;
+    startLongitude: string;
+    endLatitude?: string;
+    endLongitude?: string;
+    startAddress?: string;
+    endAddress?: string;
+    reason?: string;
+    status: 'in_progress' | 'completed' | 'locked';
+    createdAt: string;
+}
+
+interface SmartOTButtonProps {
+    userId: string;
+    onSuccess?: () => void;
+}
+
+export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
+    const { toast } = useToast();
+    const [activeSession, setActiveSession] = useState<OTSession | null>(null);
+    const [todaySessions, setTodaySessions] = useState<OTSession[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [totalOTToday, setTotalOTToday] = useState(0);
+    const [cameraOpen, setCameraOpen] = useState(false);
+    const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
+    const cameraResolveRef = useRef<((value: string) => void) | null>(null);
+    const cameraRejectRef = useRef<((reason: Error) => void) | null>(null);
+
+    // Live clock update
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Fetch active session and today's sessions
+    const fetchOTSessions = async () => {
+        try {
+            const token = await getOTAuthToken();
+
+            // Get active session
+            const activeRes = await fetch('/api/ot/sessions/active', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (activeRes.ok) {
+                const { session } = await activeRes.json();
+                setActiveSession(session);
+            }
+
+            // Get today's sessions
+            const today = format(new Date(), 'yyyy-MM-dd');
+            const sessionsRes = await fetch(`/api/ot/sessions?date=${today}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (sessionsRes.ok) {
+                const { sessions } = await sessionsRes.json();
+                setTodaySessions(sessions || []);
+
+                // Calculate total OT
+                const total = sessions?.reduce((sum: number, s: OTSession) =>
+                    s.status === 'completed' ? sum + s.otHours : sum, 0) || 0;
+                setTotalOTToday(total);
+            }
+
+            // Check if attendance exists for today
+            const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const attendanceRes = await fetch(`/api/user/attendance?userId=${userId}&date=${todayStr}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (attendanceRes.ok) {
+                const attendanceData = await attendanceRes.json();
+                // attendanceData is an array of attendance records
+                const todayAttendance = Array.isArray(attendanceData)
+                    ? attendanceData.find((a: any) => {
+                        const attDate = new Date(a.date);
+                        return attDate.toISOString().split('T')[0] === todayStr;
+                    })
+                    : null;
+                setHasAttendanceToday(!!(todayAttendance && todayAttendance.checkInTime));
+            } else {
+                console.warn('Failed to fetch attendance, assuming no attendance:', attendanceRes.statusText);
+                setHasAttendanceToday(false);
+            }
+        } catch (error) {
+            console.error('Error fetching OT sessions:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchOTSessions();
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchOTSessions, 30000);
+        return () => clearInterval(interval);
+    }, [userId]);
+
+    // Get geolocation and capture photo
+    const getLocationAndPhoto = async (): Promise<{
+        latitude: number;
+        longitude: number;
+        accuracy: number;
+        imageUrl: string;
+        address?: string;
+    } | null> => {
+        try {
+            // Get location
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000
+                });
+            });
+
+            // Capture photo using camera modal
+            const imageUrl = await new Promise<string>((resolve, reject) => {
+                setCameraOpen(true);
+                cameraResolveRef.current = resolve;
+                cameraRejectRef.current = reject;
+            });
+
+            return {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                imageUrl,
+                address: '' // TODO: Add reverse geocoding if needed
+            };
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Location/Photo Required',
+                description: 'Please enable location and camera access to record OT.'
+            });
+            return null;
+        }
+    };
+
+    // Handle camera capture
+    const handleCameraCapture = (imageUrl: string) => {
+        setCameraOpen(false);
+        if (cameraResolveRef.current) {
+            cameraResolveRef.current(imageUrl);
+            cameraResolveRef.current = null;
+        }
+    };
+
+    // Handle camera cancel
+    const handleCameraCancel = () => {
+        setCameraOpen(false);
+        if (cameraRejectRef.current) {
+            cameraRejectRef.current(new Error('Camera cancelled'));
+            cameraRejectRef.current = null;
+        }
+    };
+
+    // Start OT
+    const handleStartOT = async () => {
+        setIsLoading(true);
+
+        try {
+            const locationData = await getLocationAndPhoto();
+            if (!locationData) {
+                setIsLoading(false);
+                return;
+            }
+
+            const token = await getOTAuthToken();
+
+            console.log('[OT START] Sending request with data:', locationData);
+
+            const response = await fetch('/api/ot/sessions/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(locationData)
+            });
+
+            console.log('[OT START] Response status:', response.status);
+
+            const result = await response.json();
+            console.log('[OT START] Result:', result);
+
+            if (result.success) {
+                toast({
+                    title: 'OT Started',
+                    description: `${result.otType} OT session started successfully.`
+                });
+                await fetchOTSessions();
+                onSuccess?.();
+            } else {
+                console.error('[OT START] Failed:', result.message);
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to Start OT',
+                    description: result.message
+                });
+            }
+        } catch (error) {
+            console.error('[OT START] Error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to start OT session. Please try again.'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // End OT
+    const handleEndOT = async () => {
+        if (!activeSession) return;
+
+        setIsLoading(true);
+
+        try {
+            const locationData = await getLocationAndPhoto();
+            if (!locationData) {
+                setIsLoading(false);
+                return;
+            }
+
+            const token = await getOTAuthToken();
+            const response = await fetch(`/api/ot/sessions/${activeSession.sessionId}/end`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(locationData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                toast({
+                    title: 'OT Completed',
+                    description: `Recorded ${result.otHours?.toFixed(2)} hours of OT.`,
+                    variant: 'default'
+                });
+                await fetchOTSessions();
+                onSuccess?.();
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Failed to End OT',
+                    description: result.message
+                });
+            }
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to end OT session. Please try again.'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Calculate duration for active session
+    const getActiveDuration = (): string => {
+        if (!activeSession) return '0h 0m';
+
+        const start = new Date(activeSession.startTime);
+        const minutes = differenceInMinutes(currentTime, start);
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+
+        return `${hours}h ${mins}m`;
+    };
+
+    // Get OT type badge
+    const getOTTypeBadge = (type: string) => {
+        const colors: Record<string, string> = {
+            'holiday': 'bg-red-500',
+            'weekend': 'bg-blue-500',
+            'early_arrival': 'bg-green-500',
+            'late_departure': 'bg-yellow-500',
+            'regular': 'bg-gray-500'
+        };
+
+        return (
+            <Badge className={colors[type] || 'bg-gray-500'}>
+                {type.replace('_', ' ').toUpperCase()}
+            </Badge>
+        );
+    };
+
+    return (
+        <>
+            <CameraCaptureModal
+                isOpen={cameraOpen}
+                onClose={handleCameraCancel}
+                onCapture={handleCameraCapture}
+                title="Capture OT Photo"
+                description="Take a photo for OT verification"
+            />
+            <div className="space-y-4">
+                {/* Active Session Alert */}
+                {activeSession ? (
+                    <Alert className="border-orange-500 bg-orange-50">
+                        <Clock className="h-5 w-5 text-orange-600" />
+                        <AlertTitle className="text-orange-900 font-semibold">
+                            OT In Progress
+                        </AlertTitle>
+                        <AlertDescription className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    {getOTTypeBadge(activeSession.otType)}
+                                    <p className="text-sm text-gray-700 mt-1">
+                                        Started at {format(new Date(activeSession.startTime), 'h:mm a')}
+                                    </p>
+                                    <p className="text-lg font-bold text-orange-900 mt-1">
+                                        Duration: {getActiveDuration()}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Button
+                                variant="destructive"
+                                size="lg"
+                                className="w-full mt-3"
+                                onClick={handleEndOT}
+                                disabled={isLoading}
+                            >
+                                <StopCircle className="mr-2 h-5 w-5" />
+                                END OT NOW
+                            </Button>
+                        </AlertDescription>
+                    </Alert>
+                ) : (
+                    <>
+                        {/* Warning: OT without attendance */}
+                        {!hasAttendanceToday && (
+                            <Alert className="border-amber-200 bg-amber-50">
+                                <AlertCircle className="h-4 w-4 text-amber-600" />
+                                <AlertTitle className="text-amber-900 font-semibold">No Regular Attendance Today</AlertTitle>
+                                <AlertDescription className="text-amber-800 text-sm">
+                                    Starting OT will automatically create an attendance record. This is normal for:
+                                    <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>Weekend overtime work</li>
+                                        <li>Holiday project work</li>
+                                        <li>Early morning emergency tasks</li>
+                                    </ul>
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {/* Start OT Button */}
+                        <Button
+                            size="lg"
+                            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                            onClick={handleStartOT}
+                            disabled={isLoading}
+                        >
+                            <Zap className="mr-2 h-5 w-5" />
+                            START OT
+                        </Button>
+                    </>
+                )}
+
+                {/* Today's OT Summary */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg flex items-center justify-between">
+                            Today's OT Summary
+                            <Badge variant="outline" className="text-lg">
+                                {totalOTToday.toFixed(2)} hrs
+                            </Badge>
+                        </CardTitle>
+                        <CardDescription>
+                            {format(new Date(), 'EEEE, MMMM d, yyyy')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {todaySessions.length === 0 ? (
+                            <p className="text-sm text-gray-500 text-center py-4">
+                                No OT sessions recorded today
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {todaySessions.map((session, index) => (
+                                    <div key={session.sessionId}>
+                                        {index > 0 && <Separator className="my-2" />}
+                                        <div className="flex items-start justify-between">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    {getOTTypeBadge(session.otType)}
+                                                    {session.status === 'completed' && (
+                                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                                    )}
+                                                    {session.status === 'locked' && (
+                                                        <AlertCircle className="h-4 w-4 text-orange-600" />
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-gray-600">
+                                                    {format(new Date(session.startTime), 'h:mm a')} -
+                                                    {session.endTime ? format(new Date(session.endTime), 'h:mm a') : 'In Progress'}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold">
+                                                    {session.otHours.toFixed(2)} hrs
+                                                </p>
+                                                {session.status === 'locked' && (
+                                                    <p className="text-xs text-orange-600">Locked</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </>
+    );
+}
