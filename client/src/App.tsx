@@ -306,7 +306,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* OT Administration - Admin and Master Admin only */}
+      {/* Attendance & OT Management - Admin and Master Admin only */}
       <Route path="/ot-administration">
         <ProtectedRoute
           requiredRole={["admin", "master_admin"]}

@@ -1,6 +1,6 @@
 /**
- * Overtime Administration Page
- * Comprehensive admin page for OT system management
+ * Attendance & OT Management Page
+ * Unified admin page for workforce management: holidays, overtime, and attendance settings
  */
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +11,7 @@ import { useAuthContext } from '@/contexts/auth-context';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
-export default function OTAdministration() {
+export default function AttendanceOTManagement() {
     const { user, hasRole } = useAuthContext();
 
     // Check if user is admin or master_admin
@@ -31,15 +31,15 @@ export default function OTAdministration() {
     return (
         <div className="container mx-auto py-6 space-y-6">
             <div>
-                <h1 className="text-3xl font-bold">OT Administration</h1>
-                <p className="text-muted-foreground">Manage overtime settings, holidays, and payroll periods</p>
+                <h1 className="text-3xl font-bold">Attendance & OT Management</h1>
+                <p className="text-muted-foreground">Manage company-wide holidays, overtime policies, and workforce settings</p>
             </div>
 
             <Tabs defaultValue="holidays" className="space-y-4">
                 <TabsList>
-                    <TabsTrigger value="holidays">Holiday Calendar</TabsTrigger>
-                    <TabsTrigger value="settings">Company Settings</TabsTrigger>
-                    <TabsTrigger value="payroll">Payroll Lock</TabsTrigger>
+                    <TabsTrigger value="holidays">📅 Company Holidays</TabsTrigger>
+                    <TabsTrigger value="settings">⚙️ OT Policies</TabsTrigger>
+                    <TabsTrigger value="payroll">🔒 Payroll Lock</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="holidays">

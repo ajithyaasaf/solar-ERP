@@ -35,10 +35,7 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
     workingHours: 8,
     lateThresholdMinutes: 15,
     overtimeThresholdMinutes: 0,
-    isFlexibleTiming: false,
-    allowEarlyCheckOut: false,
-    allowRemoteWork: true,
-    allowFieldWork: true
+    isFlexibleTiming: false
   });
 
   const [previewData, setPreviewData] = useState({
@@ -56,15 +53,9 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
         workingHours: currentTiming.workingHours || 8,
         lateThresholdMinutes: currentTiming.lateThresholdMinutes || 15,
         overtimeThresholdMinutes: currentTiming.overtimeThresholdMinutes || 0,
-        isFlexibleTiming: Boolean(currentTiming.isFlexibleTiming),
-        allowEarlyCheckOut: Boolean(currentTiming.allowEarlyCheckOut),
-        allowRemoteWork: Boolean(currentTiming.allowRemoteWork),
-        allowFieldWork: Boolean(currentTiming.allowFieldWork)
+        isFlexibleTiming: Boolean(currentTiming.isFlexibleTiming)
       });
-      console.log('TIMING_DIALOG: Form data set with policies:', {
-        allowRemoteWork: Boolean(currentTiming.allowRemoteWork),
-        allowFieldWork: Boolean(currentTiming.allowFieldWork)
-      });
+      // Removed unused policy logging
     }
   }, [currentTiming]);
 
@@ -74,12 +65,12 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
       try {
         const checkIn = parseTime12Hour(formData.checkInTime);
         const checkOut = parseTime12Hour(formData.checkOutTime);
-        
+
         if (checkIn && checkOut) {
           const diffMs = checkOut.getTime() - checkIn.getTime();
           const totalMinutes = Math.max(0, diffMs / (1000 * 60));
           const hours = totalMinutes / 60;
-          
+
           setPreviewData({
             overtimeStartTime: formData.checkOutTime,
             totalWorkingMinutes: totalMinutes,
@@ -117,7 +108,7 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate times
     if (!isValidTimeSequence(formData.checkInTime, formData.checkOutTime)) {
       toast({
@@ -138,10 +129,7 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
       workingHours: 8,
       lateThresholdMinutes: 15,
       overtimeThresholdMinutes: 0,
-      isFlexibleTiming: false,
-      allowEarlyCheckOut: false,
-      allowRemoteWork: true,
-      allowFieldWork: true
+      isFlexibleTiming: false
     });
   };
 
@@ -173,7 +161,7 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
                 placeholder="9:00 AM"
                 required
               />
-              
+
               <TimeInput
                 label="Check-out Time"
                 value={formData.checkOutTime}
@@ -227,9 +215,9 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
                   min="0"
                   max="60"
                   value={formData.lateThresholdMinutes}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    lateThresholdMinutes: parseInt(e.target.value) || 0 
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    lateThresholdMinutes: parseInt(e.target.value) || 0
                   }))}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -245,9 +233,9 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
                   min="0"
                   max="120"
                   value={formData.overtimeThresholdMinutes}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    overtimeThresholdMinutes: parseInt(e.target.value) || 0 
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    overtimeThresholdMinutes: parseInt(e.target.value) || 0
                   }))}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -272,60 +260,15 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
                 </div>
                 <Switch
                   checked={formData.isFlexibleTiming}
-                  onCheckedChange={(checked) => setFormData(prev => ({ 
-                    ...prev, 
-                    isFlexibleTiming: checked 
+                  onCheckedChange={(checked) => setFormData(prev => ({
+                    ...prev,
+                    isFlexibleTiming: checked
                   }))}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Early Check-out</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Allow employees to check out before scheduled time
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.allowEarlyCheckOut}
-                  onCheckedChange={(checked) => setFormData(prev => ({ 
-                    ...prev, 
-                    allowEarlyCheckOut: checked 
-                  }))}
-                />
-              </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Remote Work</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Allow remote work attendance
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.allowRemoteWork}
-                  onCheckedChange={(checked) => setFormData(prev => ({ 
-                    ...prev, 
-                    allowRemoteWork: checked 
-                  }))}
-                />
-              </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Field Work</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Allow field work attendance
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.allowFieldWork}
-                  onCheckedChange={(checked) => setFormData(prev => ({ 
-                    ...prev, 
-                    allowFieldWork: checked 
-                  }))}
-                />
-              </div>
             </CardContent>
           </Card>
 
@@ -339,7 +282,7 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
             </CardHeader>
             <CardContent>
               <p className="text-orange-700">
-                <strong>Simple Google-level OT Rule:</strong> Any work performed after the department's 
+                <strong>Simple Google-level OT Rule:</strong> Any work performed after the department's
                 scheduled checkout time ({formData.checkOutTime}) will be automatically calculated as overtime.
                 No complex formulas or manual calculations required.
               </p>
@@ -352,13 +295,13 @@ export function TimingDialog({ isOpen, onClose, department, currentTiming }: Tim
               <RotateCcw className="h-4 w-4 mr-2" />
               Reset to Defaults
             </Button>
-            
+
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={updateTimingMutation.isPending}
                 className="bg-primary hover:bg-primary/90"
               >
@@ -378,7 +321,7 @@ function parseTime12Hour(timeStr: string): Date | null {
   try {
     const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
     const match = timeStr.match(timeRegex);
-    
+
     if (!match) return null;
 
     let [, hourStr, minuteStr, period] = match;
@@ -402,8 +345,8 @@ function parseTime12Hour(timeStr: string): Date | null {
 function isValidTimeSequence(checkIn: string, checkOut: string): boolean {
   const checkInDate = parseTime12Hour(checkIn);
   const checkOutDate = parseTime12Hour(checkOut);
-  
+
   if (!checkInDate || !checkOutDate) return false;
-  
+
   return checkOutDate > checkInDate;
 }

@@ -43,6 +43,56 @@ import { testFirebaseAdminSDK, testUserManagement } from "./test-firebase-admin"
 import { attendanceRateLimiter, generalRateLimiter, createRateLimitMiddleware } from "./utils/rate-limiter";
 import { DataCompletenessAnalyzer, SiteVisitDataMapper } from "./services/quotation-mapping-service";
 import { registerQuotationRoutes } from "./routes/quotations";
+import { isCheckoutOverdue } from "./utils/time-helpers";
+
+/**
+ * Helper function to merge a date with a time string
+ * Handles multiple time formats: ISO strings, 12-hour format (9:00 AM), 24-hour format (09:00)
+ * 
+ * @param originalDate - The original date to preserve (year, month, day)
+ * @param timeValue - Time as ISO string, 12-hour format, or HH:MM format
+ * @returns Date object with original date but updated time
+ */
+function mergeDateAndTime(originalDate: Date, timeValue: string): Date {
+  const result = new Date(originalDate);
+
+  // Handle ISO string format (e.g., "2024-12-18T18:00:00.000Z")
+  if (timeValue.includes('T') || timeValue.includes('Z')) {
+    const parsed = new Date(timeValue);
+    result.setHours(parsed.getHours(), parsed.getMinutes(), parsed.getSeconds(), parsed.getMilliseconds());
+    return result;
+  }
+
+  // Handle 12-hour format (e.g., "6:00 PM", "9:30 AM")
+  const time12HourMatch = timeValue.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (time12HourMatch) {
+    let [, hoursStr, minutesStr, period] = time12HourMatch;
+    let hours = parseInt(hoursStr);
+    const minutes = parseInt(minutesStr);
+
+    // Convert to 24-hour format
+    if (period.toUpperCase() === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period.toUpperCase() === 'AM' && hours === 12) {
+      hours = 0;
+    }
+
+    result.setHours(hours, minutes, 0, 0);
+    return result;
+  }
+
+  // Handle 24-hour format or simple HH:MM (e.g., "18:00", "09:30")
+  const time24HourMatch = timeValue.match(/(\d{1,2}):(\d{2})/);
+  if (time24HourMatch) {
+    const [, hoursStr, minutesStr] = time24HourMatch;
+    result.setHours(parseInt(hoursStr), parseInt(minutesStr), 0, 0);
+    return result;
+  }
+
+  // Fallback: return original if parsing fails
+  console.warn(`mergeDateAndTime: Unable to parse time format: "${timeValue}". Returning original date.`);
+  return result;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced middleware to verify Firebase Auth token and load user profile
@@ -1556,13 +1606,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get OT status for user
-  app.get("/api/attendance/ot-status", verifyAuth, async (req, res) => {
+  app.get("/api/ot/status", verifyAuth, async (req, res) => {
     try {
-      const userId = req.query.userId as string || req.authenticatedUser?.uid || "";
-
-      if (userId !== req.authenticatedUser?.uid || "") {
-        return res.status(403).json({ message: "Access denied" });
+      // Security: Derive user from auth token only, never from query params
+      if (!req.authenticatedUser) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required"
+        });
       }
+
+      const userId = req.authenticatedUser.uid;
 
       // Import ManualOTService
       const { ManualOTService } = await import('./services/manual-ot-service');
@@ -1572,7 +1626,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ManualOTService.isOTButtonAvailable(userId)
       ]);
 
+      // Return consistent response structure
       res.json({
+        success: true,
         ...otStatus,
         buttonAvailable: otButtonAvailability.available,
         buttonReason: otButtonAvailability.reason,
@@ -1580,7 +1636,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error getting OT status:", error);
-      res.status(500).json({ message: "Failed to get OT status" });
+      res.status(500).json({
+        success: false,
+        message: "Failed to get OT status"
+      });
     }
   });
 
@@ -1600,38 +1659,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const departmentTimingDefaults = {
         operations: {
           checkInTime: "9:00 AM", checkOutTime: "6:00 PM", workingHours: 9,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: true
+          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
         },
         admin: {
           checkInTime: "9:30 AM", checkOutTime: "6:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: true, allowRemoteWork: true, allowFieldWork: false
+          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
         },
         hr: {
           checkInTime: "9:30 AM", checkOutTime: "6:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: true, allowRemoteWork: true, allowFieldWork: false
+          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
         },
         marketing: {
           checkInTime: "9:30 AM", checkOutTime: "6:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: true, allowFieldWork: true
+          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
         },
         sales: {
           checkInTime: "9:00 AM", checkOutTime: "6:00 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: true, allowRemoteWork: true, allowFieldWork: true
+          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
         },
         technical: {
           checkInTime: "8:30 AM", checkOutTime: "5:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: true
+          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
         },
         housekeeping: {
           checkInTime: "8:00 AM", checkOutTime: "4:00 PM", workingHours: 7,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: false
+          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
         }
       };
 
@@ -1641,8 +1693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dept,
           departmentTimingDefaults[dept as keyof typeof departmentTimingDefaults] || {
             checkInTime: "9:00 AM", checkOutTime: "6:00 PM", workingHours: 8,
-            overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-            allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: false
+            overtimeThresholdMinutes: 30, lateThresholdMinutes: 15
           }
         ])
       );
@@ -1701,16 +1752,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         flexibleCheckInEnd,
         breakDurationMinutes,
         weeklyOffDays,
-        allowRemoteWork,
-        allowFieldWork,
-        allowEarlyCheckOut
       } = req.body;
 
-      console.log('BACKEND: Policy values received:', {
-        allowRemoteWork,
-        allowFieldWork,
-        allowEarlyCheckOut
-      });
+      console.log('BACKEND: Policy values received: none (removed)');
 
       // Validate timing data
       if (!checkInTime || !checkOutTime || !workingHours) {
@@ -1728,9 +1772,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(flexibleCheckInEnd && { flexibleCheckInEnd }),
         breakDurationMinutes: parseInt(breakDurationMinutes) || 60,
         weeklyOffDays: weeklyOffDays || [0],
-        allowRemoteWork: allowRemoteWork !== undefined ? Boolean(allowRemoteWork) : true,
-        allowFieldWork: allowFieldWork !== undefined ? Boolean(allowFieldWork) : true,
-        allowEarlyCheckOut: allowEarlyCheckOut !== undefined ? Boolean(allowEarlyCheckOut) : false,
         updatedBy: user.uid
       };
 
@@ -1799,7 +1840,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         const user = await storage.getUser(userId as string);
         if (user && userAttendance) {
-          attendanceRecords = userAttendance.map((record) => ({
+          // CRITICAL: Enrich with holidays to ensure holidays never show as absent
+          const { UnifiedAttendanceService } = await import('./services/unified-attendance-service');
+          const enrichedAttendance = await UnifiedAttendanceService.enrichAttendanceWithHolidays(
+            userId as string,
+            fromDate,
+            toDate,
+            userAttendance
+          );
+
+          attendanceRecords = enrichedAttendance.map((record) => ({
             ...record,
             userName: user.displayName,
             userDepartment: user.department,
@@ -2106,21 +2156,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Attendance record not found" });
       }
 
+      // **CRITICAL: Enforce date immutability - date field cannot be modified**
+      delete updateData.date;
+
       // Prepare update data
       const updates: any = {};
 
+      // Use helper function to merge times with ORIGINAL date
       if (updateData.checkInTime) {
-        const date = new Date(existingRecord.date);
-        const [hours, minutes] = updateData.checkInTime.split(':');
-        date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        updates.checkInTime = date;
+        updates.checkInTime = mergeDateAndTime(
+          new Date(existingRecord.date),
+          updateData.checkInTime
+        );
       }
 
       if (updateData.checkOutTime) {
-        const date = new Date(existingRecord.date);
-        const [hours, minutes] = updateData.checkOutTime.split(':');
-        date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        updates.checkOutTime = date;
+        updates.checkOutTime = mergeDateAndTime(
+          new Date(existingRecord.date),
+          updateData.checkOutTime
+        );
       }
 
       if (updateData.status) {
@@ -2135,9 +2189,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.remarks = updateData.remarks;
       }
 
-      // Recalculate working hours if both times are updated
-      if (updates.checkInTime && updates.checkOutTime) {
-        const workingMilliseconds = updates.checkOutTime.getTime() - updates.checkInTime.getTime();
+      if (updateData.approvedBy) {
+        updates.approvedBy = updateData.approvedBy;
+      }
+
+      // Recalculate working hours if both times are updated or available
+      const finalCheckInTime = updates.checkInTime || new Date(existingRecord.checkInTime);
+      const finalCheckOutTime = updates.checkOutTime || (existingRecord.checkOutTime ? new Date(existingRecord.checkOutTime) : null);
+
+      if (finalCheckInTime && finalCheckOutTime) {
+        const workingMilliseconds = finalCheckOutTime.getTime() - finalCheckInTime.getTime();
         updates.workingHours = Math.round((workingMilliseconds / (1000 * 60 * 60)) * 100) / 100;
       }
 
@@ -4603,10 +4664,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { year } = req.query;
       const holidays = await storage.listFixedHolidays(year ? parseInt(year as string) : undefined);
-      res.json(holidays);
+      res.json({ success: true, holidays });
     } catch (error) {
       console.error("Error fetching holidays:", error);
-      res.status(500).json({ message: "Failed to fetch holidays" });
+      res.status(500).json({ success: false, message: "Failed to fetch holidays" });
     }
   });
 
@@ -4617,22 +4678,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied - System settings permission required" });
       }
 
-      // Validate request body using schema
-      const validatedBody = insertFixedHolidaySchema.omit({ createdBy: true, createdAt: true }).parse(req.body);
+      console.log("[Holiday Creation] Request body:", JSON.stringify(req.body, null, 2));
+
+      // Extract and validate required fields
+      const { date, name, type, applicableDepartments, notes, otRateMultiplier, allowOT } = req.body;
+
+      if (!date || !name) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: date and name are required"
+        });
+      }
+
+      if (!otRateMultiplier || otRateMultiplier < 1 || otRateMultiplier > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "OT Rate Multiplier is required and must be between 1 and 10"
+        });
+      }
+
+      const holidayDate = new Date(date);
+      const year = holidayDate.getFullYear();
 
       const holidayData = {
-        ...validatedBody,
-        createdBy: user.id,
+        name,
+        date: holidayDate,
+        year,
+        type: type || "national",
+        isPaid: true,
+        isOptional: false,
+        otRateMultiplier: parseFloat(otRateMultiplier),
+        allowOT: allowOT === true, // Explicit boolean, defaults to false if not provided
+        applicableDepartments: applicableDepartments || null,
+        description: notes || null,
+        createdBy: user.uid,
+        createdAt: new Date(),
       };
 
+      console.log("[Holiday Creation] Transformed data:", JSON.stringify(holidayData, null, 2));
+
       const holiday = await storage.createFixedHoliday(holidayData);
-      res.status(201).json(holiday);
+      res.status(201).json({ success: true, holiday, message: "Holiday created successfully" });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
+        console.error("[Holiday Creation] Validation error:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ success: false, errors: error.errors, message: "Validation failed" });
       }
-      console.error("Error creating holiday:", error);
-      res.status(500).json({ message: "Failed to create holiday" });
+      console.error("[Holiday Creation] Error:", error);
+      res.status(500).json({ success: false, message: "Failed to create holiday" });
     }
   });
 
@@ -4640,20 +4733,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
-        return res.status(403).json({ message: "Access denied - System settings permission required" });
+        return res.status(403).json({ success: false, message: "Access denied - System settings permission required" });
       }
 
-      // Validate request body using partial schema
-      const validatedBody = insertFixedHolidaySchema.partial().parse(req.body);
+      console.log("[Holiday Update] Request body:", JSON.stringify(req.body, null, 2));
 
-      const holiday = await storage.updateFixedHoliday(req.params.id, validatedBody);
-      res.json(holiday);
+      // Extract and validate required fields
+      const { date, name, type, applicableDepartments, notes, otRateMultiplier, allowOT } = req.body;
+
+      if (!date || !name) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: date and name are required"
+        });
+      }
+
+      if (!otRateMultiplier || otRateMultiplier < 1 || otRateMultiplier > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "OT Rate Multiplier is required and must be between 1 and 10"
+        });
+      }
+
+      const holidayDate = new Date(date);
+      const year = holidayDate.getFullYear();
+
+      const updateData = {
+        name,
+        date: holidayDate,
+        year,
+        type: type || "national",
+        isPaid: true,
+        isOptional: false,
+        otRateMultiplier: parseFloat(otRateMultiplier),
+        allowOT: allowOT === true,
+        applicableDepartments: applicableDepartments || null,
+        description: notes || null,
+      };
+
+      console.log("[Holiday Update] Transformed data:", JSON.stringify(updateData, null, 2));
+
+      const holiday = await storage.updateFixedHoliday(req.params.id, updateData);
+      res.json({ success: true, holiday, message: "Holiday updated successfully" });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
+        console.error("[Holiday Update] Validation error:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ success: false, errors: error.errors, message: "Validation failed" });
       }
-      console.error("Error updating holiday:", error);
-      res.status(500).json({ message: "Failed to update holiday" });
+      console.error("[Holiday Update] Error:", error);
+      res.status(500).json({ success: false, message: "Failed to update holiday" });
     }
   });
 
@@ -4661,14 +4789,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
-        return res.status(403).json({ message: "Access denied - System settings permission required" });
+        return res.status(403).json({ success: false, message: "Access denied - System settings permission required" });
       }
 
       await storage.deleteFixedHoliday(req.params.id);
-      res.json({ message: "Holiday deleted successfully" });
+      res.json({ success: true, message: "Holiday deleted successfully" });
     } catch (error) {
       console.error("Error deleting holiday:", error);
-      res.status(500).json({ message: "Failed to delete holiday" });
+      res.status(500).json({ success: false, message: "Failed to delete holiday" });
+    }
+  });
+
+  // GET /api/attendance/holidays - Get holidays for attendance system
+  app.get("/api/attendance/holidays", verifyAuth, async (req, res) => {
+    try {
+      const { start, end, department } = req.query;
+
+      if (!start || !end) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required parameters: start and end dates required"
+        });
+      }
+
+      const startDate = new Date(start as string);
+      const endDate = new Date(end as string);
+
+      // Get user's department if not specified
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      const dept = department as string || user?.department || undefined;
+
+      // Use UnifiedAttendanceService to get holidays
+      const { UnifiedAttendanceService } = await import('./services/unified-attendance-service');
+      const holidays = await UnifiedAttendanceService.getHolidaysInRange(
+        startDate,
+        endDate,
+        dept
+      );
+
+      res.json({ success: true, holidays });
+    } catch (error) {
+      console.error("Error fetching holidays for attendance:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch holidays"
+      });
     }
   });
 
@@ -5347,12 +5512,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User ID required" });
       }
 
+      // **CRITICAL: Disable browser caching to ensure fresh attendance data**
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       // Use server timezone for consistent date handling
       const serverDate = new Date();
       const dateString = serverDate.toISOString().split('T')[0];
 
+      console.log('API /api/attendance/today - Query params:', { userId, serverDate, dateString });
+
       // Get today's attendance using the correct method
       const todayAttendance = await storage.getUserAttendanceForDate(userId as string, dateString);
+
+      console.log('API /api/attendance/today - Result:', {
+        found: !!todayAttendance,
+        attendanceId: todayAttendance?.id,
+        attendanceDate: todayAttendance?.date,
+        checkInTime: todayAttendance?.checkInTime
+      });
 
       res.json(todayAttendance || null);
     } catch (error) {
@@ -5360,6 +5539,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch today's attendance" });
     }
   });
+
+  // Smart incomplete records endpoint - department timing aware
+  app.get("/api/attendance/incomplete", verifyAuth, async (req, res) => {
+    try {
+      // Check admin access
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      console.log('INCOMPLETE DETECTION: Fetching records with department timing awareness');
+
+      // Get ALL attendance records without checkout
+      const allRecordsResponse = await storage.listAttendance();
+      const recordsWithoutCheckout = allRecordsResponse.filter((record: any) =>
+        record.checkInTime && !record.checkOutTime
+      );
+
+      console.log(`INCOMPLETE DETECTION: Found ${recordsWithoutCheckout.length} records without checkout`);
+
+      // ✅ OPTIMIZATION: Fetch all department timings ONCE (avoid N+1 queries)
+      const { EnterpriseTimeService } = await import('./services/enterprise-time-service');
+      const allTimings = await EnterpriseTimeService.getAllDepartmentTimings();
+      const timingMap = new Map(
+        allTimings.map((t: any) => [t.departmentId || t.id, t])
+      );
+
+      console.log(`INCOMPLETE DETECTION: Loaded ${allTimings.length} department timings`);
+
+      // Filter based on department timing with grace period
+      const trulyIncomplete = [];
+
+      for (const record of recordsWithoutCheckout) {
+        // O(1) lookup from in-memory map - no database hit
+        const timing = timingMap.get(record.userDepartment);
+
+        if (!timing) {
+          // No timing config found - include by default to be safe
+          console.log(`INCOMPLETE DETECTION: No timing for dept ${record.userDepartment}, including record ${record.id}`);
+          trulyIncomplete.push(record);
+          continue;
+        }
+
+        // Check if checkout is overdue (30 min grace period after dept checkout time)
+        const isOverdue = isCheckoutOverdue(
+          new Date(record.date),
+          timing.checkOutTime,
+          30
+        );
+
+        if (isOverdue) {
+          trulyIncomplete.push(record);
+        }
+      }
+
+      console.log(`INCOMPLETE DETECTION: ${trulyIncomplete.length} truly incomplete (${recordsWithoutCheckout.length - trulyIncomplete.length} still within work hours)`);
+
+      res.json(trulyIncomplete);
+    } catch (error) {
+      console.error("Error fetching incomplete records:", error);
+      res.status(500).json({ message: "Failed to fetch incomplete records" });
+    }
+  });
+
+
 
   // Enhanced Check-in with geolocation and field work support
   app.post("/api/attendance/check-in", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
@@ -5791,13 +6035,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`BACKEND: Updating timing for department ${department}`);
       console.log('BACKEND: Full timing data received:', req.body);
-
-      // Debug policy values specifically
-      console.log('BACKEND: Policy values extracted:', {
-        allowRemoteWork: req.body.allowRemoteWork,
-        allowFieldWork: req.body.allowFieldWork,
-        allowEarlyCheckOut: req.body.allowEarlyCheckOut
-      });
 
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
 

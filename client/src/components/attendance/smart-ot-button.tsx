@@ -55,6 +55,10 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
     const [totalOTToday, setTotalOTToday] = useState(0);
     const [cameraOpen, setCameraOpen] = useState(false);
     const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
+    const [otAvailable, setOTAvailable] = useState(false); // Fail-safe: default to disabled
+    const [otUnavailableReason, setOTUnavailableReason] = useState<string>("");
+    const [nextAvailableTime, setNextAvailableTime] = useState<string>("");
+    const [otSystemError, setOTSystemError] = useState(false); // Track if it's a technical error
     const cameraResolveRef = useRef<((value: string) => void) | null>(null);
     const cameraRejectRef = useRef<((reason: Error) => void) | null>(null);
 
@@ -70,6 +74,34 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
     const fetchOTSessions = async () => {
         try {
             const token = await getOTAuthToken();
+
+            // Get OT status and availability (fail-safe: disable on error)
+            try {
+                const statusRes = await fetch('/api/ot/status', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (statusRes.ok) {
+                    const statusData = await statusRes.json();
+                    setOTAvailable(statusData.buttonAvailable ?? false);
+                    setOTUnavailableReason(statusData.buttonReason || "");
+                    setNextAvailableTime(statusData.nextAvailableTime || "");
+                    setOTSystemError(false); // Clear any previous errors
+                } else {
+                    // Technical error: API returned error status
+                    setOTAvailable(false);
+                    setOTSystemError(true);
+                    setOTUnavailableReason("Unable to verify OT availability. Please check your connection and try again.");
+                }
+            } catch (statusError) {
+                console.error('Error fetching OT status:', statusError);
+                // Technical error: Network/system failure
+                setOTAvailable(false);
+                setOTSystemError(true);
+                setOTUnavailableReason("System error. Please contact support if this persists.");
+            }
 
             // Get active session
             const activeRes = await fetch('/api/ot/sessions/active', {
@@ -374,8 +406,40 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                     </Alert>
                 ) : (
                     <>
+                        {/* OT Unavailability Message */}
+                        {!otAvailable && (
+                            otSystemError ? (
+                                // Technical Error: Show error-styled alert
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle className="font-semibold">
+                                        System Error
+                                    </AlertTitle>
+                                    <AlertDescription className="text-sm">
+                                        {otUnavailableReason}
+                                    </AlertDescription>
+                                </Alert>
+                            ) : (
+                                // Business Rule: Show informational alert
+                                <Alert className="border-blue-200 bg-blue-50">
+                                    <Clock className="h-4 w-4 text-blue-600" />
+                                    <AlertTitle className="text-blue-900 font-semibold">
+                                        OT Not Available Right Now
+                                    </AlertTitle>
+                                    <AlertDescription className="text-blue-800 text-sm">
+                                        {otUnavailableReason || "OT is only available before or after your department's regular work hours"}
+                                        {nextAvailableTime && (
+                                            <p className="mt-2 font-medium">
+                                                Available after: <strong>{nextAvailableTime}</strong>
+                                            </p>
+                                        )}
+                                    </AlertDescription>
+                                </Alert>
+                            )
+                        )}
+
                         {/* Warning: OT without attendance */}
-                        {!hasAttendanceToday && (
+                        {otAvailable && !hasAttendanceToday && (
                             <Alert className="border-amber-200 bg-amber-50">
                                 <AlertCircle className="h-4 w-4 text-amber-600" />
                                 <AlertTitle className="text-amber-900 font-semibold">No Regular Attendance Today</AlertTitle>
@@ -395,7 +459,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                             size="lg"
                             className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                             onClick={handleStartOT}
-                            disabled={isLoading}
+                            disabled={isLoading || !otAvailable}
                         >
                             <Zap className="mr-2 h-5 w-5" />
                             START OT

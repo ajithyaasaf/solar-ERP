@@ -30,12 +30,15 @@ interface Holiday {
     date: string;
     name: string;
     type: 'national' | 'regional' | 'company';
-    otRateMultiplier: number;
-    isActive: boolean;
+    year: number;
+    isPaid: boolean;
+    isOptional: boolean;
+    otRateMultiplier: number;  // Required for payroll
+    allowOT: boolean;  // NEW: Controls OT submission on this holiday
     applicableDepartments?: string[];
-    notes?: string;
+    description?: string;
+    createdBy: string;
     createdAt: string;
-    updatedAt: string;
 }
 
 const departments = ['operations', 'admin', 'hr', 'marketing', 'sales', 'technical', 'housekeeping'];
@@ -54,9 +57,10 @@ export function HolidayManagement() {
         date: '',
         name: '',
         type: 'national' as 'national' | 'regional' | 'company',
-        otRateMultiplier: '',
         applicableDepartments: [] as string[],
-        notes: ''
+        otRateMultiplier: 2, // Default 2x pay for holidays
+        allowOT: false, // Default: strict holiday (no OT allowed)
+        notes: ''  // Ensure default value
     });
 
     // Fetch holidays
@@ -96,21 +100,11 @@ export function HolidayManagement() {
         e.preventDefault();
 
         // Validation
-        if (!formData.date || !formData.name || !formData.otRateMultiplier) {
+        if (!formData.date || !formData.name) {
             toast({
                 variant: 'destructive',
                 title: 'Missing Fields',
                 description: 'Please fill in all required fields'
-            });
-            return;
-        }
-
-        const otRate = parseFloat(formData.otRateMultiplier);
-        if (isNaN(otRate) || otRate <= 0) {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid OT Rate',
-                description: 'OT rate must be greater than 0'
             });
             return;
         }
@@ -131,11 +125,15 @@ export function HolidayManagement() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    ...formData,
-                    otRateMultiplier: otRate,
+                    date: formData.date,
+                    name: formData.name,
+                    type: formData.type,
+                    otRateMultiplier: formData.otRateMultiplier,
+                    allowOT: formData.allowOT,
                     applicableDepartments: formData.applicableDepartments.length > 0
                         ? formData.applicableDepartments
-                        : null
+                        : null,
+                    notes: formData.notes || null
                 })
             });
 
@@ -153,7 +151,7 @@ export function HolidayManagement() {
                 toast({
                     variant: 'destructive',
                     title: 'Error',
-                    description: result.message
+                    description: result.message || 'Failed to save holiday'
                 });
             }
         } catch (error) {
@@ -212,9 +210,10 @@ export function HolidayManagement() {
             date: format(new Date(holiday.date), 'yyyy-MM-dd'),
             name: holiday.name,
             type: holiday.type,
-            otRateMultiplier: holiday.otRateMultiplier.toString(),
             applicableDepartments: holiday.applicableDepartments || [],
-            notes: holiday.notes || ''
+            otRateMultiplier: holiday.otRateMultiplier || 2,
+            allowOT: holiday.allowOT || false,
+            notes: holiday.description || ''
         });
         setIsDialogOpen(true);
     };
@@ -225,8 +224,9 @@ export function HolidayManagement() {
             date: '',
             name: '',
             type: 'national',
-            otRateMultiplier: '',
             applicableDepartments: [],
+            otRateMultiplier: 2,
+            allowOT: false,
             notes: ''
         });
         setEditingHoliday(null);
@@ -322,23 +322,6 @@ export function HolidayManagement() {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="otRate">OT Rate Multiplier * (NO default)</Label>
-                                            <Input
-                                                id="otRate"
-                                                type="number"
-                                                step="0.1"
-                                                min="1"
-                                                value={formData.otRateMultiplier}
-                                                onChange={(e) => setFormData({ ...formData, otRateMultiplier: e.target.value })}
-                                                placeholder="e.g., 2.5 for 2.5x pay"
-                                                required
-                                            />
-                                            <p className="text-sm text-gray-500">
-                                                Admin must explicitly set OT rate for each holiday
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-2">
                                             <Label>Applicable Departments (leave empty for all)</Label>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {departments.map((dept) => (
@@ -365,6 +348,48 @@ export function HolidayManagement() {
                                                     </label>
                                                 ))}
                                             </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="otRate">OT Rate Multiplier (Required)</Label>
+                                            <Input
+                                                id="otRate"
+                                                type="number"
+                                                min="1"
+                                                max="10"
+                                                step="0.5"
+                                                value={formData.otRateMultiplier}
+                                                onChange={(e) => setFormData({ ...formData, otRateMultiplier: parseFloat(e.target.value) || 2 })}
+                                                placeholder="e.g., 2 for double pay, 2.5 for 2.5x pay"
+                                                required
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Employees working on this holiday will receive this multiplier on their hourly rate
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex items-center space-x-2">
+                                                <input
+                                                    id="allowOT"
+                                                    type="checkbox"
+                                                    checked={formData.allowOT}
+                                                    onChange={(e) => setFormData({
+                                                        ...formData,
+                                                        allowOT: e.target.checked
+                                                    })}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                <Label htmlFor="allowOT" className="font-normal cursor-pointer">
+                                                    Allow employees to submit OT on this holiday
+                                                </Label>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {formData.allowOT
+                                                    ? "✅ Employees can work and submit OT at the configured rate"
+                                                    : "🚫 This is a strict holiday - no OT submissions allowed"
+                                                }
+                                            </p>
                                         </div>
 
                                         <div className="space-y-2">
@@ -451,17 +476,14 @@ export function HolidayManagement() {
                                                 {format(new Date(holiday.date), 'EEEE, MMMM d, yyyy')}
                                             </p>
                                             <div className="flex items-center gap-4 text-sm">
-                                                <span className="font-medium text-green-600">
-                                                    {holiday.otRateMultiplier}x OT Rate
-                                                </span>
                                                 {holiday.applicableDepartments && holiday.applicableDepartments.length > 0 && (
                                                     <span className="text-gray-500">
                                                         Applies to: {holiday.applicableDepartments.join(', ')}
                                                     </span>
                                                 )}
                                             </div>
-                                            {holiday.notes && (
-                                                <p className="text-sm text-gray-500">{holiday.notes}</p>
+                                            {holiday.description && (
+                                                <p className="text-sm text-gray-500">{holiday.description}</p>
                                             )}
                                         </div>
                                         <div className="flex gap-2">
@@ -484,22 +506,6 @@ export function HolidayManagement() {
                                 </div>
                             ))
                         )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Important Notice */}
-            <Card className="border-orange-200 bg-orange-50">
-                <CardContent className="pt-6">
-                    <div className="flex gap-3">
-                        <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                            <p className="font-medium text-orange-900">Important: OT Rate Configuration</p>
-                            <p className="text-sm text-orange-800">
-                                There are NO default OT rates. Admin must explicitly configure the OT rate multiplier
-                                for each holiday based on company policy and business requirements.
-                            </p>
-                        </div>
                     </div>
                 </CardContent>
             </Card>

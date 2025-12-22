@@ -176,7 +176,7 @@ export function Sidebar() {
         },
         {
           href: "/ot-administration",
-          label: "OT Administration",
+          label: "Attendance & OT",
           icon: <i className="ri-settings-3-line mr-3 text-xl"></i>,
           roles: ["master_admin", "admin"]
         },

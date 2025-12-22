@@ -13,7 +13,7 @@ export const userFriendlyMessages = {
     'Office Location Detected': 'You are at the office',
     'Location Verified': 'Location confirmed',
     'Location Signal Weak': 'Having trouble finding your location',
-    
+
     // Technical terms to friendly terms
     'GPS Accuracy': 'Location accuracy',
     'Network Positioning': 'Office network location',
@@ -90,8 +90,6 @@ export const userFriendlyMessages = {
     'overtimeThresholdMinutes': 'Extra Hours Limit',
     'lateThresholdMinutes': 'Late Arrival Limit',
     'isFlexibleTiming': 'Flexible Hours',
-    'allowRemoteWork': 'Work from Home',
-    'allowFieldWork': 'Field Work',
     'epfEmployeeRate': 'Retirement Fund (Employee)',
     'epfEmployerRate': 'Retirement Fund (Company)',
     'esiEmployeeRate': 'Medical Insurance (Employee)',
@@ -109,7 +107,7 @@ export const userFriendlyMessages = {
 
 export function getUserFriendlyMessage(technicalMessage: string, category?: keyof typeof userFriendlyMessages): string {
   if (!technicalMessage) return '';
-  
+
   // Try exact match first
   if (category && userFriendlyMessages[category]) {
     const categoryMessages = userFriendlyMessages[category] as Record<string, string>;
@@ -117,7 +115,7 @@ export function getUserFriendlyMessage(technicalMessage: string, category?: keyo
       return categoryMessages[technicalMessage];
     }
   }
-  
+
   // Try partial matches across all categories
   for (const cat of Object.keys(userFriendlyMessages)) {
     const messages = userFriendlyMessages[cat as keyof typeof userFriendlyMessages] as Record<string, string>;
@@ -127,7 +125,7 @@ export function getUserFriendlyMessage(technicalMessage: string, category?: keyo
       }
     }
   }
-  
+
   // Return original if no match found
   return technicalMessage;
 }

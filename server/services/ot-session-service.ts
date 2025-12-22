@@ -60,6 +60,10 @@ export class OTSessionService {
                 };
             }
 
+            // ✅ SECURITY CHECK 3: Validate holiday OT policy
+            // This enforces allowOT field - blocks OT on strict holidays
+            await this.validateHolidayOT(userId, today);
+
             // Get today's attendance record
             let attendance = await storage.getAttendanceByUserAndDate(userId, today);
 
@@ -479,6 +483,52 @@ export class OTSessionService {
             console.error('Error checking leave status:', error);
             // On error, allow OT (fail open to avoid blocking legitimate work)
             return { onLeave: false };
+        }
+    }
+
+    /**
+     * Validate if OT is allowed on a given date based on holiday policy
+     * Throws error if holiday blocks OT
+     * Returns holiday if it exists (for rate calculation)
+     * 
+     * @param userId - User ID for department context
+     * @param date - Date to check
+     * @returns Holiday object if exists and allows OT, or null
+     * @throws Error if holiday blocks OT
+     */
+    private static async validateHolidayOT(userId: string, date: Date): Promise<any | null> {
+        try {
+            const user = await storage.getUser(userId);
+            if (!user) {
+                return null; // No user, no validation needed
+            }
+
+            // Check if date is a holiday for this user's department
+            const { UnifiedAttendanceService } = await import('./unified-attendance-service');
+            const { isHoliday, holiday } = await UnifiedAttendanceService.isHoliday(
+                date,
+                user.department || undefined
+            );
+
+            // CRITICAL: Block OT if holiday doesn't allow it
+            if (isHoliday && holiday && !holiday.allowOT) {
+                throw new Error(
+                    `OT submissions are not allowed on ${holiday.name}. This is a strict holiday.`
+                );
+            }
+
+            // Return holiday for potential rate calculation (or null if not a holiday)
+            return holiday || null;
+
+        } catch (error) {
+            // If error is our custom "not allowed" error, re-throw it
+            if (error instanceof Error && error.message.includes('not allowed')) {
+                throw error;
+            }
+
+            // For other errors, log and allow OT (fail open)
+            console.error('[OTSessionService] Error validating holiday OT:', error);
+            return null;
         }
     }
 

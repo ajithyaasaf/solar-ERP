@@ -2382,6 +2382,14 @@ export class FirestoreStorage implements IStorage {
       updatedAt: Timestamp.now(),
     });
 
+    console.log('STORAGE: Created attendance record:', {
+      id: attendanceDoc.id,
+      userId: validatedData.userId,
+      dateString: dateString,
+      date: validatedData.date,
+      checkInTime: validatedData.checkInTime
+    });
+
     return {
       id: attendanceDoc.id,
       ...validatedData,
@@ -3477,9 +3485,10 @@ export class FirestoreStorage implements IStorage {
       query = query.where("year", "==", year);
     }
 
-    const snapshot = await query.orderBy("date", "asc").get();
+    // Don't use orderBy to avoid composite index requirement
+    const snapshot = await query.get();
 
-    return snapshot.docs.map(doc => {
+    const holidays = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -3495,6 +3504,11 @@ export class FirestoreStorage implements IStorage {
         createdAt: data.createdAt?.toDate() || new Date(),
       } as FixedHoliday;
     });
+
+    // Sort in memory by date
+    holidays.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    return holidays;
   }
 
   async initializeFixedHolidays(year: number, createdBy: string): Promise<void> {
@@ -4666,9 +4680,6 @@ export class FirestoreStorage implements IStorage {
           isFlexibleTiming: false,
           breakDurationMinutes: 60,
           weeklyOffDays: [0],
-          allowRemoteWork: true,
-          allowFieldWork: true,
-          allowEarlyCheckOut: false,
           isActive: true
         };
       }
@@ -4688,9 +4699,6 @@ export class FirestoreStorage implements IStorage {
         flexibleCheckInEnd: data.flexibleCheckInEnd,
         breakDurationMinutes: data.breakDurationMinutes,
         weeklyOffDays: data.weeklyOffDays,
-        allowRemoteWork: data.allowRemoteWork !== undefined ? data.allowRemoteWork : true,
-        allowFieldWork: data.allowFieldWork !== undefined ? data.allowFieldWork : true,
-        allowEarlyCheckOut: data.allowEarlyCheckOut !== undefined ? data.allowEarlyCheckOut : false,
         isActive: data.isActive,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date()

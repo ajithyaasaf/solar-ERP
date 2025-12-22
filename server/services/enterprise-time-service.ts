@@ -15,9 +15,6 @@ export interface DepartmentTiming {
   overtimeThresholdMinutes: number;
   isFlexibleTiming: boolean;
   weekendDays: number[]; // 0=Sunday, 6=Saturday
-  allowRemoteWork: boolean; // Policy: Allow remote work attendance
-  allowFieldWork: boolean; // Policy: Allow field work attendance
-  allowEarlyCheckOut: boolean; // Policy: Allow early checkout
   isActive: boolean;
   lastUpdated: Date;
 }
@@ -35,7 +32,7 @@ export interface TimeCalculationResult {
 }
 
 export class EnterpriseTimeService {
-  
+
   // Cache for department timings to reduce database calls
   private static timingCache = new Map<string, DepartmentTiming>();
   private static cacheExpiry = new Map<string, number>();
@@ -47,18 +44,18 @@ export class EnterpriseTimeService {
   static async getDepartmentTiming(department: string): Promise<DepartmentTiming> {
     const cacheKey = department.toLowerCase();
     const now = Date.now();
-    
+
     // Check cache first
-    if (this.timingCache.has(cacheKey) && 
-        this.cacheExpiry.has(cacheKey) && 
-        this.cacheExpiry.get(cacheKey)! > now) {
+    if (this.timingCache.has(cacheKey) &&
+      this.cacheExpiry.has(cacheKey) &&
+      this.cacheExpiry.get(cacheKey)! > now) {
       return this.timingCache.get(cacheKey)!;
     }
 
     try {
       // Fetch from database
       const timing = await storage.getDepartmentTiming(department);
-      
+
       if (timing) {
         const departmentTiming: DepartmentTiming = {
           department: timing.department,
@@ -69,9 +66,6 @@ export class EnterpriseTimeService {
           overtimeThresholdMinutes: timing.overtimeThresholdMinutes || 0,
           isFlexibleTiming: timing.isFlexibleTiming || false,
           weekendDays: timing.weekendDays || [0],
-          allowRemoteWork: timing.allowRemoteWork !== undefined ? timing.allowRemoteWork : true,
-          allowFieldWork: timing.allowFieldWork !== undefined ? timing.allowFieldWork : true,
-          allowEarlyCheckOut: timing.allowEarlyCheckOut !== undefined ? timing.allowEarlyCheckOut : (department === 'sales'),
           isActive: timing.isActive !== false,
           lastUpdated: timing.updatedAt || new Date()
         };
@@ -79,7 +73,7 @@ export class EnterpriseTimeService {
         // Cache the result
         this.timingCache.set(cacheKey, departmentTiming);
         this.cacheExpiry.set(cacheKey, now + this.CACHE_DURATION);
-        
+
         return departmentTiming;
       }
     } catch (error) {
@@ -101,14 +95,14 @@ export class EnterpriseTimeService {
   ): Promise<TimeCalculationResult> {
     const timing = await this.getDepartmentTiming(department);
     const today = new Date(checkInTime);
-    
+
     // Calculate expected times for today
     const expectedCheckIn = this.parseTimeToDate(timing.checkInTime, today);
     const expectedCheckOut = this.parseTimeToDate(timing.checkOutTime, today);
-    
+
     // Calculate if late
     const isLate = checkInTime > expectedCheckIn;
-    const lateMinutes = isLate ? 
+    const lateMinutes = isLate ?
       Math.floor((checkInTime.getTime() - expectedCheckIn.getTime()) / (1000 * 60)) : 0;
 
     let workingHours = 0;
@@ -119,7 +113,7 @@ export class EnterpriseTimeService {
       // Calculate total working hours (no automatic overtime calculation)
       const totalMinutes = Math.floor((checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60));
       workingHours = Math.max(0, totalMinutes / 60);
-      
+
       // Overtime is now handled manually only through ManualOTService
       // No automatic overtime calculation based on department timing
       overtimeHours = 0;
@@ -174,18 +168,15 @@ export class EnterpriseTimeService {
     lateThresholdMinutes?: number;
     overtimeThresholdMinutes?: number;
     isFlexibleTiming?: boolean;
-    allowRemoteWork?: boolean;
-    allowFieldWork?: boolean;
-    allowEarlyCheckOut?: boolean;
   }>): Promise<void> {
     const updatePromises = timings.map(async (timing) => {
       console.log(`ENTERPRISE_TIME_SERVICE: Processing timing update for ${timing.department}`);
       console.log('ENTERPRISE_TIME_SERVICE: Input timing object:', timing);
-      
+
       // Normalize 12-hour format for consistent storage
       const checkIn12 = this.normalize12HourFormat(timing.checkInTime);
       const checkOut12 = this.normalize12HourFormat(timing.checkOutTime);
-      
+
       // Calculate working hours automatically if not provided
       const workingHours = timing.workingHours || this.calculate12HourWorkingHours(checkIn12, checkOut12);
 
@@ -198,21 +189,13 @@ export class EnterpriseTimeService {
         overtimeThresholdMinutes: timing.overtimeThresholdMinutes || 0,
         isFlexibleTiming: timing.isFlexibleTiming || false,
         // Always use explicitly provided values, no defaults when updating
-        ...(timing.allowRemoteWork !== undefined && { allowRemoteWork: Boolean(timing.allowRemoteWork) }),
-        ...(timing.allowFieldWork !== undefined && { allowFieldWork: Boolean(timing.allowFieldWork) }),
-        ...(timing.allowEarlyCheckOut !== undefined && { allowEarlyCheckOut: Boolean(timing.allowEarlyCheckOut) }),
         updatedAt: new Date()
       };
-      
-      console.log('ENTERPRISE_TIME_SERVICE: Policy values being saved:', {
-        allowRemoteWork: timingData.allowRemoteWork,
-        allowFieldWork: timingData.allowFieldWork, 
-        allowEarlyCheckOut: timingData.allowEarlyCheckOut
-      });
+
       console.log('ENTERPRISE_TIME_SERVICE: Final timing data for storage:', timingData);
 
       await storage.updateDepartmentTiming(timing.department, timingData);
-      
+
       // Invalidate cache for this department
       this.invalidateTimingCache(timing.department);
     });
@@ -226,10 +209,10 @@ export class EnterpriseTimeService {
    */
   static async getAllDepartmentTimings(): Promise<DepartmentTiming[]> {
     const departments = ['operations', 'admin', 'hr', 'marketing', 'sales', 'technical', 'housekeeping'];
-    
+
     const timingPromises = departments.map(dept => this.getDepartmentTiming(dept));
     const timings = await Promise.all(timingPromises);
-    
+
     return timings.filter(timing => timing.isActive);
   }
 
@@ -247,11 +230,11 @@ export class EnterpriseTimeService {
       if (!time12 || typeof time12 !== 'string') {
         throw new Error(`Invalid input: ${time12}`);
       }
-      
+
       const cleanTime = time12.trim();
       const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
       const match = cleanTime.match(timeRegex);
-      
+
       if (!match) {
         console.error('ENTERPRISE_TIME: Failed to match 12-hour format:', cleanTime);
         throw new Error(`Invalid 12-hour time format: ${cleanTime}`);
@@ -293,28 +276,28 @@ export class EnterpriseTimeService {
       // Handle 12-hour format directly
       const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
       const match = timeStr.trim().match(timeRegex);
-      
+
       if (!match) {
         console.error('ENTERPRISE_TIME: Invalid 12-hour format:', timeStr);
         throw new Error(`Invalid 12-hour time format: ${timeStr}`);
       }
-      
+
       let [, hourStr, minuteStr, period] = match;
       let hours = parseInt(hourStr);
       const minutes = parseInt(minuteStr);
-      
+
       // Validate parsed values
       if (isNaN(hours) || isNaN(minutes) || hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
         throw new Error(`Invalid time values: hours=${hours}, minutes=${minutes}`);
       }
-      
+
       // Convert to 24-hour for Date object
       if (period.toUpperCase() === 'PM' && hours !== 12) {
         hours += 12;
       } else if (period.toUpperCase() === 'AM' && hours === 12) {
         hours = 0;
       }
-      
+
       const date = new Date(baseDate);
       date.setHours(hours, minutes, 0, 0);
       return date;
@@ -350,12 +333,12 @@ export class EnterpriseTimeService {
     try {
       const checkInDate = this.parseTimeToDate(checkIn12, new Date());
       const checkOutDate = this.parseTimeToDate(checkOut12, new Date());
-      
+
       // Handle overnight shifts
       if (checkOutDate < checkInDate) {
         checkOutDate.setDate(checkOutDate.getDate() + 1);
       }
-      
+
       const diffMs = checkOutDate.getTime() - checkInDate.getTime();
       return Math.max(0, diffMs / (1000 * 60 * 60)); // Convert to hours
     } catch (error) {
@@ -377,9 +360,6 @@ export class EnterpriseTimeService {
       overtimeThresholdMinutes: 0,
       isFlexibleTiming: false,
       weekendDays: [0],
-      allowRemoteWork: true,
-      allowFieldWork: true,
-      allowEarlyCheckOut: department === 'sales' ? true : false,
       isActive: true,
       lastUpdated: new Date()
     };
@@ -392,7 +372,7 @@ export class EnterpriseTimeService {
     const timing = await this.getDepartmentTiming(department);
     const todayCheckIn = this.parseTimeToDate(timing.checkInTime, currentTime);
     const todayCheckOut = this.parseTimeToDate(timing.checkOutTime, currentTime);
-    
+
     return currentTime >= todayCheckIn && currentTime <= todayCheckOut;
   }
 
@@ -403,12 +383,12 @@ export class EnterpriseTimeService {
     const timing = await this.getDepartmentTiming(department);
     let nextDate = new Date(fromDate);
     nextDate.setDate(nextDate.getDate() + 1);
-    
+
     // Skip weekends
     while (timing.weekendDays.includes(nextDate.getDay())) {
       nextDate.setDate(nextDate.getDate() + 1);
     }
-    
+
     return this.parseTimeToDate(timing.checkInTime, nextDate);
   }
 
