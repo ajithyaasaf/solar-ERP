@@ -26,7 +26,6 @@ interface CompanySettings {
     defaultOTRate: number;
     weekendOTRate: number;
     maxOTHoursPerDay: number;
-    requireAdminApprovalAbove: number;
     updatedAt: string;
 }
 
@@ -43,7 +42,6 @@ export function CompanySettings() {
     const [defaultOTRate, setDefaultOTRate] = useState('');
     const [weekendOTRate, setWeekendOTRate] = useState('');
     const [maxOTHoursPerDay, setMaxOTHoursPerDay] = useState('');
-    const [requireAdminApprovalAbove, setRequireAdminApprovalAbove] = useState('');
 
     // Fetch settings
     const fetchSettings = async () => {
@@ -63,7 +61,6 @@ export function CompanySettings() {
                 setDefaultOTRate(data.defaultOTRate?.toString() || '');
                 setWeekendOTRate(data.weekendOTRate?.toString() || '');
                 setMaxOTHoursPerDay(data.maxOTHoursPerDay?.toString() || '');
-                setRequireAdminApprovalAbove(data.requireAdminApprovalAbove?.toString() || '');
             }
         } catch (error) {
             toast({
@@ -86,8 +83,7 @@ export function CompanySettings() {
         const rates = {
             defaultOTRate: parseFloat(defaultOTRate),
             weekendOTRate: parseFloat(weekendOTRate),
-            maxOTHoursPerDay: parseFloat(maxOTHoursPerDay),
-            requireAdminApprovalAbove: parseFloat(requireAdminApprovalAbove)
+            maxOTHoursPerDay: parseFloat(maxOTHoursPerDay)
         };
 
         if (Object.values(rates).some(v => isNaN(v) || v <= 0)) {
@@ -250,24 +246,9 @@ export function CompanySettings() {
                                     System will warn if OT exceeds this limit
                                 </p>
                             </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="requireAdminApprovalAbove">Require Admin Approval Above *</Label>
-                                <Input
-                                    id="requireAdminApprovalAbove"
-                                    type="number"
-                                    step="0.5"
-                                    min="1"
-                                    value={requireAdminApprovalAbove}
-                                    onChange={(e) => setRequireAdminApprovalAbove(e.target.value)}
-                                    placeholder="e.g., 6.0"
-                                />
-                                <p className="text-xs text-gray-500">
-                                    Flag for review if daily OT exceeds this threshold
-                                </p>
-                            </div>
                         </div>
                     </div>
+
 
                     <Separator />
 
@@ -280,11 +261,11 @@ export function CompanySettings() {
                         <Save className="mr-2 h-4 w-4" />
                         {isSaving ? 'Saving...' : 'Save Settings'}
                     </Button>
-                </CardContent>
-            </Card>
+                </CardContent >
+            </Card >
 
             {/* Configuration Examples */}
-            <Card className="border-green-200 bg-green-50">
+            < Card className="border-green-200 bg-green-50" >
                 <CardContent className="pt-6">
                     <div className="flex gap-3">
                         <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -299,7 +280,7 @@ export function CompanySettings() {
                         </div>
                     </div>
                 </CardContent>
-            </Card>
-        </div>
+            </Card >
+        </div >
     );
 }

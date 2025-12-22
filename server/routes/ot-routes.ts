@@ -196,138 +196,11 @@ router.get('/sessions', verifyAuth, async (req, res) => {
 // COMPANY SETTINGS ROUTES (Admin Only)
 // ============================================
 
-/**
- * GET /api/settings
- * Get company OT settings
- */
-router.get('/settings', verifyAuth, requireAdmin, async (req, res) => {
-    try {
-        const settings = await CompanySettingsService.getSettings();
 
-        return res.json({
-            success: true,
-            settings
-        });
+// Duplicate routes removed - using the more secure versions below (lines 668+)
 
-    } catch (error) {
-        console.error('Error getting settings:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to get settings'
-        });
-    }
-});
 
-/**
- * PUT /api/settings
- * Update company OT settings
- */
-router.put('/settings', verifyAuth, requireAdmin, async (req, res) => {
-    try {
-        const adminId = req.user.uid;
-        const updates = req.body;
 
-        // Parse numeric values
-        if (updates.defaultOTRate) {
-            updates.defaultOTRate = parseFloat(updates.defaultOTRate);
-        }
-        if (updates.weekendOTRate) {
-            updates.weekendOTRate = parseFloat(updates.weekendOTRate);
-        }
-        if (updates.maxOTHoursPerDay) {
-            updates.maxOTHoursPerDay = parseFloat(updates.maxOTHoursPerDay);
-        }
-        if (updates.requireAdminApprovalAbove) {
-            updates.requireAdminApprovalAbove = parseFloat(updates.requireAdminApprovalAbove);
-        }
-
-        const result = await CompanySettingsService.updateSettings(updates, adminId);
-
-        return res.json(result);
-
-    } catch (error) {
-        console.error('Error updating settings:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update settings'
-        });
-    }
-});
-
-// ============================================
-// PAYROLL LOCK ROUTES (Master Admin Only)
-// ============================================
-
-/**
- * POST /api/payroll/lock
- * Lock a payroll period
- */
-router.post('/payroll/lock', verifyAuth, async (req, res) => {
-    try {
-        const { month, year } = req.body;
-        const adminId = req.user.uid;
-        const adminRole = req.user.role;
-
-        if (!month || !year) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: month, year'
-            });
-        }
-
-        const result = await PayrollLockService.lockPeriod(
-            parseInt(month),
-            parseInt(year),
-            adminId,
-            adminRole
-        );
-
-        return res.json(result);
-
-    } catch (error) {
-        console.error('Error locking payroll period:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to lock payroll period'
-        });
-    }
-});
-
-/**
- * POST /api/payroll/unlock
- * Unlock a payroll period (master admin only, requires reason)
- */
-router.post('/payroll/unlock', verifyAuth, async (req, res) => {
-    try {
-        const { month, year, reason } = req.body;
-        const adminId = req.user.uid;
-        const adminRole = req.user.role;
-
-        if (!month || !year || !reason) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: month, year, reason'
-            });
-        }
-
-        const result = await PayrollLockService.unlockPeriod(
-            parseInt(month),
-            parseInt(year),
-            adminId,
-            adminRole,
-            reason
-        );
-
-        return res.json(result);
-
-    } catch (error) {
-        console.error('Error unlocking payroll period:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to unlock payroll period'
-        });
-    }
-});
 
 /**
  * GET /api/payroll/periods/:year
@@ -571,15 +444,12 @@ router.get('/settings', verifyAuth, requireAdmin, async (req, res) => {
  */
 router.put('/settings', verifyAuth, requireAdmin, async (req, res) => {
     try {
-        const { weekendDays, defaultOTRate, weekendOTRate, maxOTHoursPerDay, requireAdminApprovalAbove } = req.body;
+        const { weekendDays, defaultOTRate, weekendOTRate, maxOTHoursPerDay } = req.body;
         const adminId = req.user.uid;
 
         // Validate numeric fields
         const numericFields = {
-            defaultOTRate,
-            weekendOTRate,
-            maxOTHoursPerDay,
-            requireAdminApprovalAbove
+            maxOTHoursPerDay
         };
 
         for (const [key, value] of Object.entries(numericFields)) {
@@ -615,7 +485,7 @@ router.put('/settings', verifyAuth, requireAdmin, async (req, res) => {
         if (defaultOTRate !== undefined) updates.defaultOTRate = parseFloat(defaultOTRate);
         if (weekendOTRate !== undefined) updates.weekendOTRate = parseFloat(weekendOTRate);
         if (maxOTHoursPerDay !== undefined) updates.maxOTHoursPerDay = parseFloat(maxOTHoursPerDay);
-        if (requireAdminApprovalAbove !== undefined) updates.requireAdminApprovalAbove = parseFloat(requireAdminApprovalAbove);
+
 
         const result = await CompanySettingsService.updateSettings(updates, adminId);
         return res.json(result);

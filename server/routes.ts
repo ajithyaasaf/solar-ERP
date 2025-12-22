@@ -44,6 +44,7 @@ import { attendanceRateLimiter, generalRateLimiter, createRateLimitMiddleware } 
 import { DataCompletenessAnalyzer, SiteVisitDataMapper } from "./services/quotation-mapping-service";
 import { registerQuotationRoutes } from "./routes/quotations";
 import { isCheckoutOverdue } from "./utils/time-helpers";
+import otRoutes from "./routes/ot-routes";
 
 /**
  * Helper function to merge a date with a time string
@@ -7794,8 +7795,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register OT System routes
-  const otRoutes = await import('./routes/ot-routes');
-  app.use('/api/ot', otRoutes.default);
+  // Mount at /api (not /api/ot) so routes are accessible at /api/settings, /api/payroll/lock, etc.
+  app.use('/api', otRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

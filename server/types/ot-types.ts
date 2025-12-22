@@ -76,7 +76,6 @@ export interface CompanySettings {
 
     // Daily OT cap
     maxOTHoursPerDay: number;
-    requireAdminApprovalAbove: number;
 
     // Metadata
     updatedBy?: string;

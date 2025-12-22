@@ -232,7 +232,7 @@ export class OTSessionService {
             const settings = await this.getCompanySettings();
             const exceedsDailyLimit = totalOTToday > settings.maxOTHoursPerDay;
 
-            if (exceedsDailyLimit && totalOTToday <= settings.requireAdminApprovalAbove) {
+            if (exceedsDailyLimit) {
                 return {
                     success: false,
                     message: `Daily OT limit exceeded (${settings.maxOTHoursPerDay}h). Total: ${totalOTToday.toFixed(2)}h. Contact admin for approval.`,
@@ -382,7 +382,6 @@ export class OTSessionService {
                 defaultOTRate: 1.5,
                 weekendOTRate: 2.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAboveabove: 6.0,
                 updatedAt: new Date()
             };
         } catch (error) {
@@ -394,7 +393,7 @@ export class OTSessionService {
                 defaultOTRate: 1.5,
                 weekendOTRate: 2.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAbove: 6.0,
+                maxOTHoursPerDay: 5.0,
                 updatedAt: new Date()
             };
         }

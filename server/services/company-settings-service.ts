@@ -28,7 +28,6 @@ export class CompanySettingsService {
                 defaultOTRate: 1.5,
                 weekendOTRate: 2.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAbove: 6.0,
                 updatedAt: new Date()
             };
 
@@ -42,7 +41,6 @@ export class CompanySettingsService {
                 defaultOTRate: 1.5,
                 weekendOTRate: 2.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAbove: 6.0,
                 updatedAt: new Date()
             };
         }
@@ -158,11 +156,10 @@ export class CompanySettingsService {
      */
     static async updateDailyOTCap(
         maxOTHoursPerDay: number,
-        requireAdminApprovalAbove: number,
         adminId: string
     ): Promise<{ success: boolean; message: string }> {
         return this.updateSettings(
-            { maxOTHoursPerDay, requireAdminApprovalAbove },
+            { maxOTHoursPerDay },
             adminId
         );
     }
