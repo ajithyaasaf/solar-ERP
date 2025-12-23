@@ -38,7 +38,7 @@ export interface CompanyDetails {
 }
 
 export interface BillOfMaterialsItem {
-  slNo: number;
+  slNo: number | string; // Supports regular numbering (1, 2, 3) and sub-numbering (1a, 1b)
   description: string;
   type: string;
   volt: string;
@@ -547,20 +547,64 @@ export class QuotationTemplateService {
     // Inverter kW (for inverter components)
     const inverterKW = project.inverterKW || panelSystemKW;
 
-    // 1. Solar Panel - Use panel type from form (default to Bifacial)
+    // 1. Solar Panel - Split into DCR and NON-DCR entries based on panel counts
     const panelType = project.panelType === 'topcon' ? 'Topcon' :
       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    const panelMake = project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier";
+    const panelWatts = project.panelWatts || '530';
 
-    items.push({
-      slNo: slNo++,
-      description: "Solar Panel (D)",
-      type: panelType,
-      volt: "24",
-      rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
-      qty: project.panelCount || 1,
-      unit: "Nos"
-    });
+    const dcrCount = project.dcrPanelCount || 0;
+    const nonDcrCount = project.nonDcrPanelCount || 0;
+
+    if (dcrCount > 0 && nonDcrCount > 0) {
+      // Both DCR and NON-DCR panels exist - use sub-numbering (1a, 1b)
+      items.push({
+        slNo: `${slNo}a`,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+      items.push({
+        slNo: `${slNo}b`,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+      slNo++; // Increment once after sub-items
+    } else if (dcrCount > 0) {
+      // Only DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+    } else if (nonDcrCount > 0) {
+      // Only NON-DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+    }
+    // Note: If both counts are 0, no panel entry is added to BOM
 
     // 2. Solar Ongrid Inverter - MPPT type, voltage based on phase
     const inverterVoltage = project.inverterPhase === 'three_phase' ? '415' : '230';
@@ -747,20 +791,64 @@ export class QuotationTemplateService {
     // ✅ CRITICAL: For off-grid, prioritize inverterKVA (user-entered value), then inverterKW
     const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
-    // 1. Solar Panel - Use panel type from form (default to Bifacial)
+    // 1. Solar Panel - Split into DCR and NON-DCR entries based on panel counts
     const panelType = project.panelType === 'topcon' ? 'Topcon' :
       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    const panelMake = project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier";
+    const panelWatts = project.panelWatts || '530';
 
-    items.push({
-      slNo: slNo++,
-      description: "Solar Panel (D)",
-      type: panelType,
-      volt: "24",
-      rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
-      qty: project.panelCount || 1,
-      unit: "Nos"
-    });
+    const dcrCount = project.dcrPanelCount || 0;
+    const nonDcrCount = project.nonDcrPanelCount || 0;
+
+    if (dcrCount > 0 && nonDcrCount > 0) {
+      // Both DCR and NON-DCR panels exist - use sub-numbering (1a, 1b)
+      items.push({
+        slNo: `${slNo}a`,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+      items.push({
+        slNo: `${slNo}b`,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+      slNo++; // Increment once after sub-items
+    } else if (dcrCount > 0) {
+      // Only DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+    } else if (nonDcrCount > 0) {
+      // Only NON-DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+    }
+    // Note: If both counts are 0, no panel entry is added to BOM
 
     // 2. Solar Offgrid Inverter - Voltage based on inverterVolt or calculated from battery
     const inverterVoltageRaw = project.inverterVolt || (project.voltage * project.batteryCount) || '230';
@@ -958,20 +1046,64 @@ export class QuotationTemplateService {
     // ✅ CRITICAL: For hybrid, prioritize inverterKVA (user-entered value), then inverterKW
     const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
-    // 1. Solar Panel - Use panel type from form (default to Bifacial)
+    // 1. Solar Panel - Split into DCR and NON-DCR entries based on panel counts
     const panelType = project.panelType === 'topcon' ? 'Topcon' :
       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    const panelMake = project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier";
+    const panelWatts = project.panelWatts || '530';
 
-    items.push({
-      slNo: slNo++,
-      description: "Solar Panel (D)",
-      type: panelType,
-      volt: "24",
-      rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
-      qty: project.panelCount || 1,
-      unit: "Nos"
-    });
+    const dcrCount = project.dcrPanelCount || 0;
+    const nonDcrCount = project.nonDcrPanelCount || 0;
+
+    if (dcrCount > 0 && nonDcrCount > 0) {
+      // Both DCR and NON-DCR panels exist - use sub-numbering (1a, 1b)
+      items.push({
+        slNo: `${slNo}a`,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+      items.push({
+        slNo: `${slNo}b`,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+      slNo++; // Increment once after sub-items
+    } else if (dcrCount > 0) {
+      // Only DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+    } else if (nonDcrCount > 0) {
+      // Only NON-DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+    }
+    // Note: If both counts are 0, no panel entry is added to BOM
 
     // 2. Solar Hybrid Inverter - Voltage based on inverterVolt or phase
     const inverterVoltage = project.inverterVolt || (project.inverterPhase === 'three_phase' ? '415' : '230');
