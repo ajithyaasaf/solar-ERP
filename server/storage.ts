@@ -28,6 +28,7 @@ import {
   insertLeaveBalanceSchema,
   insertLeaveApplicationSchema,
   insertFixedHolidaySchema,
+  insertNotificationSchema,
   LeaveBalance,
   LeaveApplication,
   FixedHoliday,
@@ -319,6 +320,33 @@ export interface Attendance {
   otReason?: string;
   otStartTime?: Date;
   otEndTime?: Date;
+
+  // Auto-Correction & Admin Review Fields
+  autoCorrected?: boolean;
+  autoCorrectedAt?: Date;
+  autoCorrectionReason?: string;
+  adminReviewStatus?: 'pending' | 'accepted' | 'adjusted' | 'rejected';
+  adminReviewedBy?: string;
+  adminReviewedAt?: Date;
+  adminReviewNotes?: string;
+  originalCheckOutTime?: Date;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'auto_checkout' | 'admin_review' | 'system' | 'general';
+  category: 'attendance' | 'leave' | 'ot' | 'general';
+  title: string;
+  message: string;
+  actionUrl?: string;
+  actionLabel?: string;
+  dismissible: boolean;
+  status: 'unread' | 'read';
+  dismissedAt?: Date;
+  expiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Leave {
@@ -797,7 +825,15 @@ export interface IStorage {
   getUsersByDepartment(department: string): Promise<User[]>;
   getUsersByDesignation(designation: string): Promise<User[]>;
   getUsersByReportingManager(managerId: string): Promise<User[]>;
-  listUsers(): Promise<User[]>;
+  // Notifications
+  createNotification(notification: any): Promise<Notification>;
+  getNotifications(userId: string, filters?: any): Promise<Notification[]>;
+  updateNotification(id: string, updates: any): Promise<Notification>;
+  deleteExpiredNotifications(date: Date): Promise<void>;
+
+  // Attendance Enhancements
+  listIncompleteAttendance(date: Date): Promise<Attendance[]>;
+  listAttendanceByReviewStatus(status: string): Promise<Attendance[]>;
   createUser(data: z.infer<typeof insertUserSchema>): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
 
@@ -6178,6 +6214,321 @@ export class FirestoreStorage implements IStorage {
       console.error('Error listing attendance by date range:', error);
       return [];
     }
+  }
+
+  // ============================================
+  // NOTIFICATION SYSTEM STORAGE METHODS
+  // ============================================
+
+  async createNotification(notification: any): Promise<Notification> {
+    try {
+      const id = this.db.collection('notifications').doc().id;
+      const now = new Date();
+      const notificationData = {
+        ...notification,
+        id,
+        createdAt: Timestamp.fromDate(now),
+        updatedAt: Timestamp.fromDate(now),
+        dismissedAt: notification.dismissedAt ? Timestamp.fromDate(notification.dismissedAt) : null,
+        expiresAt: notification.expiresAt ? Timestamp.fromDate(notification.expiresAt) : null,
+      };
+
+      await this.db.collection('notifications').doc(id).set(notificationData);
+
+      return {
+        ...notification,
+        id,
+        createdAt: now,
+        updatedAt: now,
+      } as Notification;
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      throw error;
+    }
+  }
+
+  async getNotifications(userId: string, filters: any = {}): Promise<Notification[]> {
+    try {
+      let query: Query = this.db.collection('notifications').where('userId', '==', userId);
+
+      if (filters.status) {
+        query = query.where('status', '==', filters.status);
+      }
+      if (filters.category) {
+        query = query.where('category', '==', filters.category);
+      }
+      if (filters.type) {
+        query = query.where('type', '==', filters.type);
+      }
+
+      const snapshot = await query.orderBy('createdAt', 'desc').get();
+
+      return snapshot.docs.map(doc => this.convertFirestoreToNotification({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      return [];
+    }
+  }
+
+  async updateNotification(id: string, updates: any): Promise<Notification> {
+    try {
+      const updateData = {
+        ...updates,
+        updatedAt: Timestamp.fromDate(new Date())
+      };
+
+      if (updates.dismissedAt) {
+        updateData.dismissedAt = Timestamp.fromDate(updates.dismissedAt);
+      }
+      if (updates.expiresAt) {
+        updateData.expiresAt = Timestamp.fromDate(updates.expiresAt);
+      }
+
+      await this.db.collection('notifications').doc(id).update(updateData);
+
+      const doc = await this.db.collection('notifications').doc(id).get();
+      return this.convertFirestoreToNotification({
+        id: doc.id,
+        ...doc.data()
+      });
+    } catch (error) {
+      console.error("Error updating notification:", error);
+      throw error;
+    }
+  }
+
+  async deleteExpiredNotifications(date: Date): Promise<void> {
+    try {
+      const snapshot = await this.db.collection('notifications')
+        .where('expiresAt', '<=', Timestamp.fromDate(date))
+        .get();
+
+      const batch = this.db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    } catch (error) {
+      console.error("Error deleting expired notifications:", error);
+    }
+  }
+
+  // ============================================
+  // ATTENDANCE ENHANCEMENTS
+  // ============================================
+
+  async listIncompleteAttendance(date: Date): Promise<Attendance[]> {
+    try {
+      const dateStr = date.toISOString().split('T')[0];
+      const snapshot = await this.db.collection("attendance")
+        .where("dateString", "==", dateStr)
+        .where("status", "==", "present") // Only check those who check-in
+        .get();
+
+      // Filter in-memory for missing checkOutTime as Firestore doesn't support where(checkOutTime == null) easily with other filters
+      return snapshot.docs
+        .map(doc => this.convertFirestoreToAttendance({ id: doc.id, ...doc.data() }))
+        .filter(record => !record.checkOutTime);
+    } catch (error) {
+      console.error("Error listing incomplete attendance:", error);
+      return [];
+    }
+  }
+
+  async listAttendanceByReviewStatus(status: string): Promise<Attendance[]> {
+    try {
+      const snapshot = await this.db.collection("attendance")
+        .where("adminReviewStatus", "==", status)
+        .get();
+
+      return snapshot.docs.map(doc => this.convertFirestoreToAttendance({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Error listing attendance by review status:", error);
+      return [];
+    }
+  }
+  // ============================================
+  // NOTIFICATIONS (Phase 2)
+  // ============================================
+
+  async createNotification(data: z.infer<typeof insertNotificationSchema>): Promise<Notification> {
+    const notificationData = {
+      ...data,
+      id: db.collection("notifications").doc().id,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    await db.collection("notifications").doc(notificationData.id).set(notificationData);
+
+    return this.convertFirestoreToNotification({
+      ...notificationData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  async getNotifications(userId: string, filters?: { status?: 'unread' | 'read'; limit?: number }): Promise<Notification[]> {
+    let query: Query = db.collection("notifications").where("userId", "==", userId);
+
+    if (filters?.status) {
+      query = query.where("status", "==", filters.status);
+    }
+
+    query = query.orderBy("createdAt", "desc");
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    const snapshot = await query.get();
+    return snapshot.docs.map(doc => this.convertFirestoreToNotification({ id: doc.id, ...doc.data() }));
+  }
+
+  async updateNotification(id: string, data: Partial<Notification>): Promise<Notification> {
+    const updateData = {
+      ...data,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    await db.collection("notifications").doc(id).update(updateData);
+
+    const doc = await db.collection("notifications").doc(id).get();
+    if (!doc.exists) {
+      throw new Error("Notification not found");
+    }
+
+    return this.convertFirestoreToNotification({ id: doc.id, ...doc.data() });
+  }
+
+  async deleteExpiredNotifications(): Promise<void> {
+    const now = new Date();
+    const snapshot = await db.collection("notifications")
+      .where("expiresAt", "<=", Timestamp.fromDate(now))
+      .get();
+
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    console.log(`[CLEANUP] Deleted ${snapshot.docs.length} expired notifications`);
+  }
+
+  // ============================================
+  // ATTENDANCE REVIEW (Phases 1 & 3)
+  // ============================================
+
+  async listIncompleteAttendance(date?: Date): Promise<Attendance[]> {
+    let query: Query = db.collection("attendance")
+      .where("checkInTime", "!=", null);
+
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      query = query
+        .where("date", ">=", Timestamp.fromDate(startOfDay))
+        .where("date", "<=", Timestamp.fromDate(endOfDay));
+    }
+
+    const snapshot = await query.get();
+
+    // Filter in application layer:
+    // 1. Missing checkout (Firestore doesn't support null inequality)
+    // 2. Not already auto-corrected
+    // 3. CRITICAL: Exclude leave/holiday to prevent auto-correcting approved absences
+    const incomplete = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return this.convertFirestoreToAttendance({ id: doc.id, ...data });
+      })
+      .filter(record =>
+        !record.checkOutTime &&
+        !record.autoCorrected &&
+        record.status !== 'leave' &&     // Exclude approved leaves
+        record.status !== 'holiday'      // Exclude holidays
+      );
+
+    return incomplete;
+  }
+
+  async listAttendanceByReviewStatus(status: 'pending' | 'accepted' | 'adjusted' | 'rejected'): Promise<Attendance[]> {
+    const snapshot = await db.collection("attendance")
+      .where("adminReviewStatus", "==", status)
+      .orderBy("autoCorrectedAt", "desc")
+      .get();
+
+    // Enrich with user details
+    const attendancePromises = snapshot.docs.map(async doc => {
+      const data = doc.data();
+      const attendance = this.convertFirestoreToAttendance({ id: doc.id, ...data });
+
+      // Get user details
+      if (attendance.userId) {
+        const user = await this.getUser(attendance.userId);
+        return {
+          ...attendance,
+          userName: user?.displayName || `User #${attendance.userId}`,
+          userDepartment: user?.department || null,
+        };
+      }
+
+      return attendance;
+    });
+
+    return Promise.all(attendancePromises);
+  }
+
+  async getUsersByRole(role: 'admin' | 'master_admin' | 'employee'): Promise<User[]> {
+    const snapshot = await db.collection("users")
+      .where("role", "==", role)
+      .where("isActive", "==", true)
+      .get();
+
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        displayName: data.displayName || 'User',
+        email: data.email,
+        role: data.role,
+        department: data.department || null,
+        ...data
+      } as User;
+    });
+  }
+
+  // ============================================
+  // HELPERS
+  // ============================================
+
+  private convertFirestoreToAttendance(data: any): Attendance {
+    return {
+      ...data,
+      date: data.date?.toDate() || (data.dateString ? new Date(data.dateString) : new Date()),
+      checkInTime: data.checkInTime?.toDate() || undefined,
+      checkOutTime: data.checkOutTime?.toDate() || undefined,
+      otStartTime: data.otStartTime?.toDate() || undefined,
+      otEndTime: data.otEndTime?.toDate() || undefined,
+      autoCorrectedAt: data.autoCorrectedAt?.toDate() || undefined,
+      adminReviewedAt: data.adminReviewedAt?.toDate() || undefined,
+      originalCheckOutTime: data.originalCheckOutTime?.toDate() || undefined,
+    } as Attendance;
+  }
+
+  private convertFirestoreToNotification(data: any): Notification {
+    return {
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+      dismissedAt: data.dismissedAt?.toDate() || undefined,
+      expiresAt: data.expiresAt?.toDate() || undefined,
+    } as Notification;
   }
 }
 

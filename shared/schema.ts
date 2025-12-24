@@ -887,6 +887,32 @@ export const insertAttendanceSchema = z.object({
   manualOTHours: z.number().nullish(),
   otStatus: z.enum(["not_started", "in_progress", "completed"]).default("not_started"),
   otType: z.enum(["early_arrival", "late_departure", "weekend", "holiday"]).nullish(),
+
+  // Auto-Correction & Admin Review Fields (Phases 1-3)
+  autoCorrected: z.boolean().default(false),
+  autoCorrectedAt: z.date().nullish(),
+  autoCorrectionReason: z.string().nullish(),
+  adminReviewStatus: z.enum(["pending", "accepted", "adjusted", "rejected"]).nullish(),
+  adminReviewedBy: z.string().nullish(),
+  adminReviewedAt: z.date().nullish(),
+  adminReviewNotes: z.string().nullish(),
+  originalCheckOutTime: z.date().nullish(),
+});
+
+export const insertNotificationSchema = z.object({
+  userId: z.string(),
+  type: z.enum(["auto_checkout", "admin_review", "system", "general"]).default("general"),
+  category: z.enum(["attendance", "leave", "ot", "general"]).default("general"),
+  title: z.string(),
+  message: z.string(),
+  actionUrl: z.string().nullish(),
+  actionLabel: z.string().nullish(),
+  dismissible: z.boolean().default(true),
+  status: z.enum(["unread", "read"]).default("unread"),
+  dismissedAt: z.date().nullish(),
+  expiresAt: z.date().nullish(),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date()),
 });
 
 export const insertOfficeLocationSchema = z.object({

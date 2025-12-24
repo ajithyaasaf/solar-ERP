@@ -263,9 +263,9 @@ export class EnterpriseTimeService {
   }
 
   /**
-   * Parse 12-hour time string to Date object for today
+   * Parse 12-hour time string into a Date object for a specific base date
    */
-  private static parseTimeToDate(timeStr: string, baseDate: Date): Date {
+  public static parseTimeToDate(timeStr: string, baseDate: Date): Date {
     try {
       // Validate and clean the time string first
       if (!timeStr || typeof timeStr !== 'string') {

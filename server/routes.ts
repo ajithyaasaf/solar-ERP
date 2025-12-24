@@ -45,6 +45,10 @@ import { DataCompletenessAnalyzer, SiteVisitDataMapper } from "./services/quotat
 import { registerQuotationRoutes } from "./routes/quotations";
 import { isCheckoutOverdue } from "./utils/time-helpers";
 import otRoutes from "./routes/ot-routes";
+import { AutoCheckoutService } from "./services/auto-checkout-service";
+import { NotificationService } from "./services/notification-service";
+import { EnterpriseTimeService } from "./services/enterprise-time-service";
+import { insertNotificationSchema } from "@shared/schema";
 
 /**
  * Helper function to merge a date with a time string
@@ -185,6 +189,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(401).json({ message: "Unauthorized: Invalid token" });
     }
   };
+
+  // ============================================
+  // ATTENDANCE AUTO-CHECKOUT & NOTIFICATIONS (Phases 1-3)
+  // ============================================
+
+  // CRON Endpoint for Auto-Checkout (Phase 1)
+  app.post("/api/cron/auto-checkout", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const cronSecret = process.env.CRON_SECRET;
+
+      if (!cronSecret) {
+        console.error("[CRON] CRON_SECRET environment variable is not set!");
+        return res.status(500).json({ success: false, message: "Server configuration error" });
+      }
+
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        console.warn(`[CRON] Unauthorized access attempt from IP: ${req.ip}`);
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      const { AutoCheckoutService } = await import("./services/auto-checkout-service");
+      await AutoCheckoutService.processAutoCheckouts();
+      res.json({ success: true, message: "Auto-checkout job processed successfully" });
+    } catch (error) {
+      console.error("[CRON] Error in auto-checkout route:", error);
+      res.status(500).json({ success: false, message: "Internal server error during auto-checkout" });
+    }
+  });
+
+  // Notification Routes (Phase 2)
+  app.get("/api/notifications", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) return res.status(401).end();
+
+      const userId = req.authenticatedUser.uid;
+      const notifications = await storage.getNotifications(userId, { status: 'unread' });
+
+      res.json({ success: true, notifications });
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications/:id/dismiss", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) return res.status(401).end();
+
+      const { id } = req.params;
+      const userId = req.authenticatedUser.uid;
+
+      const notifications = await storage.getNotifications(userId);
+      const exists = notifications.some(n => n.id === id);
+
+      if (!exists) {
+        return res.status(404).json({ success: false, message: "Notification not found" });
+      }
+
+      await storage.updateNotification(id, {
+        status: 'read',
+        dismissedAt: new Date()
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error dismissing notification:", error);
+      res.status(500).json({ success: false, message: "Failed to dismiss notification" });
+    }
+  });
+
+  // Admin Review Routes (Phase 3)
+  app.get("/api/admin/attendance/pending-review", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser || (req.authenticatedUser.user.role !== 'admin' && req.authenticatedUser.user.role !== 'master_admin')) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+      }
+
+      const records = await storage.listAttendanceByReviewStatus('pending');
+
+      const enrichedRecords = await Promise.all(records.map(async (record) => {
+        const user = await storage.getUser(record.userId);
+        return {
+          ...record,
+          userName: user?.displayName || 'Unknown employee'
+        };
+      }));
+
+      res.json({ success: true, records: enrichedRecords });
+    } catch (error) {
+      console.error("Error fetching pending reviews:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch pending reviews" });
+    }
+  });
+
+  app.post("/api/admin/attendance/:id/review", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser || (req.authenticatedUser.user.role !== 'admin' && req.authenticatedUser.user.role !== 'master_admin')) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const { action, checkInTime, checkOutTime, notes } = req.body;
+      const adminId = req.authenticatedUser.uid;
+
+      const recordSnapshot = await storage.getAttendance(id);
+      if (!recordSnapshot) {
+        return res.status(404).json({ success: false, message: "Attendance record not found" });
+      }
+
+      const updateData: any = {
+        adminReviewStatus: action,
+        adminReviewedBy: adminId,
+        adminReviewedAt: new Date(),
+        adminReviewNotes: notes || ''
+      };
+
+      const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
+      const { NotificationService } = await import("./services/notification-service");
+
+      if (action === 'adjusted') {
+        if (!checkInTime || !checkOutTime) {
+          return res.status(400).json({ success: false, message: "Check-in and check-out times are required for adjustments" });
+        }
+
+        const finalIn = new Date(checkInTime);
+        const finalOut = new Date(checkOutTime);
+
+        updateData.originalCheckOutTime = recordSnapshot.checkOutTime;
+        updateData.checkInTime = finalIn;
+        updateData.checkOutTime = finalOut;
+
+        const metrics = await EnterpriseTimeService.calculateTimeMetrics(
+          recordSnapshot.userId,
+          recordSnapshot.userDepartment || 'general',
+          finalIn,
+          finalOut
+        );
+        updateData.workingHours = metrics.workingHours;
+      } else if (action === 'rejected') {
+        updateData.status = 'absent';
+      } else if (action === 'accepted') {
+        updateData.status = 'present';
+      }
+
+      await storage.updateAttendance(id, updateData);
+
+      await NotificationService.notifyAdjustmentMade(
+        recordSnapshot.userId,
+        recordSnapshot.date,
+        action,
+        notes
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error processing review:", error);
+      res.status(500).json({ success: false, message: "Failed to process review" });
+    }
+  });
+
 
   // Activity Logs with optimized performance
   app.get("/api/activity-logs", verifyAuth, async (req, res) => {
@@ -7475,32 +7640,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update follow-up (checkout)
-  app.patch("/api/follow-ups/:id/checkout", (req, res, next) => {
-    console.log("=== RAW FOLLOW-UP CHECKOUT REQUEST ===");
-    console.log("Method:", req.method);
-    console.log("URL:", req.url);
-    console.log("Follow-up ID from params:", req.params.id);
-    console.log("Raw body keys:", Object.keys(req.body));
-    console.log("Authorization header present:", !!req.headers.authorization);
-    console.log("=====================================");
-    next();
-  }, verifyAuth, async (req, res) => {
+  app.patch("/api/follow-ups/:id/checkout", verifyAuth, async (req, res) => {
     try {
-      console.log("=== FOLLOW-UP CHECKOUT REQUEST START ===");
-      console.log("Follow-up ID:", req.params.id);
-      console.log("User UID:", req.authenticatedUser?.uid || "");
-      console.log("Request body:", JSON.stringify(req.body, null, 2));
-      console.log("Request body keys:", Object.keys(req.body));
-      console.log("==========================================");
-
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'edit') : false;
 
       if (!user || !hasPermission) {
-        console.log("=== PERMISSION DENIED ===");
-        console.log("User exists:", !!user);
-        console.log("Has permission:", hasPermission);
-        console.log("=========================");
         return res.status(403).json({
           message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
@@ -7510,17 +7655,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followUp = await followUpService.getFollowUpById(req.params.id);
 
       if (!followUp) {
-        console.log("=== FOLLOW-UP NOT FOUND ===");
-        console.log("Follow-up ID:", req.params.id);
-        console.log("=============================");
         return res.status(404).json({ message: "Follow-up visit not found" });
       }
-
-      console.log("=== FOLLOW-UP FOUND ===");
-      console.log("Follow-up userId:", followUp.userId);
-      console.log("Request user UID:", user.uid);
-      console.log("User role:", user.role);
-      console.log("=======================");
 
       // Check if user can checkout this follow-up
       const canCheckout = followUp.userId === user.uid ||
@@ -7528,46 +7664,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user.role === 'master_admin';
 
       if (!canCheckout) {
-        console.log("=== CHECKOUT ACCESS DENIED ===");
-        console.log("User can checkout:", canCheckout);
-        console.log("Follow-up userId:", followUp.userId);
-        console.log("User UID:", user.uid);
-        console.log("===============================");
         return res.status(403).json({ message: "Access denied. You can only checkout your own follow-ups." });
       }
 
       // Validate required fields
       if (!req.body.siteOutLocation) {
-        console.log("=== VALIDATION ERROR: MISSING LOCATION ===");
         return res.status(400).json({
           message: "Missing required field: siteOutLocation",
           error: "MISSING_LOCATION"
         });
       }
 
-      // Validate visit outcome fields if provided
-      if (req.body.visitOutcome) {
-        const allowedOutcomes = ['completed', 'on_process', 'cancelled'];
-        if (!allowedOutcomes.includes(req.body.visitOutcome)) {
-          return res.status(400).json({
-            message: "Invalid visit outcome. Must be one of: completed, on_process, cancelled",
-            error: "INVALID_OUTCOME"
-          });
-        }
-
-        // Validate scheduled follow-up date for on_process outcome
-        if (req.body.visitOutcome === 'on_process' && req.body.scheduledFollowUpDate) {
-          const followUpDate = new Date(req.body.scheduledFollowUpDate);
-          if (followUpDate <= new Date()) {
-            return res.status(400).json({
-              message: "Scheduled follow-up date must be in the future",
-              error: "INVALID_FOLLOWUP_DATE"
-            });
-          }
-        }
-      }
-
-      // Prepare checkout data - be more flexible with missing fields
       const checkoutData = {
         siteOutTime: new Date(),
         siteOutLocation: req.body.siteOutLocation,
@@ -7575,32 +7682,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         siteOutPhotos: req.body.siteOutPhotos || [],
         status: 'completed' as const,
         notes: req.body.notes || followUp.notes || '',
-
-        // Handle visit outcome fields for follow-ups
         visitOutcome: req.body.visitOutcome || null,
         outcomeNotes: req.body.outcomeNotes || null,
         scheduledFollowUpDate: req.body.scheduledFollowUpDate ? new Date(req.body.scheduledFollowUpDate) : null,
-        // Security: Set these server-side, don't trust client input
         outcomeSelectedAt: req.body.visitOutcome ? new Date() : null,
         outcomeSelectedBy: req.body.visitOutcome ? user.uid : null,
-
         updatedAt: new Date()
       };
 
-      console.log("=== FOLLOW-UP CHECKOUT DEBUG ===");
-      console.log("Follow-up ID:", req.params.id);
-      console.log("Request body keys:", Object.keys(req.body));
-      console.log("siteOutLocation:", req.body.siteOutLocation);
-      console.log("siteOutPhotoUrl:", req.body.siteOutPhotoUrl);
-      console.log("siteOutPhotos received:", req.body.siteOutPhotos);
-      console.log("siteOutPhotos type:", typeof req.body.siteOutPhotos);
-      console.log("siteOutPhotos length:", Array.isArray(req.body.siteOutPhotos) ? req.body.siteOutPhotos.length : 'not array');
-      console.log("Checkout data:", JSON.stringify(checkoutData, null, 2));
-      console.log("================================");
-
       const updatedFollowUp = await followUpService.updateFollowUp(req.params.id, checkoutData);
 
-      // Log follow-up outcome activity using server-side normalized data
+      // Log activity
       try {
         if (updatedFollowUp.visitOutcome) {
           const outcomeLabel = {
@@ -7609,23 +7701,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cancelled: 'Cancelled'
           }[updatedFollowUp.visitOutcome] || updatedFollowUp.visitOutcome;
 
-          let activityType: 'follow_up_completed' | 'follow_up_scheduled' = 'follow_up_completed';
-          let description = `Follow-up visit ${outcomeLabel.toLowerCase()} for ${followUp.customer.name}`;
-
-          if (updatedFollowUp.visitOutcome === 'on_process' && updatedFollowUp.scheduledFollowUpDate) {
-            activityType = 'follow_up_scheduled';
-            const followUpDate = updatedFollowUp.scheduledFollowUpDate.toLocaleDateString();
-            description = `Follow-up visit rescheduled for ${followUp.customer.name} on ${followUpDate}`;
-          }
-
-          if (updatedFollowUp.outcomeNotes) {
-            description += `. Notes: ${updatedFollowUp.outcomeNotes}`;
-          }
-
           await storage.createActivityLog({
-            type: activityType,
+            type: updatedFollowUp.visitOutcome === 'on_process' ? 'follow_up_scheduled' : 'follow_up_completed',
             title: `Follow-up ${outcomeLabel}`,
-            description,
+            description: `Follow-up visit ${outcomeLabel.toLowerCase()} for ${followUp.customer.name}`,
             entityId: req.params.id,
             entityType: 'follow_up',
             userId: user.uid
@@ -7633,37 +7712,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (logError) {
         console.error("Failed to create activity log:", logError);
-        // Don't fail the checkout if logging fails
       }
-
-      console.log("=== FOLLOW-UP CHECKOUT COMPLETED ===");
-      console.log("Follow-up ID:", req.params.id);
-      console.log("User:", user.uid, user.displayName);
-      console.log("Customer:", followUp.customer.name);
-      console.log("====================================");
 
       res.json({
         data: updatedFollowUp,
         message: "Follow-up checkout completed successfully"
       });
     } catch (error) {
-      console.error("=== FOLLOW-UP CHECKOUT ERROR ===");
-      console.error("Follow-up ID:", req.params.id);
-      console.error("Error details:", error);
-      console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
-      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-      console.error("================================");
-
-      // Return more specific error information
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      res.status(500).json({
-        message: "Failed to checkout follow-up visit",
-        error: errorMessage,
-        debugInfo: {
-          followUpId: req.params.id,
-          timestamp: new Date().toISOString()
-        }
-      });
+      console.error("Error processing follow-up checkout:", error);
+      res.status(500).json({ message: "Failed to checkout follow-up visit", error: (error as Error).message });
     }
   });
 
@@ -7791,6 +7848,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in reverse geocoding:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ================================================================
+  // AUTO-CHECKOUT SYSTEM ROUTES (Phases 1-3)
+  // ================================================================
+
+  // Phase 1: CRON Job Endpoint for Auto-Checkout
+  app.post("/api/cron/auto-checkout", async (req, res) => {
+    try {
+      // Security: Verify CRON secret
+      const cronSecret = process.env.CRON_SECRET;
+      const authHeader = req.headers.authorization;
+
+      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        console.warn("[AUTO-CHECKOUT] Unauthorized CRON attempt");
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      console.log("[AUTO-CHECKOUT] CRON job triggered");
+
+      // Import and execute auto-checkout service
+      const { AutoCheckoutService } = await import("./services/auto-checkout-service");
+      await AutoCheckoutService.processAutoCheckouts();
+
+      res.json({
+        success: true,
+        message: "Auto-checkout job completed successfully"
+      });
+    } catch (error: any) {
+      console.error("[AUTO-CHECKOUT] CRON job error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Auto-checkout job failed",
+        error: error.message
+      });
+    }
+  });
+
+  // Phase 2: Notification Endpoints
+  app.get("/api/notifications", verifyAuth, async (req, res) => {
+    try {
+      const userId = req.authenticatedUser?.uid;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      const notifications = await storage.getNotifications(userId, {
+        status: 'unread',
+        limit: 50
+      });
+
+      res.json({
+        success: true,
+        notifications
+      });
+    } catch (error: any) {
+      console.error("[NOTIFICATIONS] Error fetching notifications:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch notifications",
+        error: error.message
+      });
+    }
+  });
+
+  app.post("/api/notifications/:id/dismiss", verifyAuth, async (req, res) => {
+    try {
+      const userId = req.authenticatedUser?.uid;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      const notificationId = req.params.id;
+
+      // Verify notification belongs to user
+      const notifications = await storage.getNotifications(userId);
+      const notification = notifications.find(n => n.id === notificationId);
+
+      if (!notification) {
+        return res.status(404).json({
+          success: false,
+          message: "Notification not found or access denied"
+        });
+      }
+
+      await storage.updateNotification(notificationId, {
+        status: 'read',
+        dismissedAt: new Date()
+      });
+
+      res.json({
+        success: true,
+        message: "Notification dismissed"
+      });
+    } catch (error: any) {
+      console.error("[NOTIFICATIONS] Error dismissing notification:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to dismiss notification",
+        error: error.message
+      });
+    }
+  });
+
+  // Phase 3: Admin Review Endpoints
+  app.get("/api/admin/attendance/pending-review", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+
+      // Check admin role
+      if (!user || (user.role !== 'admin' && user.role !== 'master_admin')) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Admin privileges required."
+        });
+      }
+
+      const pendingReviews = await storage.listAttendanceByReviewStatus('pending');
+
+      res.json(pendingReviews);
+    } catch (error: any) {
+      console.error("[ADMIN REVIEW] Error fetching pending reviews:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch pending reviews",
+        error: error.message
+      });
+    }
+  });
+
+  app.post("/api/admin/attendance/:id/review", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+
+      // Check admin role
+      if (!user || (user.role !== 'admin' && user.role !== 'master_admin')) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Admin privileges required."
+        });
+      }
+
+      const attendanceId = req.params.id;
+      const { action, checkInTime, checkOutTime, notes } = req.body;
+
+      // Validate action
+      if (!['accepted', 'adjusted', 'rejected'].includes(action)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid action. Must be 'accepted', 'adjusted', or 'rejected'"
+        });
+      }
+
+      // Get the attendance record
+      const record = await storage.getAttendance(attendanceId);
+      if (!record) {
+        return res.status(404).json({
+          success: false,
+          message: "Attendance record not found"
+        });
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        adminReviewStatus: action,
+        adminReviewedBy: user.uid,
+        adminReviewedAt: new Date(),
+        adminReviewNotes: notes || null
+      };
+
+      // Handle different actions
+      if (action === 'accepted') {
+        // Just mark as accepted, no time changes
+      } else if (action === 'adjusted') {
+        // Validate times
+        if (!checkInTime || !checkOutTime) {
+          return res.status(400).json({
+            success: false,
+            message: "Both checkInTime and checkOutTime are required for adjustment"
+          });
+        }
+
+        // Store original checkout time for audit trail
+        updateData.originalCheckOutTime = record.checkOutTime;
+        updateData.checkInTime = new Date(checkInTime);
+        updateData.checkOutTime = new Date(checkOutTime);
+
+        // Recalculate working hours
+        const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
+        const metrics = await EnterpriseTimeService.calculateTimeMetrics(
+          record.userId,
+          record.userDepartment || "general",
+          updateData.checkInTime,
+          updateData.checkOutTime
+        );
+        updateData.workingHours = metrics.workingHours;
+      } else if (action === 'rejected') {
+        // Mark as absent
+        updateData.status = 'absent';
+        updateData.checkOutTime = null;
+        updateData.workingHours = 0;
+      }
+
+      // Update the record
+      await storage.updateAttendance(attendanceId, updateData);
+
+      // Notify the employee
+      const { NotificationService } = await import("./services/notification-service");
+      await NotificationService.notifyAdjustmentMade(
+        record.userId,
+        record.date,
+        action,
+        notes
+      );
+
+      res.json({
+        success: true,
+        message: `Attendance ${action} successfully`,
+        data: {
+          id: attendanceId,
+          action,
+          reviewedBy: user.displayName
+        }
+      });
+    } catch (error: any) {
+      console.error("[ADMIN REVIEW] Error processing review:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to process review",
+        error: error.message
+      });
     }
   });
 
