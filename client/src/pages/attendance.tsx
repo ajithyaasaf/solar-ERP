@@ -301,11 +301,16 @@ export default function Attendance() {
     const currentHours = now.getHours();
     const currentMinutes = now.getMinutes();
 
+    const deptCheckIn = parseTime(checkInTime);
     const deptCheckout = parseTime(checkOutTime);
     const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+    const checkInTimeInMinutes = deptCheckIn.hours * 60 + deptCheckIn.minutes;
     const checkoutTimeInMinutes = deptCheckout.hours * 60 + deptCheckout.minutes;
 
-    // Disable check-in if current time is past checkout time
+    // Check if current time is BEFORE check-in time
+    const isBeforeCheckInTime = currentTimeInMinutes < checkInTimeInMinutes;
+
+    // Check if current time is AFTER checkout time
     const isPastCheckoutTime = currentTimeInMinutes > checkoutTimeInMinutes;
 
     if (!todayAttendance) {
