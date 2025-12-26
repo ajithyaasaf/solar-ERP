@@ -49,6 +49,7 @@ import { AutoCheckoutService } from "./services/auto-checkout-service";
 import { NotificationService } from "./services/notification-service";
 import { EnterpriseTimeService } from "./services/enterprise-time-service";
 import { insertNotificationSchema } from "@shared/schema";
+import { PayrollLockService } from "./services/payroll-lock-service";
 
 /**
  * Helper function to merge a date with a time string
@@ -2322,6 +2323,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Attendance record not found" });
       }
 
+      // Security Check: Verify payroll period is not locked
+      if (await PayrollLockService.isPeriodLocked(existingRecord.date)) {
+        return res.status(403).json({ message: "Cannot modify attendance for a locked payroll period" });
+      }
+
       // **CRITICAL: Enforce date immutability - date field cannot be modified**
       delete updateData.date;
 
@@ -2412,6 +2418,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const attendanceId of attendanceIds) {
         try {
+          // Security Check: Verify payroll period is not locked
+          const record = await storage.getAttendance(attendanceId);
+          if (record && await PayrollLockService.isPeriodLocked(record.date)) {
+            errorCount++;
+            results.push({
+              id: attendanceId,
+              status: 'error',
+              error: 'Cannot modify attendance for a locked payroll period'
+            });
+            continue;
+          }
+
           let result = null;
 
           switch (action) {
@@ -4392,7 +4410,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
+
+      // Security Check: Verify payroll period is not locked (for original date)
+      if (await PayrollLockService.isPeriodLocked(leave.startDate)) {
+        return res.status(403).json({ message: "Cannot modify leave for a locked payroll period" });
+      }
+
       const leaveData = insertLeaveSchema.partial().parse(req.body);
+
+      // Security Check: Verify payroll period is not locked (for new date if changed)
+      if (leaveData.startDate && await PayrollLockService.isPeriodLocked(leaveData.startDate)) {
+        return res.status(403).json({ message: "Cannot move leave to a locked payroll period" });
+      }
       const updatedLeave = await storage.updateLeave(req.params.id, leaveData);
       if (!updatedLeave) {
         return res.status(404).json({ message: "Leave record not found" });
@@ -5474,6 +5503,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { month, year, userIds } = req.body;
+
+      // Security Check: Verify payroll period is not locked
+      if (await PayrollLockService.isPeriodLocked(new Date(year, month - 1, 1))) {
+        return res.status(403).json({ message: "Cannot process payroll for a locked period" });
+      }
 
       // Process payroll for all users or specific users
       const usersToProcess = userIds || (await storage.listUsers()).map(u => u.id);

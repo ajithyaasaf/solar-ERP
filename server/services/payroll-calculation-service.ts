@@ -10,7 +10,7 @@ import { LeaveService } from "./leave-service";
  * - Pro-rated earnings and deductions
  */
 export class PayrollCalculationService {
-  constructor(private storage: IStorage) {}
+  constructor(private storage: IStorage) { }
 
   /**
    * Calculate overtime pay based on salary structure and hours worked
@@ -18,7 +18,8 @@ export class PayrollCalculationService {
   async calculateOvertimePay(
     userId: string,
     overtimeHours: number,
-    salaryStructure: any
+    salaryStructure: any,
+    settings?: any // PayrollSettings
   ): Promise<number> {
     if (overtimeHours <= 0) return 0;
 
@@ -29,12 +30,18 @@ export class PayrollCalculationService {
     const totalFixedSalary = fixedBasic + fixedHRA + fixedConveyance;
 
     // Get overtime rate (default 1.5x if not specified)
-    const overtimeRate = salaryStructure.overtimeRate || 1.5;
+    // precise-edit: Use settings logic
+    const overtimeRate = salaryStructure.overtimeRate || settings?.overtimeMultiplier || 1.5;
 
     // Calculate hourly rate based on 26 working days and 8 hours per day
-    const standardWorkingHours = 8;
-    const standardWorkingDays = 26;
-    const hourlyRate = totalFixedSalary / (standardWorkingDays * standardWorkingHours);
+    // precise-edit: Use settings logic
+    const standardWorkingHours = settings?.standardWorkingHours || 8;
+    const standardWorkingDays = settings?.standardWorkingDays || 26;
+
+    // Safety check to avoid division by zero
+    const workingHoursPerMonth = (standardWorkingDays * standardWorkingHours) || 208;
+
+    const hourlyRate = totalFixedSalary / workingHoursPerMonth;
 
     // Calculate overtime pay
     const overtimePay = overtimeHours * hourlyRate * overtimeRate;
@@ -45,7 +52,8 @@ export class PayrollCalculationService {
       totalFixedSalary,
       hourlyRate: hourlyRate.toFixed(2),
       overtimeRate,
-      overtimePay: overtimePay.toFixed(2)
+      overtimePay: overtimePay.toFixed(2),
+      workingHoursPerMonth
     });
 
     return Math.round(overtimePay);
@@ -75,25 +83,27 @@ export class PayrollCalculationService {
       let totalPaidDays = 0;
 
       for (const leave of paidLeaves) {
+        if (!leave.startDate || !leave.endDate) continue;
+
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
-        
+
         // Get the first and last day of the payroll month (end of day for last day)
         const monthStart = new Date(year, month - 1, 1);
         const monthEnd = new Date(year, month, 0, 23, 59, 59, 999); // End of last day of month
-        
+
         // Find overlap between leave period and payroll month
         const overlapStart = startDate > monthStart ? startDate : monthStart;
         const overlapEnd = endDate < monthEnd ? endDate : monthEnd;
-        
+
         // Check if there's any overlap
         if (overlapStart <= overlapEnd) {
           // Calculate number of days in the overlap
           const daysInMonth = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-          
+
           // For permission (partial day), convert hours to days
           if (leave.leaveType === 'permission') {
-            const permissionHours = leave.totalHours || 0;
+            const permissionHours = leave.permissionHours || 0; // Fixed: Use permissionHours
             const workingHoursPerDay = 8; // Standard working hours
             const partialDays = permissionHours / workingHoursPerDay;
             totalPaidDays += partialDays;
@@ -140,12 +150,12 @@ export class PayrollCalculationService {
       const unpaidLeaves = leaves.filter(leave => {
         if (leave.status !== 'approved') return false;
         if (!leave.startDate || !leave.endDate) return false;
-        
+
         // Include unpaid_leave type OR any leave that affects payroll (excluding paid types)
         const isUnpaidType = leave.leaveType === 'unpaid_leave';
         const isPaidType = leave.leaveType === 'casual_leave' || leave.leaveType === 'permission';
         const affectsPayroll = leave.affectsPayroll === true;
-        
+
         return isUnpaidType || (affectsPayroll && !isPaidType);
       });
 
@@ -154,21 +164,21 @@ export class PayrollCalculationService {
       for (const leave of unpaidLeaves) {
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
-        
+
         // Get the first and last day of the payroll month (end of day for last day)
         const monthStart = new Date(year, month - 1, 1);
         const monthEnd = new Date(year, month, 0, 23, 59, 59, 999); // End of last day of month
-        
+
         // Find overlap between leave period and payroll month
         const overlapStart = startDate > monthStart ? startDate : monthStart;
         const overlapEnd = endDate < monthEnd ? endDate : monthEnd;
-        
+
         // Check if there's any overlap
         if (overlapStart <= overlapEnd) {
           // Calculate number of days in the overlap
           const daysInMonth = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
           totalUnpaidDays += daysInMonth;
-          
+
           console.log(`PAYROLL_CALC: Unpaid leave for ${userId}: ${daysInMonth} days in month ${month}/${year} (from ${startDate.toDateString()} to ${endDate.toDateString()})`);
         }
       }
@@ -225,7 +235,7 @@ export class PayrollCalculationService {
 
         // Calculate number of months since deduction started
         const monthsSinceStart = (year - deductionStartYear) * 12 + (month - deductionStartMonth);
-        
+
         // Check if deduction is still active (within number of installments)
         return monthsSinceStart < advance.numberOfInstallments;
       });
@@ -263,8 +273,12 @@ export class PayrollCalculationService {
     // Get month details
     const monthDays = new Date(year, month, 0).getDate();
 
+    // Fetch Global Payroll Settings
+    const settings = await this.storage.getPayrollSettings();
+
     // Calculate present days from attendance
-    const validWorkingStatuses = ['present', 'late', 'overtime', 'half_day', 'early_checkout'];
+    // precise-edit: Added 'holiday' to valid statuses as holidays are typically paid
+    const validWorkingStatuses = ['present', 'late', 'overtime', 'half_day', 'early_checkout', 'holiday'];
     const presentDays = attendanceRecords.filter(record =>
       validWorkingStatuses.includes(record.status)
     ).length;
@@ -287,14 +301,16 @@ export class PayrollCalculationService {
     const earnedConveyance = (fixedConveyance / monthDays) * totalWorkingDays;
 
     // Calculate overtime hours and pay
+    // precise-edit: Added check for record.totalOTHours from new OT system
     const totalOvertimeHours = attendanceRecords.reduce(
-      (sum, record) => sum + (record.overtimeHours || record.manualOTHours || 0),
+      (sum, record) => sum + (record.totalOTHours || record.overtimeHours || record.manualOTHours || 0),
       0
     );
     const overtimePay = await this.calculateOvertimePay(
       userId,
       totalOvertimeHours,
-      salaryStructure
+      salaryStructure,
+      settings // Pass settings
     );
 
     // Calculate dynamic earnings (pro-rated)
@@ -311,13 +327,24 @@ export class PayrollCalculationService {
     // Calculate gross salary
     const grossSalary = earnedBasic + earnedHRA + earnedConveyance + totalDynamicEarnings + overtimePay;
 
-    // Calculate statutory deductions
+    // Calculate statutory deductions using Settings
+    // EPF Logic: Rate defaults to 12%, Ceiling defaults to 15000 (usually 1800 limit)
+    const epfRate = (settings?.pfRate || 12) / 100;
+    const epfCeiling = settings?.pfApplicableFromSalary || 15000; // Salary limit for PF
+    const maxEpfDeduction = epfCeiling * epfRate; // e.g., 1800
+
     const epfDeduction = salaryStructure.epfApplicable
-      ? Math.min(earnedBasic * 0.12, 1800)
+      ? Math.min(earnedBasic * epfRate, maxEpfDeduction)
       : 0;
-    const esiDeduction = salaryStructure.esiApplicable && grossSalary <= 21000
-      ? grossSalary * 0.0075
+
+    // ESI Logic: Rate defaults 0.75%, Threshold defaults 21000
+    const esiRate = (settings?.esiRate || 0.75) / 100;
+    const esiThreshold = settings?.esiApplicableFromSalary || 21000;
+
+    const esiDeduction = salaryStructure.esiApplicable && grossSalary <= esiThreshold
+      ? grossSalary * esiRate
       : 0;
+
     const vptDeduction = salaryStructure.vptAmount || 0;
 
     // Calculate dynamic deductions (pro-rated)
