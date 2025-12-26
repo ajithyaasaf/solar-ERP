@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import {
   CalendarIcon, Search, Loader2, FileText, BarChart, UserCheck, Clock,
   Plus, Edit, Trash2, Eye, Download, Upload, Settings, Users,
-  CheckCircle, XCircle, AlertCircle, MapPin, Camera, TrendingUp
+  CheckCircle, XCircle, AlertCircle, MapPin, Camera, TrendingUp, Play
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { departments } from "@shared/schema";
@@ -326,6 +326,31 @@ export default function AttendanceManagement() {
       toast({
         title: "Unable to make changes",
         description: getUserFriendlyMessage(error.message || "Failed to update attendance records", 'errors'),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Test auto-checkout mutation (admin only, for testing)
+  const testAutoCheckoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/test/run-auto-checkout', 'POST');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/attendance/pending-review'] });
+      refetchLive();
+      refetchDaily();
+      toast({
+        title: "Auto-Checkout Completed",
+        description: data.message || "Auto-checkout job processed successfully. Check Pending Review tab.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Auto-Checkout Failed",
+        description: error.message || "Failed to run auto-checkout",
         variant: "destructive",
       });
     },
@@ -884,6 +909,25 @@ export default function AttendanceManagement() {
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Policies</span>
             </Button>
+            {/* Admin-only test button for manual auto-checkout trigger */}
+            {user && (user.role === 'master_admin' || user.role === 'admin') && (
+              <Button
+                onClick={() => testAutoCheckoutMutation.mutate()}
+                variant="default"
+                className="gap-2 bg-orange-600 hover:bg-orange-700"
+                disabled={testAutoCheckoutMutation.isPending}
+                data-testid="button-test-auto-checkout"
+              >
+                {testAutoCheckoutMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {testAutoCheckoutMutation.isPending ? 'Running...' : 'Test Auto-Checkout'}
+                </span>
+              </Button>
+            )}
             <Link href="/attendance-reports">
               <Button
                 variant="outline"

@@ -965,6 +965,7 @@ export const insertDepartmentTimingSchema = z.object({
     }),
   lateThresholdMinutes: z.number().min(0).default(15), // Grace period for late arrivals (flexible input)
   overtimeThresholdMinutes: z.number().min(0).default(30), // Minimum minutes to qualify for OT (flexible input)
+  autoCheckoutGraceMinutes: z.number().min(0).default(120), // Grace period before auto-checkout triggers
   isFlexibleTiming: z.boolean().default(false),
   flexibleCheckInStart: z.string().nullish(), // e.g., "08:00"
   flexibleCheckInEnd: z.string().nullish(),   // e.g., "10:00"

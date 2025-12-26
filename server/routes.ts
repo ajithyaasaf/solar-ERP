@@ -220,52 +220,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Notification Routes (Phase 2)
-  app.get("/api/notifications", verifyAuth, async (req, res) => {
+  // Test endpoint for admins to manually trigger auto-checkout (development/testing)
+  app.post("/api/test/run-auto-checkout", verifyAuth, async (req, res) => {
+    console.log("[TEST] ========================================");
+    console.log("[TEST] Endpoint hit! Starting test auto-checkout...");
     try {
-      if (!req.authenticatedUser) return res.status(401).end();
+      // Check admin access
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      console.log("[TEST] User loaded:", user?.email, "role:", user?.role);
 
-      const userId = req.authenticatedUser.uid;
-      const notifications = await storage.getNotifications(userId, { status: 'unread' });
-
-      res.json({ success: true, notifications });
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      res.status(500).json({ success: false, message: "Failed to fetch notifications" });
-    }
-  });
-
-  app.post("/api/notifications/:id/dismiss", verifyAuth, async (req, res) => {
-    try {
-      if (!req.authenticatedUser) return res.status(401).end();
-
-      const { id } = req.params;
-      const userId = req.authenticatedUser.uid;
-
-      const notifications = await storage.getNotifications(userId);
-      const exists = notifications.some(n => n.id === id);
-
-      if (!exists) {
-        return res.status(404).json({ success: false, message: "Notification not found" });
+      if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
+        console.log("[TEST] Access denied - not admin");
+        return res.status(403).json({ success: false, message: "Access denied - admin only" });
       }
 
-      await storage.updateNotification(id, {
-        status: 'read',
-        dismissedAt: new Date()
-      });
+      console.log("[TEST] Admin access confirmed. Importing AutoCheckoutService...");
+      const { AutoCheckoutService } = await import("./services/auto-checkout-service");
+      console.log("[TEST] AutoCheckoutService imported. Calling processAutoCheckouts()...");
 
-      res.json({ success: true });
+      await AutoCheckoutService.processAutoCheckouts();
+
+      console.log("[TEST] processAutoCheckouts() completed successfully");
+      res.json({ success: true, message: "Auto-checkout job processed successfully" });
     } catch (error) {
-      console.error("Error dismissing notification:", error);
-      res.status(500).json({ success: false, message: "Failed to dismiss notification" });
+      console.error("[TEST] Error in manual auto-checkout:", error);
+      res.status(500).json({ success: false, message: "Internal server error during auto-checkout" });
     }
   });
+
+
+  // Other routes continue...
 
   // Admin Review Routes (Phase 3)
   app.get("/api/admin/attendance/pending-review", verifyAuth, async (req, res) => {
     try {
-      if (!req.authenticatedUser || (req.authenticatedUser.user.role !== 'admin' && req.authenticatedUser.user.role !== 'master_admin')) {
-        return res.status(403).json({ success: false, message: "Unauthorized" });
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      // Get user to check role
+      const currentUser = await storage.getUser(req.authenticatedUser.uid);
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master_admin')) {
+        return res.status(403).json({ success: false, message: "Admin access required" });
       }
 
       const records = await storage.listAttendanceByReviewStatus('pending');
@@ -274,11 +270,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = await storage.getUser(record.userId);
         return {
           ...record,
-          userName: user?.displayName || 'Unknown employee'
+          userName: user?.displayName || 'Unknown employee',
+          userDepartment: user?.department || null,
+          userEmail: user?.email || null
         };
       }));
 
-      res.json({ success: true, records: enrichedRecords });
+      res.json(enrichedRecords);
     } catch (error) {
       console.error("Error fetching pending reviews:", error);
       res.status(500).json({ success: false, message: "Failed to fetch pending reviews" });
@@ -1919,6 +1917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         flexibleCheckInEnd,
         breakDurationMinutes,
         weeklyOffDays,
+        autoCheckoutGraceMinutes,
       } = req.body;
 
       console.log('BACKEND: Policy values received: none (removed)');
@@ -1934,6 +1933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workingHours: parseInt(workingHours),
         overtimeThresholdMinutes: parseInt(overtimeThresholdMinutes) || 30,
         lateThresholdMinutes: parseInt(lateThresholdMinutes) || 15,
+        autoCheckoutGraceMinutes: parseInt(autoCheckoutGraceMinutes) || 120,
         isFlexibleTiming: Boolean(isFlexibleTiming),
         ...(flexibleCheckInStart && { flexibleCheckInStart }),
         ...(flexibleCheckInEnd && { flexibleCheckInEnd }),
@@ -5782,12 +5782,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
 
-        // Check if checkout is overdue (30 min grace period after dept checkout time)
-        const isOverdue = isCheckoutOverdue(
-          new Date(record.date),
+        const isOverdue = record.checkInTime ? isCheckoutOverdue(
+          new Date(record.checkInTime),
           timing.checkOutTime,
           30
-        );
+        ) : false;
 
         if (isOverdue) {
           trulyIncomplete.push(record);
@@ -5998,6 +5997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkOutTime: req.body.checkOutTime || "6:00 PM",
         lateThresholdMinutes: req.body.lateThresholdMinutes || 15,
         overtimeThresholdMinutes: req.body.overtimeThresholdMinutes || 30,
+        autoCheckoutGraceMinutes: req.body.autoCheckoutGraceMinutes || 120,
         isFlexibleTiming: req.body.isFlexibleTiming || false,
         flexibleCheckInStart: req.body.flexibleCheckInStart,
         flexibleCheckInEnd: req.body.flexibleCheckInEnd,

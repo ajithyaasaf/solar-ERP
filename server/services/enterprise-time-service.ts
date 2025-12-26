@@ -13,6 +13,7 @@ export interface DepartmentTiming {
   workingHours: number; // Calculated working hours
   lateThresholdMinutes: number;
   overtimeThresholdMinutes: number;
+  autoCheckoutGraceMinutes: number;
   isFlexibleTiming: boolean;
   weekendDays: number[]; // 0=Sunday, 6=Saturday
   isActive: boolean;
@@ -67,6 +68,7 @@ export class EnterpriseTimeService {
           isFlexibleTiming: timing.isFlexibleTiming || false,
           weekendDays: timing.weekendDays || [0],
           isActive: timing.isActive !== false,
+          autoCheckoutGraceMinutes: timing.autoCheckoutGraceMinutes || 120, // Default 2 hours
           lastUpdated: timing.updatedAt || new Date()
         };
 
@@ -96,9 +98,9 @@ export class EnterpriseTimeService {
     const timing = await this.getDepartmentTiming(department);
     const today = new Date(checkInTime);
 
-    // Calculate expected times for today
+    // Calculate expected times for today (handles cross-midnight automatically)
     const expectedCheckIn = this.parseTimeToDate(timing.checkInTime, today);
-    const expectedCheckOut = this.parseTimeToDate(timing.checkOutTime, today);
+    const expectedCheckOut = this.getExpectedCheckoutDateTime(expectedCheckIn, timing.checkOutTime);
 
     // Calculate if late
     const isLate = checkInTime > expectedCheckIn;
@@ -263,6 +265,21 @@ export class EnterpriseTimeService {
   }
 
   /**
+   * Get the expected checkout date/time based on check-in time and department checkout time string
+   * Handles shifts that cross midnight automatically
+   */
+  public static getExpectedCheckoutDateTime(checkInTime: Date, checkoutTimeStr: string): Date {
+    const checkoutDate = this.parseTimeToDate(checkoutTimeStr, checkInTime);
+
+    // If checkout time is less than or equal to check-in time, it's a cross-midnight shift
+    if (checkoutDate <= checkInTime) {
+      checkoutDate.setDate(checkoutDate.getDate() + 1);
+    }
+
+    return checkoutDate;
+  }
+
+  /**
    * Parse 12-hour time string into a Date object for a specific base date
    */
   public static parseTimeToDate(timeStr: string, baseDate: Date): Date {
@@ -310,7 +327,6 @@ export class EnterpriseTimeService {
       } else {
         fallbackDate.setHours(9, 0, 0, 0); // 9:00 AM default checkin
       }
-      console.log(`ENTERPRISE_TIME: Using fallback time for corrupted data: ${fallbackDate.toISOString()}`);
       return fallbackDate;
     }
   }
@@ -357,7 +373,8 @@ export class EnterpriseTimeService {
       checkOutTime: '6:00 PM',
       workingHours: 8,
       lateThresholdMinutes: 15,
-      overtimeThresholdMinutes: 0,
+      overtimeThresholdMinutes: 30,
+      autoCheckoutGraceMinutes: 120,
       isFlexibleTiming: false,
       weekendDays: [0],
       isActive: true,
@@ -370,10 +387,22 @@ export class EnterpriseTimeService {
    */
   static async isBusinessHours(department: string, currentTime: Date = new Date()): Promise<boolean> {
     const timing = await this.getDepartmentTiming(department);
-    const todayCheckIn = this.parseTimeToDate(timing.checkInTime, currentTime);
-    const todayCheckOut = this.parseTimeToDate(timing.checkOutTime, currentTime);
 
-    return currentTime >= todayCheckIn && currentTime <= todayCheckOut;
+    // Check if within today's shift
+    const todayCheckIn = this.parseTimeToDate(timing.checkInTime, currentTime);
+    const todayCheckOut = this.getExpectedCheckoutDateTime(todayCheckIn, timing.checkOutTime);
+
+    if (currentTime >= todayCheckIn && currentTime <= todayCheckOut) {
+      return true;
+    }
+
+    // Check if within yesterday's shift (for cross-midnight shifts)
+    const yesterday = new Date(currentTime);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayCheckIn = this.parseTimeToDate(timing.checkInTime, yesterday);
+    const yesterdayCheckOut = this.getExpectedCheckoutDateTime(yesterdayCheckIn, timing.checkOutTime);
+
+    return currentTime >= yesterdayCheckIn && currentTime <= yesterdayCheckOut;
   }
 
   /**

@@ -72,7 +72,8 @@ export default function Departments() {
     checkOutTime: "6:00 PM",
     workingHours: 8,
     overtimeThresholdMinutes: 30,
-    lateThresholdMinutes: 15
+    lateThresholdMinutes: 15,
+    autoCheckoutGraceMinutes: 120
   });
 
   // Only master_admin can access this page
@@ -729,6 +730,26 @@ export default function Departments() {
                       <span className="text-sm text-muted-foreground">minutes</span>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Auto-Checkout After</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={timingFormState.autoCheckoutGraceMinutes || 120}
+                        onChange={(e) => setTimingFormState({
+                          ...timingFormState,
+                          autoCheckoutGraceMinutes: parseInt(e.target.value) || 120
+                        })}
+                        className="w-32"
+                        placeholder="Enter minutes"
+                      />
+                      <span className="text-sm text-muted-foreground">minutes after shift end</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      System will automatically check out employees if they forget after this time.
+                    </p>
+                  </div>
                 </div>
 
 
@@ -749,8 +770,8 @@ export default function Departments() {
                   <div className="text-blue-900">{timingFormState.lateThresholdMinutes} minutes</div>
                 </div>
                 <div>
-                  <span className="text-blue-700 font-medium">OT Starts:</span>
-                  <div className="text-blue-900">+{timingFormState.overtimeThresholdMinutes} minutes</div>
+                  <span className="text-blue-700 font-medium">Auto-Checkout:</span>
+                  <div className="text-blue-900">{timingFormState.autoCheckoutGraceMinutes || 120} mins</div>
                 </div>
               </div>
             </div>

@@ -2598,6 +2598,94 @@ export class FirestoreStorage implements IStorage {
     });
   }
 
+  async listAttendance(): Promise<Attendance[]> {
+    try {
+      const attendanceRef = this.db.collection("attendance");
+      const snapshot = await attendanceRef.get();
+
+      return snapshot.docs.map(doc => {
+        const data = doc.data() || {};
+        return {
+          id: doc.id,
+          ...data,
+          date: data.date?.toDate() || new Date(),
+          checkInTime: data.checkInTime?.toDate() || null,
+          checkOutTime: data.checkOutTime?.toDate() || null,
+          otStartTime: data.otStartTime?.toDate() || undefined,
+          otEndTime: data.otEndTime?.toDate() || undefined,
+        } as Attendance;
+      });
+    } catch (error) {
+      console.error("Error listing all attendance:", error);
+      return [];
+    }
+  }
+
+  async listIncompleteAttendance(date: Date): Promise<Attendance[]> {
+    try {
+      // FIXED: Firestore where("field", "==", null) doesn't work for missing/undefined fields
+      // Solution: Get ALL attendance records, filter everything in-memory
+
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      console.log(`[STORAGE] Searching for incomplete attendance on ${date.toISOString().split('T')[0]}`);
+      console.log(`[STORAGE] Date range:`, { start: startOfDay.toISOString(), end: endOfDay.toISOString() });
+
+      const attendanceRef = this.db.collection("attendance");
+
+      // Get ALL attendance records (no filter on checkOutTime)
+      // We'll filter in-memory for incomplete ones
+      const snapshot = await attendanceRef.get();
+
+      console.log(`[STORAGE] Total attendance records in database: ${snapshot.docs.length}`);
+
+      const incomplete = snapshot.docs
+        .map(doc => {
+          const data = doc.data() || {};
+          return {
+            id: doc.id,
+            ...data,
+            date: data.date?.toDate() || new Date(),
+            checkInTime: data.checkInTime?.toDate() || null,
+            checkOutTime: data.checkOutTime?.toDate() || null,
+            otStartTime: data.otStartTime?.toDate() || undefined,
+            otEndTime: data.otEndTime?.toDate() || undefined,
+          } as Attendance;
+        })
+        .filter(record => {
+          // Filter for records on the specified date with check-in but NO check-out
+          if (!record.checkInTime) return false; // Must have checked in
+          if (record.checkOutTime) return false; // Must NOT have checked out
+          if (!record.date) return false;
+
+          const recordDate = record.date.getTime();
+          const isInDateRange = recordDate >= startOfDay.getTime() && recordDate <= endOfDay.getTime();
+
+          if (isInDateRange) {
+            console.log(`[STORAGE] Found incomplete record:`, {
+              id: record.id,
+              userId: record.userId,
+              date: record.date?.toISOString().split('T')[0],
+              checkInTime: record.checkInTime?.toISOString(),
+              checkOutTime: record.checkOutTime
+            });
+          }
+
+          return isInDateRange;
+        });
+
+      console.log(`[STORAGE] Found ${incomplete.length} incomplete attendance records for ${date.toISOString().split('T')[0]}`);
+      return incomplete;
+    } catch (error) {
+      console.error("Error listing incomplete attendance:", error);
+      return [];
+    }
+  }
+
+
   async listAttendanceBetweenDates(
     startDate: Date,
     endDate: Date,
@@ -3569,6 +3657,8 @@ export class FirestoreStorage implements IStorage {
           type: "national",
           isPaid: true,
           isOptional: false,
+          otRateMultiplier: 2.0, // Default for national holidays
+          allowOT: true,
           createdBy,
           createdAt: new Date(),
         });
@@ -4603,6 +4693,7 @@ export class FirestoreStorage implements IStorage {
             workingHours: 8,
             overtimeThresholdMinutes: 30,
             lateThresholdMinutes: 10,
+            autoCheckoutGraceMinutes: 120,
             isFlexibleTiming: false,
             breakDurationMinutes: 60,
             weeklyOffDays: [0],
@@ -4651,6 +4742,7 @@ export class FirestoreStorage implements IStorage {
             workingHours: 9,
             overtimeThresholdMinutes: 30,
             lateThresholdMinutes: 15,
+            autoCheckoutGraceMinutes: 120,
             isFlexibleTiming: false,
             breakDurationMinutes: 60,
             weeklyOffDays: [0],
@@ -4663,6 +4755,7 @@ export class FirestoreStorage implements IStorage {
             workingHours: 8,
             overtimeThresholdMinutes: 30,
             lateThresholdMinutes: 15,
+            autoCheckoutGraceMinutes: 120,
             isFlexibleTiming: true,
             breakDurationMinutes: 60,
             weeklyOffDays: [0],
@@ -4675,6 +4768,7 @@ export class FirestoreStorage implements IStorage {
             workingHours: 8,
             overtimeThresholdMinutes: 30,
             lateThresholdMinutes: 15,
+            autoCheckoutGraceMinutes: 120,
             isFlexibleTiming: false,
             breakDurationMinutes: 60,
             weeklyOffDays: [0],
@@ -4687,6 +4781,7 @@ export class FirestoreStorage implements IStorage {
             workingHours: 8,
             overtimeThresholdMinutes: 30,
             lateThresholdMinutes: 15,
+            autoCheckoutGraceMinutes: 120,
             isFlexibleTiming: false,
             breakDurationMinutes: 60,
             weeklyOffDays: [0],
@@ -4699,6 +4794,7 @@ export class FirestoreStorage implements IStorage {
             workingHours: 8,
             overtimeThresholdMinutes: 30,
             lateThresholdMinutes: 10,
+            autoCheckoutGraceMinutes: 120,
             isFlexibleTiming: false,
             breakDurationMinutes: 60,
             weeklyOffDays: [0],
@@ -4712,6 +4808,7 @@ export class FirestoreStorage implements IStorage {
           checkInTime: "09:00",
           checkOutTime: "18:00",
           lateThresholdMinutes: 15,
+          autoCheckoutGraceMinutes: 120,
           overtimeThresholdMinutes: 30,
           isFlexibleTiming: false,
           breakDurationMinutes: 60,
@@ -4729,8 +4826,9 @@ export class FirestoreStorage implements IStorage {
         checkOutTime: data.checkOutTime,
         workingHours: data.workingHours,
         overtimeThresholdMinutes: data.overtimeThresholdMinutes,
-        lateThresholdMinutes: data.lateThresholdMinutes,
-        isFlexibleTiming: data.isFlexibleTiming,
+        lateThresholdMinutes: data.lateThresholdMinutes || 15,
+        autoCheckoutGraceMinutes: data.autoCheckoutGraceMinutes || 120,
+        isFlexibleTiming: data.isFlexibleTiming || false,
         flexibleCheckInStart: data.flexibleCheckInStart,
         flexibleCheckInEnd: data.flexibleCheckInEnd,
         breakDurationMinutes: data.breakDurationMinutes,
@@ -6261,7 +6359,14 @@ export class FirestoreStorage implements IStorage {
         query = query.where('type', '==', filters.type);
       }
 
-      const snapshot = await query.orderBy('createdAt', 'desc').get();
+      // Default sorting
+      query = query.orderBy('createdAt', 'desc');
+
+      if (filters.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const snapshot = await query.get();
 
       return snapshot.docs.map(doc => this.convertFirestoreToNotification({
         id: doc.id,
@@ -6287,9 +6392,19 @@ export class FirestoreStorage implements IStorage {
         updateData.expiresAt = Timestamp.fromDate(updates.expiresAt);
       }
 
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
       await this.db.collection('notifications').doc(id).update(updateData);
 
       const doc = await this.db.collection('notifications').doc(id).get();
+      if (!doc.exists) {
+        throw new Error("Notification not found");
+      }
       return this.convertFirestoreToNotification({
         id: doc.id,
         ...doc.data()
@@ -6300,7 +6415,7 @@ export class FirestoreStorage implements IStorage {
     }
   }
 
-  async deleteExpiredNotifications(date: Date): Promise<void> {
+  async deleteExpiredNotifications(date: Date = new Date()): Promise<void> {
     try {
       const snapshot = await this.db.collection('notifications')
         .where('expiresAt', '<=', Timestamp.fromDate(date))
@@ -6309,158 +6424,21 @@ export class FirestoreStorage implements IStorage {
       const batch = this.db.batch();
       snapshot.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
+      console.log(`[CLEANUP] Deleted ${snapshot.docs.length} expired notifications`);
     } catch (error) {
       console.error("Error deleting expired notifications:", error);
     }
   }
 
   // ============================================
-  // ATTENDANCE ENHANCEMENTS
-  // ============================================
-
-  async listIncompleteAttendance(date: Date): Promise<Attendance[]> {
-    try {
-      const dateStr = date.toISOString().split('T')[0];
-      const snapshot = await this.db.collection("attendance")
-        .where("dateString", "==", dateStr)
-        .where("status", "==", "present") // Only check those who check-in
-        .get();
-
-      // Filter in-memory for missing checkOutTime as Firestore doesn't support where(checkOutTime == null) easily with other filters
-      return snapshot.docs
-        .map(doc => this.convertFirestoreToAttendance({ id: doc.id, ...doc.data() }))
-        .filter(record => !record.checkOutTime);
-    } catch (error) {
-      console.error("Error listing incomplete attendance:", error);
-      return [];
-    }
-  }
-
-  async listAttendanceByReviewStatus(status: string): Promise<Attendance[]> {
-    try {
-      const snapshot = await this.db.collection("attendance")
-        .where("adminReviewStatus", "==", status)
-        .get();
-
-      return snapshot.docs.map(doc => this.convertFirestoreToAttendance({ id: doc.id, ...doc.data() }));
-    } catch (error) {
-      console.error("Error listing attendance by review status:", error);
-      return [];
-    }
-  }
-  // ============================================
-  // NOTIFICATIONS (Phase 2)
-  // ============================================
-
-  async createNotification(data: z.infer<typeof insertNotificationSchema>): Promise<Notification> {
-    const notificationData = {
-      ...data,
-      id: db.collection("notifications").doc().id,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    await db.collection("notifications").doc(notificationData.id).set(notificationData);
-
-    return this.convertFirestoreToNotification({
-      ...notificationData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-  }
-
-  async getNotifications(userId: string, filters?: { status?: 'unread' | 'read'; limit?: number }): Promise<Notification[]> {
-    let query: Query = db.collection("notifications").where("userId", "==", userId);
-
-    if (filters?.status) {
-      query = query.where("status", "==", filters.status);
-    }
-
-    query = query.orderBy("createdAt", "desc");
-
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
-
-    const snapshot = await query.get();
-    return snapshot.docs.map(doc => this.convertFirestoreToNotification({ id: doc.id, ...doc.data() }));
-  }
-
-  async updateNotification(id: string, data: Partial<Notification>): Promise<Notification> {
-    const updateData = {
-      ...data,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    await db.collection("notifications").doc(id).update(updateData);
-
-    const doc = await db.collection("notifications").doc(id).get();
-    if (!doc.exists) {
-      throw new Error("Notification not found");
-    }
-
-    return this.convertFirestoreToNotification({ id: doc.id, ...doc.data() });
-  }
-
-  async deleteExpiredNotifications(): Promise<void> {
-    const now = new Date();
-    const snapshot = await db.collection("notifications")
-      .where("expiresAt", "<=", Timestamp.fromDate(now))
-      .get();
-
-    const batch = db.batch();
-    snapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-
-    await batch.commit();
-    console.log(`[CLEANUP] Deleted ${snapshot.docs.length} expired notifications`);
-  }
-
-  // ============================================
   // ATTENDANCE REVIEW (Phases 1 & 3)
   // ============================================
 
-  async listIncompleteAttendance(date?: Date): Promise<Attendance[]> {
-    let query: Query = db.collection("attendance")
-      .where("checkInTime", "!=", null);
-
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      query = query
-        .where("date", ">=", Timestamp.fromDate(startOfDay))
-        .where("date", "<=", Timestamp.fromDate(endOfDay));
-    }
-
-    const snapshot = await query.get();
-
-    // Filter in application layer:
-    // 1. Missing checkout (Firestore doesn't support null inequality)
-    // 2. Not already auto-corrected
-    // 3. CRITICAL: Exclude leave/holiday to prevent auto-correcting approved absences
-    const incomplete = snapshot.docs
-      .map(doc => {
-        const data = doc.data();
-        return this.convertFirestoreToAttendance({ id: doc.id, ...data });
-      })
-      .filter(record =>
-        !record.checkOutTime &&
-        !record.autoCorrected &&
-        record.status !== 'leave' &&     // Exclude approved leaves
-        record.status !== 'holiday'      // Exclude holidays
-      );
-
-    return incomplete;
-  }
-
   async listAttendanceByReviewStatus(status: 'pending' | 'accepted' | 'adjusted' | 'rejected'): Promise<Attendance[]> {
-    const snapshot = await db.collection("attendance")
+    // FIXED: Removed .orderBy("autoCorrectedAt") to avoid requiring Firestore composite index
+    // Records will still be retrieved, just not sorted by auto-correction time
+    const snapshot = await this.db.collection("attendance")
       .where("adminReviewStatus", "==", status)
-      .orderBy("autoCorrectedAt", "desc")
       .get();
 
     // Enrich with user details
@@ -6481,11 +6459,17 @@ export class FirestoreStorage implements IStorage {
       return attendance;
     });
 
-    return Promise.all(attendancePromises);
+    // Sort in memory after fetching (client-side sort)
+    const results = await Promise.all(attendancePromises);
+    return results.sort((a, b) => {
+      const dateA = a.autoCorrectedAt?.getTime() || 0;
+      const dateB = b.autoCorrectedAt?.getTime() || 0;
+      return dateB - dateA; // Descending order (newest first)
+    });
   }
 
   async getUsersByRole(role: 'admin' | 'master_admin' | 'employee'): Promise<User[]> {
-    const snapshot = await db.collection("users")
+    const snapshot = await this.db.collection("users")
       .where("role", "==", role)
       .where("isActive", "==", true)
       .get();
@@ -6507,27 +6491,36 @@ export class FirestoreStorage implements IStorage {
   // HELPERS
   // ============================================
 
+  private safeToDate(val: any): Date | undefined {
+    if (!val) return undefined;
+    if (val instanceof Date) return val;
+    if (typeof val.toDate === 'function') return val.toDate();
+    // Fallback for strings/numbers that might be dates
+    const tryDate = new Date(val);
+    return isNaN(tryDate.getTime()) ? undefined : tryDate;
+  }
+
   private convertFirestoreToAttendance(data: any): Attendance {
     return {
       ...data,
-      date: data.date?.toDate() || (data.dateString ? new Date(data.dateString) : new Date()),
-      checkInTime: data.checkInTime?.toDate() || undefined,
-      checkOutTime: data.checkOutTime?.toDate() || undefined,
-      otStartTime: data.otStartTime?.toDate() || undefined,
-      otEndTime: data.otEndTime?.toDate() || undefined,
-      autoCorrectedAt: data.autoCorrectedAt?.toDate() || undefined,
-      adminReviewedAt: data.adminReviewedAt?.toDate() || undefined,
-      originalCheckOutTime: data.originalCheckOutTime?.toDate() || undefined,
+      date: this.safeToDate(data.date) || (data.dateString ? new Date(data.dateString) : new Date()),
+      checkInTime: this.safeToDate(data.checkInTime),
+      checkOutTime: this.safeToDate(data.checkOutTime),
+      otStartTime: this.safeToDate(data.otStartTime),
+      otEndTime: this.safeToDate(data.otEndTime),
+      autoCorrectedAt: this.safeToDate(data.autoCorrectedAt),
+      adminReviewedAt: this.safeToDate(data.adminReviewedAt),
+      originalCheckOutTime: this.safeToDate(data.originalCheckOutTime),
     } as Attendance;
   }
 
   private convertFirestoreToNotification(data: any): Notification {
     return {
       ...data,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-      dismissedAt: data.dismissedAt?.toDate() || undefined,
-      expiresAt: data.expiresAt?.toDate() || undefined,
+      createdAt: this.safeToDate(data.createdAt) || new Date(),
+      updatedAt: this.safeToDate(data.updatedAt) || new Date(),
+      dismissedAt: this.safeToDate(data.dismissedAt),
+      expiresAt: this.safeToDate(data.expiresAt),
     } as Notification;
   }
 }
