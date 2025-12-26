@@ -665,6 +665,7 @@ export interface PayrollSettings {
   leaveDeductionRate: number;
   pfApplicableFromSalary: number;
   esiApplicableFromSalary: number;
+  autoCheckoutGraceMinutes: number;
   companyName: string;
   companyAddress?: string;
   companyPan?: string;
@@ -4534,6 +4535,7 @@ export class FirestoreStorage implements IStorage {
       leaveDeductionRate: 1,
       pfApplicableFromSalary: 15000,
       esiApplicableFromSalary: 21000,
+      autoCheckoutGraceMinutes: 5,
     };
     const payrollSettings = settings || defaultSettings;
 
@@ -4544,8 +4546,12 @@ export class FirestoreStorage implements IStorage {
     const dailySalary = salaryStructure.fixedSalary / payrollSettings.standardWorkingDays;
     const adjustedSalary = dailySalary * presentDays;
 
-    // Overtime calculation
-    const overtimePay = (salaryStructure.fixedSalary / (payrollSettings.standardWorkingDays * payrollSettings.standardWorkingHours)) *
+    // Overtime calculation - Use department-specific working hours if available
+    const user = await this.getUser(userId);
+    const departmentTiming = await this.getDepartmentTiming(user?.department || "");
+    const standardWorkingHours = departmentTiming?.workingHours || payrollSettings.standardWorkingHours || 8;
+
+    const overtimePay = (salaryStructure.fixedSalary / (payrollSettings.standardWorkingDays * standardWorkingHours)) *
       overtimeHours * payrollSettings.overtimeMultiplier;
 
     // Gross salary
@@ -4808,7 +4814,7 @@ export class FirestoreStorage implements IStorage {
           checkInTime: "09:00",
           checkOutTime: "18:00",
           lateThresholdMinutes: 15,
-          autoCheckoutGraceMinutes: 120,
+          autoCheckoutGraceMinutes: 5,
           overtimeThresholdMinutes: 30,
           isFlexibleTiming: false,
           breakDurationMinutes: 60,
@@ -4827,7 +4833,7 @@ export class FirestoreStorage implements IStorage {
         workingHours: data.workingHours,
         overtimeThresholdMinutes: data.overtimeThresholdMinutes,
         lateThresholdMinutes: data.lateThresholdMinutes || 15,
-        autoCheckoutGraceMinutes: data.autoCheckoutGraceMinutes || 120,
+        autoCheckoutGraceMinutes: data.autoCheckoutGraceMinutes || 5,
         isFlexibleTiming: data.isFlexibleTiming || false,
         flexibleCheckInStart: data.flexibleCheckInStart,
         flexibleCheckInEnd: data.flexibleCheckInEnd,

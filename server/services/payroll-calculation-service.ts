@@ -19,7 +19,8 @@ export class PayrollCalculationService {
     userId: string,
     overtimeHours: number,
     salaryStructure: any,
-    settings?: any // PayrollSettings
+    settings?: any, // PayrollSettings
+    departmentId?: string
   ): Promise<number> {
     if (overtimeHours <= 0) return 0;
 
@@ -33,9 +34,22 @@ export class PayrollCalculationService {
     // precise-edit: Use settings logic
     const overtimeRate = salaryStructure.overtimeRate || settings?.overtimeMultiplier || 1.5;
 
-    // Calculate hourly rate based on 26 working days and 8 hours per day
-    // precise-edit: Use settings logic
-    const standardWorkingHours = settings?.standardWorkingHours || 8;
+    // Calculate hourly rate based on standard working days and hours
+    // If departmentId is provided, get department-specific working hours
+    let standardWorkingHours = settings?.standardWorkingHours || 8;
+
+    if (departmentId) {
+      try {
+        const deptTiming = await this.storage.getDepartmentTiming(departmentId);
+        if (deptTiming && deptTiming.workingHours) {
+          standardWorkingHours = deptTiming.workingHours;
+          console.log(`PAYROLL_CALC: Using department (${departmentId}) working hours: ${standardWorkingHours}`);
+        }
+      } catch (error) {
+        console.error(`PAYROLL_CALC: Error fetching department timing for ${departmentId}:`, error);
+      }
+    }
+
     const standardWorkingDays = settings?.standardWorkingDays || 26;
 
     // Safety check to avoid division by zero
@@ -67,7 +81,8 @@ export class PayrollCalculationService {
   async getPaidLeaveDays(
     userId: string,
     month: number,
-    year: number
+    year: number,
+    departmentId?: string
   ): Promise<number> {
     try {
       const leaves = await this.storage.listLeaveApplicationsByUser(userId);
@@ -104,7 +119,20 @@ export class PayrollCalculationService {
           // For permission (partial day), convert hours to days
           if (leave.leaveType === 'permission') {
             const permissionHours = leave.permissionHours || 0; // Fixed: Use permissionHours
-            const workingHoursPerDay = 8; // Standard working hours
+
+            // Use department-specific working hours if available
+            let workingHoursPerDay = 8;
+            if (departmentId) {
+              try {
+                const deptTiming = await this.storage.getDepartmentTiming(departmentId);
+                if (deptTiming && deptTiming.workingHours) {
+                  workingHoursPerDay = deptTiming.workingHours;
+                }
+              } catch (error) {
+                console.error(`PAYROLL_CALC: Error fetching department timing for ${departmentId}:`, error);
+              }
+            }
+
             const partialDays = permissionHours / workingHoursPerDay;
             totalPaidDays += partialDays;
             console.log(`PAYROLL_CALC: Permission leave for ${userId}: ${permissionHours} hours = ${partialDays.toFixed(2)} days`);
@@ -268,7 +296,8 @@ export class PayrollCalculationService {
     month: number,
     year: number,
     attendanceRecords: any[],
-    salaryStructure: any
+    salaryStructure: any,
+    departmentId?: string
   ) {
     // Get month details
     const monthDays = new Date(year, month, 0).getDate();
@@ -284,7 +313,7 @@ export class PayrollCalculationService {
     ).length;
 
     // Get paid leave days
-    const paidLeaveDays = await this.getPaidLeaveDays(userId, month, year);
+    const paidLeaveDays = await this.getPaidLeaveDays(userId, month, year, departmentId);
 
     // Calculate total working days (attendance + paid leave)
     const totalWorkingDays = presentDays + paidLeaveDays;
@@ -310,7 +339,8 @@ export class PayrollCalculationService {
       userId,
       totalOvertimeHours,
       salaryStructure,
-      settings // Pass settings
+      settings,
+      departmentId
     );
 
     // Calculate dynamic earnings (pro-rated)

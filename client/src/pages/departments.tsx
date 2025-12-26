@@ -49,7 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { Search, PlusCircle, Pencil, Trash2, UserCog, Users, Loader2, Check, Clock, Timer, Play, Square, Coffee, Shield, Home, Building, MapPin } from "lucide-react";
+import { Search, PlusCircle, Pencil, Trash2, UserCog, Users, Loader2, Check, Clock, Timer, Play, Square, Coffee, Shield, Home, Building, MapPin, Settings } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -72,8 +72,7 @@ export default function Departments() {
     checkOutTime: "6:00 PM",
     workingHours: 8,
     overtimeThresholdMinutes: 30,
-    lateThresholdMinutes: 15,
-    autoCheckoutGraceMinutes: 120
+    lateThresholdMinutes: 15
   });
 
   // Only master_admin can access this page
@@ -106,6 +105,26 @@ export default function Departments() {
   // Fetch department timings
   const { data: departmentTimings } = useQuery({
     queryKey: ["/api/departments/timings"],
+  });
+
+  // Fetch payroll settings for global auto-checkout
+  const { data: payrollSettings } = useQuery<any>({
+    queryKey: ["/api/payroll/settings"],
+  });
+
+  // Global timing mutation
+  const updateGlobalSettingsMutation = useMutation({
+    mutationFn: (data: { autoCheckoutGraceMinutes: number }) => {
+      return apiRequest('/api/payroll/settings', 'POST', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/departments/timings"] });
+      toast({
+        title: "Settings updated",
+        description: "Global attendance settings have been updated.",
+      });
+    }
   });
 
   // Helper function to reset form state
@@ -314,6 +333,42 @@ export default function Departments() {
 
   return (
     <>
+      {/* Global Attendance Settings */}
+      <Card className="mb-6 border-blue-200 bg-blue-50/30">
+        <CardHeader className="pb-3 px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Global Attendance Settings</CardTitle>
+          </div>
+          <CardDescription>Configure organization-wide attendance policies</CardDescription>
+        </CardHeader>
+        <CardContent className="px-6 pb-6">
+          <div className="flex flex-wrap items-end gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Auto-Checkout Grace Period</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  defaultValue={payrollSettings?.autoCheckoutGraceMinutes ?? 5}
+                  className="w-32 bg-white"
+                  onBlur={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val !== payrollSettings?.autoCheckoutGraceMinutes) {
+                      updateGlobalSettingsMutation.mutate({ autoCheckoutGraceMinutes: val });
+                    }
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">minutes after shift end</span>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground pb-2 max-w-md bg-white/50 p-2 rounded border border-blue-100 italic">
+              <Shield className="h-3 w-3 inline mr-1 text-blue-500" />
+              This setting applies to <strong>all departments</strong>. Employees will be automatically checked out if they forget to check out after this duration. Default is 5 minutes.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between px-6 py-4">
           <div>
@@ -448,7 +503,7 @@ export default function Departments() {
       </Card>
 
       {/* Add/Edit Department Dialog */}
-      <Dialog
+      < Dialog
         open={showAddDepartmentDialog || showEditDialog}
         onOpenChange={(open) => {
           if (!open) {
@@ -527,9 +582,9 @@ export default function Departments() {
             </div>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      < AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -554,10 +609,10 @@ export default function Departments() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
       {/* Advanced Department Timing Configuration Dialog */}
-      <Dialog open={showTimingDialog} onOpenChange={setShowTimingDialog}>
+      < Dialog open={showTimingDialog} onOpenChange={setShowTimingDialog} >
         <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -730,24 +785,29 @@ export default function Departments() {
                       <span className="text-sm text-muted-foreground">minutes</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Auto-Checkout After</label>
+                    <label className="text-sm font-medium">Standard Working Hours</label>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
-                        min="0"
-                        value={timingFormState.autoCheckoutGraceMinutes || 120}
+                        min="1"
+                        max="24"
+                        step="0.5"
+                        value={timingFormState.workingHours}
                         onChange={(e) => setTimingFormState({
                           ...timingFormState,
-                          autoCheckoutGraceMinutes: parseInt(e.target.value) || 120
+                          workingHours: parseFloat(e.target.value) || 8
                         })}
                         className="w-32"
-                        placeholder="Enter minutes"
+                        placeholder="e.g., 8"
                       />
-                      <span className="text-sm text-muted-foreground">minutes after shift end</span>
+                      <span className="text-sm text-muted-foreground">hours/day</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      System will automatically check out employees if they forget after this time.
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Used as divisor for OT hourly rate calculation (Daily Salary / Working Hours)
                     </p>
                   </div>
                 </div>
@@ -771,7 +831,7 @@ export default function Departments() {
                 </div>
                 <div>
                   <span className="text-blue-700 font-medium">Auto-Checkout:</span>
-                  <div className="text-blue-900">{timingFormState.autoCheckoutGraceMinutes || 120} mins</div>
+                  <div className="text-blue-900">{payrollSettings?.autoCheckoutGraceMinutes ?? 5} mins (Global)</div>
                 </div>
               </div>
             </div>
@@ -795,7 +855,7 @@ export default function Departments() {
             </div>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
     </>
   );
 }

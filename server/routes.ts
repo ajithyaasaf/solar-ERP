@@ -6646,7 +6646,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             month,
             year,
             monthAttendance,
-            salaryStructure
+            salaryStructure,
+            employee.department ?? undefined
           );
 
           // Create payroll record with all calculated values
