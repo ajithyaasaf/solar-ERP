@@ -395,7 +395,13 @@ export default function AttendanceManagement() {
     return matchesSearch && matchesDepartment && matchesStatus;
   });
 
-  // Separate incomplete records for easy identification
+  // CRITICAL FIX: Incomplete records for Pending Review tab should show ALL pending,
+  // regardless of date filter, so admins see everything that needs review
+  const allIncompleteRecords = dailyAttendance.filter((record: any) =>
+    isIncompleteRecord(record) && !record.autoCorrected
+  );
+
+  // Separate incomplete records for easy identification (filtered by date for other views)
   // Option 2: Exclude auto-corrected records from incomplete list
   const incompleteRecords = filteredDailyAttendance.filter((record: any) =>
     isIncompleteRecord(record) && !record.autoCorrected
@@ -942,7 +948,7 @@ export default function AttendanceManagement() {
         </div>
       </div>
 
-      {/* Sticky Command Bar */}
+      {/* Command Bar */}
       <CommandBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -1500,7 +1506,7 @@ export default function AttendanceManagement() {
                     Incomplete Records - Urgent Action Required
                   </CardTitle>
                   <CardDescription className="text-amber-700">
-                    {incompleteRecords.length} employee(s) forgot to check out in the selected date range.
+                    {allIncompleteRecords.length} employee(s) forgot to check out. Showing ALL pending reviews regardless of date filter.
                     These records need immediate correction to maintain data accuracy.
                   </CardDescription>
                 </CardHeader>
@@ -1512,7 +1518,7 @@ export default function AttendanceManagement() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        incompleteRecords.forEach((record: any) => handleQuickFixCheckout(record));
+                        allIncompleteRecords.forEach((record: any) => handleQuickFixCheckout(record));
                       }}
                       disabled={updateAttendanceMutation.isPending}
                       className="bg-amber-600 hover:bg-amber-700 text-white"
@@ -1539,7 +1545,7 @@ export default function AttendanceManagement() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {incompleteRecords.map((record: any) => (
+                        {allIncompleteRecords.map((record: any) => (
                           <TableRow key={record.id} className="bg-amber-50/30">
                             <TableCell className="font-medium">
                               <div>
