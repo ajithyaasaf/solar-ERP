@@ -200,6 +200,111 @@ export class UnifiedAttendanceService {
   }
 
   /**
+   * Enrich attendance records with weekly-off days (e.g., Sundays)
+   * For dates without attendance records that fall on configured weekly-off days,
+   * add virtual records to ensure employees get paid for these days
+   */
+  static async enrichAttendanceWithWeeklyOffs(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    existingRecords: any[]
+  ): Promise<any[]> {
+    try {
+      const user = await storage.getUser(userId);
+      if (!user || !user.department) return existingRecords;
+
+      // Get department timing to check configured weekly-off days
+      const departmentTiming = await storage.getDepartmentTiming(user.department);
+      const weeklyOffDays = departmentTiming?.weeklyOffDays || [0]; // Default to Sunday
+
+      const recordsByDate = new Map();
+      existingRecords.forEach(record => {
+        const dateStr = new Date(record.date).toISOString().split('T')[0];
+        recordsByDate.set(dateStr, record);
+      });
+
+      const enrichedRecords = [...existingRecords];
+
+      // Iterate through all dates in the range
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+        const dateStr = currentDate.toISOString().split('T')[0];
+
+        // Check if this day is a configured weekly-off and no record exists
+        if (weeklyOffDays.includes(dayOfWeek) && !recordsByDate.has(dateStr)) {
+          enrichedRecords.push({
+            id: `weekly_off-${dateStr}-${userId}`,
+            userId,
+            date: new Date(currentDate),
+            status: 'weekly_off',
+            attendanceType: 'office',
+            isWeeklyOff: true,
+            checkInTime: null,
+            checkOutTime: null,
+            workingHours: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      enrichedRecords.sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      return enrichedRecords;
+    } catch (error) {
+      console.error('[UnifiedAttendanceService] Error enriching attendance with weekly-offs:', error);
+      return existingRecords;
+    }
+  }
+
+  /**
+   * Comprehensive attendance enrichment
+   * Combines holiday and weekly-off enrichment to ensure complete month view
+   * This is the master enrichment function to call before payroll processing
+   */
+  static async enrichAttendanceComprehensively(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    existingRecords: any[]
+  ): Promise<any[]> {
+    try {
+      // First enrich with holidays
+      let enriched = await this.enrichAttendanceWithHolidays(
+        userId,
+        startDate,
+        endDate,
+        existingRecords
+      );
+
+      // Then enrich with weekly-offs
+      enriched = await this.enrichAttendanceWithWeeklyOffs(
+        userId,
+        startDate,
+        endDate,
+        enriched
+      );
+
+      console.log(`[UnifiedAttendanceService] Comprehensively enriched attendance for user ${userId}:`, {
+        original: existingRecords.length,
+        enriched: enriched.length,
+        added: enriched.length - existingRecords.length
+      });
+
+      return enriched;
+    } catch (error) {
+      console.error('[UnifiedAttendanceService] Error in comprehensive enrichment:', error);
+      return existingRecords;
+    }
+  }
+
+  /**
    * Process attendance check-in with enterprise location validation
    */
   static async processCheckIn(request: AttendanceCheckInRequest): Promise<AttendanceCheckInResponse> {

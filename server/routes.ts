@@ -1629,6 +1629,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // CRITICAL: Auto-tag half-day status based on working hours (50% threshold)
+      // Only auto-tag during normal checkout, NOT during auto-checkout
+      let finalStatus = attendanceRecord.status; // Keep original status by default
+
+      if (workingHours < (standardWorkingHours * 0.5)) {
+        finalStatus = 'half_day' as any;
+        console.log(`CHECKOUT: Auto-tagging as half_day - worked ${workingHours.toFixed(2)}h < 50% of ${standardWorkingHours}h`);
+      }
+
       // Update attendance record with checkout details
       const updatedAttendance = await storage.updateAttendance(attendanceRecord.id, {
         checkOutTime: finalCheckOutTime,
@@ -1637,6 +1646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkOutImageUrl: imageUrl,
         workingHours: Math.round(workingHours * 100) / 100,
         overtimeHours: Math.round(overtimeHours * 100) / 100,
+        status: finalStatus, // Apply auto-tagged status
         otReason: hasOvertimeThreshold ? otReason : undefined,
         remarks: reason || (hasOvertimeThreshold ? `Overtime: ${otReason}` : undefined)
       });
@@ -6640,12 +6650,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           console.log(`PAYROLL_BULK: ${employee.displayName} - ${monthAttendance.length} attendance records`);
 
+          // CRITICAL: Enrich attendance with holidays and weekly-offs before calculation
+          // This ensures employees get paid for Sundays and Holidays
+          const { UnifiedAttendanceService } = await import('./services/unified-attendance-service');
+          const startDate = new Date(year, month - 1, 1);
+          const endDate = new Date(year, month, 0);
+
+          const enrichedAttendance = await UnifiedAttendanceService.enrichAttendanceComprehensively(
+            userId,
+            startDate,
+            endDate,
+            monthAttendance
+          );
+
+          console.log(`PAYROLL_BULK: ${employee.displayName} - Enriched to ${enrichedAttendance.length} days (added ${enrichedAttendance.length - monthAttendance.length} statutory days)`);
+
           // Use PayrollCalculationService for comprehensive calculation
           const calculation = await payrollCalcService.calculateComprehensivePayroll(
             userId,
             month,
             year,
-            monthAttendance,
+            enrichedAttendance,
             salaryStructure,
             employee.department ?? undefined
           );
