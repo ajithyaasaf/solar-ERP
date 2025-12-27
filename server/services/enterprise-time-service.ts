@@ -57,6 +57,10 @@ export class EnterpriseTimeService {
       // Fetch from database
       const timing = await storage.getDepartmentTiming(department);
 
+      // Fetch global payroll settings for grace period
+      const payrollSettings = await storage.getPayrollSettings();
+      const globalGraceMinutes = payrollSettings?.autoCheckoutGraceMinutes ?? 5;
+
       if (timing) {
         const departmentTiming: DepartmentTiming = {
           department: timing.department,
@@ -68,7 +72,7 @@ export class EnterpriseTimeService {
           isFlexibleTiming: timing.isFlexibleTiming || false,
           weekendDays: timing.weekendDays || [0],
           isActive: timing.isActive !== false,
-          autoCheckoutGraceMinutes: timing.autoCheckoutGraceMinutes || 120, // Default 2 hours
+          autoCheckoutGraceMinutes: globalGraceMinutes, // Using global setting
           lastUpdated: timing.updatedAt || new Date()
         };
 

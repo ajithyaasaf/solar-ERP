@@ -1101,6 +1101,7 @@ export const insertPayrollSettingsSchema = z.object({
   standardWorkingHours: z.number().min(1).default(8), // Standard working hours per day
   standardWorkingDays: z.number().min(1).default(26), // Standard working days per month
   leaveDeductionRate: z.number().min(0).max(100).default(100), // Percentage deduction for leaves
+  autoCheckoutGraceMinutes: z.number().min(0).default(5), // Global auto-checkout grace period in minutes
 
   // Salary calculation rules
   pfApplicableFromSalary: z.number().min(0).default(15000), // PF applicable from this salary amount
@@ -1243,6 +1244,7 @@ export const insertEnhancedPayrollSettingsSchema = z.object({
   standardWorkingDays: z.number().min(1).default(26),
   standardWorkingHours: z.number().min(1).default(8),
   overtimeThresholdHours: z.number().min(0).default(8),
+  autoCheckoutGraceMinutes: z.number().min(0).default(5), // Global auto-checkout grace period in minutes
   companyName: z.string().default("Prakash Greens Energy"),
   companyAddress: z.string().nullish(),
   companyPan: z.string().nullish(),

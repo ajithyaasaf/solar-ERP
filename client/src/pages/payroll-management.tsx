@@ -18,12 +18,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/auth-context";
 import { TimeDisplay } from "@/components/time/time-display";
-import { 
-  Calculator, 
-  Settings, 
-  Users, 
-  FileSpreadsheet, 
-  Download, 
+import {
+  Calculator,
+  Settings,
+  Users,
+  FileSpreadsheet,
+  Download,
   Upload,
   Plus,
   Edit3,
@@ -133,6 +133,7 @@ interface EnhancedPayrollSettings {
   autoCalculateStatutory: boolean;
   allowManualOverride: boolean;
   requireApprovalForProcessing: boolean;
+  autoCheckoutGraceMinutes: number;
 }
 
 interface PayrollSettingsFormData {
@@ -153,13 +154,14 @@ interface PayrollSettingsFormData {
   autoCalculateStatutory: boolean;
   allowManualOverride: boolean;
   requireApprovalForProcessing: boolean;
+  autoCheckoutGraceMinutes: number;
 }
 
 export default function EnhancedPayrollManagement() {
   const { toast } = useToast();
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
-  
+
   // Memory leak prevention with proper useEffect cleanup
   useEffect(() => {
     return () => {
@@ -168,10 +170,10 @@ export default function EnhancedPayrollManagement() {
       queryClient.cancelQueries({ queryKey: ['/api/users'] });
     };
   }, [queryClient]);
-  
+
   // Undo management for bulk payroll operations
   const { actions, addAction, executeUndo, clearActions } = useUndoManager();
-  
+
   // Offline handling
   const offlineHandler = useOfflineHandler();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -218,7 +220,7 @@ export default function EnhancedPayrollManagement() {
         year: selectedYear.toString(),
         ...(selectedDepartment && selectedDepartment !== "all" && { department: selectedDepartment })
       };
-      
+
       const response = await apiRequest('/api/enhanced-payrolls', 'GET', queryParams);
       if (!response.ok) {
         throw new Error(`Failed to fetch payrolls: ${response.status}`);
@@ -256,15 +258,15 @@ export default function EnhancedPayrollManagement() {
 
   // Enhanced mutations with offline handling and undo capabilities
   const updatePayrollMutation = useMutation({
-    mutationFn: async (data: { id: string; [key: string]: any }) => {
+    mutationFn: async (data: { id: string;[key: string]: any }) => {
       return await callWithOfflineHandling(
         async () => apiRequest(`/api/enhanced-payrolls/${data.id}`, 'PUT', data),
         async () => apiRequest(`/api/enhanced-payrolls/${data.id}`, 'PUT', data)
       );
     },
     onSuccess: (result, variables) => {
-      toast({ 
-        title: "Changes saved", 
+      toast({
+        title: "Changes saved",
         description: getUserFriendlyMessage("Payroll updated successfully!", 'success')
       });
       queryClient.invalidateQueries({ queryKey: ["/api/enhanced-payrolls"] });
@@ -272,10 +274,10 @@ export default function EnhancedPayrollManagement() {
     },
     onError: (error) => {
       console.error('Update payroll error:', error);
-      toast({ 
-        title: "Error", 
+      toast({
+        title: "Error",
         description: "Failed to update payroll record",
-        variant: "destructive" 
+        variant: "destructive"
       });
     }
   });
@@ -331,9 +333,9 @@ export default function EnhancedPayrollManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/enhanced-payrolls"] });
       queryClient.invalidateQueries({ queryKey: ["/api/enhanced-salary-structures"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ 
-        title: "Bulk processing completed", 
-        description: `Processed ${data.payrolls?.length || 0} payrolls successfully` 
+      toast({
+        title: "Bulk processing completed",
+        description: `Processed ${data.payrolls?.length || 0} payrolls successfully`
       });
       // Force immediate refetch for real-time updates
       refetchPayrolls();
@@ -358,7 +360,7 @@ export default function EnhancedPayrollManagement() {
   });
 
   // Helper functions
-  const formatCurrency = (amount: number) => 
+  const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
 
   const monthNames = [
@@ -398,9 +400,9 @@ export default function EnhancedPayrollManagement() {
                   Configure statutory rates and company information
                 </DialogDescription>
               </DialogHeader>
-              <PayrollSettingsForm 
-                settings={settings} 
-                onSubmit={(data) => updateSettingsMutation.mutate(data)} 
+              <PayrollSettingsForm
+                settings={settings}
+                onSubmit={(data) => updateSettingsMutation.mutate(data)}
               />
             </DialogContent>
           </Dialog>
@@ -440,11 +442,11 @@ export default function EnhancedPayrollManagement() {
                 </DialogDescription>
               </DialogHeader>
               <div className="max-h-[calc(95vh-120px)] overflow-y-auto">
-                <SalaryStructureForm 
+                <SalaryStructureForm
                   users={users}
                   earningsFields={earningsFields}
                   deductionsFields={deductionsFields}
-                  onSubmit={(data) => createSalaryStructureMutation.mutate(data)} 
+                  onSubmit={(data) => createSalaryStructureMutation.mutate(data)}
                 />
               </div>
             </DialogContent>
@@ -463,7 +465,7 @@ export default function EnhancedPayrollManagement() {
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[calc(95vh-120px)] overflow-y-auto">
-              <EditPayrollForm 
+              <EditPayrollForm
                 payrollId={editingPayroll}
                 payroll={payrolls.find(p => p.id === editingPayroll)}
                 users={users}
@@ -541,9 +543,9 @@ export default function EnhancedPayrollManagement() {
 
             <div className="space-y-2 sm:col-span-2 lg:col-span-1">
               <Label className="text-sm font-medium">Actions</Label>
-              <Button 
-                onClick={() => bulkProcessPayrollMutation.mutate({ 
-                  month: selectedMonth, 
+              <Button
+                onClick={() => bulkProcessPayrollMutation.mutate({
+                  month: selectedMonth,
                   year: selectedYear,
                   userIds: selectedDepartment && selectedDepartment !== "all" ? users
                     .filter((user: any) => user.department === selectedDepartment)
@@ -650,7 +652,7 @@ export default function EnhancedPayrollManagement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PayrollTable 
+              <PayrollTable
                 payrolls={payrolls}
                 users={users}
                 earningsFields={earningsFields}
@@ -673,7 +675,7 @@ export default function EnhancedPayrollManagement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <SalaryStructuresTable 
+              <SalaryStructuresTable
                 structures={salaryStructures}
                 users={users}
                 earningsFields={earningsFields}
@@ -705,12 +707,12 @@ export default function EnhancedPayrollManagement() {
 }
 
 // Enhanced Payroll Processing Table Component
-function PayrollTable({ 
-  payrolls, 
-  users, 
-  earningsFields, 
-  deductionsFields, 
-  onEdit 
+function PayrollTable({
+  payrolls,
+  users,
+  earningsFields,
+  deductionsFields,
+  onEdit
 }: {
   payrolls: EnhancedPayroll[];
   users: User[];
@@ -722,7 +724,7 @@ function PayrollTable({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
 
-  const formatCurrency = (amount: number) => 
+  const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
 
   const getStatusColor = (status: string) => {
@@ -883,7 +885,7 @@ function PayrollTable({
           const payrollUser = users.find((u: any) => u.id === payroll.userId);
           const isExpanded = expandedRows.has(payroll.id);
           const { overtimeHours, overtimePay, perHourRate } = calculateOvertimeDetails(payroll);
-          
+
           return (
             <Card key={payroll.id} className="w-full">
               <CardHeader className="pb-3">
@@ -929,7 +931,7 @@ function PayrollTable({
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-medium text-sm text-gray-600">Overtime</h4>
@@ -952,17 +954,17 @@ function PayrollTable({
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => onEdit(payroll.id)}
                     className="flex-1"
                   >
                     <Edit3 className="h-3 w-3 mr-2" />
                     Edit
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => toggleRowExpansion(payroll.id)}
                     className="flex-1"
@@ -976,7 +978,7 @@ function PayrollTable({
                 {isExpanded && (
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="font-semibold text-lg">Complete Details - {payrollUser?.displayName}</h4>
-                    
+
                     <div className="grid grid-cols-1 gap-4">
                       <Card>
                         <CardHeader className="pb-3">
@@ -1068,7 +1070,7 @@ function PayrollTable({
               const payrollUser = users.find((u: any) => u.id === payroll.userId);
               const isExpanded = expandedRows.has(payroll.id);
               const { overtimeHours, overtimePay, perHourRate } = calculateOvertimeDetails(payroll);
-              
+
               return (
                 <React.Fragment key={payroll.id}>
                   <TableRow className="hover:bg-gray-50">
@@ -1139,18 +1141,18 @@ function PayrollTable({
                           {payroll.status}
                         </Badge>
                         <div className="flex gap-1">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-8 w-8 p-0" 
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
                             onClick={() => onEdit(payroll.id)}
                             title="Edit Payroll"
                           >
                             <Edit3 className="h-3 w-3" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="h-8 w-8 p-0"
                             onClick={() => toggleRowExpansion(payroll.id)}
                             title="View Details"
@@ -1161,14 +1163,14 @@ function PayrollTable({
                       </div>
                     </TableCell>
                   </TableRow>
-                  
+
                   {/* Expanded Row Details */}
                   {isExpanded && (
                     <TableRow className="bg-gray-50">
                       <TableCell colSpan={8}>
                         <div className="p-4 space-y-4">
                           <h4 className="font-semibold text-lg">Comprehensive Payroll Details - {payrollUser?.displayName}</h4>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             {/* Attendance Details */}
                             <Card>
@@ -1221,7 +1223,7 @@ function PayrollTable({
                                   <span>Overtime Pay:</span>
                                   <span className="font-medium text-orange-600">{formatCurrency(overtimePay)}</span>
                                 </div>
-                                
+
                                 {Object.keys(payroll.dynamicEarnings || {}).length > 0 && (
                                   <>
                                     <div className="border-t pt-2 mt-2">
@@ -1235,7 +1237,7 @@ function PayrollTable({
                                     </div>
                                   </>
                                 )}
-                                
+
                                 <div className="border-t pt-2 flex justify-between font-bold text-green-600">
                                   <span>Total Earnings:</span>
                                   <span>{formatCurrency(payroll.totalEarnings)}</span>
@@ -1269,7 +1271,7 @@ function PayrollTable({
                                     <span className="font-medium">{formatCurrency(payroll.tdsDeduction)}</span>
                                   </div>
                                 )}
-                                
+
                                 {Object.keys(payroll.dynamicDeductions || {}).length > 0 && (
                                   <>
                                     <div className="border-t pt-2 mt-2">
@@ -1283,7 +1285,7 @@ function PayrollTable({
                                     </div>
                                   </>
                                 )}
-                                
+
                                 <div className="border-t pt-2 flex justify-between font-bold text-red-600">
                                   <span>Total Deductions:</span>
                                   <span>{formatCurrency(payroll.totalDeductions)}</span>
@@ -1350,7 +1352,7 @@ function PayrollTable({
           <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No payroll records found</h3>
           <p className="text-muted-foreground">
-            {payrolls.length === 0 
+            {payrolls.length === 0
               ? "Process payroll for the selected month to see data here."
               : "No payroll records match the selected filters."
             }
@@ -1362,11 +1364,11 @@ function PayrollTable({
 }
 
 // Enhanced Salary Structures Table Component  
-function SalaryStructuresTable({ 
-  structures, 
-  users, 
-  earningsFields, 
-  deductionsFields 
+function SalaryStructuresTable({
+  structures,
+  users,
+  earningsFields,
+  deductionsFields
 }: {
   structures: EnhancedSalaryStructure[];
   users: User[];
@@ -1377,7 +1379,7 @@ function SalaryStructuresTable({
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
   const [salaryRangeFilter, setSalaryRangeFilter] = useState<string>("all");
 
-  const formatCurrency = (amount: number) => 
+  const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
 
   const toggleRowExpansion = (structureId: string) => {
@@ -1401,7 +1403,7 @@ function SalaryStructuresTable({
     const grossSalary = calculateGrossSalary(structure);
     const esiAmount = structure.esiApplicable && grossSalary <= 21000 ? (grossSalary * 0.0075) : 0;
     const vptAmount = structure.vptAmount || 0;
-    
+
     // Check for individual deduction fields (stored as direct properties from form submission)
     const structureAny = structure as any; // Type assertion to access dynamic fields
     const tdsAmount = structureAny.tdsDeduction || 0;
@@ -1409,27 +1411,27 @@ function SalaryStructuresTable({
     const advanceAmount = structureAny.advanceDeduction || 0;
     const fineAmount = structureAny.fineDeduction || 0;
     const creditAmount = structureAny.creditDeduction || 0;
-    
+
     // Debug logging to understand the calculation
-    const totalDeductions = epfAmount + esiAmount + vptAmount + tdsAmount + loanAmount + 
-           advanceAmount + fineAmount + creditAmount + customDeductionsTotal;
-    
+    const totalDeductions = epfAmount + esiAmount + vptAmount + tdsAmount + loanAmount +
+      advanceAmount + fineAmount + creditAmount + customDeductionsTotal;
+
     console.log('DEBUG calculateTotalDeductions:', {
-      epfAmount, esiAmount, vptAmount, tdsAmount, loanAmount, 
+      epfAmount, esiAmount, vptAmount, tdsAmount, loanAmount,
       advanceAmount, fineAmount, creditAmount, customDeductionsTotal, totalDeductions,
       structureId: structure.id
     });
-    
+
     return totalDeductions;
   };
 
   const filteredStructures = structures.filter(structure => {
     const structureUser = users.find((u: any) => u.id === structure.userId);
     const departmentMatch = filterDepartment === "all" || structureUser?.department === filterDepartment;
-    
+
     const grossSalary = calculateGrossSalary(structure);
     let salaryRangeMatch = true;
-    
+
     if (salaryRangeFilter !== "all") {
       switch (salaryRangeFilter) {
         case "0-25000":
@@ -1446,7 +1448,7 @@ function SalaryStructuresTable({
           break;
       }
     }
-    
+
     return departmentMatch && salaryRangeMatch;
   });
 
@@ -1559,7 +1561,7 @@ function SalaryStructuresTable({
               const totalDeductions = calculateTotalDeductions(structure);
               const netSalary = grossSalary - totalDeductions;
               const isExpanded = expandedRows.has(structure.id);
-              
+
               return (
                 <React.Fragment key={structure.id}>
                   <TableRow className="hover:bg-gray-50">
@@ -1640,14 +1642,14 @@ function SalaryStructuresTable({
                       </div>
                     </TableCell>
                   </TableRow>
-                  
+
                   {/* Expanded Row Details */}
                   {isExpanded && (
                     <TableRow className="bg-gray-50">
                       <TableCell colSpan={8}>
                         <div className="p-4 space-y-4">
                           <h4 className="font-semibold text-lg">Detailed Salary Breakdown - {structureUser?.displayName}</h4>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {/* Earnings Breakdown */}
                             <Card>
@@ -1667,7 +1669,7 @@ function SalaryStructuresTable({
                                   <span>Fixed Conveyance:</span>
                                   <span className="font-medium">{formatCurrency(structure.fixedConveyance)}</span>
                                 </div>
-                                
+
                                 {Object.keys(structure.customEarnings || {}).length > 0 && (
                                   <>
                                     <div className="border-t pt-2 mt-2">
@@ -1681,7 +1683,7 @@ function SalaryStructuresTable({
                                     </div>
                                   </>
                                 )}
-                                
+
                                 <div className="border-t pt-2 flex justify-between font-bold text-green-600">
                                   <span>Gross Earnings:</span>
                                   <span>{formatCurrency(grossSalary)}</span>
@@ -1713,7 +1715,7 @@ function SalaryStructuresTable({
                                     <span className="font-medium">{formatCurrency(structure.vptAmount)}</span>
                                   </div>
                                 )}
-                                
+
                                 {Object.keys(structure.customDeductions || {}).length > 0 && (
                                   <>
                                     <div className="border-t pt-2 mt-2">
@@ -1727,7 +1729,7 @@ function SalaryStructuresTable({
                                     </div>
                                   </>
                                 )}
-                                
+
                                 <div className="border-t pt-2 flex justify-between font-bold text-red-600">
                                   <span>Total Deductions:</span>
                                   <span>{formatCurrency(totalDeductions)}</span>
@@ -1790,7 +1792,7 @@ function SalaryStructuresTable({
           <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No salary structures found</h3>
           <p className="text-muted-foreground">
-            {structures.length === 0 
+            {structures.length === 0
               ? "Create salary structures to see data here."
               : "No structures match the selected filters."
             }
@@ -1901,7 +1903,7 @@ function FieldConfigForm({ onSubmit }: { onSubmit: (data: any) => void }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="category">Category</Label>
-          <Select value={formData.category} onValueChange={(value: "earnings" | "deductions") => 
+          <Select value={formData.category} onValueChange={(value: "earnings" | "deductions") =>
             setFormData({ ...formData, category: value })
           }>
             <SelectTrigger>
@@ -1915,7 +1917,7 @@ function FieldConfigForm({ onSubmit }: { onSubmit: (data: any) => void }) {
         </div>
         <div>
           <Label htmlFor="dataType">Data Type</Label>
-          <Select value={formData.dataType} onValueChange={(value: "number" | "percentage" | "boolean" | "text") => 
+          <Select value={formData.dataType} onValueChange={(value: "number" | "percentage" | "boolean" | "text") =>
             setFormData({ ...formData, dataType: value })
           }>
             <SelectTrigger>
@@ -1934,7 +1936,7 @@ function FieldConfigForm({ onSubmit }: { onSubmit: (data: any) => void }) {
       <div className="grid grid-cols-3 gap-4">
         <div>
           <Label htmlFor="department">Department</Label>
-          <Select value={formData.department} onValueChange={(value) => 
+          <Select value={formData.department} onValueChange={(value) =>
             setFormData({ ...formData, department: value })
           }>
             <SelectTrigger>
@@ -1987,11 +1989,11 @@ function FieldConfigForm({ onSubmit }: { onSubmit: (data: any) => void }) {
 }
 
 // Salary Structure Form Component
-function SalaryStructureForm({ 
-  users, 
-  earningsFields, 
-  deductionsFields, 
-  onSubmit 
+function SalaryStructureForm({
+  users,
+  earningsFields,
+  deductionsFields,
+  onSubmit
 }: {
   users: User[];
   earningsFields: PayrollFieldConfig[];
@@ -2005,13 +2007,13 @@ function SalaryStructureForm({
     designation: "",
     department: "",
     dateOfJoining: "",
-    
+
     // Fixed Salary Components (Monthly)
     fixedSalary: 0,
     fixedBasic: 0,
     fixedHRA: 0,
     fixedConveyance: 0,
-    
+
     // Day Structure
     monthDays: 30,
     perDaySalary: 0,
@@ -2019,7 +2021,7 @@ function SalaryStructureForm({
     monthWorkingHours: 0,
     perDayWorkingHours: 8,
     overtimeRate: 1.5,
-    
+
     // Earnings
     earnedBasic: 0,
     earnedHRA: 0,
@@ -2027,7 +2029,7 @@ function SalaryStructureForm({
     otherEarnings: 0,
     grossSalary: 0,
     overtimePay: 0,
-    
+
     // Deductions
     epfDeduction: 0,
     esiDeduction: 0,
@@ -2038,21 +2040,21 @@ function SalaryStructureForm({
     fineDeduction: 0,
     creditDeduction: 0,
     totalDeductions: 0,
-    
+
     // Final Salary
     netSalary: 0,
-    
+
     // Configuration
     perDaySalaryBase: "basic_hra" as "basic" | "basic_hra" | "gross",
     epfApplicable: true,
     esiApplicable: true,
     autoCalculate: true,
     effectiveFrom: new Date().toISOString().split('T')[0],
-    
+
     // Custom fields
     customEarnings: {} as Record<string, number>,
     customDeductions: {} as Record<string, number>,
-    
+
     // Remarks
     remarks: ""
   });
@@ -2080,13 +2082,13 @@ function SalaryStructureForm({
   // Update total deductions when manual deduction values change (when auto-calculation is off)
   React.useEffect(() => {
     if (!formData.autoCalculate) {
-      const totalDeductions = formData.epfDeduction + formData.esiDeduction + formData.vptDeduction + 
-                             formData.tdsDeduction + formData.loanDeduction + formData.advanceDeduction + 
-                             formData.fineDeduction + formData.creditDeduction;
-      
+      const totalDeductions = formData.epfDeduction + formData.esiDeduction + formData.vptDeduction +
+        formData.tdsDeduction + formData.loanDeduction + formData.advanceDeduction +
+        formData.fineDeduction + formData.creditDeduction;
+
       // Calculate total earnings for net salary
-      const totalEarnings = formData.earnedBasic + formData.earnedHRA + formData.earnedConveyance + 
-                           formData.otherEarnings + formData.overtimePay;
+      const totalEarnings = formData.earnedBasic + formData.earnedHRA + formData.earnedConveyance +
+        formData.otherEarnings + formData.overtimePay;
       const netSalary = totalEarnings - totalDeductions;
 
       setFormData(prev => ({
@@ -2118,7 +2120,7 @@ function SalaryStructureForm({
     const earnedBasic = (formData.fixedBasic / formData.monthDays) * formData.workingDays;
     const earnedHRA = (formData.fixedHRA / formData.monthDays) * formData.workingDays;
     const earnedConveyance = (formData.fixedConveyance / formData.monthDays) * formData.workingDays;
-    
+
     // Statutory deductions
     let epf = 0, esi = 0;
     if (formData.epfApplicable && gross <= 15000) {
@@ -2127,11 +2129,11 @@ function SalaryStructureForm({
     if (formData.esiApplicable && gross <= 21000) {
       esi = gross * 0.0075; // 0.75%
     }
-    
-    const totalDeductions = epf + esi + formData.vptDeduction + formData.tdsDeduction + 
-                           formData.loanDeduction + formData.advanceDeduction + 
-                           formData.fineDeduction + formData.creditDeduction;
-    
+
+    const totalDeductions = epf + esi + formData.vptDeduction + formData.tdsDeduction +
+      formData.loanDeduction + formData.advanceDeduction +
+      formData.fineDeduction + formData.creditDeduction;
+
     const totalEarnings = earnedBasic + earnedHRA + earnedConveyance + formData.otherEarnings + formData.overtimePay;
     const netSalary = totalEarnings - totalDeductions;
 
@@ -2513,7 +2515,7 @@ function SalaryStructureForm({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <Label htmlFor="perDaySalaryBase">Per Day Salary Base</Label>
-            <Select value={formData.perDaySalaryBase} onValueChange={(value: "basic" | "basic_hra" | "gross") => 
+            <Select value={formData.perDaySalaryBase} onValueChange={(value: "basic" | "basic_hra" | "gross") =>
               setFormData(prev => ({ ...prev, perDaySalaryBase: value }))
             }>
               <SelectTrigger>
@@ -2551,7 +2553,7 @@ function SalaryStructureForm({
             <Label htmlFor="autoCalculate">Auto Calculate</Label>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="netSalary">Net Salary</Label>
@@ -2577,9 +2579,9 @@ function SalaryStructureForm({
 
       {/* Action Buttons */}
       <div className="flex justify-between items-center pt-6 border-t">
-        <Button 
-          type="button" 
-          variant="outline" 
+        <Button
+          type="button"
+          variant="outline"
           onClick={calculateSalary}
           className="flex items-center gap-2"
         >
@@ -2598,9 +2600,9 @@ function SalaryStructureForm({
 }
 
 // Payroll Settings Form Component
-function PayrollSettingsForm({ 
-  settings, 
-  onSubmit 
+function PayrollSettingsForm({
+  settings,
+  onSubmit
 }: {
   settings?: EnhancedPayrollSettings;
   onSubmit: (data: PayrollSettingsFormData) => void;
@@ -2622,7 +2624,8 @@ function PayrollSettingsForm({
     companyTan: settings?.companyTan || "",
     autoCalculateStatutory: Boolean(settings?.autoCalculateStatutory ?? true),
     allowManualOverride: Boolean(settings?.allowManualOverride ?? true),
-    requireApprovalForProcessing: Boolean(settings?.requireApprovalForProcessing ?? false)
+    requireApprovalForProcessing: Boolean(settings?.requireApprovalForProcessing ?? false),
+    autoCheckoutGraceMinutes: settings?.autoCheckoutGraceMinutes || 5
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -2713,10 +2716,10 @@ function PayrollSettingsForm({
         </div>
       </div>
 
-      {/* Working Hours */}
+      {/* Working Hours & Attendance */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">Working Hours</h3>
-        <div className="grid grid-cols-3 gap-4">
+        <h3 className="text-lg font-semibold mb-4">Attendance & Working Hours</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <Label htmlFor="standardWorkingDays">Standard Working Days</Label>
             <Input
@@ -2742,6 +2745,16 @@ function PayrollSettingsForm({
               type="number"
               value={formData.overtimeThresholdHours}
               onChange={(e) => setFormData({ ...formData, overtimeThresholdHours: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="autoCheckoutGraceMinutes">Auto-Checkout Grace (Mins)</Label>
+            <Input
+              id="autoCheckoutGraceMinutes"
+              type="number"
+              value={formData.autoCheckoutGraceMinutes}
+              onChange={(e) => setFormData({ ...formData, autoCheckoutGraceMinutes: parseInt(e.target.value) || 0 })}
+              placeholder="Default is 5"
             />
           </div>
         </div>
@@ -2784,10 +2797,10 @@ function PayrollSettingsForm({
             />
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Configuration Options */}
-      <div>
+      < div >
         <h3 className="text-lg font-semibold mb-4">Configuration</h3>
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
@@ -2815,24 +2828,24 @@ function PayrollSettingsForm({
             <Label htmlFor="requireApprovalForProcessing">Require Approval for Processing</Label>
           </div>
         </div>
-      </div>
+      </div >
 
       <div className="flex justify-end gap-2">
         <Button type="submit">Update Settings</Button>
       </div>
-    </form>
+    </form >
   );
 }
 
 // Edit Payroll Form Component
-function EditPayrollForm({ 
+function EditPayrollForm({
   payrollId,
-  payroll, 
-  users, 
-  earningsFields, 
-  deductionsFields, 
-  onSubmit, 
-  onCancel 
+  payroll,
+  users,
+  earningsFields,
+  deductionsFields,
+  onSubmit,
+  onCancel
 }: {
   payrollId: string;
   payroll?: EnhancedPayroll;
@@ -2868,20 +2881,20 @@ function EditPayrollForm({
 
   const calculateTotals = () => {
     // Calculate gross salary (before BETTA)
-    const grossSalary = formData.earnedBasic + formData.earnedHRA + formData.earnedConveyance + 
-                       formData.overtimePay + Object.values(formData.dynamicEarnings).reduce((sum, val) => sum + val, 0);
-    
+    const grossSalary = formData.earnedBasic + formData.earnedHRA + formData.earnedConveyance +
+      formData.overtimePay + Object.values(formData.dynamicEarnings).reduce((sum, val) => sum + val, 0);
+
     // Calculate final gross (after BETTA)
     const finalGross = grossSalary + formData.betta;
-    
+
     // Calculate total deductions (including new fields from manual system)
-    const totalDeductions = formData.epfDeduction + formData.esiDeduction + formData.vptDeduction + 
-                           formData.tdsDeduction + formData.fineDeduction + formData.salaryAdvance +
-                           Object.values(formData.dynamicDeductions).reduce((sum, val) => sum + val, 0);
-    
+    const totalDeductions = formData.epfDeduction + formData.esiDeduction + formData.vptDeduction +
+      formData.tdsDeduction + formData.fineDeduction + formData.salaryAdvance +
+      Object.values(formData.dynamicDeductions).reduce((sum, val) => sum + val, 0);
+
     // Calculate net salary (final gross + credit adjustment - total deductions)
     const netSalary = finalGross + formData.creditAdjustment - totalDeductions;
-    
+
     return {
       grossSalary,
       finalGross,
@@ -2923,7 +2936,7 @@ function EditPayrollForm({
     });
   };
 
-  const formatCurrency = (amount: number) => 
+  const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
 
   if (!payroll) {

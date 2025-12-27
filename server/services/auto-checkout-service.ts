@@ -72,8 +72,8 @@ export class AutoCheckoutService {
                 const deptCheckOutDate = EnterpriseTimeService.getExpectedCheckoutDateTime(record.checkInTime!, timing.checkOutTime);
                 console.log(`[AUTO-CHECKOUT] Dept checkout time: ${deptCheckOutDate.toISOString()}`);
 
-                // Use department-specific grace period (default to 2 hours if not set)
-                const gracePeriodMs = (timing.autoCheckoutGraceMinutes || 120) * 60 * 1000;
+                // Use department-specific grace period (now global, default to 5 minutes)
+                const gracePeriodMs = (timing.autoCheckoutGraceMinutes || 5) * 60 * 1000;
                 const autoCheckoutThreshold = new Date(deptCheckOutDate.getTime() + gracePeriodMs);
                 console.log(`[AUTO-CHECKOUT] Grace period threshold: ${autoCheckoutThreshold.toISOString()}`);
                 console.log(`[AUTO-CHECKOUT] Current time: ${now.toISOString()}`);
@@ -105,7 +105,7 @@ export class AutoCheckoutService {
                         workingHours: metrics.workingHours,
                         autoCorrected: true,
                         autoCorrectedAt: now,
-                        autoCorrectionReason: `Forgotten checkout (system auto-corrected after ${timing.autoCheckoutGraceMinutes || 120} minutes past ${timing.checkOutTime})`,
+                        autoCorrectionReason: `Forgotten checkout (system auto-corrected after ${timing.autoCheckoutGraceMinutes || 5} minutes past ${timing.checkOutTime})`,
                         adminReviewStatus: 'pending'
                     });
 

@@ -305,12 +305,16 @@ export class PayrollCalculationService {
     // Fetch Global Payroll Settings
     const settings = await this.storage.getPayrollSettings();
 
-    // Calculate present days from attendance
-    // precise-edit: Added 'holiday' to valid statuses as holidays are typically paid
-    const validWorkingStatuses = ['present', 'late', 'overtime', 'half_day', 'early_checkout', 'holiday'];
-    const presentDays = attendanceRecords.filter(record =>
-      validWorkingStatuses.includes(record.status)
-    ).length;
+    // Calculate present days from attendance with weighted units
+    // CRITICAL: half_day = 0.5, present/late/holiday/weekly_off = 1.0
+    const presentDays = attendanceRecords.reduce((total, record) => {
+      if (record.status === 'half_day') return total + 0.5;
+
+      const fullPayStatuses = ['present', 'late', 'overtime', 'early_checkout', 'holiday', 'weekly_off'];
+      if (fullPayStatuses.includes(record.status)) return total + 1.0;
+
+      return total;
+    }, 0);
 
     // Get paid leave days
     const paidLeaveDays = await this.getPaidLeaveDays(userId, month, year, departmentId);

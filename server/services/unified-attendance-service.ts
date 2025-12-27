@@ -216,7 +216,7 @@ export class UnifiedAttendanceService {
 
       // Get department timing to check configured weekly-off days
       const departmentTiming = await storage.getDepartmentTiming(user.department);
-      const weeklyOffDays = departmentTiming?.weeklyOffDays || [0]; // Default to Sunday
+      const weeklyOffDays = departmentTiming?.weekendDays || [0]; // Default to Sunday
 
       const recordsByDate = new Map();
       existingRecords.forEach(record => {
