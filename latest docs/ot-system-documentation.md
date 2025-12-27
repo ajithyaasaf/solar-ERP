@@ -181,8 +181,8 @@ If no attendance record exists (e.g., Sunday work), the system creates:
 | Setting | Type | Example | Description |
 |---------|------|---------|-------------|
 | `weekendDays` | `number[]` | `[0, 6]` | 0=Sunday, 6=Saturday |
-| `defaultOTRate` | `number` | `1.5` | Multiplier for regular OT |
-| `weekendOTRate` | `number` | `2.0` | Multiplier for weekend OT |
+| `defaultOTRate` | `number` | `1.0` | Multiplier for regular OT |
+| `weekendOTRate` | `number` | `1.0` | Multiplier for weekend OT |
 | `maxOTHoursPerDay` | `number` | `5.0` | Daily cap before warning |
 | `requireAdminApprovalAbove` | `number` | `6.0` | Threshold for approval |
 
@@ -431,8 +431,8 @@ Prevents employees/admins from retroactively adding OT hours after payroll is pr
 {
   "settings": {
     "weekendDays": [0],
-    "defaultOTRate": 1.5,
-    "weekendOTRate": 2.0,
+    "defaultOTRate": 1.0,
+    "weekendOTRate": 1.0,
     "maxOTHoursPerDay": 5.0,
     "requireAdminApprovalAbove": 6.0
   }
@@ -515,8 +515,8 @@ For each OT session:
 1. Determine `otType`
 2. Lookup applicable rate:
    - **Holiday**: `holiday.otRateMultiplier` (e.g., 2.5x)
-   - **Weekend**: `company_settings.weekendOTRate` (e.g., 2.0x)
-   - **Early/Late**: `company_settings.defaultOTRate` (e.g., 1.5x)
+   - **Weekend**: `company_settings.weekendOTRate` (e.g., 1.0x)
+   - **Early/Late**: `company_settings.defaultOTRate` (e.g., 1.0x)
 3. Calculate: `otPay = otHours × hourlyRate × multiplier`
 
 ### Locking Enforcement
@@ -561,7 +561,7 @@ npx tsx server/migrations/migrate-ot-to-sessions.ts
 1. **Morning 8AM:** No regular attendance exists (Sunday).
 2. **Start OT:** System auto-creates attendance, detects `weekend` OT type.
 3. **Work 8AM - 2PM:** 6 hours logged.
-4. **End OT:** Calculates 6h × 2.0x = 12h equivalent pay.
+4. **End OT:** Calculates 6h × 1.0x = 6h equivalent pay.
 
 ### Use Case 2: Multiple Sessions in One Day
 **Scenario:** Sales executive works early morning and late night.

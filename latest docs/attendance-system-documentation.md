@@ -242,7 +242,76 @@ This prevents false positives (e.g., marking someone as "incomplete" at 5:45 PM 
 
 ---
 
-## 5. Security & Payroll Integration
+## 6.5 Production Safeguards (P1/P2 Critical Features)
+
+### 6.5.1 Payroll Lock Enforcement (P1.1)
+**Rule**: Admins **cannot** review attendance for locked payroll periods.
+
+**Implementation**: `POST /api/admin/attendance/:id/review` checks `PayrollLockService.isPeriodLocked(date)` before allowing any changes.
+
+**Error Response**: HTTP 403 - "Cannot modify attendance for a locked payroll period. Unlock the period first."
+
+**Workaround**: Master Admin must unlock the payroll period via Payroll Administration page.
+
+---
+
+### 6.5.2 Leave vs Attendance Conflict Resolution (P1.2)
+**Rule**: Auto-checkout **skips** records where an approved leave exists for that day.
+
+**Implementation**: `AutoCheckoutService` calls `LeaveService.hasLeaveOnDate()` before processing.
+
+**Behavior**: If approved leave exists → Skip auto-checkout, leave remains as source of truth.
+
+**Why**: Prevents payroll confusion where a day shows both "Leave" and "Present".
+
+---
+
+### 6.5.3 Pending Review Warning (P1.3)
+**Rule**: Payroll generation is **blocked** if pending review records exist.
+
+**Implementation**: `POST /api/payroll/calculate-all` returns HTTP 409 if pending records found.
+
+**Override**: Include `forceProceed: true` to proceed (pending days excluded from salary).
+
+---
+
+### 6.5.4 Reports & Dashboard Consistency (P2)
+**Rule**: Attendance reports and dashboards **exclude** pending review records.
+
+**Filtered Endpoints**:
+- `GET /api/attendance`
+- `GET /api/attendance/report`
+- `GET /api/attendance/range`
+- `GET /api/attendance/department-stats`
+- `GET /api/attendance/analytics`
+
+**Result**: Reports show same present days count as payroll calculations.
+
+---
+
+### 6.5.5 Admin Review Status Workflow
+
+**Key Statuses**:
+- `pending` - Awaiting admin review (**excluded** from payroll & reports)
+- `accepted` - Approved as-is (**included** in payroll & reports)
+- `adjusted` - Manually corrected (**included** in payroll & reports)
+- `rejected` - Marked absent (excluded from payroll)
+
+**Flow**:
+```
+1. Auto-checkout runs → adminReviewStatus = 'pending'
+2. Record excluded from:
+   - Payroll calculations
+   - Attendance reports
+   - Dashboard stats
+   - Excel exports
+3. Admin reviews → Status changes to accepted/adjusted/rejected
+4. If accepted/adjusted → Now included in all reports & payroll
+```
+
+---
+
+## 7. Security & Payroll Integration
 
 ### 5.1 Payroll Locks
 **Service**: `PayrollLockService`

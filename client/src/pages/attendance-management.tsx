@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/utils";
 import { sanitizeFormData } from "../../../shared/utils/form-sanitizer";
 import { TimeDisplay } from "@/components/time/time-display";
+import { TimeInput } from "@/components/time/time-input";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { UndoManager, useUndoManager } from "@/components/undo/undo-manager";
@@ -350,11 +351,12 @@ export default function AttendanceManagement() {
     onError: (error: any) => {
       toast({
         title: "Auto-Checkout Failed",
-        description: error.message || "Failed to run auto-checkout",
+        description: error.message || "Failed to run auto-checkout job",
         variant: "destructive",
       });
     },
   });
+
 
   // Helper function to check if record is incomplete (missing checkout)
   const isIncompleteRecord = (record: any) => {
@@ -934,6 +936,8 @@ export default function AttendanceManagement() {
                 </span>
               </Button>
             )}
+
+
             <Link href="/attendance-reports">
               <Button
                 variant="outline"
@@ -990,8 +994,8 @@ export default function AttendanceManagement() {
             </TabsTrigger>
             <TabsTrigger value="daily" className="gap-2 text-xs sm:text-sm" data-testid="tab-daily">
               <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Daily Records</span>
-              <span className="sm:hidden">Daily</span>
+              <span className="hidden sm:inline">Attendance Records</span>
+              <span className="sm:hidden">Records</span>
               {incompleteRecords.length > 0 && (
                 <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
                   {incompleteRecords.length}
@@ -1002,9 +1006,9 @@ export default function AttendanceManagement() {
               <Edit className="h-4 w-4" />
               <span className="hidden sm:inline">Corrections</span>
               <span className="sm:hidden">Fix</span>
-              {incompleteRecords.length > 0 && (
+              {allIncompleteRecords.length > 0 && (
                 <Badge variant="destructive" className="ml-1 px-1 py-0 text-xs">
-                  {incompleteRecords.length}
+                  {allIncompleteRecords.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -1046,7 +1050,7 @@ export default function AttendanceManagement() {
               </SelectContent>
             </Select>
 
-            {(activeTab === "daily" || activeTab === "corrections") && (
+            {activeTab === "daily" && (
               <>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-full sm:w-32">
@@ -1929,7 +1933,7 @@ export default function AttendanceManagement() {
 
       {/* Edit Attendance Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editingAttendance && isIncompleteRecord(editingAttendance) ? (
@@ -1946,112 +1950,136 @@ export default function AttendanceManagement() {
             </DialogTitle>
             <DialogDescription>
               {editingAttendance && isIncompleteRecord(editingAttendance) ? (
-                <div className="space-y-2">
-                  <p>Fixing missing checkout for {editingAttendance?.userName}</p>
-                  <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-700">
-                    <Clock className="h-4 w-4" />
-                    Suggested time: {getSuggestedCheckoutTime(editingAttendance)} (department closing)
-                  </div>
-                </div>
+                'Complete missing attendance information'
               ) : (
-                `Modify attendance details for ${editingAttendance?.userName}`
+                'Modify attendance details and working hours'
               )}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="checkInTime">Check In Time</Label>
-                <Input
-                  id="checkInTime"
-                  type="time"
-                  value={editForm.checkInTime}
-                  onChange={(e) => setEditForm({ ...editForm, checkInTime: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="checkOutTime" className="flex items-center gap-2">
-                  Check Out Time
-                  {editingAttendance && isIncompleteRecord(editingAttendance) && (
-                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
-                      Missing
-                    </Badge>
-                  )}
-                </Label>
-                <Input
-                  id="checkOutTime"
-                  type="time"
-                  value={editForm.checkOutTime}
-                  onChange={(e) => setEditForm({ ...editForm, checkOutTime: e.target.value })}
-                  className={editingAttendance && isIncompleteRecord(editingAttendance) ? "border-amber-300 bg-amber-50" : ""}
-                  placeholder={editingAttendance && isIncompleteRecord(editingAttendance) ? getSuggestedCheckoutTime(editingAttendance) : ""}
-                />
-                {editingAttendance && isIncompleteRecord(editingAttendance) && (
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      type="button"
-                      onClick={() => setEditForm({ ...editForm, checkOutTime: getSuggestedCheckoutTime(editingAttendance) })}
-                      className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                    >
-                      <Clock className="h-3 w-3 mr-1" />
-                      Use Department Time
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      type="button"
-                      onClick={() => setEditForm({ ...editForm, checkOutTime: "6:00 PM" })}
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                    >
-                      Use 6:00 PM
-                    </Button>
+          {editingAttendance && (
+            <div className="space-y-4">
+              {/* Employee Info Card */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <Label className="text-gray-600">Employee</Label>
+                      <p className="font-semibold">{editingAttendance.userName}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">Department</Label>
+                      <p className="font-semibold capitalize">{editingAttendance.userDepartment || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">Date</Label>
+                      <p className="font-semibold">{formatDate(new Date(editingAttendance.date))}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-600">Status</Label>
+                      <div className="mt-1">
+                        {isIncompleteRecord(editingAttendance) ? (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                            Incomplete
+                          </Badge>
+                        ) : (
+                          getStatusBadge(editingAttendance)
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </CardContent>
+              </Card>
 
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="present">Present</SelectItem>
-                  <SelectItem value="absent">Absent</SelectItem>
-                  <SelectItem value="late">Late</SelectItem>
-                  <SelectItem value="leave">Leave</SelectItem>
-                  <SelectItem value="holiday">Holiday</SelectItem>
-                  <SelectItem value="half_day">Half Day</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Timing Card */}
+              <Card className={editingAttendance && isIncompleteRecord(editingAttendance) ? "bg-amber-50 border-amber-200" : ""}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Attendance Times
+                  </CardTitle>
+                  {editingAttendance && isIncompleteRecord(editingAttendance) && (
+                    <CardDescription className="text-amber-700">
+                      Missing checkout detected. Suggested time: {getSuggestedCheckoutTime(editingAttendance)} (department closing)
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-0 space-y-4">
+                  <TimeInput
+                    label="Check-In Time"
+                    value={editForm.checkInTime}
+                    onChange={(value) => setEditForm({ ...editForm, checkInTime: value })}
+                    placeholder="9:00 AM"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Label className="text-sm font-medium">
+                        Check-Out Time
+                      </Label>
+                      {editingAttendance && isIncompleteRecord(editingAttendance) && (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                          Missing
+                        </Badge>
+                      )}
+                    </div>
+                    <TimeInput
+                      value={editForm.checkOutTime}
+                      onChange={(value) => setEditForm({ ...editForm, checkOutTime: value })}
+                      placeholder={editingAttendance && isIncompleteRecord(editingAttendance) ? getSuggestedCheckoutTime(editingAttendance) : "6:00 PM"}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div>
-              <Label htmlFor="overtimeHours">Overtime Hours</Label>
-              <Input
-                id="overtimeHours"
-                type="number"
-                step="0.5"
-                min="0"
-                value={editForm.overtimeHours}
-                onChange={(e) => setEditForm({ ...editForm, overtimeHours: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
+              {/* Additional Details Card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Additional Details</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-4">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="present">Present</SelectItem>
+                        <SelectItem value="absent">Absent</SelectItem>
+                        <SelectItem value="late">Late</SelectItem>
+                        <SelectItem value="leave">Leave</SelectItem>
+                        <SelectItem value="holiday">Holiday</SelectItem>
+                        <SelectItem value="half_day">Half Day</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <div>
-              <Label htmlFor="remarks">Remarks</Label>
-              <Textarea
-                id="remarks"
-                placeholder="Add remarks or notes..."
-                value={editForm.remarks}
-                onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
-              />
+                  <div>
+                    <Label htmlFor="overtimeHours">Overtime Hours</Label>
+                    <Input
+                      id="overtimeHours"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={editForm.overtimeHours}
+                      onChange={(e) => setEditForm({ ...editForm, overtimeHours: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="remarks">Remarks</Label>
+                    <Textarea
+                      id="remarks"
+                      placeholder="Add remarks or notes..."
+                      value={editForm.remarks}
+                      onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditModal(false)}>
@@ -2166,26 +2194,18 @@ export default function AttendanceManagement() {
               {/* Time Adjustment Fields (shown when action is 'adjusted') */}
               {reviewForm.action === 'adjusted' && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Adjusted Check-In Time</Label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., 9:00 AM"
-                      value={reviewForm.checkInTime}
-                      onChange={(e) => setReviewForm({ ...reviewForm, checkInTime: e.target.value })}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Format: 9:00 AM or 6:30 PM</p>
-                  </div>
-                  <div>
-                    <Label>Adjusted Check-Out Time</Label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., 6:00 PM"
-                      value={reviewForm.checkOutTime}
-                      onChange={(e) => setReviewForm({ ...reviewForm, checkOutTime: e.target.value })}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Format: 9:00 AM or 6:30 PM</p>
-                  </div>
+                  <TimeInput
+                    label="Adjusted Check-In Time"
+                    value={reviewForm.checkInTime}
+                    onChange={(value) => setReviewForm({ ...reviewForm, checkInTime: value })}
+                    placeholder="9:00 AM"
+                  />
+                  <TimeInput
+                    label="Adjusted Check-Out Time"
+                    value={reviewForm.checkOutTime}
+                    onChange={(value) => setReviewForm({ ...reviewForm, checkOutTime: value })}
+                    placeholder="6:00 PM"
+                  />
                 </div>
               )}
 

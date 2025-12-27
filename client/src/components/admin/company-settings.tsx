@@ -200,10 +200,10 @@ export function CompanySettings() {
                                     min="1"
                                     value={defaultOTRate}
                                     onChange={(e) => setDefaultOTRate(e.target.value)}
-                                    placeholder="e.g., 1.5"
+                                    placeholder="e.g., 1.0"
                                 />
                                 <p className="text-xs text-gray-500">
-                                    For regular weekday OT (e.g., 1.5 = 1.5x base pay)
+                                    For regular weekday OT (e.g., 1.0 = 1.0x base pay)
                                 </p>
                             </div>
 
@@ -216,10 +216,10 @@ export function CompanySettings() {
                                     min="1"
                                     value={weekendOTRate}
                                     onChange={(e) => setWeekendOTRate(e.target.value)}
-                                    placeholder="e.g., 2.0"
+                                    placeholder="e.g., 1.0"
                                 />
                                 <p className="text-xs text-gray-500">
-                                    For OT on configured weekend days (e.g., 2.0 = 2x base pay)
+                                    For OT on configured weekend days (e.g., 1.0 = 1.0x base pay)
                                 </p>
                             </div>
                         </div>

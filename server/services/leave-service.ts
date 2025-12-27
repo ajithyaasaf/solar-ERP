@@ -1,8 +1,9 @@
 import { IStorage } from "../storage";
 import { InsertLeaveApplication, LeaveApplication, FIXED_ANNUAL_HOLIDAYS } from "@shared/schema";
+import { PayrollHelper } from "./payroll-helper";
 
 export class LeaveService {
-  constructor(private storage: IStorage) {}
+  constructor(private storage: IStorage) { }
 
   async validateLeaveApplication(
     data: Partial<InsertLeaveApplication>,
@@ -87,13 +88,13 @@ export class LeaveService {
     endDate: Date
   ): Promise<boolean> {
     const leaves = await this.storage.listLeaveApplicationsByUser(userId);
-    
+
     for (const leave of leaves) {
       if (leave.status === "approved" || leave.status === "pending_manager" || leave.status === "pending_hr") {
         if (leave.leaveType !== "permission" && leave.startDate && leave.endDate) {
           const leaveStart = new Date(leave.startDate);
           const leaveEnd = new Date(leave.endDate);
-          
+
           if (
             (startDate >= leaveStart && startDate <= leaveEnd) ||
             (endDate >= leaveStart && endDate <= leaveEnd) ||
@@ -104,7 +105,7 @@ export class LeaveService {
         }
       }
     }
-    
+
     return false;
   }
 
@@ -124,6 +125,44 @@ export class LeaveService {
     return date.getDay() === 0;
   }
 
+  /**
+   * P1.2: Check if a user has approved leave on a specific date
+   * Used by AutoCheckoutService to skip leave days
+   */
+  async hasLeaveOnDate(userId: string, date: Date): Promise<boolean> {
+    const leaves = await this.storage.listLeaveApplicationsByUser(userId);
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+
+    for (const leave of leaves) {
+      // Only check approved leaves
+      if (leave.status !== "approved") continue;
+
+      if (leave.leaveType === "permission") {
+        // For permission, check if it's on the same day
+        if (leave.permissionDate) {
+          const permDate = new Date(leave.permissionDate);
+          permDate.setHours(0, 0, 0, 0);
+          if (permDate.getTime() === targetDate.getTime()) {
+            return true;
+          }
+        }
+      } else if (leave.startDate && leave.endDate) {
+        // For full-day leaves, check if date falls within range
+        const leaveStart = new Date(leave.startDate);
+        const leaveEnd = new Date(leave.endDate);
+        leaveStart.setHours(0, 0, 0, 0);
+        leaveEnd.setHours(23, 59, 59, 999);
+
+        if (targetDate >= leaveStart && targetDate <= leaveEnd) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   async calculatePayrollDeduction(
     userId: string,
     leaveType: string,
@@ -138,8 +177,10 @@ export class LeaveService {
       return 0;
     }
 
-    const perDaySalary = salaryStructure.basicSalary / 26;
-    return perDaySalary * days;
+    const settings = await this.storage.getPayrollSettings();
+    const dailySalary = PayrollHelper.getDailySalary(salaryStructure, settings);
+
+    return Math.round(dailySalary * days);
   }
 
   async updateLeaveBalanceOnApproval(leaveId: string): Promise<void> {
@@ -185,7 +226,7 @@ export class LeaveService {
   async getLeaveStatistics(userId: string, month: number, year: number) {
     const balance = await this.storage.getLeaveBalance(userId, month, year);
     const leaves = await this.storage.listLeaveApplicationsByUser(userId);
-    
+
     const monthLeaves = leaves.filter(leave => {
       const appDate = new Date(leave.applicationDate || leave.createdAt);
       return appDate.getMonth() + 1 === month && appDate.getFullYear() === year;

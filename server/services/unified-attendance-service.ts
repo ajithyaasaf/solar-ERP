@@ -889,12 +889,15 @@ export class UnifiedAttendanceService {
       }
 
       // Filter by date range if provided
-      const filteredRecords = dateRange
+      let filteredRecords = dateRange
         ? attendanceRecords.filter((record: any) => {
           const checkInDate = new Date(record.checkInTime);
           return checkInDate >= dateRange.start && checkInDate <= dateRange.end;
         })
         : attendanceRecords;
+
+      // P2: Exclude pending reviews to match payroll logic
+      filteredRecords = filteredRecords.filter((record: any) => record.adminReviewStatus !== 'pending');
 
       const totalDays = filteredRecords.length;
       const totalWorkingHours = filteredRecords.reduce((sum: number, record: any) => sum + (record.workingHours || 0), 0);

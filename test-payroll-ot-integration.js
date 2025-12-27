@@ -54,9 +54,9 @@ async function testPayrollOTIntegration() {
       // Test OT calculation logic
       const result = testOTCalculation(scenario);
       console.log(`   Calculated: ${result.regular}h regular + ${result.overtime}h OT`);
-      
-      if (result.regular === scenario.expected.regular && 
-          result.overtime === scenario.expected.overtime) {
+
+      if (result.regular === scenario.expected.regular &&
+        result.overtime === scenario.expected.overtime) {
         console.log('   ✅ PASS');
       } else {
         console.log('   ❌ FAIL - Calculation mismatch');
@@ -86,7 +86,7 @@ async function testPayrollOTIntegration() {
     console.log(`Overtime Hours: ${sampleEmployeeData.overtimeHours}h`);
     console.log('---');
     console.log(`Earned Salary: ₹${payrollResult.earnedSalary}`);
-    console.log(`Overtime Pay: ₹${payrollResult.overtimePay} (Rate: 1.5x)`);
+    console.log(`Overtime Pay: ₹${payrollResult.overtimePay} (Rate: 1.0x)`);
     console.log(`Gross Salary: ₹${payrollResult.grossSalary}`);
     console.log(`Total Deductions: ₹${payrollResult.totalDeductions}`);
     console.log(`Net Salary: ₹${payrollResult.netSalary}`);
@@ -110,7 +110,7 @@ async function testPayrollOTIntegration() {
     console.log('✅ Payroll integration is connected');
     console.log('✅ Manual OT sessions properly tracked');
     console.log('✅ Early arrival + late departure logic works');
-    console.log('✅ OT rates applied correctly (1.5x standard)');
+    console.log('✅ OT rates applied correctly (1.0x standard)');
     console.log('✅ Combined OT scenarios handled properly');
 
   } catch (error) {
@@ -126,12 +126,12 @@ function testOTCalculation(scenario) {
   const checkOut = parseTime(scenario.checkOut);
 
   let overtimeMinutes = 0;
-  
+
   // Early arrival OT
   if (checkIn < deptStart) {
     overtimeMinutes += (deptStart - checkIn) / (1000 * 60);
   }
-  
+
   // Late departure OT
   if (checkOut > deptEnd) {
     overtimeMinutes += (checkOut - deptEnd) / (1000 * 60);
@@ -159,36 +159,36 @@ function parseTime(timeStr) {
   const today = new Date();
   const [time, period] = timeStr.split(' ');
   const [hours, minutes] = time.split(':').map(Number);
-  
+
   let hour24 = hours;
   if (period === 'PM' && hours !== 12) hour24 += 12;
   if (period === 'AM' && hours === 12) hour24 = 0;
-  
+
   return new Date(today.getFullYear(), today.getMonth(), today.getDate(), hour24, minutes);
 }
 
 function calculatePayrollWithOT(employeeData) {
   const { basicSalary, fixedSalary, presentDays, workingDays, overtimeHours } = employeeData;
-  
+
   // Calculate earned salary based on present days
   const dailySalary = fixedSalary / 22; // Standard working days
   const earnedSalary = dailySalary * presentDays;
-  
-  // Calculate overtime pay (1.5x rate)
+
+  // Calculate overtime pay (1.0x rate)
   const hourlyRate = fixedSalary / (22 * 8); // 8 hours per day
-  const overtimePay = hourlyRate * overtimeHours * 1.5;
-  
+  const overtimePay = hourlyRate * overtimeHours * 1.0;
+
   // Gross salary
   const grossSalary = earnedSalary + overtimePay;
-  
+
   // Deductions (simplified)
   const pfDeduction = basicSalary * 0.12; // 12% PF
   const esiDeduction = grossSalary < 21000 ? grossSalary * 0.0075 : 0; // 0.75% ESI
   const totalDeductions = pfDeduction + esiDeduction;
-  
+
   // Net salary
   const netSalary = grossSalary - totalDeductions;
-  
+
   return {
     earnedSalary: Math.round(earnedSalary),
     overtimePay: Math.round(overtimePay),
@@ -200,9 +200,9 @@ function calculatePayrollWithOT(employeeData) {
 
 function testOTRateCalculation() {
   console.log('Standard Rate: ₹200/hour');
-  console.log('OT Rate (1.5x): ₹300/hour');
-  console.log('5 hours OT = ₹1,500 additional pay');
-  console.log('10 hours OT = ₹3,000 additional pay');
+  console.log('OT Rate (1.0x): ₹200/hour');
+  console.log('5 hours OT = ₹1,000 additional pay');
+  console.log('10 hours OT = ₹2,000 additional pay');
 }
 
 // Run the test

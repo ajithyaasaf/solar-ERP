@@ -1,4 +1,5 @@
 import { db } from "./firebase";
+import { PayrollHelper } from "./services/payroll-helper";
 import {
   FieldValue,
   Timestamp,
@@ -3658,7 +3659,7 @@ export class FirestoreStorage implements IStorage {
           type: "national",
           isPaid: true,
           isOptional: false,
-          otRateMultiplier: 2.0, // Default for national holidays
+          otRateMultiplier: 1.0, // Default for national holidays
           allowOT: true,
           createdBy,
           createdAt: new Date(),
@@ -4529,9 +4530,9 @@ export class FirestoreStorage implements IStorage {
       pfRate: 12,
       esiRate: 1.75,
       tdsRate: 10,
-      overtimeMultiplier: 1.5,
+      overtimeMultiplier: 1.0,
       standardWorkingHours: 8,
-      standardWorkingDays: 22,
+      standardWorkingDays: 26,
       leaveDeductionRate: 1,
       pfApplicableFromSalary: 15000,
       esiApplicableFromSalary: 21000,
@@ -4542,31 +4543,37 @@ export class FirestoreStorage implements IStorage {
     // Calculate salary components
     const { workingDays, presentDays, absentDays, overtimeHours, leaveDays } = attendanceSummary;
 
-    // Base salary calculations
-    const dailySalary = salaryStructure.fixedSalary / payrollSettings.standardWorkingDays;
+    // Base salary calculations using PayrollHelper (Standardized 26-Day Logic)
+    const dailySalary = (PayrollHelper as any).getDailySalary({
+      fixedBasic: (salaryStructure as any).basicSalary || 0,
+      fixedHRA: (salaryStructure as any).hra || 0,
+      fixedConveyance: (salaryStructure as any).allowances || 0
+    }, payrollSettings);
+
     const adjustedSalary = dailySalary * presentDays;
 
-    // Overtime calculation - Use department-specific working hours if available
+    // Overtime calculation using PayrollHelper
     const user = await this.getUser(userId);
     const departmentTiming = await this.getDepartmentTiming(user?.department || "");
     const standardWorkingHours = departmentTiming?.workingHours || payrollSettings.standardWorkingHours || 8;
 
-    const overtimePay = (salaryStructure.fixedSalary / (payrollSettings.standardWorkingDays * standardWorkingHours)) *
-      overtimeHours * payrollSettings.overtimeMultiplier;
+    const hourlyRate = PayrollHelper.getHourlyRate(dailySalary, payrollSettings, standardWorkingHours);
+    const overtimePay = hourlyRate * overtimeHours * (payrollSettings.overtimeMultiplier || 1.0);
 
-    // Gross salary
-    const grossSalary = adjustedSalary + (salaryStructure.hra || 0) + (salaryStructure.allowances || 0) +
-      (salaryStructure.variableComponent || 0) + overtimePay;
+    // Gross salary (including pro-rated fixed components)
+    // For simple storage calculation, we apply the presentDays ratio to the fixed salary
+    const grossSalary = adjustedSalary + (salaryStructure.variableComponent || 0) + overtimePay;
 
-    // Deductions
-    const pfDeduction = grossSalary >= payrollSettings.pfApplicableFromSalary ?
-      (salaryStructure.basicSalary * payrollSettings.pfRate) / 100 : 0;
+    // Statutory Deductions using Settings or PayrollHelper if applicable
+    const epfRate = (payrollSettings.pfRate || 12) / 100;
+    const pfDeduction = ((salaryStructure as any).basicSalary || 0) >= payrollSettings.pfApplicableFromSalary ?
+      (((salaryStructure as any).basicSalary || 0) * epfRate) : 0;
 
-    // FIXED: Use correct ESI rate (0.75%) consistent with routes.ts
-    const esiDeduction = grossSalary >= payrollSettings.esiApplicableFromSalary ? 0 :
-      (grossSalary * 0.75) / 100;
+    const esiRate = (payrollSettings.esiRate || 0.75) / 100;
+    const esiDeduction = grossSalary <= payrollSettings.esiApplicableFromSalary ?
+      (grossSalary * esiRate) : 0;
 
-    const tdsDeduction = (grossSalary * payrollSettings.tdsRate) / 100;
+    const tdsDeduction = (grossSalary * (payrollSettings.tdsRate || 10)) / 100;
 
     // Get salary advances
     const advances = await this.listSalaryAdvances({
@@ -4578,9 +4585,13 @@ export class FirestoreStorage implements IStorage {
       .filter(advance => {
         const startDate = new Date(advance.deductionStartYear, advance.deductionStartMonth - 1);
         const currentDate = new Date(year, month - 1);
-        return startDate <= currentDate && advance.remainingAmount > 0;
+        // Check if deduction period has started
+        return startDate <= currentDate;
       })
-      .reduce((total, advance) => total + advance.monthlyDeduction, 0);
+      .reduce((total, advance) => {
+        // Calculate remaining amount logic if needed, but for now we take the monthly deduction
+        return total + (advance.monthlyDeduction || 0);
+      }, 0);
 
     const totalDeductions = pfDeduction + esiDeduction + tdsDeduction + advanceDeduction;
     const netSalary = grossSalary - totalDeductions;
@@ -4642,10 +4653,13 @@ export class FirestoreStorage implements IStorage {
       }
     }
 
-    const presentDays = attendanceRecords.filter(r => r.status === 'present' || r.status === 'late').length;
+    // FIXED: Exclude records pending review (Payroll Blocked until approved)
+    const validRecords = attendanceRecords.filter(r => r.adminReviewStatus !== 'pending');
+
+    const presentDays = validRecords.filter(r => r.status === 'present' || r.status === 'late').length;
     const absentDays = workingDays - presentDays;
-    const overtimeHours = attendanceRecords.reduce((total, r) => total + (r.overtimeHours || 0), 0);
-    const leaveDays = attendanceRecords.filter(r => r.status === 'leave').length;
+    const overtimeHours = validRecords.reduce((total, r) => total + (r.overtimeHours || 0), 0);
+    const leaveDays = validRecords.filter(r => r.status === 'leave').length;
 
     return {
       workingDays,

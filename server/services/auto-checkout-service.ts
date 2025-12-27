@@ -1,6 +1,7 @@
 import { storage } from '../storage';
 import { EnterpriseTimeService } from './enterprise-time-service';
 import { NotificationService } from './notification-service';
+import { LeaveService } from './leave-service';
 
 export class AutoCheckoutService {
     /**
@@ -60,6 +61,14 @@ export class AutoCheckoutService {
 
         for (const record of incomplete) {
             try {
+                // P1.2: Skip records on approved leave days - leave always wins
+                const leaveService = new LeaveService(storage);
+                const hasLeave = await leaveService.hasLeaveOnDate(record.userId, record.date);
+                if (hasLeave) {
+                    console.log(`[AUTO-CHECKOUT] ⏩ Skipping record ${record.id} - Approved leave exists for this day`);
+                    continue;
+                }
+
                 if (!record.userDepartment) {
                     console.warn(`[AUTO-CHECKOUT] ⚠️ Skipping record ${record.id} -missing department`);
                     continue;

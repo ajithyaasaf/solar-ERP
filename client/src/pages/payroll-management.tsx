@@ -446,6 +446,7 @@ export default function EnhancedPayrollManagement() {
                   users={users}
                   earningsFields={earningsFields}
                   deductionsFields={deductionsFields}
+                  settings={settings}
                   onSubmit={(data) => createSalaryStructureMutation.mutate(data)}
                 />
               </div>
@@ -1597,7 +1598,7 @@ function SalaryStructuresTable({
                     <TableCell>
                       <div className="space-y-1 text-sm">
                         <div>Base: {structure.perDaySalaryBase || 'basic'}</div>
-                        <div>OT Rate: {structure.overtimeRate || 1.5}x</div>
+                        <div>OT Rate: {structure.overtimeRate || 1.0}x</div>
                         <div className="text-muted-foreground">Per day calculated</div>
                       </div>
                     </TableCell>
@@ -1749,7 +1750,7 @@ function SalaryStructuresTable({
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Overtime Rate:</span>
-                                  <span className="font-medium">{structure.overtimeRate || 1.5}x</span>
+                                  <span className="font-medium">{structure.overtimeRate || 1.0}x</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>EPF Applicable:</span>
@@ -1993,11 +1994,13 @@ function SalaryStructureForm({
   users,
   earningsFields,
   deductionsFields,
+  settings,
   onSubmit
 }: {
   users: User[];
   earningsFields: PayrollFieldConfig[];
   deductionsFields: PayrollFieldConfig[];
+  settings?: EnhancedPayrollSettings;
   onSubmit: (data: any) => void;
 }) {
   const [formData, setFormData] = useState({
@@ -2015,12 +2018,12 @@ function SalaryStructureForm({
     fixedConveyance: 0,
 
     // Day Structure
-    monthDays: 30,
+    monthDays: settings?.standardWorkingDays || 26,
     perDaySalary: 0,
-    workingDays: 30,
+    workingDays: settings?.standardWorkingDays || 26,
     monthWorkingHours: 0,
     perDayWorkingHours: 8,
-    overtimeRate: 1.5,
+    overtimeRate: 1.0,
 
     // Earnings
     earnedBasic: 0,
@@ -2121,13 +2124,20 @@ function SalaryStructureForm({
     const earnedHRA = (formData.fixedHRA / formData.monthDays) * formData.workingDays;
     const earnedConveyance = (formData.fixedConveyance / formData.monthDays) * formData.workingDays;
 
-    // Statutory deductions
+    // Statutory deductions using global settings
     let epf = 0, esi = 0;
-    if (formData.epfApplicable && gross <= 15000) {
-      epf = Math.min(gross * 0.12, 1800); // 12% capped at 15000 salary
+    const epfCeiling = settings?.epfCeiling || 15000;
+    const epfRate = (settings?.epfEmployeeRate || 12) / 100;
+    const esiThreshold = settings?.esiThreshold || 21000;
+    const esiRate = (settings?.esiEmployeeRate || 0.75) / 100;
+
+    if (formData.epfApplicable) {
+      // Logic: apply rate to actual salary if below ceiling, otherwise apply to ceiling
+      const epfBasis = Math.min(gross, epfCeiling);
+      epf = epfBasis * epfRate;
     }
-    if (formData.esiApplicable && gross <= 21000) {
-      esi = gross * 0.0075; // 0.75%
+    if (formData.esiApplicable && gross <= esiThreshold) {
+      esi = gross * esiRate;
     }
 
     const totalDeductions = epf + esi + formData.vptDeduction + formData.tdsDeduction +
@@ -2334,7 +2344,7 @@ function SalaryStructureForm({
               type="number"
               step="0.1"
               value={formData.overtimeRate}
-              onChange={(e) => setFormData(prev => ({ ...prev, overtimeRate: parseFloat(e.target.value) || 1.5 }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, overtimeRate: parseFloat(e.target.value) || 1.0 }))}
             />
           </div>
         </div>

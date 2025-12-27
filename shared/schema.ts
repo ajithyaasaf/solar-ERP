@@ -1097,7 +1097,7 @@ export const insertPayrollSettingsSchema = z.object({
   pfRate: z.number().min(0).max(100).default(12), // PF rate percentage
   esiRate: z.number().min(0).max(100).default(0.75), // ESI rate percentage
   tdsRate: z.number().min(0).max(100).default(0), // TDS rate percentage
-  overtimeMultiplier: z.number().min(1).default(2), // Overtime pay multiplier
+  overtimeMultiplier: z.number().min(1).default(1), // Overtime pay multiplier
   standardWorkingHours: z.number().min(1).default(8), // Standard working hours per day
   standardWorkingDays: z.number().min(1).default(26), // Standard working days per month
   leaveDeductionRate: z.number().min(0).max(100).default(100), // Percentage deduction for leaves
@@ -1184,7 +1184,7 @@ export const insertEnhancedSalaryStructureSchema = z.object({
   customEarnings: z.record(z.number()).default({}),
   customDeductions: z.record(z.number()).default({}),
   perDaySalaryBase: z.enum(["basic", "basic_hra", "gross"]).default("basic_hra"),
-  overtimeRate: z.number().min(0).default(1.5),
+  overtimeRate: z.number().min(0).default(1.0),
   epfApplicable: z.boolean().default(true),
   esiApplicable: z.boolean().default(true),
   vptAmount: z.number().min(0).default(0),
@@ -2123,7 +2123,7 @@ export const insertFixedHolidaySchema = z.object({
   isOptional: z.boolean().default(false),
 
   // OT Rate - REQUIRED for payroll calculations
-  otRateMultiplier: z.number().min(1).max(10), // e.g., 2.0 for 2x pay, 2.5 for 2.5x pay
+  otRateMultiplier: z.number().min(1).max(10), // e.g., 1.0 for 1x pay, 1.5 for 1.5x pay
 
   // OT Policy - Controls whether OT can be submitted on this holiday
   allowOT: z.boolean().default(false), // Safe default: block OT on holidays

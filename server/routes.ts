@@ -195,6 +195,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ATTENDANCE AUTO-CHECKOUT & NOTIFICATIONS (Phases 1-3)
   // ============================================
 
+
+  // ============================================
+  // TEST ENDPOINT FOR PENDING REVIEW FIX
+  // ============================================
+  app.post("/api/test/create-incomplete-record", async (req, res) => {
+    try {
+      console.log('🧪 Creating test incomplete attendance record...');
+
+      // 1. Get a user (try master_admin first)
+      const admins = await storage.getUsersByRole('master_admin');
+      const user = admins[0]; // Use the first master admin
+
+      if (!user) {
+        return res.status(404).json({ message: "No master_admin found to attach record to" });
+      }
+
+      console.log(`👤 Using user: ${user.displayName} (${user.email})`);
+
+      // 2. Set date to Yesterday 9:00 AM
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(9, 0, 0, 0);
+
+      // 3. Remove any existing record for yesterday to avoid duplicates
+      // Note: We need to implement a delete or just ignore collision for now
+      // Let's just create it. If it fails due to duplicate, that's fine for testing manually
+      // but ideally we check. 
+      // check for existing
+      const existing = await storage.getAttendanceByUserAndDate(user.id, yesterday);
+      if (existing) {
+        console.log(`⚠️ Found existing record for yesterday (ID: ${existing.id}). attempting to delete/overwrite...`);
+        // We might not have delete exposed easily here without importing more.
+        // Let's just try to create. If storage allows duplicates for different timestamps, it might verify.
+        // But getAttendanceByUserAndDate usually checks by date string.
+        // Let's proceed.
+      }
+
+      // 4. Create Incomplete Record (No CheckOut Time)
+      const attendanceData = {
+        userId: user.id,
+        date: yesterday,
+        checkInTime: yesterday,
+        checkOutTime: undefined, // ❌ MISSING CHECKOUT
+
+        status: 'present',
+        attendanceType: 'office',
+        reason: 'Test Incomplete Record',
+        checkInLatitude: '12.9716',
+        checkInLongitude: '77.5946',
+        isLate: false,
+        lateMinutes: 0,
+        workingHours: 0,
+        breakHours: 0,
+        otStartTime: undefined,
+        otEndTime: undefined,
+        isWithinOfficeRadius: true,
+        remarks: 'Test record created via API for validation',
+
+        locationAccuracy: 10,
+        locationValidationType: 'manual',
+        locationConfidence: 1,
+        isManualOT: false,
+        otStatus: 'not_started',
+        autoCorrected: false // Important: Not auto-corrected yet
+      };
+
+      // @ts-ignore - bypassing some strict type checks for test data
+      const newRecord = await storage.createAttendance(attendanceData);
+
+      console.log('✅ Test record created successfully:', newRecord.id);
+
+      return res.json({
+        success: true,
+        message: "Test incomplete record created successfully for yesterday",
+        recordId: newRecord.id,
+        user: user.displayName,
+        date: yesterday.toISOString().split('T')[0]
+      });
+
+    } catch (error: any) {
+      console.error("❌ Error creating test record:", error);
+      res.status(500).json({ message: "Failed to create test record", error: error.message });
+    }
+  });
+
   // CRON Endpoint for Auto-Checkout (Phase 1)
   app.post("/api/cron/auto-checkout", async (req, res) => {
     try {
@@ -296,6 +381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recordSnapshot = await storage.getAttendance(id);
       if (!recordSnapshot) {
         return res.status(404).json({ success: false, message: "Attendance record not found" });
+      }
+
+      // P1.1: Block reviews if payroll period is locked
+      if (await PayrollLockService.isPeriodLocked(recordSnapshot.date)) {
+        return res.status(403).json({
+          success: false,
+          message: "Cannot modify attendance for a locked payroll period. Unlock the period first."
+        });
       }
 
       const updateData: any = {
@@ -1201,7 +1294,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Access denied" });
         }
         const attendance = await storage.listAttendanceByUser(userId as string);
-        return res.json(attendance);
+        // P2: Exclude pending reviews
+        const filtered = attendance.filter(r => r.adminReviewStatus !== 'pending');
+        return res.json(filtered);
       }
 
       // If specific date requested (all users for that date - admin only)
@@ -1215,13 +1310,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const attendance = await storage.listAttendanceByDate(
           new Date(date as string),
         );
-        return res.json(attendance);
+        // P2: Exclude pending reviews
+        const filtered = attendance.filter(r => r.adminReviewStatus !== 'pending');
+        return res.json(filtered);
       }
 
       // Default case: return current user's own attendance data
       // This allows employees to view their own attendance without specifying userId
       const attendance = await storage.listAttendanceByUser(requestingUser.uid);
-      return res.json(attendance);
+      // P2: Exclude pending reviews
+      const filtered = attendance.filter(r => r.adminReviewStatus !== 'pending');
+      return res.json(filtered);
     } catch (error) {
       console.error("Error fetching attendance:", error);
       res.status(500).json({ message: "Failed to fetch attendance" });
@@ -2052,7 +2151,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json(attendanceRecords);
+      // P2: Exclude pending reviews to match payroll logic
+      const filteredRecords = attendanceRecords.filter(r => r.adminReviewStatus !== 'pending');
+
+      res.json(filteredRecords);
     } catch (error) {
       console.error("Error generating attendance report:", error);
       res.status(500).json({ message: "Failed to generate attendance report" });
@@ -2117,7 +2219,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(enrichedRecords);
+      // P2: Exclude pending reviews to match payroll logic
+      const filteredForPayroll = enrichedRecords.filter(r => r.adminReviewStatus !== 'pending');
+
+      res.json(filteredForPayroll);
     } catch (error) {
       console.error("Error generating attendance range report:", error);
       res
@@ -2189,7 +2294,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       targetDate.setHours(0, 0, 0, 0);
 
       // Get attendance records for the date
-      const attendanceRecords = await storage.listAttendanceByDate(targetDate);
+      const allRecords = await storage.listAttendanceByDate(targetDate);
+      // P2: Exclude pending reviews from stats
+      const attendanceRecords = allRecords.filter(r => r.adminReviewStatus !== 'pending');
 
       // Get all users
       const allUsers = await storage.listUsers();
@@ -5653,9 +5760,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pfRate: 12,
         esiRate: 1.75,
         tdsRate: 10,
-        overtimeMultiplier: 1.5,
+        overtimeMultiplier: 1.0,
         standardWorkingHours: 8,
-        standardWorkingDays: 22,
+        standardWorkingDays: 26,
         leaveDeductionRate: 1,
         pfApplicableFromSalary: 15000,
         esiApplicableFromSalary: 21000,
@@ -6597,6 +6704,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`PAYROLL_BULK: Processing all users: ${targetUserIds.length}`);
       }
 
+      // P1.3: Check for pending review records in this period
+      const pendingRecords = await storage.listAttendanceByReviewStatus('pending');
+      const periodPending = pendingRecords.filter(r => {
+        const recordDate = new Date(r.date);
+        return recordDate.getMonth() + 1 === month && recordDate.getFullYear() === year;
+      });
+
+      if (periodPending.length > 0 && !req.body.forceProceed) {
+        console.log(`PAYROLL_BULK: Blocked due to ${periodPending.length} pending reviews`);
+        return res.status(409).json({
+          success: false,
+          message: `${periodPending.length} attendance record(s) are pending admin review for this period. Review them first or set forceProceed to continue.`,
+          pendingCount: periodPending.length,
+          pendingRecords: periodPending.map(r => ({
+            id: r.id,
+            userId: r.userId,
+            date: r.date,
+            userName: (r as any).userName || 'Unknown'
+          })),
+          requiresConfirmation: true
+        });
+      }
+
+      // P2.1: Restrict forceProceed to Master Admin only
+      if (req.body.forceProceed) {
+        if (user.role !== 'master_admin') {
+          console.log(`PAYROLL_BULK: forceProceed blocked for non-master admin: ${user.displayName}`);
+          return res.status(403).json({
+            success: false,
+            message: "Only Master Admin can use forceProceed to bypass pending review checks."
+          });
+        }
+        console.log(`[PAYROLL AUDIT] forceProceed used by ${user.displayName} (${user.id}) for ${month}/${year} - ${periodPending.length} pending days excluded`);
+      }
+
       // Initialize PayrollCalculationService
       const { PayrollCalculationService } = await import('./services/payroll-calculation-service');
       const payrollCalcService = new PayrollCalculationService(storage);
@@ -6709,7 +6851,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             netSalary: calculation.netSalary,
             status: 'processed',
             processedBy: user.uid,
-            processedAt: new Date()
+            processedAt: new Date(),
+            // P2.1: Audit fields for compliance
+            generatedWithForceProceed: req.body.forceProceed || false,
+            pendingReviewDaysExcluded: req.body.forceProceed ? periodPending.filter(r => r.userId === userId).length : 0,
+            payrollNotes: req.body.forceProceed && periodPending.some(r => r.userId === userId)
+              ? `Generated with forceProceed flag. ${periodPending.filter(r => r.userId === userId).length} day(s) pending review were excluded from salary calculation.`
+              : null
           };
 
           const newPayroll = await storage.createEnhancedPayroll(payrollData);

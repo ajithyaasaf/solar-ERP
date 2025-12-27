@@ -379,8 +379,8 @@ export class OTSessionService {
             return settings || {
                 id: '1',
                 weekendDays: [0], // Sunday only default
-                defaultOTRate: 1.5,
-                weekendOTRate: 2.0,
+                defaultOTRate: 1.0,
+                weekendOTRate: 1.0,
                 maxOTHoursPerDay: 5.0,
                 updatedAt: new Date()
             };
@@ -390,8 +390,8 @@ export class OTSessionService {
             return {
                 id: '1',
                 weekendDays: [0],
-                defaultOTRate: 1.5,
-                weekendOTRate: 2.0,
+                defaultOTRate: 1.0,
+                weekendOTRate: 1.0,
                 maxOTHoursPerDay: 5.0,
                 maxOTHoursPerDay: 5.0,
                 updatedAt: new Date()

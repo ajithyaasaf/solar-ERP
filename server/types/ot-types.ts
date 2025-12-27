@@ -71,8 +71,8 @@ export interface CompanySettings {
     weekendDays: number[];  // [0] = Sunday only, [0, 6] = Sat+Sun, etc.
 
     // Default OT rates
-    defaultOTRate: number;     // e.g., 1.5x
-    weekendOTRate: number;     // e.g., 2.0x
+    defaultOTRate: number;     // e.g., 1.0x
+    weekendOTRate: number;     // e.g., 1.0x
 
     // Daily OT cap
     maxOTHoursPerDay: number;
