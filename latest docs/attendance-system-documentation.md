@@ -47,6 +47,13 @@ The Attendance System is a **Simplified Enterprise Solution** for employee time 
 - `processCheckOut()`: Calculates working hours.
 - `isHoliday()`: Blocks check-in on company holidays.
 - `enrichAttendanceWithHolidays()`: Adds holiday records to attendance history.
+- `enrichAttendanceWithWeeklyOffs()`: Adds weekly-off (Sunday) records for payroll accuracy.
+- `enrichAttendanceComprehensively()`: Master function combining holiday + weekly-off enrichment.
+
+**Payroll Integration Features** *(New - Dec 2025)*:
+- **Half-Day Auto-Tagging**: Automatically marks attendance as `half_day` if working hours < 50% of department shift.
+- **Statutory Credit**: Ensures Sundays and Holidays are counted as paid days in payroll calculations.
+- **Attendance Enrichment**: Adds virtual attendance records for non-working days to ensure accurate salary calculations.
 
 ### 2.2 EnterpriseTimeService
 **File**: `server/services/enterprise-time-service.ts`
@@ -626,6 +633,166 @@ Department timings are cached for **5 minutes**. After bulk updates, call `POST 
 3. **Auto-Checkout**: `AutoCheckoutService` runs via cron (`/api/cron/auto-checkout`).
 4. **Admin Review**: `POST /api/admin/attendance/review/:id` for correcting auto-checkout records.
 5. **Rate Limiting**: Check-in/out are rate-limited - handle 429 responses gracefully.
+
+---
+
+## 20. Payroll Precision Features (Dec 2025)
+
+### 20.1 Overview
+New payroll-integrated features ensure 100% accuracy in salary calculations by handling half-days, weekly-offs, and holidays correctly.
+
+### 20.2 Half-Day Auto-Tagging
+
+**Trigger**: Normal checkout (NOT auto-checkout)  
+**File**: `server/routes.ts:1632-1649`
+
+**Logic**:
+```typescript
+if (workingHours < (standardWorkingHours * 0.5)) {
+  status = 'half_day';  // Auto-tagged
+}
+```
+
+**Example**:
+- **9-hour shift**: Half-day if worked < 4.5 hours
+- **6-hour shift**: Half-day if worked < 3 hours
+- **Department-specific**: Uses each department's configured working hours
+
+**Safety**:
+- ✅ Only applied during normal checkout
+- ❌ NOT applied during auto-checkout (admin review instead)
+
+### 20.3 Attendance Enrichment
+
+**Purpose**: Add virtual records for Sundays and Holidays to ensure employees get paid for non-working days.
+
+**Functions**:
+1. `enrichAttendanceWithHolidays()`: Adds national/company holidays
+2. `enrichAttendanceWithWeeklyOffs()`: Adds Sundays (or configured weekly-off days)
+3. `enrichAttendanceComprehensively()`: Master function combining both
+
+**Usage in Bulk Payroll**:
+```typescript
+// File: server/routes.ts:6653-6676
+const enrichedAttendance = await UnifiedAttendanceService.enrichAttendanceComprehensively(
+  userId,
+  startDate,  // First day of month
+  endDate,    // Last day of month
+  monthAttendance  // Raw attendance records
+);
+
+// Pass enriched data to payroll calculator
+const calculation = await payrollCalcService.calculateComprehensivePayroll(
+  userId, month, year,
+  enrichedAttendance,  // ← Contains Sundays + Holidays
+  salaryStructure,
+  department
+);
+```
+
+**Example**:
+- January 2025: 26 working days + 5 Sundays = 31 total records
+- Employee gets paid for all 31 days (if present for working days)
+
+### 20.4 Weighted Salary Calculation
+
+**File**: `server/services/payroll-calculation-service.ts:308-317`
+
+**Logic**:
+```typescript
+const presentDays = attendanceRecords.reduce((total, record) => {
+  if (record.status === 'half_day') return total + 0.5;
+  
+  const fullPayStatuses = ['present', 'late', 'overtime', 
+                           'early_checkout', 'holiday', 'weekly_off'];
+  if (fullPayStatuses.includes(record.status)) return total + 1.0;
+  
+  return total;
+}, 0);
+```
+
+**Result**:
+- `half_day` = 0.5 salary units
+- `present`, `late`, `weekly_off`, `holiday` = 1.0 salary units
+- `absent` = 0.0 salary units
+
+**Example Calculation**:
+```
+Basic Salary: ₹26,000
+Per Day Rate: ₹26,000 / 26 = ₹1,000
+
+Attendance in January:
+- 24 present days = 24.0
+- 1 half_day = 0.5
+- 5 weekly_off (Sundays) = 5.0
+Total: 29.5 days
+
+Salary: ₹1,000 × 29.5 = ₹29,500
+```
+
+### 20.5 Integration Points
+
+**Checkout Route**:
+- Auto-tags `half_day` based on 50% threshold
+- Updates attendance status in real-time
+
+**Bulk Payroll Processing**:
+- Enriches attendance before calculation
+- Ensures Sundays and Holidays are counted
+- Uses weighted calculation for accuracy
+
+**Auto-Checkout Service**:
+- Does NOT auto-tag status (safety feature)
+- Leaves status unchanged for admin review
+
+### 20.6 Configuration
+
+**Department Timing** (`server/services/enterprise-time-service.ts`):
+```typescript
+{
+  workingHours: 9,           // Used for 50% threshold (9 * 0.5 = 4.5h)
+  weekendDays: [0],          // 0 = Sunday (used for enrichment)
+  checkInTime: "9:00 AM",
+  checkOutTime: "6:00 PM"
+}
+```
+
+**Payroll Settings**:
+- `standardWorkingDays: 26`: Used as salary divisor
+- All departments use same 26-day standard
+
+### 20.7 Edge Cases Handled
+
+| Scenario | Behavior |
+|----------|----------|
+| Work exactly 50% (4.5h in 9h) | NOT tagged as half-day (keeps full status) |
+| Auto-checkout with 4h worked | Status unchanged, flagged for admin review |
+| Sunday + National Holiday | Only one record added (prevents duplicates) |
+| Missing weekendDays config | Defaults to `[0]` (Sunday only) |
+
+### 20.8 For Developers
+
+**Key Files**:
+1. `server/services/payroll-calculation-service.ts`: Weighted calculation
+2. `server/services/unified-attendance-service.ts`: Enrichment functions
+3. `server/routes.ts`: Checkout auto-tag + bulk payroll integration
+
+**Testing**:
+```bash
+# Test half-day auto-tagging
+1. Check in at 9:00 AM
+2. Check out at 1:00 PM (4 hours)
+3. Verify status = 'half_day' automatically
+
+# Test enrichment
+1. Process January 2025 payroll
+2. Verify 26 actual + 5 Sundays = 31 records
+3. Check presentDays includes Sunday count
+```
+
+**API Endpoints**:
+- `POST /api/attendance/check-out`: Applies auto-tagging
+- `POST /api/enhanced-payrolls/bulk-process`: Uses enrichment
 
 ---
 
