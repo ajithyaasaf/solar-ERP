@@ -696,21 +696,22 @@ export class QuotationPDFService {
         <div style="margin-top: 15px;">
           ${template.scopeOfWork.plumbingWork.map(item => `<div>${item}</div>`).join('')}
         </div>` : ''}
-        
-        ${(template.scopeOfWork.customerScope.civilWork.length > 0 ||
+      </div>
+      
+      ${(template.scopeOfWork.customerScope.civilWork.length > 0 ||
           template.scopeOfWork.customerScope.netBiDirectionalMeter.length > 0 ||
           template.scopeOfWork.customerScope.electricalWork.length > 0 ||
           template.scopeOfWork.customerScope.plumbingWork.length > 0) ? `
-        <div style="margin-top: 20px;">
-          <strong>• Customer's Scope of Work:</strong><br>
-          <div style="margin-left: 20px;">
-            ${template.scopeOfWork.customerScope.civilWork.length > 0 ? template.scopeOfWork.customerScope.civilWork.map(item => `<div>${item}</div>`).join('') : ''}
-            ${template.scopeOfWork.customerScope.netBiDirectionalMeter.length > 0 ? '<br>' + template.scopeOfWork.customerScope.netBiDirectionalMeter.map(item => `<div>${item}</div>`).join('') : ''}
-            ${template.scopeOfWork.customerScope.electricalWork.length > 0 ? '<br>' + template.scopeOfWork.customerScope.electricalWork.map(item => `<div>${item}</div>`).join('') : ''}
-            ${template.scopeOfWork.customerScope.plumbingWork.length > 0 ? '<br>' + template.scopeOfWork.customerScope.plumbingWork.map(item => `<div>${item}</div>`).join('') : ''}
-          </div>
-        </div>` : ''}
-      </div>
+      <!-- Customer's Scope of Work as separate section -->
+      <div class="scope-section" style="margin-top: 30px;">
+        <h3 style="color: #228B22;">Customer's Scope of Work</h3>
+        <div>
+          ${template.scopeOfWork.customerScope.civilWork.length > 0 ? template.scopeOfWork.customerScope.civilWork.map(item => `<div>${item}</div>`).join('') : ''}
+          ${template.scopeOfWork.customerScope.netBiDirectionalMeter.length > 0 ? '<br>' + template.scopeOfWork.customerScope.netBiDirectionalMeter.map(item => `<div>${item}</div>`).join('') : ''}
+          ${template.scopeOfWork.customerScope.electricalWork.length > 0 ? '<br>' + template.scopeOfWork.customerScope.electricalWork.map(item => `<div>${item}</div>`).join('') : ''}
+          ${template.scopeOfWork.customerScope.plumbingWork.length > 0 ? '<br>' + template.scopeOfWork.customerScope.plumbingWork.map(item => `<div>${item}</div>`).join('') : ''}
+        </div>
+      </div>` : ''}
       ` : ''}
       
       ${!isWaterUtility ? `

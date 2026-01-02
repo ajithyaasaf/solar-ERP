@@ -31,20 +31,12 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
 
   // Simplified form states
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   // Location states
   const [currentAddress, setCurrentAddress] = useState<string>("");
   const [isLocationRefreshing, setIsLocationRefreshing] = useState(false);
   const [isAddressLoading, setIsAddressLoading] = useState(false);
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   // Validation state
   const [policyErrors, setPolicyErrors] = useState<string[]>([]);
 
@@ -63,15 +55,9 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
     if (locationError) return { text: "Location Error", color: "destructive" as const };
     if (locationLoading) return { text: "Getting Location...", color: "secondary" as const };
     if (!location) return { text: "Location Required", color: "outline" as const };
-<<<<<<< HEAD
 
     return {
       text: "Location Ready",
-=======
-    
-    return { 
-      text: "Location Ready", 
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       color: "default" as const
     };
   };
@@ -81,29 +67,17 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
   // Fetch address from location using Google Maps API
   const fetchLocationAddress = async () => {
     if (!location) return;
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     setIsAddressLoading(true);
     try {
       // Direct Google Maps reverse geocoding for accurate address
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY;
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       if (apiKey) {
         const response = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${apiKey}`
         );
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         if (response.ok) {
           const data = await response.json();
           if (data.results && data.results.length > 0) {
@@ -114,11 +88,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           }
         }
       }
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Fallback to coordinates if Google Maps API unavailable
       setCurrentAddress(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
       console.log('Using coordinate fallback for address');
@@ -141,17 +111,10 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-<<<<<<< HEAD
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-=======
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -172,8 +135,6 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
         const policies = await response.json();
         console.log('CHECK_IN: Department policies fetched:', {
           department: user?.department,
-          allowRemoteWork: policies.allowRemoteWork,
-          allowFieldWork: policies.allowFieldWork,
           fullPolicies: policies
         });
         // Policies fetched but not stored since we're using simplified attendance
@@ -186,19 +147,11 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
   // Simplified form validation - only require location and photo
   const validateForm = () => {
     const errors: string[] = [];
-<<<<<<< HEAD
 
     if (!location) {
       errors.push('Location access required for check-in');
     }
 
-=======
-    
-    if (!location) {
-      errors.push('Location access required for check-in');
-    }
-    
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     if (!capturedPhoto) {
       errors.push('Selfie photo required for attendance verification');
     }
@@ -224,11 +177,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       console.log('FRONTEND: Refreshing location and address...');
       await getCurrentLocation();
       console.log('FRONTEND: Location refreshed successfully');
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       toast({
         title: "Location Updated",
         description: "Getting your current address...",
@@ -264,11 +213,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       // Upload photo to Cloudinary
       if (capturedPhoto) {
         console.log('FRONTEND: Uploading photo to Cloudinary...');
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         try {
           const uploadResponse = await apiRequest('/api/attendance/upload-photo', 'POST', {
             imageData: capturedPhoto,
@@ -282,15 +227,9 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
 
           const uploadResult = await uploadResponse.json();
           photoUploadUrl = uploadResult.url;
-<<<<<<< HEAD
 
           console.log('FRONTEND: Photo uploaded successfully:', photoUploadUrl);
 
-=======
-          
-          console.log('FRONTEND: Photo uploaded successfully:', photoUploadUrl);
-          
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           toast({
             title: "Photo Uploaded",
             description: "Photo uploaded to cloud storage successfully",
@@ -325,15 +264,9 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       }, []);
 
       console.log('FRONTEND: Sending simplified check-in request');
-<<<<<<< HEAD
       console.log('Location data:', {
         latitude: location.latitude,
         longitude: location.longitude,
-=======
-      console.log('Location data:', { 
-        latitude: location.latitude, 
-        longitude: location.longitude, 
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         accuracy: location.accuracy,
         hasPhoto: !!photoUploadUrl,
         address: currentAddress
@@ -343,24 +276,14 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
 
       if (!response.ok) {
         const errorData = await response.json();
-<<<<<<< HEAD
 
 
 
-=======
-        
-
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         throw new Error(errorData.message || 'Failed to check in');
       }
 
       const result = await response.json();
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
 
 
       return result;
@@ -368,63 +291,30 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
     onSuccess: (data) => {
       console.log('FRONTEND: Check-in successful with enterprise validation');
       console.log('Location validation:', data.location?.validation);
-<<<<<<< HEAD
 
       const validationType = data.location?.validation?.type || 'standard';
       const confidence = data.location?.validation?.confidence || 0;
       const indoorDetection = data.location?.validation?.indoorDetection ? ' (Indoor GPS)' : '';
 
-=======
-      
-      const validationType = data.location?.validation?.type || 'standard';
-      const confidence = data.location?.validation?.confidence || 0;
-      const indoorDetection = data.location?.validation?.indoorDetection ? ' (Indoor GPS)' : '';
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       toast({
         title: "Check in successfully",
         variant: "default",
       });
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Reset form
       setCapturedPhoto(null);
       setCurrentAddress("");
 
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Cleanup camera
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
         setIsCameraActive(false);
       }
-<<<<<<< HEAD
 
-      // **CRITICAL: Invalidate ALL attendance queries immediately**
-      console.log('CHECK-IN: Invalidating attendance queries...');
-
-      // Invalidate all queries that start with /api/attendance
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return typeof key === 'string' && key.startsWith('/api/attendance');
-        }
-      });
-
-      console.log('CHECK-IN: Queries invalidated');
-
-      // Call parent onSuccess which will trigger refreshAttendance
-=======
-      
       // Invalidate queries to refresh attendance data
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
@@ -433,18 +323,13 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           return false;
         }
       });
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
+
       onSuccess();
       onClose();
     },
     onError: (error: Error) => {
       console.log('FRONTEND: Check-in failed -', error.message);
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       toast({
         title: "Check-in Failed",
         description: error.message,
@@ -457,20 +342,12 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
   const startCamera = async () => {
     try {
       console.log('CAMERA: Starting camera for attendance photo...');
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Check for camera support
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Camera not supported on this device');
       }
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Enhanced video constraints for better compatibility
       const constraints = {
         video: {
@@ -480,75 +357,43 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
         },
         audio: false
       };
-<<<<<<< HEAD
 
       console.log('CAMERA: Requesting camera access with constraints:', constraints);
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-=======
-      
-      console.log('CAMERA: Requesting camera access with constraints:', constraints);
-      
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       console.log('CAMERA: Stream obtained:', {
         id: mediaStream.id,
         active: mediaStream.active,
         tracks: mediaStream.getTracks().length,
         videoTracks: mediaStream.getVideoTracks().length
       });
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Check if video tracks are available
       const videoTracks = mediaStream.getVideoTracks();
       if (videoTracks.length === 0) {
         throw new Error('No video tracks found in stream');
       }
-<<<<<<< HEAD
 
       setStream(mediaStream);
       setIsCameraActive(true);
       setIsVideoReady(false);
 
-=======
-      
-      setStream(mediaStream);
-      setIsCameraActive(true);
-      setIsVideoReady(false);
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Video element should now be available since it's always rendered
       if (videoRef.current) {
         const video = videoRef.current;
         console.log('CAMERA: Video element found, setting up...');
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         // Set essential video properties
         video.muted = true;
         video.playsInline = true;
         video.autoplay = true;
         video.controls = false;
-<<<<<<< HEAD
 
         // Assign the stream to the video element
         console.log('CAMERA: Assigning stream to video element');
         video.srcObject = mediaStream;
 
-=======
-        
-        // Assign the stream to the video element
-        console.log('CAMERA: Assigning stream to video element');
-        video.srcObject = mediaStream;
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         // Force play
         setTimeout(async () => {
           try {
@@ -558,11 +403,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
             console.warn('CAMERA: Auto-play failed, but stream should still be visible:', playError);
           }
         }, 100);
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         console.log('CAMERA: Video setup complete');
       } else {
         console.error('CAMERA: Video ref is null!');
@@ -573,20 +414,12 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
         });
         setIsCameraActive(false);
       }
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     } catch (error) {
       console.error('CAMERA: Access failed:', error);
       setIsCameraActive(false);
       setIsVideoReady(false);
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       let errorMessage = "Unable to access camera. ";
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
@@ -599,11 +432,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           errorMessage += error.message;
         }
       }
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       toast({
         title: "Camera Access Failed",
         description: errorMessage,
@@ -616,21 +445,13 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       console.log('CAMERA: Capturing photo...', {
         videoWidth: video.videoWidth,
         videoHeight: video.videoHeight,
         readyState: video.readyState
       });
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       if (video.videoWidth > 0 && video.videoHeight > 0) {
         // Use the new overlay utility to capture photo with timestamp and location
         const photoDataUrl = capturePhotoWithOverlay(video, canvas, {
@@ -643,32 +464,19 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           } : undefined,
           overlayType: 'checkin'
         });
-<<<<<<< HEAD
 
         if (photoDataUrl) {
           setCapturedPhoto(photoDataUrl);
 
           console.log('CAMERA: Photo captured successfully with overlay, size:', photoDataUrl.length);
 
-=======
-        
-        if (photoDataUrl) {
-          setCapturedPhoto(photoDataUrl);
-          
-          console.log('CAMERA: Photo captured successfully with overlay, size:', photoDataUrl.length);
-          
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           // Stop camera after capture
           if (stream) {
             stream.getTracks().forEach(track => track.stop());
             setStream(null);
             setIsCameraActive(false);
           }
-<<<<<<< HEAD
 
-=======
-          
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
           toast({
             title: "Photo Captured",
             description: "Check-in photo captured with timestamp and location",
@@ -704,7 +512,6 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
     console.log('CAMERA: Resetting photo and stopping camera...');
     setCapturedPhoto(null);
     setIsVideoReady(false);
-<<<<<<< HEAD
 
     if (videoRef.current) {
       const video = videoRef.current;
@@ -715,27 +522,11 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       video.removeEventListener('playing', () => { });
       video.removeEventListener('error', () => { });
 
-=======
-    
-    if (videoRef.current) {
-      const video = videoRef.current;
-      
-      // Remove event listeners
-      video.removeEventListener('canplay', () => {});
-      video.removeEventListener('loadedmetadata', () => {});
-      video.removeEventListener('playing', () => {});
-      video.removeEventListener('error', () => {});
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Clear video source
       video.srcObject = null;
       video.load();
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     if (stream) {
       stream.getTracks().forEach(track => {
         track.stop();
@@ -829,11 +620,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
                   )}
                 </Button>
               </div>
-<<<<<<< HEAD
 
-=======
-              
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
               {/* Simplified Address Display */}
               {location && (
                 <div className="space-y-2">
@@ -859,11 +646,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
                   <div className="text-sm text-red-600 bg-red-50 p-3 rounded border border-red-200">
                     {locationError.message}
                   </div>
-<<<<<<< HEAD
 
-=======
-                  
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                   {/* Mobile-responsive help instructions */}
                   <div className="text-xs text-muted-foreground space-y-2">
                     <p className="font-medium">To enable location access:</p>
@@ -909,7 +692,6 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
               {/* Camera view */}
               <div className="space-y-2" style={{ display: isCameraActive ? 'block' : 'none' }}>
                 <div className="relative bg-black rounded border overflow-hidden">
-<<<<<<< HEAD
                   <video
                     ref={videoRef}
                     autoPlay
@@ -917,15 +699,6 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
                     muted
                     className="w-full h-64 object-cover"
                     style={{
-=======
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    playsInline
-                    muted
-                    className="w-full h-64 object-cover"
-                    style={{ 
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
                       transform: 'scaleX(-1)',
                       minHeight: '16rem',
                       backgroundColor: '#000'

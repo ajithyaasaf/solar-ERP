@@ -44,7 +44,7 @@ export function OvertimeExplanationCard({ departmentTiming, className = "" }: Ov
         {/* Overtime Examples */}
         <div className="space-y-3">
           <div className="text-sm font-medium text-gray-700">Overtime Examples:</div>
-          
+
           {/* Example 1: Early arrival */}
           <div className="bg-orange-50 p-3 rounded border border-orange-200">
             <div className="flex items-center gap-2 mb-1">
@@ -52,11 +52,11 @@ export function OvertimeExplanationCard({ departmentTiming, className = "" }: Ov
               <span className="text-sm font-medium text-orange-800">Early Arrival Overtime</span>
             </div>
             <div className="text-xs text-orange-700">
-              Work from 7:00 AM - <TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} /> = 
+              Work from 7:00 AM - <TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} /> =
               {' '}<strong>2h overtime</strong> + {departmentTiming.workingHours}h regular
             </div>
           </div>
-          
+
           {/* Example 2: Late departure */}
           <div className="bg-red-50 p-3 rounded border border-red-200">
             <div className="flex items-center gap-2 mb-1">
@@ -64,11 +64,11 @@ export function OvertimeExplanationCard({ departmentTiming, className = "" }: Ov
               <span className="text-sm font-medium text-red-800">Late Departure Overtime</span>
             </div>
             <div className="text-xs text-red-700">
-              Work from <TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /> - 8:00 PM = 
+              Work from <TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /> - 8:00 PM =
               {' '}{departmentTiming.workingHours}h regular + <strong>2h overtime</strong>
             </div>
           </div>
-          
+
           {/* Example 3: Within schedule */}
           <div className="bg-green-50 p-3 rounded border border-green-200">
             <div className="flex items-center gap-2 mb-1">
@@ -76,7 +76,7 @@ export function OvertimeExplanationCard({ departmentTiming, className = "" }: Ov
               <span className="text-sm font-medium text-green-800">Regular Hours</span>
             </div>
             <div className="text-xs text-green-700">
-              Work exactly <TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /> - <TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} /> = 
+              Work exactly <TimeDisplay time={departmentTiming.checkInTime} format12Hour={true} /> - <TimeDisplay time={departmentTiming.checkOutTime} format12Hour={true} /> =
               {' '}<strong>{departmentTiming.workingHours}h regular</strong>, 0h overtime
             </div>
           </div>

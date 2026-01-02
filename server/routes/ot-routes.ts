@@ -68,7 +68,7 @@ const requireMasterAdmin = async (req: any, res: Response, next: NextFunction) =
  * POST /api/ot/sessions/start
  * Start a new OT session
  */
-router.post('/sessions/start', verifyAuth, async (req, res) => {
+router.post('/sessions/start', verifyAuth, async (req: any, res) => {
     try {
         const { latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
         const userId = req.user.uid;
@@ -105,7 +105,7 @@ router.post('/sessions/start', verifyAuth, async (req, res) => {
  * POST /api/ot/sessions/:id/end
  * End an active OT session
  */
-router.post('/sessions/:id/end', verifyAuth, async (req, res) => {
+router.post('/sessions/:id/end', verifyAuth, async (req: any, res) => {
     try {
         const { id: sessionId } = req.params;
         const { latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
@@ -144,7 +144,7 @@ router.post('/sessions/:id/end', verifyAuth, async (req, res) => {
  * GET /api/ot/sessions/active
  * Get active OT session for current user
  */
-router.get('/sessions/active', verifyAuth, async (req, res) => {
+router.get('/sessions/active', verifyAuth, async (req: any, res) => {
     try {
         const userId = req.user.uid;
 
@@ -168,7 +168,7 @@ router.get('/sessions/active', verifyAuth, async (req, res) => {
  * GET /api/ot/sessions
  * Get OT sessions for a specific date
  */
-router.get('/sessions', verifyAuth, async (req, res) => {
+router.get('/sessions', verifyAuth, async (req: any, res) => {
     try {
         const userId = req.user.uid;
         const { date } = req.query;
@@ -196,144 +196,17 @@ router.get('/sessions', verifyAuth, async (req, res) => {
 // COMPANY SETTINGS ROUTES (Admin Only)
 // ============================================
 
-/**
- * GET /api/settings
- * Get company OT settings
- */
-router.get('/settings', verifyAuth, requireAdmin, async (req, res) => {
-    try {
-        const settings = await CompanySettingsService.getSettings();
 
-        return res.json({
-            success: true,
-            settings
-        });
+// Duplicate routes removed - using the more secure versions below (lines 668+)
 
-    } catch (error) {
-        console.error('Error getting settings:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to get settings'
-        });
-    }
-});
 
-/**
- * PUT /api/settings
- * Update company OT settings
- */
-router.put('/settings', verifyAuth, requireAdmin, async (req, res) => {
-    try {
-        const adminId = req.user.uid;
-        const updates = req.body;
 
-        // Parse numeric values
-        if (updates.defaultOTRate) {
-            updates.defaultOTRate = parseFloat(updates.defaultOTRate);
-        }
-        if (updates.weekendOTRate) {
-            updates.weekendOTRate = parseFloat(updates.weekendOTRate);
-        }
-        if (updates.maxOTHoursPerDay) {
-            updates.maxOTHoursPerDay = parseFloat(updates.maxOTHoursPerDay);
-        }
-        if (updates.requireAdminApprovalAbove) {
-            updates.requireAdminApprovalAbove = parseFloat(updates.requireAdminApprovalAbove);
-        }
-
-        const result = await CompanySettingsService.updateSettings(updates, adminId);
-
-        return res.json(result);
-
-    } catch (error) {
-        console.error('Error updating settings:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update settings'
-        });
-    }
-});
-
-// ============================================
-// PAYROLL LOCK ROUTES (Master Admin Only)
-// ============================================
-
-/**
- * POST /api/payroll/lock
- * Lock a payroll period
- */
-router.post('/payroll/lock', verifyAuth, async (req, res) => {
-    try {
-        const { month, year } = req.body;
-        const adminId = req.user.uid;
-        const adminRole = req.user.role;
-
-        if (!month || !year) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: month, year'
-            });
-        }
-
-        const result = await PayrollLockService.lockPeriod(
-            parseInt(month),
-            parseInt(year),
-            adminId,
-            adminRole
-        );
-
-        return res.json(result);
-
-    } catch (error) {
-        console.error('Error locking payroll period:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to lock payroll period'
-        });
-    }
-});
-
-/**
- * POST /api/payroll/unlock
- * Unlock a payroll period (master admin only, requires reason)
- */
-router.post('/payroll/unlock', verifyAuth, async (req, res) => {
-    try {
-        const { month, year, reason } = req.body;
-        const adminId = req.user.uid;
-        const adminRole = req.user.role;
-
-        if (!month || !year || !reason) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: month, year, reason'
-            });
-        }
-
-        const result = await PayrollLockService.unlockPeriod(
-            parseInt(month),
-            parseInt(year),
-            adminId,
-            adminRole,
-            reason
-        );
-
-        return res.json(result);
-
-    } catch (error) {
-        console.error('Error unlocking payroll period:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to unlock payroll period'
-        });
-    }
-});
 
 /**
  * GET /api/payroll/periods/:year
  * Get all payroll periods for a year
  */
-router.get('/payroll/periods/:year', verifyAuth, requireAdmin, async (req, res) => {
+router.get('/payroll/periods/:year', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { year } = req.params;
 
@@ -357,7 +230,7 @@ router.get('/payroll/periods/:year', verifyAuth, requireAdmin, async (req, res) 
  * GET /api/payroll/status/:month/:year
  * Get payroll period status
  */
-router.get('/payroll/status/:month/:year', verifyAuth, requireAdmin, async (req, res) => {
+router.get('/payroll/status/:month/:year', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { month, year } = req.params;
 
@@ -389,7 +262,7 @@ router.get('/payroll/status/:month/:year', verifyAuth, requireAdmin, async (req,
  * Get holidays for a specific year or month
  * Query params: year (required), month (optional)
  */
-router.get('/holidays', verifyAuth, requireAdmin, async (req, res) => {
+router.get('/holidays', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { year, month } = req.query;
 
@@ -437,7 +310,7 @@ router.get('/holidays', verifyAuth, requireAdmin, async (req, res) => {
  * POST /api/holidays
  * Create a new holiday
  */
-router.post('/holidays', verifyAuth, requireAdmin, async (req, res) => {
+router.post('/holidays', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { date, name, type, otRateMultiplier, applicableDepartments, notes } = req.body;
         const adminId = req.user.uid;
@@ -484,7 +357,7 @@ router.post('/holidays', verifyAuth, requireAdmin, async (req, res) => {
  * PUT /api/holidays/:id
  * Update an existing holiday
  */
-router.put('/holidays/:id', verifyAuth, requireAdmin, async (req, res) => {
+router.put('/holidays/:id', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { id } = req.params;
         const { date, name, type, otRateMultiplier, applicableDepartments, notes, isActive } = req.body;
@@ -526,7 +399,7 @@ router.put('/holidays/:id', verifyAuth, requireAdmin, async (req, res) => {
  * DELETE /api/holidays/:id
  * Delete a holiday (soft delete - sets isActive to false)
  */
-router.delete('/holidays/:id', verifyAuth, requireAdmin, async (req, res) => {
+router.delete('/holidays/:id', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { id } = req.params;
         const adminId = req.user.uid;
@@ -551,7 +424,7 @@ router.delete('/holidays/:id', verifyAuth, requireAdmin, async (req, res) => {
  * GET /api/settings
  * Get company OT settings
  */
-router.get('/settings', verifyAuth, requireAdmin, async (req, res) => {
+router.get('/settings', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const settings = await CompanySettingsService.getSettings();
         return res.json({ settings });
@@ -569,17 +442,14 @@ router.get('/settings', verifyAuth, requireAdmin, async (req, res) => {
  * PUT /api/settings
  * Update company OT settings
  */
-router.put('/settings', verifyAuth, requireAdmin, async (req, res) => {
+router.put('/settings', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
-        const { weekendDays, defaultOTRate, weekendOTRate, maxOTHoursPerDay, requireAdminApprovalAbove } = req.body;
+        const { weekendDays, defaultOTRate, weekendOTRate, maxOTHoursPerDay } = req.body;
         const adminId = req.user.uid;
 
         // Validate numeric fields
         const numericFields = {
-            defaultOTRate,
-            weekendOTRate,
-            maxOTHoursPerDay,
-            requireAdminApprovalAbove
+            maxOTHoursPerDay
         };
 
         for (const [key, value] of Object.entries(numericFields)) {
@@ -615,7 +485,7 @@ router.put('/settings', verifyAuth, requireAdmin, async (req, res) => {
         if (defaultOTRate !== undefined) updates.defaultOTRate = parseFloat(defaultOTRate);
         if (weekendOTRate !== undefined) updates.weekendOTRate = parseFloat(weekendOTRate);
         if (maxOTHoursPerDay !== undefined) updates.maxOTHoursPerDay = parseFloat(maxOTHoursPerDay);
-        if (requireAdminApprovalAbove !== undefined) updates.requireAdminApprovalAbove = parseFloat(requireAdminApprovalAbove);
+
 
         const result = await CompanySettingsService.updateSettings(updates, adminId);
         return res.json(result);
@@ -637,7 +507,7 @@ router.put('/settings', verifyAuth, requireAdmin, async (req, res) => {
  * GET /api/payroll/periods/:year
  * Get all payroll periods for a year
  */
-router.get('/payroll/periods/:year', verifyAuth, requireAdmin, async (req, res) => {
+router.get('/payroll/periods/:year', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { year } = req.params;
         const yearNum = parseInt(year);
@@ -665,7 +535,7 @@ router.get('/payroll/periods/:year', verifyAuth, requireAdmin, async (req, res) 
  * POST /api/payroll/lock
  * Lock a payroll period (master_admin only)
  */
-router.post('/payroll/lock', verifyAuth, requireMasterAdmin, async (req, res) => {
+router.post('/payroll/lock', verifyAuth, requireMasterAdmin, async (req: any, res) => {
     try {
         const { month, year } = req.body;
         const adminId = req.user.uid;
@@ -694,7 +564,7 @@ router.post('/payroll/lock', verifyAuth, requireMasterAdmin, async (req, res) =>
             });
         }
 
-        const result = await PayrollLockService.lockPeriod(monthNum, yearNum, adminId);
+        const result = await PayrollLockService.lockPeriod(monthNum, yearNum, adminId, req.authenticatedUser?.user?.role || 'admin');
         return res.json(result);
 
     } catch (error) {
@@ -710,7 +580,7 @@ router.post('/payroll/lock', verifyAuth, requireMasterAdmin, async (req, res) =>
  * POST /api/payroll/unlock
  * Unlock a payroll period with mandatory reason (master_admin only)
  */
-router.post('/payroll/unlock', verifyAuth, requireMasterAdmin, async (req, res) => {
+router.post('/payroll/unlock', verifyAuth, requireMasterAdmin, async (req: any, res) => {
     try {
         const { month, year, reason } = req.body;
         const adminId = req.user.uid;
@@ -746,7 +616,7 @@ router.post('/payroll/unlock', verifyAuth, requireMasterAdmin, async (req, res) 
             });
         }
 
-        const result = await PayrollLockService.unlockPeriod(monthNum, yearNum, reason, adminId);
+        const result = await PayrollLockService.unlockPeriod(monthNum, yearNum, reason, adminId, req.authenticatedUser?.user?.role || 'admin');
         return res.json(result);
 
     } catch (error) {
@@ -758,4 +628,230 @@ router.post('/payroll/unlock', verifyAuth, requireMasterAdmin, async (req, res) 
     }
 });
 
+// ============================================
+// ADMIN REVIEW ROUTES (Zero-Fraud System)
+// ============================================
+
+/**
+ * GET /api/ot/sessions/pending
+ * Get all OT sessions pending admin review
+ */
+router.get('/sessions/pending', verifyAuth, requireAdmin, async (req: any, res) => {
+    try {
+        const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+        const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+        const department = req.query.department as string | undefined;
+
+        // Get all attendance records in date range
+        const records = startDate && endDate
+            ? await storage.listAttendanceByDateRange(startDate, endDate)
+            : await storage.listAttendanceByDateRange(
+                new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+                new Date()
+            );
+
+        // Extract pending OT sessions
+        const pendingSessions: any[] = [];
+
+        for (const record of records) {
+            if (!record.otSessions || !Array.isArray(record.otSessions)) continue;
+
+            const pending = record.otSessions.filter((s: any) => s.status === 'PENDING_REVIEW');
+
+            for (const session of pending) {
+                // Get user info
+                const user = await storage.getUser(record.userId);
+
+                // Filter by department if specified
+                if (department && user?.department !== department) continue;
+
+                pendingSessions.push({
+                    ...session,
+                    attendanceId: record.id,
+                    userId: record.userId,
+                    userName: user?.displayName || 'Unknown',
+                    userDepartment: user?.department || 'Unknown',
+                    date: record.date
+                });
+            }
+        }
+
+        // Sort by date descending
+        pendingSessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        return res.json({
+            success: true,
+            sessions: pendingSessions,
+            total: pendingSessions.length
+        });
+
+    } catch (error) {
+        console.error('Error getting pending OT sessions:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to get pending sessions'
+        });
+    }
+});
+
+/**
+ * POST /api/ot/sessions/:sessionId/review
+ * Review an OT session (approve/adjust/reject)
+ */
+router.post('/sessions/:sessionId/review', verifyAuth, requireAdmin, async (req: any, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { action, adjustedHours, notes, attendanceId } = req.body;
+        const adminUid = req.user.uid;
+        const adminUser = req.authenticatedUser?.user;
+
+        if (!action || !['APPROVED', 'ADJUSTED', 'REJECTED'].includes(action)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid action. Must be APPROVED, ADJUSTED, or REJECTED'
+            });
+        }
+
+        if (action === 'ADJUSTED' && (adjustedHours === undefined || adjustedHours === null)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Adjusted hours required for ADJUSTED action'
+            });
+        }
+
+        if (!attendanceId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Attendance ID required'
+            });
+        }
+
+        // Get attendance record
+        const attendance = await storage.getAttendance(attendanceId);
+        if (!attendance || !attendance.otSessions) {
+            return res.status(404).json({
+                success: false,
+                message: 'Attendance record not found'
+            });
+        }
+
+        // Find session
+        const sessions = Array.isArray(attendance.otSessions) ? attendance.otSessions : [];
+        const sessionIndex = sessions.findIndex((s: any) => s.sessionId === sessionId);
+
+        if (sessionIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'OT session not found'
+            });
+        }
+
+        const session = sessions[sessionIndex];
+
+        // SECURITY CHECK: Ensure payroll period is not locked
+        const sessionDate = new Date(session.startTime);
+        const month = sessionDate.getMonth() + 1;
+        const year = sessionDate.getFullYear();
+
+        const payrollPeriod = await storage.getPayrollPeriod(month, year);
+        if (payrollPeriod && payrollPeriod.status === 'locked') {
+            return res.status(403).json({
+                success: false,
+                message: `Payroll for ${month}/${year} is locked. Cannot review OT sessions for this period.`
+            });
+        }
+
+        // Update session based on action
+        const now = new Date();
+        let updatedSession: any;
+
+        if (action === 'APPROVED') {
+            updatedSession = {
+                ...session,
+                status: 'APPROVED',
+                reviewedBy: adminUid,
+                reviewedAt: now,
+                reviewAction: 'APPROVED',
+                reviewNotes: notes || 'Approved by admin',
+                updatedAt: now
+            };
+        } else if (action === 'ADJUSTED') {
+            updatedSession = {
+                ...session,
+                status: 'APPROVED',
+                originalOTHours: session.otHours,
+                otHours: parseFloat(adjustedHours),
+                adjustedOTHours: parseFloat(adjustedHours),
+                reviewedBy: adminUid,
+                reviewedAt: now,
+                reviewAction: 'ADJUSTED',
+                reviewNotes: notes || `Hours adjusted from ${session.otHours}h to ${adjustedHours}h`,
+                updatedAt: now
+            };
+        } else { // REJECTED
+            updatedSession = {
+                ...session,
+                status: 'REJECTED',
+                reviewedBy: adminUid,
+                reviewedAt: now,
+                reviewAction: 'REJECTED',
+                reviewNotes: notes || 'Rejected by admin',
+                updatedAt: now
+            };
+        }
+
+        // Update sessions array
+        sessions[sessionIndex] = updatedSession;
+
+        // Recalculate total approved OT
+        const totalApprovedOT = sessions
+            .filter((s: any) => s.status === 'APPROVED' || s.status === 'completed')
+            .reduce((sum: number, s: any) => sum + (s.otHours || 0), 0);
+
+        // Update attendance
+        await storage.updateAttendance(attendanceId, {
+            otSessions: sessions,
+            totalOTHours: totalApprovedOT
+        });
+
+        // Log activity
+        await storage.createActivityLog({
+            type: 'attendance',
+            title: `OT Session ${action}`,
+            description: `${adminUser?.displayName || 'Admin'} ${action.toLowerCase()} OT session (${session.otHours}h${action === 'ADJUSTED' ? ` → ${adjustedHours}h` : ''})`,
+            entityId: sessionId,
+            entityType: 'ot_session',
+            userId: attendance.userId
+        });
+
+        // Notify employee
+        const actionText = action === 'APPROVED' ? 'approved' :
+            action === 'ADJUSTED' ? `adjusted to ${adjustedHours} hours` :
+                'rejected';
+
+        await storage.createNotification({
+            userId: attendance.userId,
+            type: 'admin_review',
+            title: `OT ${action === 'REJECTED' ? 'Rejected' : 'Approved'}`,
+            message: `Your OT session from ${new Date(session.startTime).toLocaleString()} has been ${actionText}.${notes ? ` Note: ${notes}` : ''}`,
+            createdAt: now
+        });
+
+        return res.json({
+            success: true,
+            message: `OT session ${action.toLowerCase()} successfully`,
+            session: updatedSession,
+            totalOTHours: totalApprovedOT
+        });
+
+    } catch (error) {
+        console.error('Error reviewing OT session:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to review OT session'
+        });
+    }
+});
+
 export default router;
+

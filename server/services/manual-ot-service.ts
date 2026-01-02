@@ -5,6 +5,7 @@
 
 import { storage } from '../storage';
 import { CloudinaryService } from './cloudinary-service';
+import { PayrollLockService } from './payroll-lock-service';
 
 export interface OTStartRequest {
   userId: string;
@@ -50,7 +51,38 @@ export interface OTEndResponse {
 }
 
 export class ManualOTService {
-  
+  // In-memory cache for department timings (30 minute TTL)
+  private static departmentTimingCache: Map<string, {
+    timing: any;
+    timestamp: number;
+  }> = new Map();
+  private static CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+  /**
+   * Get department timing with caching
+   */
+  private static async getDepartmentTimingCached(department: string) {
+    const cached = this.departmentTimingCache.get(department);
+    const now = Date.now();
+
+    // Return cached value if still valid
+    if (cached && (now - cached.timestamp) < this.CACHE_TTL_MS) {
+      return cached.timing;
+    }
+
+    // Fetch from database
+    const timing = await storage.getDepartmentTiming(department);
+
+    // Update cache
+    this.departmentTimingCache.set(department, {
+      timing,
+      timestamp: now
+    });
+
+    return timing;
+  }
+
+
   /**
    * Start manual OT session
    */
@@ -80,7 +112,17 @@ export class ManualOTService {
       // Get today's attendance record
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
+      // Security Check: Verify payroll period is not locked
+      if (await PayrollLockService.isPeriodLocked(today)) {
+        return {
+          success: false,
+          message: 'Payroll period is locked. Cannot start OT.',
+          otType: 'late_departure', // Default fallback
+          startTime: new Date().toISOString()
+        };
+      }
+
       console.log('MANUAL OT SERVICE: Looking for attendance record for date:', today.toISOString().split('T')[0]);
       let todayAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
       console.log('MANUAL OT SERVICE: Found attendance record:', todayAttendance ? 'YES' : 'NO');
@@ -126,7 +168,7 @@ export class ManualOTService {
       }
 
       const otType = await this.determineOTType(user.department, new Date());
-      
+
       return {
         success: true,
         message: `OT session started successfully (${otType})`,
@@ -159,7 +201,19 @@ export class ManualOTService {
       // Get today's attendance record
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
+      // Security Check: Verify payroll period is not locked
+      if (await PayrollLockService.isPeriodLocked(today)) {
+        return {
+          success: false,
+          message: 'Payroll period is locked. Cannot end OT.',
+          otHours: 0,
+          totalWorkingHours: 0,
+          startTime: '',
+          endTime: ''
+        };
+      }
+
       const todayAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
 
       if (!todayAttendance) {
@@ -197,7 +251,7 @@ export class ManualOTService {
 
       const otEndTime = new Date();
       const otStartTime = todayAttendance.otStartTime ? new Date(todayAttendance.otStartTime) : null;
-      
+
       // Validate that otStartTime is a valid date
       if (!otStartTime || isNaN(otStartTime.getTime())) {
         console.error('MANUAL OT SERVICE: Invalid otStartTime:', todayAttendance.otStartTime);
@@ -210,7 +264,7 @@ export class ManualOTService {
           endTime: ''
         };
       }
-      
+
       // Calculate OT hours
       const otDurationMs = otEndTime.getTime() - otStartTime.getTime();
       const otHours = Number((otDurationMs / (1000 * 60 * 60)).toFixed(2));
@@ -242,8 +296,8 @@ export class ManualOTService {
       // This ensures accurate calculation whether user did regular checkout or not
       let regularHours = 0;
       if (todayAttendance.checkInTime) {
-        const effectiveCheckOutTime = todayAttendance.checkOutTime 
-          ? new Date(todayAttendance.checkOutTime) 
+        const effectiveCheckOutTime = todayAttendance.checkOutTime
+          ? new Date(todayAttendance.checkOutTime)
           : otEndTime;
         const regularDurationMs = effectiveCheckOutTime.getTime() - new Date(todayAttendance.checkInTime).getTime();
         regularHours = regularDurationMs / (1000 * 60 * 60);
@@ -283,7 +337,7 @@ export class ManualOTService {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const todayAttendance = await storage.getAttendanceByUserAndDate(userId, today);
 
       if (!todayAttendance) {
@@ -306,7 +360,7 @@ export class ManualOTService {
         canEndOT,
         otStartTime: todayAttendance.otStartTime,
         otType: todayAttendance.otType,
-        currentOTHours: todayAttendance.otStartTime 
+        currentOTHours: todayAttendance.otStartTime
           ? Number(((new Date().getTime() - new Date(todayAttendance.otStartTime).getTime()) / (1000 * 60 * 60)).toFixed(2))
           : 0
       };
@@ -334,7 +388,7 @@ export class ManualOTService {
       }
 
       // Get department timing
-      const departmentTiming = await storage.getDepartmentTiming(department);
+      const departmentTiming = await this.getDepartmentTimingCached(department);
       if (!departmentTiming) {
         return 'late_departure'; // Default if no timing configured
       }
@@ -386,18 +440,18 @@ export class ManualOTService {
       // Create date in IST timezone (UTC+5:30)
       const istOffset = 5.5 * 60 * 60 * 1000; // 5:30 hours in milliseconds
       const result = new Date(referenceDate);
-      
+
       // Set the time in IST and then convert to UTC
       result.setUTCFullYear(referenceDate.getUTCFullYear());
       result.setUTCMonth(referenceDate.getUTCMonth());
       result.setUTCDate(referenceDate.getUTCDate());
       result.setUTCHours(hour, minute, 0, 0);
-      
+
       // Convert IST to UTC by subtracting the offset
       const utcTime = new Date(result.getTime() - istOffset);
-      
+
       // Debug logging removed for production
-      
+
       return utcTime;
     } catch (error) {
       console.error('Error parsing time:', error);
@@ -431,7 +485,7 @@ export class ManualOTService {
       }
 
       // Get department timing
-      const departmentTiming = await storage.getDepartmentTiming(user.department);
+      const departmentTiming = await this.getDepartmentTimingCached(user.department);
       if (!departmentTiming) {
         return { available: true }; // If no timing configured, allow OT
       }
@@ -450,7 +504,7 @@ export class ManualOTService {
       }
 
       // Available after department end time (late departure OT)
-      
+
       if (currentTime > deptEndTime) {
         return { available: true };
       }

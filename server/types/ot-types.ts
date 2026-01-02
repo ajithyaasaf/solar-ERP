@@ -28,8 +28,22 @@ export interface OTSession {
     reason: string;
     employeeId: string;
 
-    // Status
-    status: 'in_progress' | 'completed' | 'locked';
+    // Status (expanded for Zero-Fraud system)
+    // Legacy: 'in_progress', 'completed', 'locked'
+    // New: 'PENDING_REVIEW', 'APPROVED', 'REJECTED'
+    status: 'in_progress' | 'completed' | 'locked' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+
+    // Auto-close tracking
+    autoClosedAt?: Date;                  // Set when cron auto-closes session
+    autoClosedNote?: string;              // Reason for auto-close
+
+    // Admin review (for PENDING_REVIEW → APPROVED/REJECTED)
+    reviewedBy?: string;                  // Admin UID who reviewed
+    reviewedAt?: Date;                    // Review timestamp
+    reviewAction?: 'APPROVED' | 'ADJUSTED' | 'REJECTED';  // Action taken
+    reviewNotes?: string;                 // Admin's notes
+    originalOTHours?: number;             // Original hours before adjustment
+    adjustedOTHours?: number;             // Adjusted hours (if ADJUSTED)
 
     // Timestamps
     createdAt?: Date;
@@ -71,12 +85,11 @@ export interface CompanySettings {
     weekendDays: number[];  // [0] = Sunday only, [0, 6] = Sat+Sun, etc.
 
     // Default OT rates
-    defaultOTRate: number;     // e.g., 1.5x
-    weekendOTRate: number;     // e.g., 2.0x
+    defaultOTRate: number;     // e.g., 1.0x
+    weekendOTRate: number;     // e.g., 1.0x
 
     // Daily OT cap
     maxOTHoursPerDay: number;
-    requireAdminApprovalAbove: number;
 
     // Metadata
     updatedBy?: string;
@@ -141,21 +154,25 @@ export interface EndOTSessionResponse {
     otHours?: number;
     totalOTToday?: number;
     exceedsDailyLimit?: boolean;
+    reviewRequired?: boolean;
 }
 
 /**
  * Extended Attendance Interface
  * Adds OT sessions array to existing attendance
+ * Note: Commented out to avoid import dependency
  */
+/*
 export interface AttendanceWithOTSessions extends Omit<Attendance, 'overtimeHours'> {
     otSessions: OTSession[];
     totalOTHours: number;
 
     // Keep legacy fields for backward compatibility (marked as deprecated)
-    /** @deprecated Use otSessions array instead */
+    // @deprecated Use otSessions array instead
     otStartTime?: Date;
-    /** @deprecated Use otSessions array instead */
+    // @deprecated Use otSessions array instead
     otEndTime?: Date;
-    /** @deprecated Use totalOTHours instead */
+    // @deprecated Use totalOTHours instead
     overtimeHours?: number;
 }
+*/

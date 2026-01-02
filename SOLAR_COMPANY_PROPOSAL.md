@@ -96,7 +96,7 @@ Your team works faster, customers get served better, and you make more money.
 **Smart Salary Calculations:**
 - Dynamic earnings (Basic + DA + HRA + Special Allowance)
 - Automatic deductions (EPF, ESI, Professional Tax, Advance)
-- Overtime payment at 1.5× hourly rate
+- Overtime payment at 1.0× hourly rate
 - Half-day/full-day absence handling
 - Early checkout penalty calculations
 - Monthly payroll reports with breakdowns

@@ -64,49 +64,39 @@ export function isTimeAfter(time1: TimeValue, time2: TimeValue): boolean {
 /**
  * Check if an attendance checkout is overdue based on department timing
  * 
- * @param attendanceDate - The date of the attendance record
- * @param departmentCheckoutTime - Department's standard checkout time (e.g., "6:00 PM")
+ * @param checkInTime - The actual check-in time of the employee
+ * @param departmentCheckoutTimeStr - Department's standard checkout time (e.g., "6:00 PM")
  * @param gracePeriodMinutes - Grace period after checkout time (default: 30 minutes)
  * @returns true if checkout is overdue, false otherwise
  */
 export function isCheckoutOverdue(
-    attendanceDate: Date,
-    departmentCheckoutTime: string,
+    checkInTime: Date,
+    departmentCheckoutTimeStr: string,
     gracePeriodMinutes: number = 30
 ): boolean {
     const now = new Date();
 
-    // Normalize dates to compare only year/month/day
-    const attendanceDateOnly = new Date(attendanceDate);
-    attendanceDateOnly.setHours(0, 0, 0, 0);
-
-    const todayDateOnly = new Date();
-    todayDateOnly.setHours(0, 0, 0, 0);
-
-    // If record is from previous days, it's always overdue
-    if (attendanceDateOnly < todayDateOnly) {
-        return true;
-    }
-
-    // If record is from a future date, it's not overdue
-    if (attendanceDateOnly > todayDateOnly) {
-        return false;
-    }
-
-    // Record is from today - check if current time > checkout time + grace period
     try {
-        const checkoutTime = parseTimeString(departmentCheckoutTime);
-        const checkoutWithGrace = addMinutes(checkoutTime, gracePeriodMinutes);
+        const checkoutTime = parseTimeString(departmentCheckoutTimeStr);
 
-        const currentTime: TimeValue = {
-            hours: now.getHours(),
-            minutes: now.getMinutes()
-        };
+        // Construct the expected checkout date on the same day as check-in
+        const expectedCheckout = new Date(checkInTime);
+        expectedCheckout.setHours(checkoutTime.hours, checkoutTime.minutes, 0, 0);
 
-        return isTimeAfter(currentTime, checkoutWithGrace);
+        // If expected checkout is BEFORE check-in, it must be a cross-midnight shift
+        // e.g., Check-in 10 PM, Checkout 2 AM. 2 AM < 10 PM.
+        if (expectedCheckout <= checkInTime) {
+            expectedCheckout.setDate(expectedCheckout.getDate() + 1);
+        }
+
+        // Add grace period
+        const overdueThreshold = new Date(expectedCheckout.getTime() + gracePeriodMinutes * 60000);
+
+        return now > overdueThreshold;
     } catch (error) {
-        console.error('Error parsing department checkout time:', error);
-        // If we can't parse the time, assume it's overdue to be safe
-        return true;
+        console.error('Error in isCheckoutOverdue:', error);
+        // If we can't determine, assume overdue if it's been more than 24 hours since check-in
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60000);
+        return checkInTime < twentyFourHoursAgo;
     }
 }

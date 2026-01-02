@@ -1,5 +1,6 @@
 import { IStorage } from "../storage";
 import { LeaveService } from "./leave-service";
+import { PayrollHelper } from "./payroll-helper";
 
 /**
  * Enterprise Payroll Calculation Service
@@ -10,7 +11,7 @@ import { LeaveService } from "./leave-service";
  * - Pro-rated earnings and deductions
  */
 export class PayrollCalculationService {
-  constructor(private storage: IStorage) {}
+  constructor(private storage: IStorage) { }
 
   /**
    * Calculate overtime pay based on salary structure and hours worked
@@ -18,7 +19,9 @@ export class PayrollCalculationService {
   async calculateOvertimePay(
     userId: string,
     overtimeHours: number,
-    salaryStructure: any
+    salaryStructure: any,
+    settings?: any, // PayrollSettings
+    departmentId?: string
   ): Promise<number> {
     if (overtimeHours <= 0) return 0;
 
@@ -28,13 +31,28 @@ export class PayrollCalculationService {
     const fixedConveyance = salaryStructure.fixedConveyance || 0;
     const totalFixedSalary = fixedBasic + fixedHRA + fixedConveyance;
 
-    // Get overtime rate (default 1.5x if not specified)
-    const overtimeRate = salaryStructure.overtimeRate || 1.5;
+    // Get overtime rate (default 1.0x if not specified)
+    // precise-edit: Use settings logic
+    const overtimeRate = salaryStructure.overtimeRate || settings?.overtimeMultiplier || 1.0;
 
-    // Calculate hourly rate based on 26 working days and 8 hours per day
-    const standardWorkingHours = 8;
-    const standardWorkingDays = 26;
-    const hourlyRate = totalFixedSalary / (standardWorkingDays * standardWorkingHours);
+    // Calculate hourly rate based on standard working days and hours
+    // If departmentId is provided, get department-specific working hours
+    let standardWorkingHours = settings?.standardWorkingHours || 8;
+
+    if (departmentId) {
+      try {
+        const deptTiming = await this.storage.getDepartmentTiming(departmentId);
+        if (deptTiming && deptTiming.workingHours) {
+          standardWorkingHours = deptTiming.workingHours;
+          console.log(`PAYROLL_CALC: Using department (${departmentId}) working hours: ${standardWorkingHours}`);
+        }
+      } catch (error) {
+        console.error(`PAYROLL_CALC: Error fetching department timing for ${departmentId}:`, error);
+      }
+    }
+
+    const dailySalary = PayrollHelper.getDailySalary(salaryStructure, settings);
+    const hourlyRate = PayrollHelper.getHourlyRate(dailySalary, settings, standardWorkingHours);
 
     // Calculate overtime pay
     const overtimePay = overtimeHours * hourlyRate * overtimeRate;
@@ -45,7 +63,8 @@ export class PayrollCalculationService {
       totalFixedSalary,
       hourlyRate: hourlyRate.toFixed(2),
       overtimeRate,
-      overtimePay: overtimePay.toFixed(2)
+      overtimePay: overtimePay.toFixed(2),
+      standardWorkingHours
     });
 
     return Math.round(overtimePay);
@@ -59,7 +78,8 @@ export class PayrollCalculationService {
   async getPaidLeaveDays(
     userId: string,
     month: number,
-    year: number
+    year: number,
+    departmentId?: string
   ): Promise<number> {
     try {
       const leaves = await this.storage.listLeaveApplicationsByUser(userId);
@@ -75,26 +95,41 @@ export class PayrollCalculationService {
       let totalPaidDays = 0;
 
       for (const leave of paidLeaves) {
+        if (!leave.startDate || !leave.endDate) continue;
+
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
-        
+
         // Get the first and last day of the payroll month (end of day for last day)
         const monthStart = new Date(year, month - 1, 1);
         const monthEnd = new Date(year, month, 0, 23, 59, 59, 999); // End of last day of month
-        
+
         // Find overlap between leave period and payroll month
         const overlapStart = startDate > monthStart ? startDate : monthStart;
         const overlapEnd = endDate < monthEnd ? endDate : monthEnd;
-        
+
         // Check if there's any overlap
         if (overlapStart <= overlapEnd) {
           // Calculate number of days in the overlap
           const daysInMonth = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-          
+
           // For permission (partial day), convert hours to days
           if (leave.leaveType === 'permission') {
-            const permissionHours = leave.totalHours || 0;
-            const workingHoursPerDay = 8; // Standard working hours
+            const permissionHours = leave.permissionHours || 0; // Fixed: Use permissionHours
+
+            // Use department-specific working hours if available
+            let workingHoursPerDay = 8;
+            if (departmentId) {
+              try {
+                const deptTiming = await this.storage.getDepartmentTiming(departmentId);
+                if (deptTiming && deptTiming.workingHours) {
+                  workingHoursPerDay = deptTiming.workingHours;
+                }
+              } catch (error) {
+                console.error(`PAYROLL_CALC: Error fetching department timing for ${departmentId}:`, error);
+              }
+            }
+
             const partialDays = permissionHours / workingHoursPerDay;
             totalPaidDays += partialDays;
             console.log(`PAYROLL_CALC: Permission leave for ${userId}: ${permissionHours} hours = ${partialDays.toFixed(2)} days`);
@@ -130,7 +165,6 @@ export class PayrollCalculationService {
     userId: string,
     month: number,
     year: number,
-    monthDays: number,
     totalFixedSalary: number
   ): Promise<number> {
     try {
@@ -140,12 +174,12 @@ export class PayrollCalculationService {
       const unpaidLeaves = leaves.filter(leave => {
         if (leave.status !== 'approved') return false;
         if (!leave.startDate || !leave.endDate) return false;
-        
+
         // Include unpaid_leave type OR any leave that affects payroll (excluding paid types)
         const isUnpaidType = leave.leaveType === 'unpaid_leave';
         const isPaidType = leave.leaveType === 'casual_leave' || leave.leaveType === 'permission';
         const affectsPayroll = leave.affectsPayroll === true;
-        
+
         return isUnpaidType || (affectsPayroll && !isPaidType);
       });
 
@@ -154,28 +188,35 @@ export class PayrollCalculationService {
       for (const leave of unpaidLeaves) {
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
-        
+
         // Get the first and last day of the payroll month (end of day for last day)
         const monthStart = new Date(year, month - 1, 1);
         const monthEnd = new Date(year, month, 0, 23, 59, 59, 999); // End of last day of month
-        
+
         // Find overlap between leave period and payroll month
         const overlapStart = startDate > monthStart ? startDate : monthStart;
         const overlapEnd = endDate < monthEnd ? endDate : monthEnd;
-        
+
         // Check if there's any overlap
         if (overlapStart <= overlapEnd) {
           // Calculate number of days in the overlap
           const daysInMonth = Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
           totalUnpaidDays += daysInMonth;
-          
+
           console.log(`PAYROLL_CALC: Unpaid leave for ${userId}: ${daysInMonth} days in month ${month}/${year} (from ${startDate.toDateString()} to ${endDate.toDateString()})`);
         }
       }
 
       // Calculate per-day salary and deduction
-      const perDaySalary = totalFixedSalary / monthDays;
-      const unpaidDeduction = totalUnpaidDays * perDaySalary;
+      // Calculate per-day salary and deduction using STANDARD DAYS
+      const settings = await this.storage.getPayrollSettings();
+      const dailySalary = PayrollHelper.getDailySalary({
+        fixedBasic: totalFixedSalary, // Passing total as one component since we only need the sum
+        fixedHRA: 0,
+        fixedConveyance: 0
+      }, settings);
+
+      const unpaidDeduction = totalUnpaidDays * dailySalary;
 
       console.log('PAYROLL_CALC: Total unpaid leave deduction:', {
         userId,
@@ -183,7 +224,7 @@ export class PayrollCalculationService {
         year,
         unpaidLeaves: unpaidLeaves.length,
         totalUnpaidDays,
-        perDaySalary: perDaySalary.toFixed(2),
+        perDaySalary: dailySalary.toFixed(2),
         unpaidDeduction: unpaidDeduction.toFixed(2)
       });
 
@@ -225,7 +266,7 @@ export class PayrollCalculationService {
 
         // Calculate number of months since deduction started
         const monthsSinceStart = (year - deductionStartYear) * 12 + (month - deductionStartMonth);
-        
+
         // Check if deduction is still active (within number of installments)
         return monthsSinceStart < advance.numberOfInstallments;
       });
@@ -258,19 +299,33 @@ export class PayrollCalculationService {
     month: number,
     year: number,
     attendanceRecords: any[],
-    salaryStructure: any
+    salaryStructure: any,
+    departmentId?: string
   ) {
-    // Get month details
+    // Get month details (ONLY used for displaying Days in Month, NOT for calculation)
     const monthDays = new Date(year, month, 0).getDate();
 
-    // Calculate present days from attendance
-    const validWorkingStatuses = ['present', 'late', 'overtime', 'half_day', 'early_checkout'];
-    const presentDays = attendanceRecords.filter(record =>
-      validWorkingStatuses.includes(record.status)
-    ).length;
+    // Fetch Global Payroll Settings
+    const fetchedSettings = await this.storage.getPayrollSettings();
+    // SAFETY FIX: Default settings to {} to prevent undefined crash in calculations
+    const settings = fetchedSettings || {} as any;
+
+    // Calculate present days from attendance with weighted units
+    // CRITICAL: half_day = 0.5, present/late/holiday/weekly_off = 1.0
+    const presentDays = attendanceRecords.reduce((total, record) => {
+      // BLOCK: Records pending admin review are excluded from payroll (Treat as 0 days)
+      if (record.adminReviewStatus === 'pending') return total;
+
+      if (record.status === 'half_day') return total + 0.5;
+
+      const fullPayStatuses = ['present', 'late', 'overtime', 'early_checkout', 'holiday', 'weekly_off'];
+      if (fullPayStatuses.includes(record.status)) return total + 1.0;
+
+      return total;
+    }, 0);
 
     // Get paid leave days
-    const paidLeaveDays = await this.getPaidLeaveDays(userId, month, year);
+    const paidLeaveDays = await this.getPaidLeaveDays(userId, month, year, departmentId);
 
     // Calculate total working days (attendance + paid leave)
     const totalWorkingDays = presentDays + paidLeaveDays;
@@ -282,19 +337,85 @@ export class PayrollCalculationService {
     const totalFixedSalary = fixedBasic + fixedHRA + fixedConveyance;
 
     // Pro-rate earnings based on total working days (attendance + paid leave)
-    const earnedBasic = (fixedBasic / monthDays) * totalWorkingDays;
-    const earnedHRA = (fixedHRA / monthDays) * totalWorkingDays;
-    const earnedConveyance = (fixedConveyance / monthDays) * totalWorkingDays;
+    // Pro-rate earnings based on STANDARD DAYS (via PayrollHelper)
+    // We calculate the ratio of worked days to standard days (e.g. 26)
+    // ratio = totalWorkingDays / standardWorkingDays
+    const standardWorkingDays = settings.standardWorkingDays || 26;
+    const proRataRatio = totalWorkingDays / standardWorkingDays;
+
+    const earnedBasic = fixedBasic * proRataRatio;
+    const earnedHRA = fixedHRA * proRataRatio;
+    const earnedConveyance = fixedConveyance * proRataRatio;
+
+    // Get holidays for the month (for OT rate calculation)
+    const { HolidayService } = await import('./holiday-service');
+    const monthlyHolidays = await HolidayService.getHolidaysForMonth(month, year);
+
+    // Create a map for O(1) holiday lookup by date string (YYYY-MM-DD)
+    const holidayMap = new Map();
+    monthlyHolidays.forEach(h => {
+      const dateStr = new Date(h.date).toISOString().split('T')[0];
+      holidayMap.set(dateStr, h);
+    });
 
     // Calculate overtime hours and pay
-    const totalOvertimeHours = attendanceRecords.reduce(
-      (sum, record) => sum + (record.overtimeHours || record.manualOTHours || 0),
-      0
-    );
+    // ZERO-FRAUD LOGIC: Only count APPROVED sessions (and legacy 'completed')
+    // STRICTLY EXCLUDE sessions with status 'PENDING_REVIEW' or 'REJECTED'
+    // RATE INTEGRETY FIX: Calculate "Weighted Effective Hours" based on OT Type logic
+    const totalWeightedOvertimeHours = attendanceRecords.reduce((sum, record) => {
+      // Exclude records pending attendance review
+      if (record.adminReviewStatus === 'pending') return sum;
+
+      // NEW OT SYSTEM: Filter by session status
+      if (record.otSessions && Array.isArray(record.otSessions)) {
+        const approvedWeightedHours = record.otSessions
+          .filter((s: any) => {
+            // Include legacy 'completed' status (backward compatibility)
+            if (s.status === 'completed') return true;
+            // Include new 'APPROVED' status
+            if (s.status === 'APPROVED') return true;
+            // EXCLUDE all others ('in_progress', 'PENDING_REVIEW', 'REJECTED', 'locked')
+            return false;
+          })
+          .reduce((hours: number, s: any) => {
+            const rawHours = s.otHours || 0;
+            let multiplier = settings.defaultOTRate || 1.0;
+
+            // Apply specific multipliers
+            if (s.otType === 'weekend') {
+              multiplier = settings.weekendOTRate || 1.0;
+            } else if (s.otType === 'holiday') {
+              const sDate = new Date(s.startTime).toISOString().split('T')[0];
+              const holiday = holidayMap.get(sDate);
+              // Use specific holiday rate if found, otherwise fall back to default
+              if (holiday) {
+                multiplier = holiday.otRateMultiplier || 1.0;
+              }
+            }
+
+            // Return weighted hours (e.g. 5 hours * 2.0 rate = 10 effective hours)
+            return hours + (rawHours * multiplier);
+          }, 0);
+        return sum + approvedWeightedHours;
+      }
+
+      // LEGACY FIELDS: Fallback for old records (assume 1.0x rate)
+      return sum + (record.totalOTHours || record.overtimeHours || record.manualOTHours || 0);
+    }, 0);
+
+    // ROUNDING FIX: Ensure 2 decimal precision to avoid floating point artifacts (e.g. 3.999999)
+    const finalWeightedHours = Math.round(totalWeightedOvertimeHours * 100) / 100;
+
+    // Pass '1.0' as the rate multiplier since we already applied the weights above
+    // This allows the weighted sum to be multiplied by the hourly rate directly
+    // SAFETY FIX: Default settings to {} to prevent undefined crash
+    const safeSettings = settings || {};
     const overtimePay = await this.calculateOvertimePay(
       userId,
-      totalOvertimeHours,
-      salaryStructure
+      finalWeightedHours,
+      salaryStructure,
+      { ...safeSettings, overtimeMultiplier: 1.0 }, // Override to 1.0
+      departmentId
     );
 
     // Calculate dynamic earnings (pro-rated)
@@ -302,7 +423,10 @@ export class PayrollCalculationService {
     let totalDynamicEarnings = 0;
     Object.entries(dynamicEarnings).forEach(([key, value]) => {
       if (typeof value === 'number' && value > 0) {
-        const earnedAmount = (value / monthDays) * totalWorkingDays;
+        // Dynamic earnings also follow the standard day pro-rating?
+        // Usually these are fixed monthly amounts that get pro-rated.
+        // If we strictly follow "Standard 26 Day" rule:
+        const earnedAmount = value * proRataRatio;
         dynamicEarnings[key] = Math.round(earnedAmount);
         totalDynamicEarnings += earnedAmount;
       }
@@ -311,13 +435,24 @@ export class PayrollCalculationService {
     // Calculate gross salary
     const grossSalary = earnedBasic + earnedHRA + earnedConveyance + totalDynamicEarnings + overtimePay;
 
-    // Calculate statutory deductions
+    // Calculate statutory deductions using Settings
+    // EPF Logic: Rate defaults to 12%, Ceiling defaults to 15000 (usually 1800 limit)
+    const epfRate = (settings?.pfRate || 12) / 100;
+    const epfCeiling = settings?.pfApplicableFromSalary || 15000; // Salary limit for PF
+    const maxEpfDeduction = epfCeiling * epfRate; // e.g., 1800
+
     const epfDeduction = salaryStructure.epfApplicable
-      ? Math.min(earnedBasic * 0.12, 1800)
+      ? Math.min(earnedBasic * epfRate, maxEpfDeduction)
       : 0;
-    const esiDeduction = salaryStructure.esiApplicable && grossSalary <= 21000
-      ? grossSalary * 0.0075
+
+    // ESI Logic: Rate defaults 0.75%, Threshold defaults 21000
+    const esiRate = (settings?.esiRate || 0.75) / 100;
+    const esiThreshold = settings?.esiApplicableFromSalary || 21000;
+
+    const esiDeduction = salaryStructure.esiApplicable && grossSalary <= esiThreshold
+      ? grossSalary * esiRate
       : 0;
+
     const vptDeduction = salaryStructure.vptAmount || 0;
 
     // Calculate dynamic deductions (pro-rated)
@@ -325,7 +460,7 @@ export class PayrollCalculationService {
     let totalDynamicDeductions = 0;
     Object.entries(dynamicDeductions).forEach(([key, value]) => {
       if (typeof value === 'number' && value > 0) {
-        const deductedAmount = (value / monthDays) * totalWorkingDays;
+        const deductedAmount = value * proRataRatio;
         dynamicDeductions[key] = Math.round(deductedAmount);
         totalDynamicDeductions += deductedAmount;
       }
@@ -336,7 +471,10 @@ export class PayrollCalculationService {
       userId,
       month,
       year,
-      monthDays,
+      // Note: Unpaid leave deduction inside the service might need similar adjustment
+      // But we passed totalFixedSalary. 
+      // Ideally, `calculateUnpaidLeaveDeduction` should also use PayrollHelper logic.
+      // Let's verify that method next.
       totalFixedSalary
     );
 
@@ -366,7 +504,7 @@ export class PayrollCalculationService {
       presentDays,
       paidLeaveDays,
       totalWorkingDays,
-      overtimeHours: totalOvertimeHours,
+      overtimeHours: finalWeightedHours,
       overtimePay,
       grossSalary: Math.round(grossSalary),
       totalDeductions: Math.round(totalDeductions),
@@ -377,8 +515,8 @@ export class PayrollCalculationService {
       monthDays,
       presentDays,
       paidLeaveDays,
-      overtimeHours: totalOvertimeHours,
-      perDaySalary: Math.round(totalFixedSalary / monthDays),
+      overtimeHours: finalWeightedHours,
+      perDaySalary: Math.round(PayrollHelper.getDailySalary(salaryStructure, settings)),
       earnedBasic: Math.round(earnedBasic),
       earnedHRA: Math.round(earnedHRA),
       earnedConveyance: Math.round(earnedConveyance),
@@ -394,7 +532,7 @@ export class PayrollCalculationService {
       totalEarnings: Math.round(grossSalary),
       totalDeductions: Math.round(totalDeductions),
       netSalary: Math.round(netSalary),
-      esiEligible: grossSalary <= 21000
+      esiEligible: grossSalary <= esiThreshold
     };
   }
 }

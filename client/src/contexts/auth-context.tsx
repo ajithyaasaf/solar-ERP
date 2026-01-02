@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         const userData = await response.json();
         setUser({
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: "employee"
           })
         });
-        
+
         if (syncResponse.ok) {
           const syncData = await syncResponse.json();
           setUser({
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isActive: true
       });
     }
-    
+
     setLoading(false);
   };
 
@@ -158,53 +158,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }),
       credentials: 'include'
     })
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      } else {
-        throw new Error(`Failed to create user: ${response.statusText}`);
-      }
-    })
-    .then(newUserData => {
-      console.log("Created new user:", newUserData);
-      
-      setUser({
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName || newUserData.displayName,
-        photoURL: firebaseUser.photoURL,
-        role: newUserData.role,
-        department: newUserData.department,
-        designation: newUserData.designation || null,
-        employeeId: newUserData.employeeId,
-        reportingManagerId: newUserData.reportingManagerId || null,
-        payrollGrade: newUserData.payrollGrade || null,
-        joinDate: newUserData.joinDate ? new Date(newUserData.joinDate) : undefined,
-        isActive: newUserData.isActive !== false,
-        id: newUserData.id,
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          throw new Error(`Failed to create user: ${response.statusText}`);
+        }
+      })
+      .then(newUserData => {
+        console.log("Created new user:", newUserData);
+
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || newUserData.displayName,
+          photoURL: firebaseUser.photoURL,
+          role: newUserData.role,
+          department: newUserData.department,
+          designation: newUserData.designation || null,
+          employeeId: newUserData.employeeId,
+          reportingManagerId: newUserData.reportingManagerId || null,
+          payrollGrade: newUserData.payrollGrade || null,
+          joinDate: newUserData.joinDate ? new Date(newUserData.joinDate) : undefined,
+          isActive: newUserData.isActive !== false,
+          id: newUserData.id,
+        });
+
+        // Show success toast
+        toast({
+          title: "Account created",
+          description: "Your account has been successfully set up.",
+          variant: "success" as any,
+        });
+      })
+      .catch(error => {
+        console.error("Error creating user:", error);
+        handleBasicAuth(firebaseUser);
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      
-      // Show success toast
-      toast({
-        title: "Account created",
-        description: "Your account has been successfully set up.",
-        variant: "success" as any,
-      });
-    })
-    .catch(error => {
-      console.error("Error creating user:", error);
-      handleBasicAuth(firebaseUser);
-    })
-    .finally(() => {
-      setLoading(false);
-    });
   };
-  
+
   useEffect(() => {
     // Keep existing user during transitions to prevent UI flicker
     let currentUser: AuthUser | null = null;
     let isInitialAuth = true;
-    
+
     // Keep track of auth state in localStorage to prevent flashes
     const persistedAuth = localStorage.getItem('authState');
     if (persistedAuth) {
@@ -217,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Failed to parse persisted auth state");
       }
     }
-    
+
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       // Handle logout
       if (!firebaseUser) {
@@ -226,14 +226,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-      
+
       // If this is the first auth event or we're changing users
       if (isInitialAuth || !currentUser || currentUser.uid !== firebaseUser.uid) {
         // Don't set loading to true if we already have a user (prevents login screen flash)
         if (!user) {
           setLoading(true);
         }
-        
+
         // Create temporary user object
         currentUser = {
           uid: firebaseUser.uid,
@@ -245,49 +245,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           designation: null,
           isActive: true
         };
-        
+
         // For initial auth, don't update user state if we already have persisted data
         // This prevents unnecessary re-renders and UI flicker
         if (!isInitialAuth || !user) {
           setUser(currentUser);
         }
-        
+
         try {
           // Sync this user with our database
           const result = await syncUser(firebaseUser.uid, true);
-          
+
           if (result.status === 'error') {
             // If there was an error syncing, fall back to basic auth
             handleBasicAuth(firebaseUser);
             return;
           }
-          
+
           // Get the user data and update state
           const userData = result.user;
-          
+
           // Update our current user reference
           currentUser = {
             uid: firebaseUser.uid,
-            email: userData.email || firebaseUser.email,
-            displayName: userData.displayName || firebaseUser.displayName,
+            email: userData?.email || firebaseUser.email,
+            displayName: userData?.displayName || firebaseUser.displayName,
             photoURL: firebaseUser.photoURL,
-            role: userData.role,
-            department: userData.department,
-            designation: userData.designation || null,
-            employeeId: userData.employeeId,
-            reportingManagerId: userData.reportingManagerId || null,
-            payrollGrade: userData.payrollGrade || null,
-            joinDate: userData.joinDate ? new Date(userData.joinDate) : undefined,
+            role: (userData?.role || 'employee') as 'master_admin' | 'admin' | 'employee',
+            department: userData?.department || null,
+            designation: userData?.designation || null,
+            employeeId: userData?.employeeId,
+            reportingManagerId: userData?.reportingManagerId || null,
+            payrollGrade: userData?.payrollGrade || null,
+            joinDate: userData?.joinDate ? new Date(userData.joinDate) : undefined,
             isActive: userData.isActive !== false,
             id: userData.id,
           };
-          
+
           // Set the complete user data
           setUser(currentUser);
-          
+
           // Persist the auth state to prevent login flashes on page refresh
           localStorage.setItem('authState', JSON.stringify(currentUser));
-          
+
           // Mark that we've completed the initial auth
           isInitialAuth = false;
         } catch (error) {
@@ -305,17 +305,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const createUserProfile = async (userData: Partial<AuthUser>) => {
     if (!user) return;
-    
+
     try {
       const response = await apiRequest("POST", "/api/users", {
         ...userData,
         uid: user.uid,
       });
-      
+
       if (response.ok) {
         const updatedUser = await response.json();
         setUser((prevUser) => prevUser ? { ...prevUser, ...updatedUser } : null);
-        
+
         toast({
           title: "Profile updated",
           description: "Your profile has been successfully updated.",
@@ -324,7 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error creating user profile:", error);
-      
+
       toast({
         title: "Error",
         description: "There was an error updating your profile.",
@@ -335,14 +335,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUserProfile = async (userData: Partial<AuthUser>) => {
     if (!user || !user.id) return;
-    
+
     try {
       const response = await apiRequest("PATCH", `/api/users/${user.id}`, userData);
-      
+
       if (response.ok) {
         const updatedUser = await response.json();
         setUser((prevUser) => prevUser ? { ...prevUser, ...updatedUser } : null);
-        
+
         toast({
           title: "Profile updated",
           description: "Your profile has been successfully updated.",
@@ -351,7 +351,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error updating user profile:", error);
-      
+
       toast({
         title: "Error",
         description: "There was an error updating your profile.",
@@ -363,11 +363,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Department-based permission check
   const isDepartmentMember = (departments: Department[] | Department): boolean => {
     if (!user || !user.department) return false;
-    
+
     if (Array.isArray(departments)) {
       return departments.includes(user.department);
     }
-    
+
     return user.department === departments;
   };
 
@@ -375,18 +375,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasPermission = (permission: SystemPermission | SystemPermission[]): boolean => {
     if (!user) return false;
     if (user.role === "master_admin") return true; // Master admin has all permissions
-    
+
     console.log("=== PERMISSION CHECK ===");
     console.log("User permissions:", permissions);
     console.log("Required permission:", permission);
     console.log("Permissions length:", permissions.length);
-    
+
     if (Array.isArray(permission)) {
       const hasAny = permission.some(p => permissions.includes(p));
       console.log("Array check result:", hasAny);
       return hasAny;
     }
-    
+
     const hasSingle = permissions.includes(permission);
     console.log("Single check result:", hasSingle);
     return hasSingle;
@@ -394,41 +394,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasRole = (role: UserRole | UserRole[]): boolean => {
     if (!user) return false;
-    
+
     if (Array.isArray(role)) {
       return role.includes(user.role);
     }
-    
+
     return user.role === role;
   };
 
   const hasDesignation = (designation: Designation | Designation[]): boolean => {
     if (!user || !user.designation) return false;
-    
+
     if (Array.isArray(designation)) {
       return designation.includes(user.designation);
     }
-    
+
     return user.designation === designation;
   };
 
   const canAccessModule = (module: string): boolean => {
     if (!user) return false;
     if (user.role === "master_admin") return true;
-    
+
     const viewPermission = `${module}.view` as SystemPermission;
     const fullAccessPermission = `${module}.full_access` as SystemPermission;
-    
+
     return permissions.includes(viewPermission) || permissions.includes(fullAccessPermission);
   };
 
   const refreshPermissions = async (): Promise<void> => {
     if (!user?.uid) return;
-    
+
     try {
       // Calculate permissions based on department + designation (or default for new employees)
       const effectivePermissions = getEffectivePermissions(user.department, user.designation);
-      
+
       console.log("=== PERMISSION CALCULATION DEBUG ===");
       console.log("User:", user.uid);
       console.log("Department:", user.department);
@@ -436,9 +436,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("Calculated permissions:", effectivePermissions);
       console.log("Permission count:", effectivePermissions.length);
       console.log("=====================================");
-      
+
       setPermissions(effectivePermissions);
-      
+
       // Set approval capabilities based on designation level
       if (user.designation) {
         const designationLevels = {
@@ -451,7 +451,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "manager": 7,
           "director": 8
         };
-        
+
         const level = designationLevels[user.designation] || 1;
         setCanApprove(level >= 5); // Senior Executive and above can approve
         setMaxApprovalAmount(level >= 7 ? 1000000 : level >= 6 ? 500000 : level >= 5 ? 100000 : null);
@@ -460,7 +460,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCanApprove(false);
         setMaxApprovalAmount(null);
       }
-      
+
     } catch (error) {
       console.error("Error calculating permissions:", error);
       setPermissions([]);
@@ -477,7 +477,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log("User Designation:", user?.designation);
     console.log("All conditions met:", !!(user?.uid));
     console.log("=====================================");
-    
+
     if (user?.uid) {
       console.log("Calling refreshPermissions...");
       refreshPermissions();
@@ -514,10 +514,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuthContext() {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
     throw new Error("useAuthContext must be used within an AuthProvider");
   }
-  
+
   return context;
 }

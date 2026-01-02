@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { z } from "zod";
 import {
   insertAttendanceSchema,
-  insertOfficeLocationSchema,
   insertPermissionSchema,
   insertRoleSchema,
   insertUserRoleAssignmentSchema,
@@ -29,12 +28,11 @@ import {
   insertDepartmentSchema,
   insertDesignationSchema,
   insertPermissionGroupSchema,
-  insertProductSchema,
   insertQuotationSchema,
   insertInvoiceSchema,
   insertLeaveSchema
 } from "./storage";
-import { isWithinGeoFence, calculateDistance, performAutomaticLocationCalibration } from "./utils";
+import { isWithinGeoFence, calculateDistance } from "./utils";
 import { UnifiedAttendanceService } from "./services/unified-attendance-service";
 import { EnterprisePerformanceMonitor } from "./services/performance-monitor";
 import { auth } from "./firebase";
@@ -44,6 +42,12 @@ import { attendanceRateLimiter, generalRateLimiter, createRateLimitMiddleware } 
 import { DataCompletenessAnalyzer, SiteVisitDataMapper } from "./services/quotation-mapping-service";
 import { registerQuotationRoutes } from "./routes/quotations";
 import { isCheckoutOverdue } from "./utils/time-helpers";
+import otRoutes from "./routes/ot-routes";
+import { AutoCheckoutService } from "./services/auto-checkout-service";
+import { NotificationService } from "./services/notification-service";
+import { EnterpriseTimeService } from "./services/enterprise-time-service";
+import { insertNotificationSchema } from "@shared/schema";
+import { PayrollLockService } from "./services/payroll-lock-service";
 
 /**
  * Helper function to merge a date with a time string
@@ -184,6 +188,258 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(401).json({ message: "Unauthorized: Invalid token" });
     }
   };
+
+  // ============================================
+  // ATTENDANCE AUTO-CHECKOUT & NOTIFICATIONS (Phases 1-3)
+  // ============================================
+
+
+  // ============================================
+  // TEST ENDPOINT FOR PENDING REVIEW FIX
+  // ============================================
+  app.post("/api/test/create-incomplete-record", async (req, res) => {
+    try {
+      console.log('🧪 Creating test incomplete attendance record...');
+
+      // 1. Get a user (try master_admin first)
+      const admins = await storage.getUsersByRole('master_admin');
+      const user = admins[0]; // Use the first master admin
+
+      if (!user) {
+        return res.status(404).json({ message: "No master_admin found to attach record to" });
+      }
+
+      console.log(`👤 Using user: ${user.displayName} (${user.email})`);
+
+      // 2. Set date to Yesterday 9:00 AM
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(9, 0, 0, 0);
+
+      // 3. Remove any existing record for yesterday to avoid duplicates
+      // Note: We need to implement a delete or just ignore collision for now
+      // Let's just create it. If it fails due to duplicate, that's fine for testing manually
+      // but ideally we check. 
+      // check for existing
+      const existing = await storage.getAttendanceByUserAndDate(user.id, yesterday);
+      if (existing) {
+        console.log(`⚠️ Found existing record for yesterday (ID: ${existing.id}). attempting to delete/overwrite...`);
+        // We might not have delete exposed easily here without importing more.
+        // Let's just try to create. If storage allows duplicates for different timestamps, it might verify.
+        // But getAttendanceByUserAndDate usually checks by date string.
+        // Let's proceed.
+      }
+
+      // 4. Create Incomplete Record (No CheckOut Time)
+      const attendanceData = {
+        userId: user.id,
+        date: yesterday,
+        checkInTime: yesterday,
+        checkOutTime: undefined, // ❌ MISSING CHECKOUT
+
+        status: 'present',
+        attendanceType: 'office',
+        reason: 'Test Incomplete Record',
+        checkInLatitude: '12.9716',
+        checkInLongitude: '77.5946',
+        isLate: false,
+        lateMinutes: 0,
+        workingHours: 0,
+        breakHours: 0,
+        otStartTime: undefined,
+        otEndTime: undefined,
+        isWithinOfficeRadius: true,
+        remarks: 'Test record created via API for validation',
+
+        locationAccuracy: 10,
+        locationValidationType: 'manual',
+        locationConfidence: 1,
+        isManualOT: false,
+        otStatus: 'not_started',
+        autoCorrected: false // Important: Not auto-corrected yet
+      };
+
+      // @ts-ignore - bypassing some strict type checks for test data
+      const newRecord = await storage.createAttendance(attendanceData);
+
+      console.log('✅ Test record created successfully:', newRecord.id);
+
+      return res.json({
+        success: true,
+        message: "Test incomplete record created successfully for yesterday",
+        recordId: newRecord.id,
+        user: user.displayName,
+        date: yesterday.toISOString().split('T')[0]
+      });
+
+    } catch (error: any) {
+      console.error("❌ Error creating test record:", error);
+      res.status(500).json({ message: "Failed to create test record", error: error.message });
+    }
+  });
+
+  // CRON Endpoint for Auto-Checkout (Phase 1)
+  app.post("/api/cron/auto-checkout", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const cronSecret = process.env.CRON_SECRET;
+
+      if (!cronSecret) {
+        console.error("[CRON] CRON_SECRET environment variable is not set!");
+        return res.status(500).json({ success: false, message: "Server configuration error" });
+      }
+
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        console.warn(`[CRON] Unauthorized access attempt from IP: ${req.ip}`);
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      const { AutoCheckoutService } = await import("./services/auto-checkout-service");
+      await AutoCheckoutService.processAutoCheckouts();
+      res.json({ success: true, message: "Auto-checkout job processed successfully" });
+    } catch (error) {
+      console.error("[CRON] Error in auto-checkout route:", error);
+      res.status(500).json({ success: false, message: "Internal server error during auto-checkout" });
+    }
+  });
+
+  // Test endpoint for admins to manually trigger auto-checkout (development/testing)
+  app.post("/api/test/run-auto-checkout", verifyAuth, async (req, res) => {
+    console.log("[TEST] ========================================");
+    console.log("[TEST] Endpoint hit! Starting test auto-checkout...");
+    try {
+      // Check admin access
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      console.log("[TEST] User loaded:", user?.email, "role:", user?.role);
+
+      if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
+        console.log("[TEST] Access denied - not admin");
+        return res.status(403).json({ success: false, message: "Access denied - admin only" });
+      }
+
+      console.log("[TEST] Admin access confirmed. Importing AutoCheckoutService...");
+      const { AutoCheckoutService } = await import("./services/auto-checkout-service");
+      console.log("[TEST] AutoCheckoutService imported. Calling processAutoCheckouts()...");
+
+      await AutoCheckoutService.processAutoCheckouts();
+
+      console.log("[TEST] processAutoCheckouts() completed successfully");
+      res.json({ success: true, message: "Auto-checkout job processed successfully" });
+    } catch (error) {
+      console.error("[TEST] Error in manual auto-checkout:", error);
+      res.status(500).json({ success: false, message: "Internal server error during auto-checkout" });
+    }
+  });
+
+
+  // Other routes continue...
+
+  // Admin Review Routes (Phase 3)
+  app.get("/api/admin/attendance/pending-review", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      // Get user to check role
+      const currentUser = await storage.getUser(req.authenticatedUser.uid);
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'master_admin')) {
+        return res.status(403).json({ success: false, message: "Admin access required" });
+      }
+
+      const records = await storage.listAttendanceByReviewStatus('pending');
+
+      const enrichedRecords = await Promise.all(records.map(async (record) => {
+        const user = await storage.getUser(record.userId);
+        return {
+          ...record,
+          userName: user?.displayName || 'Unknown employee',
+          userDepartment: user?.department || null,
+          userEmail: user?.email || null
+        };
+      }));
+
+      res.json(enrichedRecords);
+    } catch (error) {
+      console.error("Error fetching pending reviews:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch pending reviews" });
+    }
+  });
+
+  app.post("/api/admin/attendance/:id/review", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser || (req.authenticatedUser.user.role !== 'admin' && req.authenticatedUser.user.role !== 'master_admin')) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      const { action, checkInTime, checkOutTime, notes } = req.body;
+      const adminId = req.authenticatedUser.uid;
+
+      const recordSnapshot = await storage.getAttendance(id);
+      if (!recordSnapshot) {
+        return res.status(404).json({ success: false, message: "Attendance record not found" });
+      }
+
+      // P1.1: Block reviews if payroll period is locked
+      if (await PayrollLockService.isPeriodLocked(recordSnapshot.date)) {
+        return res.status(403).json({
+          success: false,
+          message: "Cannot modify attendance for a locked payroll period. Unlock the period first."
+        });
+      }
+
+      const updateData: any = {
+        adminReviewStatus: action,
+        adminReviewedBy: adminId,
+        adminReviewedAt: new Date(),
+        adminReviewNotes: notes || ''
+      };
+
+      const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
+      const { NotificationService } = await import("./services/notification-service");
+
+      if (action === 'adjusted') {
+        if (!checkInTime || !checkOutTime) {
+          return res.status(400).json({ success: false, message: "Check-in and check-out times are required for adjustments" });
+        }
+
+        const finalIn = new Date(checkInTime);
+        const finalOut = new Date(checkOutTime);
+
+        updateData.originalCheckOutTime = recordSnapshot.checkOutTime;
+        updateData.checkInTime = finalIn;
+        updateData.checkOutTime = finalOut;
+
+        const metrics = await EnterpriseTimeService.calculateTimeMetrics(
+          recordSnapshot.userId,
+          recordSnapshot.userDepartment || 'general',
+          finalIn,
+          finalOut
+        );
+        updateData.workingHours = metrics.workingHours;
+      } else if (action === 'rejected') {
+        updateData.status = 'absent';
+      } else if (action === 'accepted') {
+        updateData.status = 'present';
+      }
+
+      await storage.updateAttendance(id, updateData);
+
+      await NotificationService.notifyAdjustmentMade(
+        recordSnapshot.userId,
+        recordSnapshot.date,
+        action,
+        notes
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error processing review:", error);
+      res.status(500).json({ success: false, message: "Failed to process review" });
+    }
+  });
+
 
   // Activity Logs with optimized performance
   app.get("/api/activity-logs", verifyAuth, async (req, res) => {
@@ -914,15 +1170,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If no office locations exist, create default office location
       if (officeLocations.length === 0) {
-        const defaultLocation = {
-          name: "Head Office - Prakash Greens Energy",
-          latitude: "9.966844592415782",
-          longitude: "78.1338405791111",
-          radius: 100
-        };
+        // NOTE: Office location mutation methods have been removed
+        // If you need to create office locations, do so via Firebase Console
+        console.warn('No office locations found. Please create via Firebase Console.');
 
-        await storage.createOfficeLocation(defaultLocation);
-        officeLocations = await storage.listOfficeLocations();
+        // const defaultLocation = {
+        //   name: "Head Office - Prakash Greens Energy",
+        //   latitude: "9.966844592415782",
+        //   longitude: "78.1338405791111",
+        //   radius: 100
+        // };
+        // await storage.createOfficeLocation(defaultLocation);
+        // officeLocations = await storage.listOfficeLocations();
       }
 
       res.json(officeLocations);
@@ -932,74 +1191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/office-locations/:id", verifyAuth, async (req, res) => {
-    try {
-      const officeLocation = await storage.getOfficeLocation(req.params.id);
-      if (!officeLocation) {
-        return res.status(404).json({ message: "Office location not found" });
-      }
-      res.json(officeLocation);
-    } catch (error) {
-      console.error("Error fetching office location:", error);
-      res.status(500).json({ message: "Failed to fetch office location" });
-    }
-  });
 
-  app.post("/api/office-locations", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || user.role !== "master_admin") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const locationData = insertOfficeLocationSchema.parse(req.body);
-      const officeLocation = await storage.createOfficeLocation(locationData);
-      res.status(201).json(officeLocation);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error("Error creating office location:", error);
-      res.status(500).json({ message: "Failed to create office location" });
-    }
-  });
-
-  app.patch("/api/office-locations/:id", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || user.role !== "master_admin") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const locationData = insertOfficeLocationSchema.partial().parse(req.body);
-      const updatedLocation = await storage.updateOfficeLocation(
-        req.params.id,
-        locationData,
-      );
-      if (!updatedLocation) {
-        return res.status(404).json({ message: "Office location not found" });
-      }
-      res.json(updatedLocation);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error("Error updating office location:", error);
-      res.status(500).json({ message: "Failed to update office location" });
-    }
-  });
-
-  app.delete("/api/office-locations/:id", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || user.role !== "master_admin") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      await storage.deleteOfficeLocation(req.params.id);
-      res.status(204).end();
-    } catch (error) {
-      console.error("Error deleting office location:", error);
-      res.status(500).json({ message: "Failed to delete office location" });
-    }
-  });
 
   // Attendance
   app.get("/api/attendance", verifyAuth, async (req, res) => {
@@ -1036,7 +1228,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ message: "Access denied" });
         }
         const attendance = await storage.listAttendanceByUser(userId as string);
-        return res.json(attendance);
+        // P2: Exclude pending reviews
+        const filtered = attendance.filter(r => r.adminReviewStatus !== 'pending');
+        return res.json(filtered);
       }
 
       // If specific date requested (all users for that date - admin only)
@@ -1050,13 +1244,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const attendance = await storage.listAttendanceByDate(
           new Date(date as string),
         );
-        return res.json(attendance);
+        // P2: Exclude pending reviews
+        const filtered = attendance.filter(r => r.adminReviewStatus !== 'pending');
+        return res.json(filtered);
       }
 
       // Default case: return current user's own attendance data
       // This allows employees to view their own attendance without specifying userId
       const attendance = await storage.listAttendanceByUser(requestingUser.uid);
-      return res.json(attendance);
+      // P2: Exclude pending reviews
+      const filtered = attendance.filter(r => r.adminReviewStatus !== 'pending');
+      return res.json(filtered);
     } catch (error) {
       console.error("Error fetching attendance:", error);
       res.status(500).json({ message: "Failed to fetch attendance" });
@@ -1464,6 +1662,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // CRITICAL: Auto-tag half-day status based on working hours (50% threshold)
+      // Only auto-tag during normal checkout, NOT during auto-checkout
+      let finalStatus = attendanceRecord.status; // Keep original status by default
+
+      if (workingHours < (standardWorkingHours * 0.5)) {
+        finalStatus = 'half_day' as any;
+        console.log(`CHECKOUT: Auto-tagging as half_day - worked ${workingHours.toFixed(2)}h < 50% of ${standardWorkingHours}h`);
+      }
+
       // Update attendance record with checkout details
       const updatedAttendance = await storage.updateAttendance(attendanceRecord.id, {
         checkOutTime: finalCheckOutTime,
@@ -1472,6 +1679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkOutImageUrl: imageUrl,
         workingHours: Math.round(workingHours * 100) / 100,
         overtimeHours: Math.round(overtimeHours * 100) / 100,
+        status: finalStatus, // Apply auto-tagged status
         otReason: hasOvertimeThreshold ? otReason : undefined,
         remarks: reason || (hasOvertimeThreshold ? `Overtime: ${otReason}` : undefined)
       });
@@ -1606,13 +1814,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get OT status for user
-  app.get("/api/attendance/ot-status", verifyAuth, async (req, res) => {
+  app.get("/api/ot/status", verifyAuth, async (req, res) => {
     try {
-      const userId = req.query.userId as string || req.authenticatedUser?.uid || "";
-
-      if (userId !== req.authenticatedUser?.uid || "") {
-        return res.status(403).json({ message: "Access denied" });
+      // Security: Derive user from auth token only, never from query params
+      if (!req.authenticatedUser) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required"
+        });
       }
+
+      const userId = req.authenticatedUser.uid;
 
       // Import ManualOTService
       const { ManualOTService } = await import('./services/manual-ot-service');
@@ -1622,7 +1834,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ManualOTService.isOTButtonAvailable(userId)
       ]);
 
+      // Return consistent response structure
       res.json({
+        success: true,
         ...otStatus,
         buttonAvailable: otButtonAvailability.available,
         buttonReason: otButtonAvailability.reason,
@@ -1630,79 +1844,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error getting OT status:", error);
-      res.status(500).json({ message: "Failed to get OT status" });
+      res.status(500).json({
+        success: false,
+        message: "Failed to get OT status"
+      });
     }
   });
 
   // Department Timing Management APIs
-
-  // Get all department timings
-  app.get("/api/departments/timings", verifyAuth, async (req, res) => {
-    try {
-      const { user } = req.authenticatedUser;
-
-      // Only master_admin can view all department timings
-      if (user.role !== "master_admin") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Generate department timings dynamically from schema (12-hour format)
-      const departmentTimingDefaults = {
-        operations: {
-          checkInTime: "9:00 AM", checkOutTime: "6:00 PM", workingHours: 9,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: true
-        },
-        admin: {
-          checkInTime: "9:30 AM", checkOutTime: "6:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: true, allowRemoteWork: true, allowFieldWork: false
-        },
-        hr: {
-          checkInTime: "9:30 AM", checkOutTime: "6:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: true, allowRemoteWork: true, allowFieldWork: false
-        },
-        marketing: {
-          checkInTime: "9:30 AM", checkOutTime: "6:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: true, allowFieldWork: true
-        },
-        sales: {
-          checkInTime: "9:00 AM", checkOutTime: "6:00 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: true, allowRemoteWork: true, allowFieldWork: true
-        },
-        technical: {
-          checkInTime: "8:30 AM", checkOutTime: "5:30 PM", workingHours: 8,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: true
-        },
-        housekeeping: {
-          checkInTime: "8:00 AM", checkOutTime: "4:00 PM", workingHours: 7,
-          overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-          allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: false
-        }
-      };
-
-      // Build department timings object from schema
-      const departmentTimings = Object.fromEntries(
-        departments.map(dept => [
-          dept,
-          departmentTimingDefaults[dept as keyof typeof departmentTimingDefaults] || {
-            checkInTime: "9:00 AM", checkOutTime: "6:00 PM", workingHours: 8,
-            overtimeThresholdMinutes: 30, lateThresholdMinutes: 15,
-            allowEarlyCheckOut: false, allowRemoteWork: false, allowFieldWork: false
-          }
-        ])
-      );
-
-      res.json(departmentTimings);
-    } catch (error: any) {
-      console.error("Error fetching department timings:", error);
-      res.status(500).json({ message: "Failed to fetch department timings" });
-    }
-  });
+  // REMOVED: Legacy route that returned hardcoded default values and ignored Firestore.
+  // The correct route is at line 6008+ which uses EnterpriseTimeService to read from database.
 
   // Get specific department timing
   app.get("/api/departments/:departmentId/timing", verifyAuth, async (req, res) => {
@@ -1715,13 +1866,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Get timing from database using storage layer
-      const timing = await storage.getDepartmentTiming(departmentId);
+      // Use EnterpriseTimeService which provides defaults when timing not configured
+      const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
+      const timing = await EnterpriseTimeService.getDepartmentTiming(departmentId);
 
-      if (!timing) {
-        return res.status(404).json({ message: "Department timing not found" });
-      }
-
+      // EnterpriseTimeService always returns a timing object (with defaults if not found)
       res.json(timing);
     } catch (error: any) {
       console.error("Error fetching department timing:", error);
@@ -1740,6 +1889,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
+      // CRITICAL: Normalize department name to lowercase for consistent storage
+      const normalizedDeptId = departmentId.toLowerCase();
+
       const {
         checkInTime,
         checkOutTime,
@@ -1751,16 +1903,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         flexibleCheckInEnd,
         breakDurationMinutes,
         weeklyOffDays,
-        allowRemoteWork,
-        allowFieldWork,
-        allowEarlyCheckOut
+        autoCheckoutGraceMinutes,
       } = req.body;
 
-      console.log('BACKEND: Policy values received:', {
-        allowRemoteWork,
-        allowFieldWork,
-        allowEarlyCheckOut
-      });
+      console.log('BACKEND: Policy values received: none (removed)');
 
       // Validate timing data
       if (!checkInTime || !checkOutTime || !workingHours) {
@@ -1768,33 +1914,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const timingData = {
+        department: normalizedDeptId, // Store normalized department name
         checkInTime,
         checkOutTime,
         workingHours: parseInt(workingHours),
         overtimeThresholdMinutes: parseInt(overtimeThresholdMinutes) || 30,
         lateThresholdMinutes: parseInt(lateThresholdMinutes) || 15,
+        autoCheckoutGraceMinutes: parseInt(autoCheckoutGraceMinutes) || 120,
         isFlexibleTiming: Boolean(isFlexibleTiming),
         ...(flexibleCheckInStart && { flexibleCheckInStart }),
         ...(flexibleCheckInEnd && { flexibleCheckInEnd }),
         breakDurationMinutes: parseInt(breakDurationMinutes) || 60,
         weeklyOffDays: weeklyOffDays || [0],
-        allowRemoteWork: allowRemoteWork !== undefined ? Boolean(allowRemoteWork) : true,
-        allowFieldWork: allowFieldWork !== undefined ? Boolean(allowFieldWork) : true,
-        allowEarlyCheckOut: allowEarlyCheckOut !== undefined ? Boolean(allowEarlyCheckOut) : false,
         updatedBy: user.uid
       };
 
       console.log('BACKEND: Saving timing data with policies:', timingData);
 
-      // Save to database using storage layer
-      const updatedTiming = await storage.updateDepartmentTiming(departmentId, timingData);
+      // Save to database using normalized department name
+      const updatedTiming = await storage.updateDepartmentTiming(normalizedDeptId, timingData);
 
       // Clear Enterprise Time Service cache for this department
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
-      EnterpriseTimeService.clearDepartmentCache(departmentId);
+      EnterpriseTimeService.clearDepartmentCache(normalizedDeptId);
 
       // Force clear all related cache to ensure fresh data
-      EnterpriseTimeService.invalidateTimingCache(departmentId);
+      EnterpriseTimeService.invalidateTimingCache(normalizedDeptId);
 
       // Log activity
       await storage.createActivityLog({
@@ -1849,7 +1994,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         const user = await storage.getUser(userId as string);
         if (user && userAttendance) {
-          attendanceRecords = userAttendance.map((record) => ({
+          // CRITICAL: Enrich with holidays to ensure holidays never show as absent
+          const { UnifiedAttendanceService } = await import('./services/unified-attendance-service');
+          const enrichedAttendance = await UnifiedAttendanceService.enrichAttendanceWithHolidays(
+            userId as string,
+            fromDate,
+            toDate,
+            userAttendance
+          );
+
+          attendanceRecords = enrichedAttendance.map((record) => ({
             ...record,
             userName: user.displayName,
             userDepartment: user.department,
@@ -1875,7 +2029,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json(attendanceRecords);
+      // P2: Exclude pending reviews to match payroll logic
+      const filteredRecords = attendanceRecords.filter(r => r.adminReviewStatus !== 'pending');
+
+      res.json(filteredRecords);
     } catch (error) {
       console.error("Error generating attendance report:", error);
       res.status(500).json({ message: "Failed to generate attendance report" });
@@ -1940,7 +2097,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(enrichedRecords);
+      // P2: Exclude pending reviews to match payroll logic
+      const filteredForPayroll = enrichedRecords.filter(r => r.adminReviewStatus !== 'pending');
+
+      res.json(filteredForPayroll);
     } catch (error) {
       console.error("Error generating attendance range report:", error);
       res
@@ -2012,7 +2172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       targetDate.setHours(0, 0, 0, 0);
 
       // Get attendance records for the date
-      const attendanceRecords = await storage.listAttendanceByDate(targetDate);
+      const allRecords = await storage.listAttendanceByDate(targetDate);
+      // P2: Exclude pending reviews from stats
+      const attendanceRecords = allRecords.filter(r => r.adminReviewStatus !== 'pending');
 
       // Get all users
       const allUsers = await storage.listUsers();
@@ -2156,6 +2318,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Attendance record not found" });
       }
 
+      // Security Check: Verify payroll period is not locked
+      if (await PayrollLockService.isPeriodLocked(existingRecord.date)) {
+        return res.status(403).json({ message: "Cannot modify attendance for a locked payroll period" });
+      }
+
       // **CRITICAL: Enforce date immutability - date field cannot be modified**
       delete updateData.date;
 
@@ -2246,6 +2413,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const attendanceId of attendanceIds) {
         try {
+          // Security Check: Verify payroll period is not locked
+          const record = await storage.getAttendance(attendanceId);
+          if (record && await PayrollLockService.isPeriodLocked(record.date)) {
+            errorCount++;
+            results.push({
+              id: attendanceId,
+              status: 'error',
+              error: 'Cannot modify attendance for a locked payroll period'
+            });
+            continue;
+          }
+
           let result = null;
 
           switch (action) {
@@ -2674,174 +2853,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-
-  // Products with pagination and performance optimizations
-  app.get("/api/products", verifyAuth, async (req, res) => {
-    try {
-      if (!req.authenticatedUser) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // Check if user has permission to view products
-      const hasPermission = req.authenticatedUser.permissions.includes("products.view") ||
-        req.authenticatedUser.permissions.includes("products.create") ||
-        req.authenticatedUser.user.role === "master_admin";
-
-      if (!hasPermission) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Parse pagination parameters
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const search = (req.query.search as string) || '';
-      const sortBy = (req.query.sortBy as string) || 'name';
-      const sortOrder = (req.query.sortOrder as string) || 'asc';
-
-      // Get products with pagination
-      const products = await storage.listProducts();
-
-      // Apply search filter if provided
-      let filteredProducts = products;
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredProducts = products.filter((product: any) =>
-          product.name?.toLowerCase().includes(searchLower) ||
-          product.type?.toLowerCase().includes(searchLower) ||
-          product.make?.toLowerCase().includes(searchLower)
-        );
-      }
-
-      // Sort products
-      filteredProducts.sort((a: any, b: any) => {
-        const aValue = a[sortBy] || '';
-        const bValue = b[sortBy] || '';
-
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortOrder === 'asc'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        } else {
-          return sortOrder === 'asc'
-            ? (aValue > bValue ? 1 : -1)
-            : (bValue > aValue ? 1 : -1);
-        }
-      });
-
-      // Calculate pagination values
-      const totalItems = filteredProducts.length;
-      const totalPages = Math.ceil(totalItems / limit);
-      const startIndex = (page - 1) * limit;
-      const endIndex = Math.min(startIndex + limit, totalItems);
-
-      // Get paginated subset
-      const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-
-      // Return with pagination metadata
-      res.json({
-        data: paginatedProducts,
-        pagination: {
-          page,
-          limit,
-          totalItems,
-          totalPages,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1
-        }
-      });
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      res.status(500).json({ message: "Failed to fetch products" });
-    }
-  });
-
-  app.get("/api/products/:id", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !["master_admin", "admin", "technical_team"].includes(
-          user.role || user.department || "",
-        )
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const product = await storage.getProduct(req.params.id);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      res.json(product);
-    } catch (error) {
-      console.error("Error fetching product:", error);
-      res.status(500).json({ message: "Failed to fetch product" });
-    }
-  });
-
-  app.post("/api/products", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !["master_admin", "admin", "technical_team"].includes(
-          user.role || user.department || "",
-        )
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const productData = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(productData);
-      res.status(201).json(product);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error("Error creating product:", error);
-      res.status(500).json({ message: "Failed to create product" });
-    }
-  });
-
-  app.patch("/api/products/:id", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (
-        !user ||
-        !["master_admin", "admin", "technical_team"].includes(
-          user.role || user.department || "",
-        )
-      ) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const productData = insertProductSchema.partial().parse(req.body);
-      const updatedProduct = await storage.updateProduct(
-        req.params.id,
-        productData,
-      );
-      if (!updatedProduct) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      res.json(updatedProduct);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
-      }
-      console.error("Error updating product:", error);
-      res.status(500).json({ message: "Failed to update product" });
-    }
-  });
-
-  app.delete("/api/products/:id", verifyAuth, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || !["master_admin", "admin"].includes(user.role || "")) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      await storage.deleteProduct(req.params.id);
-      res.status(204).end();
-    } catch (error) {
-      console.error("Error deleting product:", error);
-      res.status(500).json({ message: "Failed to delete product" });
-    }
-  });
 
   // Quotations with pagination and performance optimizations
   app.get("/api/quotations", verifyAuth, async (req, res) => {
@@ -4226,7 +4237,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ) {
         return res.status(403).json({ message: "Access denied" });
       }
+
+      // Security Check: Verify payroll period is not locked (for original date)
+      if (await PayrollLockService.isPeriodLocked(leave.startDate)) {
+        return res.status(403).json({ message: "Cannot modify leave for a locked payroll period" });
+      }
+
       const leaveData = insertLeaveSchema.partial().parse(req.body);
+
+      // Security Check: Verify payroll period is not locked (for new date if changed)
+      if (leaveData.startDate && await PayrollLockService.isPeriodLocked(leaveData.startDate)) {
+        return res.status(403).json({ message: "Cannot move leave to a locked payroll period" });
+      }
       const updatedLeave = await storage.updateLeave(req.params.id, leaveData);
       if (!updatedLeave) {
         return res.status(404).json({ message: "Leave record not found" });
@@ -4267,6 +4289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           casualLeaveHistory: [],
           permissionHistory: [],
           lastResetDate: now,
+          createdAt: now,
+          updatedAt: now,
         });
         const newBalance = await storage.getCurrentLeaveBalance(user.id);
         return res.json(newBalance);
@@ -4664,10 +4688,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { year } = req.query;
       const holidays = await storage.listFixedHolidays(year ? parseInt(year as string) : undefined);
-      res.json(holidays);
+      res.json({ success: true, holidays });
     } catch (error) {
       console.error("Error fetching holidays:", error);
-      res.status(500).json({ message: "Failed to fetch holidays" });
+      res.status(500).json({ success: false, message: "Failed to fetch holidays" });
     }
   });
 
@@ -4678,22 +4702,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied - System settings permission required" });
       }
 
-      // Validate request body using schema
-      const validatedBody = insertFixedHolidaySchema.omit({ createdBy: true, createdAt: true }).parse(req.body);
+      console.log("[Holiday Creation] Request body:", JSON.stringify(req.body, null, 2));
+
+      // Extract and validate required fields
+      const { date, name, type, applicableDepartments, notes, otRateMultiplier, allowOT } = req.body;
+
+      if (!date || !name) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: date and name are required"
+        });
+      }
+
+      if (!otRateMultiplier || otRateMultiplier < 1 || otRateMultiplier > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "OT Rate Multiplier is required and must be between 1 and 10"
+        });
+      }
+
+      const holidayDate = new Date(date);
+      const year = holidayDate.getFullYear();
 
       const holidayData = {
-        ...validatedBody,
-        createdBy: user.id,
+        name,
+        date: holidayDate,
+        year,
+        type: type || "national",
+        isPaid: true,
+        isOptional: false,
+        otRateMultiplier: parseFloat(otRateMultiplier),
+        allowOT: allowOT === true, // Explicit boolean, defaults to false if not provided
+        applicableDepartments: applicableDepartments || null,
+        description: notes || null,
+        createdBy: user.uid,
+        createdAt: new Date(),
       };
 
+      console.log("[Holiday Creation] Transformed data:", JSON.stringify(holidayData, null, 2));
+
       const holiday = await storage.createFixedHoliday(holidayData);
-      res.status(201).json(holiday);
+      res.status(201).json({ success: true, holiday, message: "Holiday created successfully" });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
+        console.error("[Holiday Creation] Validation error:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ success: false, errors: error.errors, message: "Validation failed" });
       }
-      console.error("Error creating holiday:", error);
-      res.status(500).json({ message: "Failed to create holiday" });
+      console.error("[Holiday Creation] Error:", error);
+      res.status(500).json({ success: false, message: "Failed to create holiday" });
     }
   });
 
@@ -4701,20 +4757,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
-        return res.status(403).json({ message: "Access denied - System settings permission required" });
+        return res.status(403).json({ success: false, message: "Access denied - System settings permission required" });
       }
 
-      // Validate request body using partial schema
-      const validatedBody = insertFixedHolidaySchema.partial().parse(req.body);
+      console.log("[Holiday Update] Request body:", JSON.stringify(req.body, null, 2));
 
-      const holiday = await storage.updateFixedHoliday(req.params.id, validatedBody);
-      res.json(holiday);
+      // Extract and validate required fields
+      const { date, name, type, applicableDepartments, notes, otRateMultiplier, allowOT } = req.body;
+
+      if (!date || !name) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: date and name are required"
+        });
+      }
+
+      if (!otRateMultiplier || otRateMultiplier < 1 || otRateMultiplier > 10) {
+        return res.status(400).json({
+          success: false,
+          message: "OT Rate Multiplier is required and must be between 1 and 10"
+        });
+      }
+
+      const holidayDate = new Date(date);
+      const year = holidayDate.getFullYear();
+
+      const updateData = {
+        name,
+        date: holidayDate,
+        year,
+        type: type || "national",
+        isPaid: true,
+        isOptional: false,
+        otRateMultiplier: parseFloat(otRateMultiplier),
+        allowOT: allowOT === true,
+        applicableDepartments: applicableDepartments || null,
+        description: notes || null,
+      };
+
+      console.log("[Holiday Update] Transformed data:", JSON.stringify(updateData, null, 2));
+
+      const holiday = await storage.updateFixedHoliday(req.params.id, updateData);
+      res.json({ success: true, holiday, message: "Holiday updated successfully" });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ errors: error.errors });
+        console.error("[Holiday Update] Validation error:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ success: false, errors: error.errors, message: "Validation failed" });
       }
-      console.error("Error updating holiday:", error);
-      res.status(500).json({ message: "Failed to update holiday" });
+      console.error("[Holiday Update] Error:", error);
+      res.status(500).json({ success: false, message: "Failed to update holiday" });
     }
   });
 
@@ -4722,14 +4813,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "system.settings"))) {
-        return res.status(403).json({ message: "Access denied - System settings permission required" });
+        return res.status(403).json({ success: false, message: "Access denied - System settings permission required" });
       }
 
       await storage.deleteFixedHoliday(req.params.id);
-      res.json({ message: "Holiday deleted successfully" });
+      res.json({ success: true, message: "Holiday deleted successfully" });
     } catch (error) {
       console.error("Error deleting holiday:", error);
-      res.status(500).json({ message: "Failed to delete holiday" });
+      res.status(500).json({ success: false, message: "Failed to delete holiday" });
+    }
+  });
+
+  // GET /api/attendance/holidays - Get holidays for attendance system
+  app.get("/api/attendance/holidays", verifyAuth, async (req, res) => {
+    try {
+      const { start, end, department } = req.query;
+
+      if (!start || !end) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required parameters: start and end dates required"
+        });
+      }
+
+      const startDate = new Date(start as string);
+      const endDate = new Date(end as string);
+
+      // Get user's department if not specified
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      const dept = department as string || user?.department || undefined;
+
+      // Use UnifiedAttendanceService to get holidays
+      const { UnifiedAttendanceService } = await import('./services/unified-attendance-service');
+      const holidays = await UnifiedAttendanceService.getHolidaysInRange(
+        startDate,
+        endDate,
+        dept
+      );
+
+      res.json({ success: true, holidays });
+    } catch (error) {
+      console.error("Error fetching holidays for attendance:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch holidays"
+      });
     }
   });
 
@@ -5205,6 +5333,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { month, year, userIds } = req.body;
 
+      // Security Check: Verify payroll period is not locked
+      if (await PayrollLockService.isPeriodLocked(new Date(year, month - 1, 1))) {
+        return res.status(403).json({ message: "Cannot process payroll for a locked period" });
+      }
+
       // Process payroll for all users or specific users
       const usersToProcess = userIds || (await storage.listUsers()).map(u => u.id);
       const processedPayrolls = [];
@@ -5339,9 +5472,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pfRate: 12,
         esiRate: 1.75,
         tdsRate: 10,
-        overtimeMultiplier: 1.5,
+        overtimeMultiplier: 1.0,
         standardWorkingHours: 8,
-        standardWorkingDays: 22,
+        standardWorkingDays: 26,
         leaveDeductionRate: 1,
         pfApplicableFromSalary: 15000,
         esiApplicableFromSalary: 21000,
@@ -5368,7 +5501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date();
       const todayString = today.toISOString().split('T')[0];
 
-      const attendance = await storage.listAttendance({ date: todayString });
+      const attendance = await storage.listAttendance({ startDate: todayString, endDate: todayString });
 
       // Filter for active/live records (checked in but not checked out)
       const liveAttendance = attendance.filter(record =>
@@ -5437,8 +5570,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Smart incomplete records endpoint - department timing aware
-  app.get("/api/attendance/incomplete", verifyAuth, requireAdmin, async (req, res) => {
+  app.get("/api/attendance/incomplete", verifyAuth, async (req, res) => {
     try {
+      // Check admin access
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       console.log('INCOMPLETE DETECTION: Fetching records with department timing awareness');
 
       // Get ALL attendance records without checkout
@@ -5472,12 +5611,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
 
-        // Check if checkout is overdue (30 min grace period after dept checkout time)
-        const isOverdue = isCheckoutOverdue(
-          new Date(record.date),
+        const isOverdue = record.checkInTime ? isCheckoutOverdue(
+          new Date(record.checkInTime),
           timing.checkOutTime,
           30
-        );
+        ) : false;
 
         if (isOverdue) {
           trulyIncomplete.push(record);
@@ -5607,7 +5745,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isLate: false,
         checkInTime: new Date(),
         date: new Date(),
-        location: `${checkInData.latitude},${checkInData.longitude}`,
         checkInLatitude: checkInData.latitude,
         checkInLongitude: checkInData.longitude,
         checkInImageUrl: checkInData.imageUrl
@@ -5646,7 +5783,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Department timing management
+  // Department timing management (legacy route - kept for backward compatibility)
+  // NOTE: This route duplicates the one at line ~1917, Express will match the first one
   app.get("/api/departments/:departmentId/timing", verifyAuth, async (req, res) => {
     try {
       if (!req.authenticatedUser) {
@@ -5661,7 +5799,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const timing = await storage.getDepartmentTiming(req.params.departmentId);
+      // Use EnterpriseTimeService for consistent defaults
+      const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
+      const timing = await EnterpriseTimeService.getDepartmentTiming(req.params.departmentId);
       res.json(timing);
     } catch (error) {
       console.error("Error fetching department timing:", error);
@@ -5669,52 +5809,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/departments/:departmentId/timing", verifyAuth, async (req, res) => {
-    try {
-      if (!req.authenticatedUser) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // Check permission - only master admin can set timing
-      if (req.authenticatedUser.user.role !== "master_admin") {
-        return res.status(403).json({ message: "Access denied - Master Admin only" });
-      }
-
-      const timingData = {
-        departmentId: req.params.departmentId,
-        department: req.body.department,
-        workingHours: req.body.workingHours || 8,
-        checkInTime: req.body.checkInTime || "9:00 AM",
-        checkOutTime: req.body.checkOutTime || "6:00 PM",
-        lateThresholdMinutes: req.body.lateThresholdMinutes || 15,
-        overtimeThresholdMinutes: req.body.overtimeThresholdMinutes || 30,
-        isFlexibleTiming: req.body.isFlexibleTiming || false,
-        flexibleCheckInStart: req.body.flexibleCheckInStart,
-        flexibleCheckInEnd: req.body.flexibleCheckInEnd,
-        breakDurationMinutes: req.body.breakDurationMinutes || 60,
-        weeklyOffDays: req.body.weeklyOffDays || [0], // Sunday
-        createdBy: req.authenticatedUser.user.uid
-      };
-
-      const timing = await storage.createDepartmentTiming(timingData);
-
-      // Create audit log
-      await storage.createAuditLog({
-        userId: req.authenticatedUser.user.uid,
-        action: "department_timing_created",
-        entityType: "department_timing",
-        entityId: timing.id,
-        changes: timingData,
-        department: req.authenticatedUser.user.department,
-        designation: req.authenticatedUser.user.designation
-      });
-
-      res.json({ message: "Department timing created successfully", timing });
-    } catch (error) {
-      console.error("Error creating department timing:", error);
-      res.status(500).json({ message: "Failed to create department timing" });
-    }
-  });
+  // REMOVED: Legacy duplicate route - was shadowing the correct route at line 6113
+  // This route used storage.createDepartmentTiming instead of EnterpriseTimeService.updateDepartmentTimings
+  // and read department from req.body instead of URL params, causing data loss
+  // The correct implementation is at /api/departments/:department/timing (line 6113+)
 
   // Bulk attendance actions
   app.post("/api/attendance/bulk-action", verifyAuth, async (req, res) => {
@@ -5851,6 +5949,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all department timings with cache refresh option
   app.get("/api/departments/timings", verifyAuth, async (req, res) => {
     try {
+      // CRITICAL: Disable HTTP caching to ensure fresh data
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       const { user } = req.authenticatedUser;
       const { refresh } = req.query;
 
@@ -5859,25 +5962,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      console.log('BACKEND: Fetching all department timings');
-
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
 
       // Clear cache if refresh requested
       if (refresh === 'true') {
-        console.log('BACKEND: Refreshing all department timing cache');
         EnterpriseTimeService.invalidateTimingCache();
       }
 
       const timings = await EnterpriseTimeService.getAllDepartmentTimings();
 
-      // Convert to object format for frontend compatibility
+      // CRITICAL FIX: Use normalized lowercase department names as keys
+      // Frontend lookup uses lowercase keys, so we must ensure consistency
       const timingsObject = timings.reduce((acc, timing) => {
-        acc[timing.department] = timing;
+        const normalizedKey = timing.department.toLowerCase();
+        acc[normalizedKey] = timing;
         return acc;
       }, {} as Record<string, any>);
-
-      console.log('BACKEND: Retrieved all department timings:', Object.keys(timingsObject));
 
       res.json(timingsObject);
     } catch (error) {
@@ -5925,13 +6025,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`BACKEND: Updating timing for department ${department}`);
       console.log('BACKEND: Full timing data received:', req.body);
-
-      // Debug policy values specifically
-      console.log('BACKEND: Policy values extracted:', {
-        allowRemoteWork: req.body.allowRemoteWork,
-        allowFieldWork: req.body.allowFieldWork,
-        allowEarlyCheckOut: req.body.allowEarlyCheckOut
-      });
 
       const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
 
@@ -6284,6 +6377,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`PAYROLL_BULK: Processing all users: ${targetUserIds.length}`);
       }
 
+      // P1.3: Check for pending review records in this period
+      const pendingRecords = await storage.listAttendanceByReviewStatus('pending');
+      const periodPending = pendingRecords.filter(r => {
+        const recordDate = new Date(r.date);
+        return recordDate.getMonth() + 1 === month && recordDate.getFullYear() === year;
+      });
+
+      if (periodPending.length > 0 && !req.body.forceProceed) {
+        console.log(`PAYROLL_BULK: Blocked due to ${periodPending.length} pending reviews`);
+        return res.status(409).json({
+          success: false,
+          message: `${periodPending.length} attendance record(s) are pending admin review for this period. Review them first or set forceProceed to continue.`,
+          pendingCount: periodPending.length,
+          pendingRecords: periodPending.map(r => ({
+            id: r.id,
+            userId: r.userId,
+            date: r.date,
+            userName: (r as any).userName || 'Unknown'
+          })),
+          requiresConfirmation: true
+        });
+      }
+
+      // P2.1: Restrict forceProceed to Master Admin only
+      if (req.body.forceProceed) {
+        if (user.role !== 'master_admin') {
+          console.log(`PAYROLL_BULK: forceProceed blocked for non-master admin: ${user.displayName}`);
+          return res.status(403).json({
+            success: false,
+            message: "Only Master Admin can use forceProceed to bypass pending review checks."
+          });
+        }
+        console.log(`[PAYROLL AUDIT] forceProceed used by ${user.displayName} (${user.id}) for ${month}/${year} - ${periodPending.length} pending days excluded`);
+      }
+
       // Initialize PayrollCalculationService
       const { PayrollCalculationService } = await import('./services/payroll-calculation-service');
       const payrollCalcService = new PayrollCalculationService(storage);
@@ -6337,13 +6465,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           console.log(`PAYROLL_BULK: ${employee.displayName} - ${monthAttendance.length} attendance records`);
 
+          // CRITICAL: Enrich attendance with holidays and weekly-offs before calculation
+          // This ensures employees get paid for Sundays and Holidays
+          const { UnifiedAttendanceService } = await import('./services/unified-attendance-service');
+          const startDate = new Date(year, month - 1, 1);
+          const endDate = new Date(year, month, 0);
+
+          const enrichedAttendance = await UnifiedAttendanceService.enrichAttendanceComprehensively(
+            userId,
+            startDate,
+            endDate,
+            monthAttendance
+          );
+
+          console.log(`PAYROLL_BULK: ${employee.displayName} - Enriched to ${enrichedAttendance.length} days (added ${enrichedAttendance.length - monthAttendance.length} statutory days)`);
+
           // Use PayrollCalculationService for comprehensive calculation
           const calculation = await payrollCalcService.calculateComprehensivePayroll(
             userId,
             month,
             year,
-            monthAttendance,
-            salaryStructure
+            enrichedAttendance,
+            salaryStructure,
+            employee.department ?? undefined
           );
 
           // Create payroll record with all calculated values
@@ -6380,7 +6524,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             netSalary: calculation.netSalary,
             status: 'processed',
             processedBy: user.uid,
-            processedAt: new Date()
+            processedAt: new Date(),
+            // P2.1: Audit fields for compliance
+            generatedWithForceProceed: req.body.forceProceed || false,
+            pendingReviewDaysExcluded: req.body.forceProceed ? periodPending.filter(r => r.userId === userId).length : 0,
+            payrollNotes: req.body.forceProceed && periodPending.some(r => r.userId === userId)
+              ? `Generated with forceProceed flag. ${periodPending.filter(r => r.userId === userId).length} day(s) pending review were excluded from salary calculation.`
+              : null
           };
 
           const newPayroll = await storage.createEnhancedPayroll(payrollData);
@@ -6442,6 +6592,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const updatedSettings = await storage.updateEnhancedPayrollSettings(settingsData);
+
+      // AUDIT LOG: Critical for Forensic Consistency
+      await storage.createAuditLog({
+        userId: user.uid,
+        action: "payroll_settings_updated",
+        entityType: "payroll_settings",
+        entityId: updatedSettings.id || "global",
+        changes: req.body, // Log the changes requested
+        department: user.department,
+        designation: user.designation
+      });
+
       res.json(updatedSettings);
     } catch (error) {
       console.error("Error updating payroll settings:", error);
@@ -7371,32 +7533,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update follow-up (checkout)
-  app.patch("/api/follow-ups/:id/checkout", (req, res, next) => {
-    console.log("=== RAW FOLLOW-UP CHECKOUT REQUEST ===");
-    console.log("Method:", req.method);
-    console.log("URL:", req.url);
-    console.log("Follow-up ID from params:", req.params.id);
-    console.log("Raw body keys:", Object.keys(req.body));
-    console.log("Authorization header present:", !!req.headers.authorization);
-    console.log("=====================================");
-    next();
-  }, verifyAuth, async (req, res) => {
+  app.patch("/api/follow-ups/:id/checkout", verifyAuth, async (req, res) => {
     try {
-      console.log("=== FOLLOW-UP CHECKOUT REQUEST START ===");
-      console.log("Follow-up ID:", req.params.id);
-      console.log("User UID:", req.authenticatedUser?.uid || "");
-      console.log("Request body:", JSON.stringify(req.body, null, 2));
-      console.log("Request body keys:", Object.keys(req.body));
-      console.log("==========================================");
-
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       const hasPermission = user ? await checkSiteVisitPermission(user, 'edit') : false;
 
       if (!user || !hasPermission) {
-        console.log("=== PERMISSION DENIED ===");
-        console.log("User exists:", !!user);
-        console.log("Has permission:", hasPermission);
-        console.log("=========================");
         return res.status(403).json({
           message: "Access denied. Site Visit access is limited to Technical, Marketing, and Admin departments."
         });
@@ -7406,17 +7548,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followUp = await followUpService.getFollowUpById(req.params.id);
 
       if (!followUp) {
-        console.log("=== FOLLOW-UP NOT FOUND ===");
-        console.log("Follow-up ID:", req.params.id);
-        console.log("=============================");
         return res.status(404).json({ message: "Follow-up visit not found" });
       }
-
-      console.log("=== FOLLOW-UP FOUND ===");
-      console.log("Follow-up userId:", followUp.userId);
-      console.log("Request user UID:", user.uid);
-      console.log("User role:", user.role);
-      console.log("=======================");
 
       // Check if user can checkout this follow-up
       const canCheckout = followUp.userId === user.uid ||
@@ -7424,46 +7557,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user.role === 'master_admin';
 
       if (!canCheckout) {
-        console.log("=== CHECKOUT ACCESS DENIED ===");
-        console.log("User can checkout:", canCheckout);
-        console.log("Follow-up userId:", followUp.userId);
-        console.log("User UID:", user.uid);
-        console.log("===============================");
         return res.status(403).json({ message: "Access denied. You can only checkout your own follow-ups." });
       }
 
       // Validate required fields
       if (!req.body.siteOutLocation) {
-        console.log("=== VALIDATION ERROR: MISSING LOCATION ===");
         return res.status(400).json({
           message: "Missing required field: siteOutLocation",
           error: "MISSING_LOCATION"
         });
       }
 
-      // Validate visit outcome fields if provided
-      if (req.body.visitOutcome) {
-        const allowedOutcomes = ['completed', 'on_process', 'cancelled'];
-        if (!allowedOutcomes.includes(req.body.visitOutcome)) {
-          return res.status(400).json({
-            message: "Invalid visit outcome. Must be one of: completed, on_process, cancelled",
-            error: "INVALID_OUTCOME"
-          });
-        }
-
-        // Validate scheduled follow-up date for on_process outcome
-        if (req.body.visitOutcome === 'on_process' && req.body.scheduledFollowUpDate) {
-          const followUpDate = new Date(req.body.scheduledFollowUpDate);
-          if (followUpDate <= new Date()) {
-            return res.status(400).json({
-              message: "Scheduled follow-up date must be in the future",
-              error: "INVALID_FOLLOWUP_DATE"
-            });
-          }
-        }
-      }
-
-      // Prepare checkout data - be more flexible with missing fields
       const checkoutData = {
         siteOutTime: new Date(),
         siteOutLocation: req.body.siteOutLocation,
@@ -7471,32 +7575,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         siteOutPhotos: req.body.siteOutPhotos || [],
         status: 'completed' as const,
         notes: req.body.notes || followUp.notes || '',
-
-        // Handle visit outcome fields for follow-ups
         visitOutcome: req.body.visitOutcome || null,
         outcomeNotes: req.body.outcomeNotes || null,
         scheduledFollowUpDate: req.body.scheduledFollowUpDate ? new Date(req.body.scheduledFollowUpDate) : null,
-        // Security: Set these server-side, don't trust client input
         outcomeSelectedAt: req.body.visitOutcome ? new Date() : null,
         outcomeSelectedBy: req.body.visitOutcome ? user.uid : null,
-
         updatedAt: new Date()
       };
 
-      console.log("=== FOLLOW-UP CHECKOUT DEBUG ===");
-      console.log("Follow-up ID:", req.params.id);
-      console.log("Request body keys:", Object.keys(req.body));
-      console.log("siteOutLocation:", req.body.siteOutLocation);
-      console.log("siteOutPhotoUrl:", req.body.siteOutPhotoUrl);
-      console.log("siteOutPhotos received:", req.body.siteOutPhotos);
-      console.log("siteOutPhotos type:", typeof req.body.siteOutPhotos);
-      console.log("siteOutPhotos length:", Array.isArray(req.body.siteOutPhotos) ? req.body.siteOutPhotos.length : 'not array');
-      console.log("Checkout data:", JSON.stringify(checkoutData, null, 2));
-      console.log("================================");
-
       const updatedFollowUp = await followUpService.updateFollowUp(req.params.id, checkoutData);
 
-      // Log follow-up outcome activity using server-side normalized data
+      // Log activity
       try {
         if (updatedFollowUp.visitOutcome) {
           const outcomeLabel = {
@@ -7505,23 +7594,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             cancelled: 'Cancelled'
           }[updatedFollowUp.visitOutcome] || updatedFollowUp.visitOutcome;
 
-          let activityType: 'follow_up_completed' | 'follow_up_scheduled' = 'follow_up_completed';
-          let description = `Follow-up visit ${outcomeLabel.toLowerCase()} for ${followUp.customer.name}`;
-
-          if (updatedFollowUp.visitOutcome === 'on_process' && updatedFollowUp.scheduledFollowUpDate) {
-            activityType = 'follow_up_scheduled';
-            const followUpDate = updatedFollowUp.scheduledFollowUpDate.toLocaleDateString();
-            description = `Follow-up visit rescheduled for ${followUp.customer.name} on ${followUpDate}`;
-          }
-
-          if (updatedFollowUp.outcomeNotes) {
-            description += `. Notes: ${updatedFollowUp.outcomeNotes}`;
-          }
-
           await storage.createActivityLog({
-            type: activityType,
+            type: updatedFollowUp.visitOutcome === 'on_process' ? 'follow_up_scheduled' : 'follow_up_completed',
             title: `Follow-up ${outcomeLabel}`,
-            description,
+            description: `Follow-up visit ${outcomeLabel.toLowerCase()} for ${followUp.customer.name}`,
             entityId: req.params.id,
             entityType: 'follow_up',
             userId: user.uid
@@ -7529,37 +7605,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (logError) {
         console.error("Failed to create activity log:", logError);
-        // Don't fail the checkout if logging fails
       }
-
-      console.log("=== FOLLOW-UP CHECKOUT COMPLETED ===");
-      console.log("Follow-up ID:", req.params.id);
-      console.log("User:", user.uid, user.displayName);
-      console.log("Customer:", followUp.customer.name);
-      console.log("====================================");
 
       res.json({
         data: updatedFollowUp,
         message: "Follow-up checkout completed successfully"
       });
     } catch (error) {
-      console.error("=== FOLLOW-UP CHECKOUT ERROR ===");
-      console.error("Follow-up ID:", req.params.id);
-      console.error("Error details:", error);
-      console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
-      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-      console.error("================================");
-
-      // Return more specific error information
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      res.status(500).json({
-        message: "Failed to checkout follow-up visit",
-        error: errorMessage,
-        debugInfo: {
-          followUpId: req.params.id,
-          timestamp: new Date().toISOString()
-        }
-      });
+      console.error("Error processing follow-up checkout:", error);
+      res.status(500).json({ message: "Failed to checkout follow-up visit", error: (error as Error).message });
     }
   });
 
@@ -7690,9 +7744,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ================================================================
+  // AUTO-CHECKOUT SYSTEM ROUTES (Phases 1-3)
+  // ================================================================
+
+  // Phase 1: CRON Job Endpoint for Auto-Checkout
+  app.post("/api/cron/auto-checkout", async (req, res) => {
+    try {
+      // Security: Verify CRON secret
+      const cronSecret = process.env.CRON_SECRET;
+      const authHeader = req.headers.authorization;
+
+      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+        console.warn("[AUTO-CHECKOUT] Unauthorized CRON attempt");
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      console.log("[AUTO-CHECKOUT] CRON job triggered");
+
+      // Import and execute auto-checkout service
+      const { AutoCheckoutService } = await import("./services/auto-checkout-service");
+      await AutoCheckoutService.processAutoCheckouts();
+
+      res.json({
+        success: true,
+        message: "Auto-checkout job completed successfully"
+      });
+    } catch (error: any) {
+      console.error("[AUTO-CHECKOUT] CRON job error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Auto-checkout job failed",
+        error: error.message
+      });
+    }
+  });
+
+  // Phase 2: Notification Endpoints
+  app.get("/api/notifications", verifyAuth, async (req, res) => {
+    try {
+      const userId = req.authenticatedUser?.uid;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      const notifications = await storage.getNotifications(userId, {
+        status: 'unread',
+        limit: 50
+      });
+
+      res.json({
+        success: true,
+        notifications
+      });
+    } catch (error: any) {
+      console.error("[NOTIFICATIONS] Error fetching notifications:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch notifications",
+        error: error.message
+      });
+    }
+  });
+
+  app.post("/api/notifications/:id/dismiss", verifyAuth, async (req, res) => {
+    try {
+      const userId = req.authenticatedUser?.uid;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      }
+
+      const notificationId = req.params.id;
+
+      // Verify notification belongs to user
+      const notifications = await storage.getNotifications(userId);
+      const notification = notifications.find(n => n.id === notificationId);
+
+      if (!notification) {
+        return res.status(404).json({
+          success: false,
+          message: "Notification not found or access denied"
+        });
+      }
+
+      await storage.updateNotification(notificationId, {
+        status: 'read',
+        dismissedAt: new Date()
+      });
+
+      res.json({
+        success: true,
+        message: "Notification dismissed"
+      });
+    } catch (error: any) {
+      console.error("[NOTIFICATIONS] Error dismissing notification:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to dismiss notification",
+        error: error.message
+      });
+    }
+  });
+
+  // Phase 3: Admin Review Endpoints
+  app.get("/api/admin/attendance/pending-review", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+
+      // Check admin role
+      if (!user || (user.role !== 'admin' && user.role !== 'master_admin')) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Admin privileges required."
+        });
+      }
+
+      const pendingReviews = await storage.listAttendanceByReviewStatus('pending');
+
+      res.json(pendingReviews);
+    } catch (error: any) {
+      console.error("[ADMIN REVIEW] Error fetching pending reviews:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch pending reviews",
+        error: error.message
+      });
+    }
+  });
+
+  app.post("/api/admin/attendance/:id/review", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+
+      // Check admin role
+      if (!user || (user.role !== 'admin' && user.role !== 'master_admin')) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Admin privileges required."
+        });
+      }
+
+      const attendanceId = req.params.id;
+      const { action, checkInTime, checkOutTime, notes } = req.body;
+
+      // Validate action
+      if (!['accepted', 'adjusted', 'rejected'].includes(action)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid action. Must be 'accepted', 'adjusted', or 'rejected'"
+        });
+      }
+
+      // Get the attendance record
+      const record = await storage.getAttendance(attendanceId);
+      if (!record) {
+        return res.status(404).json({
+          success: false,
+          message: "Attendance record not found"
+        });
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        adminReviewStatus: action,
+        adminReviewedBy: user.uid,
+        adminReviewedAt: new Date(),
+        adminReviewNotes: notes || null
+      };
+
+      // Handle different actions
+      if (action === 'accepted') {
+        // Just mark as accepted, no time changes
+      } else if (action === 'adjusted') {
+        // Validate times
+        if (!checkInTime || !checkOutTime) {
+          return res.status(400).json({
+            success: false,
+            message: "Both checkInTime and checkOutTime are required for adjustment"
+          });
+        }
+
+        // Store original checkout time for audit trail
+        updateData.originalCheckOutTime = record.checkOutTime;
+        updateData.checkInTime = new Date(checkInTime);
+        updateData.checkOutTime = new Date(checkOutTime);
+
+        // Recalculate working hours
+        const { EnterpriseTimeService } = await import("./services/enterprise-time-service");
+        const metrics = await EnterpriseTimeService.calculateTimeMetrics(
+          record.userId,
+          record.userDepartment || "general",
+          updateData.checkInTime,
+          updateData.checkOutTime
+        );
+        updateData.workingHours = metrics.workingHours;
+      } else if (action === 'rejected') {
+        // Mark as absent
+        updateData.status = 'absent';
+        updateData.checkOutTime = null;
+        updateData.workingHours = 0;
+      }
+
+      // Update the record
+      await storage.updateAttendance(attendanceId, updateData);
+
+      // Notify the employee
+      const { NotificationService } = await import("./services/notification-service");
+      await NotificationService.notifyAdjustmentMade(
+        record.userId,
+        record.date,
+        action,
+        notes
+      );
+
+      res.json({
+        success: true,
+        message: `Attendance ${action} successfully`,
+        data: {
+          id: attendanceId,
+          action,
+          reviewedBy: user.displayName
+        }
+      });
+    } catch (error: any) {
+      console.error("[ADMIN REVIEW] Error processing review:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to process review",
+        error: error.message
+      });
+    }
+  });
+
   // Register OT System routes
-  const otRoutes = await import('./routes/ot-routes');
-  app.use('/api/ot', otRoutes.default);
+  // Mount at /api/ot so routes like /sessions/start become /api/ot/sessions/start
+  app.use('/api/ot', otRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

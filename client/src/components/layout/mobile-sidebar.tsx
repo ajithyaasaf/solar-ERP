@@ -44,9 +44,8 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: "ri-dashboard-line", requiredPermissions: "dashboard.view" },
     { href: "/customers", label: "Customers", icon: "ri-user-3-line", requiredPermissions: ["customers.view", "customers.create"] },
-    { href: "/products", label: "Products", icon: "ri-store-2-line", requiredPermissions: ["products.view", "products.create"] },
     { href: "/quotations", label: "Quotations", icon: "ri-file-list-3-line", requiredPermissions: ["quotations.view", "quotations.create"] },
-    { href: "/invoices", label: "Invoices", icon: "ri-bill-line", requiredPermissions: ["invoices.view", "invoices.create"] },
+    // { href: "/invoices", label: "Invoices", icon: "ri-bill-line", requiredPermissions: ["invoices.view", "invoices.create"] },
     { href: "/attendance", label: "Attendance", icon: "ri-time-line", requiredPermissions: ["attendance.view_own", "attendance.view_team", "attendance.view_all"] },
     { href: "/leave", label: "Leave", icon: "ri-calendar-check-line", requiredPermissions: ["leave.view_own", "leave.view_team", "leave.view_all"] },
     { href: "/site-visit", label: "Site Visit", icon: "ri-map-pin-line", requiredPermissions: ["site_visit.view", "site_visit.create"] },
@@ -57,8 +56,8 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
     { href: "/hr-management", label: "HR Mgmt", icon: "ri-team-line", roles: ["master_admin", "admin"], requiredPermissions: ["users.view"] },
     { href: "/departments", label: "Departments", icon: "ri-building-line", roles: ["master_admin"], requiredPermissions: ["departments.view", "departments.create"] },
     { href: "/attendance-management", label: "Attendance Mgmt", icon: "ri-shield-user-line", roles: ["master_admin"] },
+    { href: "/ot-pending-review", label: "OT Review", icon: "ri-timer-flash-line", roles: ["master_admin", "admin"] },
     { href: "/payroll-management", label: "Payroll Mgmt", icon: "ri-money-dollar-circle-line", roles: ["master_admin"] },
-    { href: "/office-locations", label: "Offices", icon: "ri-map-pin-line", roles: ["master_admin"], requiredPermissions: "system.settings" },
     { href: "/settings", label: "Settings", icon: "ri-settings-4-line" },
   ];
 

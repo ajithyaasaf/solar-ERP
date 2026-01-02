@@ -18,7 +18,7 @@ export function isWithinGeoFence(
   if (!lat || !lng || !fenceLat || !fenceLng || !radiusInMeters) {
     return false;
   }
-  
+
   // Calculate distance using Haversine formula
   const distance = getDistanceBetweenCoordinates(
     lat,
@@ -26,7 +26,7 @@ export function isWithinGeoFence(
     fenceLat,
     fenceLng
   );
-  
+
   // Check if within radius
   return distance <= radiusInMeters;
 }
@@ -46,26 +46,26 @@ export function getDistanceBetweenCoordinates(
   lon2: number
 ): number {
   const earthRadiusInMeters = 6371000; // Earth's radius in meters
-  
+
   // Convert degrees to radians
   const latRad1 = toRadians(lat1);
   const latRad2 = toRadians(lat2);
   const lonRad1 = toRadians(lon1);
   const lonRad2 = toRadians(lon2);
-  
+
   // Differences
   const dLat = latRad2 - latRad1;
   const dLon = lonRad2 - lonRad1;
-  
+
   // Haversine formula
-  const a = 
+  const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(latRad1) * Math.cos(latRad2) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = earthRadiusInMeters * c;
-  
+
   return distance;
 }
 
@@ -122,7 +122,7 @@ export async function performAutomaticLocationCalibration(
     }
 
     const checkins = recentOfficeCheckins.get(officeId)!;
-    
+
     // Add current check-in
     checkins.push({
       latitude: userLat,
@@ -153,26 +153,30 @@ export async function performAutomaticLocationCalibration(
       avgLon
     );
 
-    // If average check-in location is more than 100m away from stored coordinates, auto-calibrate
+    // If average check-in location is more than 100m away from stored coordinates, detect drift
     if (currentDistance > 100) {
-      console.log(`AUTO-CALIBRATION: Updating office "${officeLocation.name}" coordinates`);
-      console.log(`Old coordinates: ${officeLocation.latitude}, ${officeLocation.longitude}`);
-      console.log(`New coordinates: ${avgLat}, ${avgLon} (based on ${validCheckins.length} recent check-ins)`);
-      console.log(`Distance improvement: ${Math.round(currentDistance)}m -> ~0m`);
+      console.log(`AUTO-CALIBRATION: Office "${officeLocation.name}" coordinates drift detected`);
+      console.log(`Current coordinates: ${officeLocation.latitude}, ${officeLocation.longitude}`);
+      console.log(`Suggested coordinates: ${avgLat}, ${avgLon} (based on ${validCheckins.length} recent check-ins)`);
+      console.log(`Distance drift: ${Math.round(currentDistance)}m`);
+      console.warn('AUTO-CALIBRATION: Update method removed. Please update coordinates manually via Firebase Console if needed.');
 
-      // Update office location with calibrated coordinates
-      await storage.updateOfficeLocation(officeId, {
-        ...officeLocation,
-        latitude: avgLat.toString(),
-        longitude: avgLon.toString(),
-        lastCalibrated: new Date().toISOString(),
-        calibrationMethod: 'automatic',
-        calibrationCheckins: validCheckins.length
-      });
+      // NOTE: Office location mutation methods have been removed
+      // Auto-calibration can no longer update coordinates automatically
+      // If coordinates need updating, do so via Firebase Console
 
-      // Clear check-in history after successful calibration
+      // await storage.updateOfficeLocation(officeId, {
+      //   ...officeLocation,
+      //   latitude: avgLat.toString(),
+      //   longitude: avgLon.toString(),
+      //   lastCalibrated: new Date().toISOString(),
+      //   calibrationMethod: 'automatic',
+      //   calibrationCheckins: validCheckins.length
+      // });
+
+      // Clear check-in history after detection
       recentOfficeCheckins.set(officeId, []);
-      
+
       console.log(`AUTO-CALIBRATION: Successfully updated office location coordinates`);
     } else {
       console.log(`AUTO-CALIBRATION: Office coordinates are accurate (${Math.round(currentDistance)}m variance)`);

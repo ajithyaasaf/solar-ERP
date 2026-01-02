@@ -25,10 +25,9 @@ export class CompanySettingsService {
             return settings || {
                 id: '1',
                 weekendDays: [0], // Sunday only default
-                defaultOTRate: 1.5,
-                weekendOTRate: 2.0,
+                defaultOTRate: 1.0,
+                weekendOTRate: 1.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAbove: 6.0,
                 updatedAt: new Date()
             };
 
@@ -39,10 +38,9 @@ export class CompanySettingsService {
             return {
                 id: '1',
                 weekendDays: [0],
-                defaultOTRate: 1.5,
-                weekendOTRate: 2.0,
+                defaultOTRate: 1.0,
+                weekendOTRate: 1.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAbove: 6.0,
                 updatedAt: new Date()
             };
         }
@@ -158,11 +156,10 @@ export class CompanySettingsService {
      */
     static async updateDailyOTCap(
         maxOTHoursPerDay: number,
-        requireAdminApprovalAbove: number,
         adminId: string
     ): Promise<{ success: boolean; message: string }> {
         return this.updateSettings(
-            { maxOTHoursPerDay, requireAdminApprovalAbove },
+            { maxOTHoursPerDay },
             adminId
         );
     }
@@ -201,7 +198,7 @@ export class CompanySettingsService {
             }
         } catch (error) {
             console.error('Error getting OT rate:', error);
-            return 1.5; // Safe default
+            return 1.0; // Safe default
         }
     }
 }

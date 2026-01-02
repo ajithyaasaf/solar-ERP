@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Sidebar } from "./sidebar";
 import { MobileSidebar } from "./mobile-sidebar";
 import { Header } from "./header";
+import { NotificationBanner } from "./notification-banner";
 import { useAuthContext } from "@/contexts/auth-context";
 import { Loader2 } from "lucide-react";
 
@@ -59,9 +60,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <Sidebar />
 
       {/* Mobile sidebar */}
-      <MobileSidebar 
-        isOpen={isMobileMenuOpen} 
-        setIsOpen={setIsMobileMenuOpen} 
+      <MobileSidebar
+        isOpen={isMobileMenuOpen}
+        setIsOpen={setIsMobileMenuOpen}
       />
 
       {/* Main content area */}
@@ -75,6 +76,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto px-3 py-4 sm:p-4 md:p-6 bg-gray-50" style={{ overscrollBehavior: 'contain' }}>
           <div className="max-w-[1600px] mx-auto">
+            {/* Notification banner for auto-checkout and admin alerts */}
+            <div className="mb-4">
+              <NotificationBanner />
+            </div>
             {children}
           </div>
         </main>

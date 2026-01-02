@@ -38,7 +38,7 @@ export interface CompanyDetails {
 }
 
 export interface BillOfMaterialsItem {
-  slNo: number;
+  slNo: number | string; // Supports regular numbering (1, 2, 3) and sub-numbering (1a, 1b)
   description: string;
   type: string;
   volt: string;
@@ -255,70 +255,69 @@ export class QuotationTemplateService {
 
     // Generate structure description based on structure type and heights
     const projectWithStructure = project as any;
-    if (projectWithStructure.structureType) {
-      let structureDesc = "1) Structure:";
-
-      // Format structure type name
-      let structureTypeName = '';
-      switch (projectWithStructure.structureType) {
-        case 'gp_structure':
-          structureTypeName = 'GP Structure';
-          break;
-        case 'mono_rail':
-          structureTypeName = 'Mono Rail';
-          break;
-        case 'gi_structure':
-          structureTypeName = 'GI Structure';
-          break;
-        case 'gi_round_pipe':
-          structureTypeName = 'GI Round Pipe';
-          break;
-        case 'ms_square_pipe':
-          structureTypeName = 'MS Square Pipe';
-          break;
-        default:
-          structureTypeName = projectWithStructure.structureType;
-      }
-
-      // Helper function to format floor information
-      const getFloorText = () => {
-        const floor = projectWithStructure.floor;
-        if (floor === undefined || floor === null) return '';
-
-        const floorNum = floor.toString();
-        if (floorNum === '0') return ' (Ground Floor)';
-        const suffix = floorNum === '1' ? 'st' : floorNum === '2' ? 'nd' : floorNum === '3' ? 'rd' : 'th';
-        return ` (${floorNum}${suffix} Floor)`;
-      };
-
-      const floorText = getFloorText();
-
-      // Add structure type
-      scopeOfWork.structure.push(structureDesc);
-
-      // Add height details if applicable
-      if (projectWithStructure.structureType === 'mono_rail' && projectWithStructure.monoRail) {
-        const monoRailType = projectWithStructure.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail';
-        scopeOfWork.structure.push(`   • ${structureTypeName} - ${monoRailType}, South facing slant mounting${floorText}`);
-      } else if (projectWithStructure.gpStructure) {
-        const lowerHeight = projectWithStructure.gpStructure.lowerEndHeight || '0';
-        const higherHeight = projectWithStructure.gpStructure.higherEndHeight || '0';
-        scopeOfWork.structure.push(`   • ${structureTypeName}, South facing slant mounting of lower end height in ${lowerHeight} feet`);
-        scopeOfWork.structure.push(`   • and higher end in ${higherHeight} feet${floorText}`);
-      } else {
-        scopeOfWork.structure.push(`   • ${structureTypeName}, South facing slant mounting${floorText}`);
-      }
-    }
 
     // Handle scope based on project type
     if (project.projectType === 'on_grid') {
+      // Structure section for On-Grid
+      if (projectWithStructure.structureType) {
+        scopeOfWork.structure.push("1) Structure:");
+
+        // Format structure type name
+        let structureTypeName = '';
+        switch (projectWithStructure.structureType) {
+          case 'gp_structure':
+            structureTypeName = 'GP Structure';
+            break;
+          case 'mono_rail':
+            structureTypeName = 'Mono Rail';
+            break;
+          case 'gi_structure':
+            structureTypeName = 'GI Structure';
+            break;
+          case 'gi_round_pipe':
+            structureTypeName = 'GI Round Pipe';
+            break;
+          case 'ms_square_pipe':
+            structureTypeName = 'MS Square Pipe';
+            break;
+          default:
+            structureTypeName = projectWithStructure.structureType;
+        }
+
+        // Helper function to format floor information
+        const getFloorText = () => {
+          const floor = projectWithStructure.floor;
+          if (floor === undefined || floor === null) return '';
+
+          const floorNum = floor.toString();
+          if (floorNum === '0') return ' (Ground Floor)';
+          const suffix = floorNum === '1' ? 'st' : floorNum === '2' ? 'nd' : floorNum === '3' ? 'rd' : 'th';
+          return ` (${floorNum}${suffix} Floor)`;
+        };
+
+        const floorText = getFloorText();
+
+        // Add height details with "For flat roofing" prefix
+        if (projectWithStructure.structureType === 'mono_rail' && projectWithStructure.monoRail) {
+          const monoRailType = projectWithStructure.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail';
+          scopeOfWork.structure.push(`   • For flat roofing, ${structureTypeName} - ${monoRailType}, South facing slant mounting${floorText}`);
+        } else if (projectWithStructure.gpStructure) {
+          const lowerHeight = projectWithStructure.gpStructure.lowerEndHeight || '0';
+          const higherHeight = projectWithStructure.gpStructure.higherEndHeight || '0';
+          scopeOfWork.structure.push(`   • For flat roofing, South facing slant mounting of lower end height is ${lowerHeight} feet & ${higherHeight} feet at higher end${floorText}`);
+        } else {
+          scopeOfWork.structure.push(`   • For flat roofing, ${structureTypeName}, South facing slant mounting${floorText}`);
+        }
+      }
+
       // Civil Work Scope
       const civilWorkScope = (project as any).civilWorkScope || 'customer_scope';
       if (civilWorkScope === 'company_scope') {
         scopeOfWork.structure.push("   • Civil work including earth pit construction (Company Scope)");
       } else {
         scopeOfWork.customerScope.civilWork.push("1) Civil work:");
-        scopeOfWork.customerScope.civilWork.push("   • Earth pit Construction as per spec (for Structure)");
+        scopeOfWork.customerScope.civilWork.push("   • Earth pit digging.");
+        scopeOfWork.customerScope.civilWork.push("   • 1 feet chamber and concrete (for Structure)");
       }
 
       // Net Meter Scope
@@ -330,27 +329,113 @@ export class QuotationTemplateService {
         scopeOfWork.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
         scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB at Customer's Expense");
         scopeOfWork.customerScope.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
-        scopeOfWork.customerScope.netBiDirectionalMeter.push("   • Any registration and modification charges for net meter to be paid by Customer");
+        scopeOfWork.customerScope.netBiDirectionalMeter.push("   • Application and Installation charges for net meter to be paid by Customer.");
       }
     } else if (project.projectType === 'off_grid') {
-      // Civil Work Scope
+      // Structure section for Off-Grid - Multiple roofing type variations
+      scopeOfWork.structure.push("1) Structure:");
+      scopeOfWork.structure.push("   • For flat roofing, South facing slant mounting of lower end height is 3 Feet & 4 Feet at taller end.");
+      scopeOfWork.structure.push("   • For sheet roofing, panels will be placed on the roof with rail structure.");
+      scopeOfWork.structure.push("   • For other kinds of roofing, the structure will vary.");
+
+      // Annual Maintenance (if included)
+      const amcIncluded = (project as any).amcIncluded || false;
+      if (amcIncluded) {
+        scopeOfWork.structure.push("2) Annual Maintenance:");
+        scopeOfWork.structure.push("   • We give 1 year of free service, which includes 4 quarterly services.");
+        scopeOfWork.structure.push("   • We offer annual maintenance contract starting from the second year of installation as per customer choice on chargeable basis.");
+      }
+
+      // Training section for Off-Grid - Dynamic numbering based on AMC
+      const trainingNumber = amcIncluded ? 3 : 2;
+      scopeOfWork.structure.push(`${trainingNumber}) Training:`);
+      scopeOfWork.structure.push("   • We provide hands on training to end user.");
+
+      // Customer Scope - Civil Work
       const civilWorkScope = (project as any).civilWorkScope || 'customer_scope';
       if (civilWorkScope === 'company_scope') {
         scopeOfWork.structure.push("   • Civil work including earth pit construction (Company Scope)");
       } else {
         scopeOfWork.customerScope.civilWork.push("1) Civil work:");
-        scopeOfWork.customerScope.civilWork.push("   • Earth pit Construction as per spec (for Structure)");
-        scopeOfWork.customerScope.civilWork.push("   • Battery stand and inverter installation base to be provided by Customer");
+        scopeOfWork.customerScope.civilWork.push("   • Patch works after installation.");
+        scopeOfWork.customerScope.civilWork.push("   • Earth pit digging.");
       }
 
-      // Add AMC text if included
-      const amcIncluded = (project as any).amcIncluded || false;
-      if (amcIncluded) {
-        scopeOfWork.structure.push("2) Annual Maintenance:");
-        scopeOfWork.structure.push("   • We give 1 year of free service, which includes 3 quarterly services.");
-        scopeOfWork.structure.push("   • We offer annual maintenance contract starting from the second year of installation as per customer choice on chargeable basis.");
-      }
+      // Customer Scope - Outgoing Electrical Wiring
+      scopeOfWork.customerScope.electricalWork.push("2) Outgoing Electrical Wiring:");
+      scopeOfWork.customerScope.electricalWork.push("   • From ACDB / Outgoing MCB to existing house wiring (if necessary).");
+
+      // Customer Scope - Transport
+      scopeOfWork.customerScope.plumbingWork.push("3) Transport:");
+      scopeOfWork.customerScope.plumbingWork.push("   • Will be claimed at actuals from the customer.");
+
+      // Customer Scope - Cables & Accessories
+      scopeOfWork.customerScope.plumbingWork.push("4) Cables & Accessories:");
+      scopeOfWork.customerScope.plumbingWork.push("   • Extra will be charged for any material exceeding those mentioned in the bill of materials.");
+
     } else if (project.projectType === 'hybrid') {
+      // Structure section for Hybrid
+      if (projectWithStructure.structureType) {
+        scopeOfWork.structure.push("1) Structure:");
+
+        // Format structure type name
+        let structureTypeName = '';
+        switch (projectWithStructure.structureType) {
+          case 'gp_structure':
+            structureTypeName = 'GP Structure';
+            break;
+          case 'mono_rail':
+            structureTypeName = 'Mono Rail';
+            break;
+          case 'gi_structure':
+            structureTypeName = 'GI Structure';
+            break;
+          case 'gi_round_pipe':
+            structureTypeName = 'GI Round Pipe';
+            break;
+          case 'ms_square_pipe':
+            structureTypeName = 'MS Square Pipe';
+            break;
+          default:
+            structureTypeName = projectWithStructure.structureType;
+        }
+
+        // Helper function to format floor information
+        const getFloorText = () => {
+          const floor = projectWithStructure.floor;
+          if (floor === undefined || floor === null) return '';
+
+          const floorNum = floor.toString();
+          if (floorNum === '0') return '';  // Don't show floor for ground in hybrid
+          const suffix = floorNum === '1' ? 'st' : floorNum === '2' ? 'nd' : floorNum === '3' ? 'rd' : 'th';
+          return ` (${floorNum}${suffix} Floor)`;
+        };
+
+        const floorText = getFloorText();
+
+        // Add height details with "For flat roofing" prefix
+        if (projectWithStructure.structureType === 'mono_rail' && projectWithStructure.monoRail) {
+          const monoRailType = projectWithStructure.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail';
+          scopeOfWork.structure.push(`   • For flat roofing, ${structureTypeName} - ${monoRailType}, South facing slant mounting${floorText}`);
+        } else if (projectWithStructure.gpStructure) {
+          const lowerHeight = projectWithStructure.gpStructure.lowerEndHeight || '0';
+          const higherHeight = projectWithStructure.gpStructure.higherEndHeight || '0';
+          scopeOfWork.structure.push(`   • For flat roofing, South facing slant mounting of lower end height is ${lowerHeight} feet & ${higherHeight} feet at higher end`);
+        } else {
+          scopeOfWork.structure.push(`   • For flat roofing, ${structureTypeName}, South facing slant mounting${floorText}`);
+        }
+      }
+
+      // Net Meter Scope
+      const netMeterScope = (project as any).netMeterScope || 'customer_scope';
+      if (netMeterScope === 'company_scope') {
+        scopeOfWork.netBiDirectionalMeter.push("2) Net Meter:");
+        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB and all charges (Company Scope)");
+      } else {
+        scopeOfWork.netBiDirectionalMeter.push("2) Net Meter:");
+        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB at customer's expenses.");
+      }
+
       // Electrical Work Scope
       const electricalWorkScope = (project as any).electricalWorkScope || 'customer_scope';
       if (electricalWorkScope === 'company_scope') {
@@ -361,17 +446,22 @@ export class QuotationTemplateService {
         scopeOfWork.customerScope.electricalWork.push("   • Basic electrical wiring to be provided by Customer");
       }
 
-      // Net Meter Scope
-      const netMeterScope = (project as any).netMeterScope || 'customer_scope';
-      if (netMeterScope === 'company_scope') {
-        scopeOfWork.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
-        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB and all charges (Company Scope)");
+      // Customer Scope - Civil Work
+      const civilWorkScope = (project as any).civilWorkScope || 'customer_scope';
+      if (civilWorkScope === 'company_scope') {
+        scopeOfWork.structure.push("   • Civil work including earth pit construction (Company Scope)");
       } else {
-        scopeOfWork.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
-        scopeOfWork.netBiDirectionalMeter.push("   • We will take the responsibility of applying to EB at Customer's Expense");
-        scopeOfWork.customerScope.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
-        scopeOfWork.customerScope.netBiDirectionalMeter.push("   • Any registration and modification charges for net meter to be paid by Customer");
+        scopeOfWork.customerScope.civilWork.push("1) Civil work:");
+        scopeOfWork.customerScope.civilWork.push("   • Earth pit digging.");
+        scopeOfWork.customerScope.civilWork.push("   • 1 Feet chamber with concrete.");
       }
+
+      // Customer Scope - Net Meter
+      if (netMeterScope !== 'company_scope') {
+        scopeOfWork.customerScope.netBiDirectionalMeter.push("2) Net (Bi-directional) Meter:");
+        scopeOfWork.customerScope.netBiDirectionalMeter.push("   • Application and Installation charges for net meter to be paid by Customer.");
+      }
+
     } else if (project.projectType === 'water_pump') {
       // Plumbing Work Scope
       const plumbingWorkScope = (project as any).plumbingWorkScope || 'customer_scope';
@@ -547,20 +637,64 @@ export class QuotationTemplateService {
     // Inverter kW (for inverter components)
     const inverterKW = project.inverterKW || panelSystemKW;
 
-    // 1. Solar Panel - Use panel type from form (default to Bifacial)
+    // 1. Solar Panel - Split into DCR and NON-DCR entries based on panel counts
     const panelType = project.panelType === 'topcon' ? 'Topcon' :
       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    const panelMake = project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier";
+    const panelWatts = project.panelWatts || '530';
 
-    items.push({
-      slNo: slNo++,
-      description: "Solar Panel (D)",
-      type: panelType,
-      volt: "24",
-      rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
-      qty: project.panelCount || 1,
-      unit: "Nos"
-    });
+    const dcrCount = project.dcrPanelCount || 0;
+    const nonDcrCount = project.nonDcrPanelCount || 0;
+
+    if (dcrCount > 0 && nonDcrCount > 0) {
+      // Both DCR and NON-DCR panels exist - use sub-numbering (1a, 1b)
+      items.push({
+        slNo: `${slNo}a`,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+      items.push({
+        slNo: `${slNo}b`,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+      slNo++; // Increment once after sub-items
+    } else if (dcrCount > 0) {
+      // Only DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+    } else if (nonDcrCount > 0) {
+      // Only NON-DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+    }
+    // Note: If both counts are 0, no panel entry is added to BOM
 
     // 2. Solar Ongrid Inverter - MPPT type, voltage based on phase
     const inverterVoltage = project.inverterPhase === 'three_phase' ? '415' : '230';
@@ -747,20 +881,64 @@ export class QuotationTemplateService {
     // ✅ CRITICAL: For off-grid, prioritize inverterKVA (user-entered value), then inverterKW
     const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
-    // 1. Solar Panel - Use panel type from form (default to Bifacial)
+    // 1. Solar Panel - Split into DCR and NON-DCR entries based on panel counts
     const panelType = project.panelType === 'topcon' ? 'Topcon' :
       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    const panelMake = project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier";
+    const panelWatts = project.panelWatts || '530';
 
-    items.push({
-      slNo: slNo++,
-      description: "Solar Panel (D)",
-      type: panelType,
-      volt: "24",
-      rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
-      qty: project.panelCount || 1,
-      unit: "Nos"
-    });
+    const dcrCount = project.dcrPanelCount || 0;
+    const nonDcrCount = project.nonDcrPanelCount || 0;
+
+    if (dcrCount > 0 && nonDcrCount > 0) {
+      // Both DCR and NON-DCR panels exist - use sub-numbering (1a, 1b)
+      items.push({
+        slNo: `${slNo}a`,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+      items.push({
+        slNo: `${slNo}b`,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+      slNo++; // Increment once after sub-items
+    } else if (dcrCount > 0) {
+      // Only DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+    } else if (nonDcrCount > 0) {
+      // Only NON-DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+    }
+    // Note: If both counts are 0, no panel entry is added to BOM
 
     // 2. Solar Offgrid Inverter - Voltage based on inverterVolt or calculated from battery
     const inverterVoltageRaw = project.inverterVolt || (project.voltage * project.batteryCount) || '230';
@@ -958,20 +1136,64 @@ export class QuotationTemplateService {
     // ✅ CRITICAL: For hybrid, prioritize inverterKVA (user-entered value), then inverterKW
     const inverterKVA = (project as any).inverterKVA || project.inverterKW || panelSystemKW;
 
-    // 1. Solar Panel - Use panel type from form (default to Bifacial)
+    // 1. Solar Panel - Split into DCR and NON-DCR entries based on panel counts
     const panelType = project.panelType === 'topcon' ? 'Topcon' :
       project.panelType === 'mono_perc' ? 'Mono-PERC' : 'Bifacial';
+    const panelMake = project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier";
+    const panelWatts = project.panelWatts || '530';
 
-    items.push({
-      slNo: slNo++,
-      description: "Solar Panel (D)",
-      type: panelType,
-      volt: "24",
-      rating: `${project.panelWatts || '530'} WATTS`,
-      make: project.solarPanelMake?.length > 0 ? project.solarPanelMake.join(' / ') : "Gautam / Premier",
-      qty: project.panelCount || 1,
-      unit: "Nos"
-    });
+    const dcrCount = project.dcrPanelCount || 0;
+    const nonDcrCount = project.nonDcrPanelCount || 0;
+
+    if (dcrCount > 0 && nonDcrCount > 0) {
+      // Both DCR and NON-DCR panels exist - use sub-numbering (1a, 1b)
+      items.push({
+        slNo: `${slNo}a`,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+      items.push({
+        slNo: `${slNo}b`,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+      slNo++; // Increment once after sub-items
+    } else if (dcrCount > 0) {
+      // Only DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: dcrCount,
+        unit: "Nos"
+      });
+    } else if (nonDcrCount > 0) {
+      // Only NON-DCR panels - single entry with label
+      items.push({
+        slNo: slNo++,
+        description: "Solar Panel (NON-DCR)",
+        type: panelType,
+        volt: "24",
+        rating: `${panelWatts} WATTS`,
+        make: panelMake,
+        qty: nonDcrCount,
+        unit: "Nos"
+      });
+    }
+    // Note: If both counts are 0, no panel entry is added to BOM
 
     // 2. Solar Hybrid Inverter - Voltage based on inverterVolt or phase
     const inverterVoltage = project.inverterVolt || (project.inverterPhase === 'three_phase' ? '415' : '230');

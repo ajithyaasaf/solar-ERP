@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -30,12 +30,11 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [location] = useLocation();
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const { user } = useAuthContext();
-  
+
   // Map of routes to display names
   const routeTitles: Record<string, string> = {
     "/dashboard": "Dashboard",
     "/customers": "Customers",
-    "/products": "Products",
     "/quotations": "Quotations",
     "/invoices": "Invoices",
     "/attendance": "Attendance",
@@ -53,8 +52,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     switch (location) {
       case "/customers":
         return [{ label: "New Customer", description: "Add a new customer", icon: <UserPlus className="h-4 w-4" />, href: "/customers/new" }];
-      case "/products":
-        return [{ label: "New Product", description: "Add a new product", icon: <Package className="h-4 w-4" />, href: "/products/new" }];
+
       case "/quotations":
         return [{ label: "New Quotation", description: "Create a quotation", icon: <FileText className="h-4 w-4" />, href: "/quotations/new" }];
       case "/invoices":
@@ -66,7 +64,6 @@ export function Header({ onMenuClick }: HeaderProps) {
       default:
         return [
           { label: "New Customer", description: "Add a new customer", icon: <UserPlus className="h-4 w-4" />, href: "/customers/new" },
-          { label: "New Product", description: "Add a product", icon: <Package className="h-4 w-4" />, href: "/products/new" },
           { label: "New Quotation", description: "Create a quotation", icon: <FileText className="h-4 w-4" />, href: "/quotations/new" },
           { label: "New Invoice", description: "Create an invoice", icon: <Receipt className="h-4 w-4" />, href: "/invoices/new" }
         ];
@@ -79,9 +76,9 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Mobile menu button - visible only on mobile */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="md:hidden h-9 w-9 rounded-full"
               onClick={onMenuClick}
               aria-label="Toggle menu"
@@ -101,12 +98,12 @@ export function Header({ onMenuClick }: HeaderProps) {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
             {/* Search button for mobile */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="relative md:hidden h-9 w-9"
               onClick={() => {
                 // Mobile search functionality
@@ -115,17 +112,17 @@ export function Header({ onMenuClick }: HeaderProps) {
             >
               <Search className="h-5 w-5 text-gray-600" />
             </Button>
-            
+
             {/* Search input for larger screens */}
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input 
-                type="text" 
-                placeholder="Search..." 
-                className="pl-10 pr-4 py-2 w-48 lg:w-64" 
+              <Input
+                type="text"
+                placeholder="Search..."
+                className="pl-10 pr-4 py-2 w-48 lg:w-64"
               />
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="bg-primary hover:bg-primary/90 text-white h-9 px-2 md:px-4 rounded-md">
@@ -137,8 +134,8 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <DropdownMenuLabel className="text-sm font-semibold px-2 py-2">Create New</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {getNewEntryOptions().map((option, index) => (
-                  <DropdownMenuItem 
-                    key={index} 
+                  <DropdownMenuItem
+                    key={index}
                     className="cursor-pointer px-3 py-3 hover:bg-gray-100 focus:bg-gray-100 focus:text-gray-900 flex items-start gap-3"
                     onClick={() => {
                       if ('onClick' in option && option.onClick) {
@@ -157,7 +154,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            
+
             <div className="relative">
               <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
                 <Bell className="h-5 w-5 text-gray-600" />
@@ -167,7 +164,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
       </header>
-      
+
       <CheckInModal open={showCheckInModal} onOpenChange={setShowCheckInModal} />
     </>
   );

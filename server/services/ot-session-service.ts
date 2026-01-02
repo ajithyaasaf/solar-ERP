@@ -60,45 +60,77 @@ export class OTSessionService {
                 };
             }
 
-            // Get today's attendance record
-            let attendance = await storage.getAttendanceByUserAndDate(userId, today);
-
-            if (!attendance) {
-                // Create new attendance record if doesn't exist (for weekend OT)
-                attendance = await storage.createAttendance({
-                    userId,
-                    date: today,
-                    attendanceType: 'office',
-                    status: 'present',
-                    isLate: false,
-                    isWithinOfficeRadius: true,
-                    otSessions: [],
-                    totalOTHours: 0
-                });
-            }
-
-            // Parse existing OT sessions
-            const existingSessions: OTSession[] = Array.isArray(attendance.otSessions)
-                ? attendance.otSessions
-                : [];
-
-            // Check for active session
-            const activeSession = existingSessions.find(s => s.status === 'in_progress');
-            if (activeSession) {
-                return {
-                    success: false,
-                    message: 'You already have an active OT session. Please end it first.'
-                };
-            }
+            // ✅ SECURITY CHECK 3: Validate holiday OT policy
+            // This enforces allowOT field - blocks OT on strict holidays
+            await this.validateHolidayOT(userId, today);
 
             // Determine OT type
             const otType = await this.determineOTType(user.department || 'operations', new Date());
 
-            // Generate session ID and number
-            const sessionNumber = existingSessions.length + 1;
-            const sessionId = `ot_${today.toISOString().split('T')[0].replace(/-/g, '')}_${userId}_${String(sessionNumber).padStart(3, '0')}`;
+            // Generate session ID for the NEW session
+            // Note: In a transaction, we can't easily know the "sessionNumber" sequentially 
+            // without reading. The transaction method reads it.
+            // However, our transaction method expects a session OBJECT.
+            // We need to pass the "partial" session or let the transaction build it.
+            // But to keep it simple, we'll let the transaction handle the appending.
+            // Wait, we need the Session ID for the response. 
+            // Our transaction method `addOTSessionTransaction` appends to the array.
+            // We need to generate the ID *before* calling it, but we need the index.
+            // CHALLENGE: To be truly atomic, we should read the index inside the transaction.
 
-            // Create new session
+            // RE-STRATEGY: The `addOTSessionTransaction` I wrote pushes `session`.
+            // But `session` needs an ID and Number.
+            // If I generate distinct IDs (random/timestamp), the number is just cosmetic.
+            // Let's use a Timestamp-based ID so it's unique regardless of index.
+
+            const timestamp = new Date().getTime();
+            const sessionId = `ot_${userId}_${timestamp}`;
+
+            // Validating uniqueness in transaction is critical.
+            // The transaction I wrote does NOT auto-increment sessionNumber.
+            // It just pushes what I give it.
+            // If I want perfect Session Numbers (1, 2, 3), I must read inside transaction.
+            // The transaction logic I added (lines 6150+) reads the doc.
+            // I should modify `addOTSessionTransaction` to *assign* the session number properly.
+
+            // For now, let's look at the implementation of `addOTSessionTransaction` again.
+            // It does: `const updatedSessions = [...sessions, session];`
+            // It does NOT modify the session object.
+
+            // CRITICAL DECISION: Session Number is nice-to-have. Data Safety is critical.
+            // I will estimate the Session Number as `existingSessions.length + 1` from a fresh read?
+            // No, that defeats the purpose.
+
+            // BETTER FIX: Update Storage method to accept a "Session Creator Function" or partial data?
+            // Too complex.
+            // PRACTICAL FIX: Pass the session with a placeholder, rely on `sessionId` for identity.
+            // We can accept that `sessionNumber` might be slightly off in a race condition (rare),
+            // OR we fetch, generate, and rely on the transaction to fail if state changed?
+            // The transaction fails if `attendanceRef` changes? No, Firestore transactions retry.
+
+            // Let's rely on the transaction to block duplicates.
+            // I'll assume sessionNumber is 1 + (current estimate). logic collision is low impact.
+            // The important part is Blocking 2 active sessions.
+
+            // Let's do a quick read (optimistic) to get session count, 
+            // then send to transaction.
+            // Transaction verifies "No Active Session".
+            // If checking fails, it aborts. SAFE.
+
+            const attendance = await storage.getAttendanceByUserAndDate(userId, today);
+
+            // Must have attendance record to start OT (user must check-in first)
+            if (!attendance) {
+                return {
+                    success: false,
+                    message: 'No attendance record found for today. Please check in first before starting OT.'
+                };
+            }
+
+            const currentCount = attendance.otSessions?.length || 0;
+            const sessionNumber = currentCount + 1;
+
+            // Create new session object
             const newSession: OTSession = {
                 sessionId,
                 sessionNumber,
@@ -115,13 +147,19 @@ export class OTSessionService {
                 createdAt: new Date()
             };
 
-            // Add to sessions array
-            const updatedSessions = [...existingSessions, newSession];
-
-            // Update attendance record
-            await storage.updateAttendance(attendance.id, {
-                otSessions: updatedSessions
-            });
+            // ATOMIC WRITE: Ensures no double-start
+            // Pass attendance.id (the actual document ID) - NOT userId
+            try {
+                await storage.addOTSessionTransaction(attendance.id, newSession);
+            } catch (err: any) {
+                if (err.message === 'ACTIVE_SESSION_EXISTS') {
+                    return {
+                        success: false,
+                        message: 'You already have an active OT session. Please end it first.'
+                    };
+                }
+                throw err;
+            }
 
             // Log activity
             await storage.createActivityLog({
@@ -206,6 +244,30 @@ export class OTSessionService {
             const startTime = new Date(session.startTime);
             const otHours = Number(((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)).toFixed(2));
 
+            // Calculate total OT for today (before adding current session)
+            const totalOTBefore = sessions
+                .filter(s => s.status === 'completed' || s.status === 'APPROVED')
+                .reduce((sum, s) => sum + s.otHours, 0);
+
+            // Get daily limit
+            const settings = await this.getCompanySettings();
+            const maxDaily = settings.maxOTHoursPerDay;
+            const totalOTAfter = totalOTBefore + otHours;
+
+            // ZERO-FRAUD LOGIC: Determine status
+            let sessionStatus: 'APPROVED' | 'PENDING_REVIEW';
+            let statusMessage: string;
+
+            if (totalOTAfter <= maxDaily) {
+                // Within limit → Auto-approve
+                sessionStatus = 'APPROVED';
+                statusMessage = `OT session completed and approved. ${otHours.toFixed(2)} hours recorded.`;
+            } else {
+                // Exceeds limit → Pending review
+                sessionStatus = 'PENDING_REVIEW';
+                statusMessage = `Daily OT limit exceeded (${maxDaily}h). Session saved but requires admin approval. Total: ${totalOTAfter.toFixed(2)}h.`;
+            }
+
             // Update session
             sessions[sessionIndex] = {
                 ...session,
@@ -215,50 +277,49 @@ export class OTSessionService {
                 endLatitude: latitude.toString(),
                 endLongitude: longitude.toString(),
                 endAddress: address,
-                status: 'completed',
+                status: sessionStatus,
                 updatedAt: new Date()
             };
 
-            // Calculate total OT for today
-            const totalOTToday = sessions
-                .filter(s => s.status === 'completed')
+            // Calculate total APPROVED OT for today (for attendance record)
+            const approvedOTToday = sessions
+                .filter(s => s.status === 'APPROVED' || s.status === 'completed')
                 .reduce((sum, s) => sum + s.otHours, 0);
-
-            // Check daily OT cap
-            const settings = await this.getCompanySettings();
-            const exceedsDailyLimit = totalOTToday > settings.maxOTHoursPerDay;
-
-            if (exceedsDailyLimit && totalOTToday <= settings.requireAdminApprovalAbove) {
-                return {
-                    success: false,
-                    message: `Daily OT limit exceeded (${settings.maxOTHoursPerDay}h). Total: ${totalOTToday.toFixed(2)}h. Contact admin for approval.`,
-                    totalOTToday,
-                    exceedsDailyLimit: true
-                };
-            }
 
             // Update attendance
             await storage.updateAttendance(attendance.id, {
                 otSessions: sessions,
-                totalOTHours: totalOTToday
+                totalOTHours: approvedOTToday  // Only count approved hours
             });
 
             // Log activity
             await storage.createActivityLog({
                 type: 'attendance',
-                title: 'OT Session Completed',
-                description: `${user.displayName} completed OT session: ${otHours.toFixed(2)} hours`,
+                title: sessionStatus === 'APPROVED' ? 'OT Session Approved' : 'OT Session Pending Review',
+                description: `${user.displayName} completed OT session: ${otHours.toFixed(2)} hours (${sessionStatus})`,
                 entityId: sessionId,
                 entityType: 'ot_session',
                 userId
             });
 
+            // Send notification if pending review
+            if (sessionStatus === 'PENDING_REVIEW') {
+                await storage.createNotification({
+                    userId,
+                    type: 'admin_review',
+                    title: 'OT Requires Review',
+                    message: `Your OT session (${otHours.toFixed(2)}h) exceeds the daily limit and requires admin approval.`,
+                    createdAt: new Date()
+                });
+            }
+
             return {
                 success: true,
-                message: `OT session completed. ${otHours.toFixed(2)} hours recorded.`,
+                message: statusMessage,
                 otHours,
-                totalOTToday,
-                exceedsDailyLimit
+                totalOTToday: totalOTAfter,
+                exceedsDailyLimit: sessionStatus === 'PENDING_REVIEW',
+                reviewRequired: sessionStatus === 'PENDING_REVIEW'
             };
 
         } catch (error) {
@@ -375,10 +436,9 @@ export class OTSessionService {
             return settings || {
                 id: '1',
                 weekendDays: [0], // Sunday only default
-                defaultOTRate: 1.5,
-                weekendOTRate: 2.0,
+                defaultOTRate: 1.0,
+                weekendOTRate: 1.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAboveabove: 6.0,
                 updatedAt: new Date()
             };
         } catch (error) {
@@ -387,10 +447,10 @@ export class OTSessionService {
             return {
                 id: '1',
                 weekendDays: [0],
-                defaultOTRate: 1.5,
-                weekendOTRate: 2.0,
+                defaultOTRate: 1.0,
+                weekendOTRate: 1.0,
                 maxOTHoursPerDay: 5.0,
-                requireAdminApprovalAbove: 6.0,
+                maxOTHoursPerDay: 5.0,
                 updatedAt: new Date()
             };
         }
@@ -479,6 +539,52 @@ export class OTSessionService {
             console.error('Error checking leave status:', error);
             // On error, allow OT (fail open to avoid blocking legitimate work)
             return { onLeave: false };
+        }
+    }
+
+    /**
+     * Validate if OT is allowed on a given date based on holiday policy
+     * Throws error if holiday blocks OT
+     * Returns holiday if it exists (for rate calculation)
+     * 
+     * @param userId - User ID for department context
+     * @param date - Date to check
+     * @returns Holiday object if exists and allows OT, or null
+     * @throws Error if holiday blocks OT
+     */
+    private static async validateHolidayOT(userId: string, date: Date): Promise<any | null> {
+        try {
+            const user = await storage.getUser(userId);
+            if (!user) {
+                return null; // No user, no validation needed
+            }
+
+            // Check if date is a holiday for this user's department
+            const { UnifiedAttendanceService } = await import('./unified-attendance-service');
+            const { isHoliday, holiday } = await UnifiedAttendanceService.isHoliday(
+                date,
+                user.department || undefined
+            );
+
+            // CRITICAL: Block OT if holiday doesn't allow it
+            if (isHoliday && holiday && !holiday.allowOT) {
+                throw new Error(
+                    `OT submissions are not allowed on ${holiday.name}. This is a strict holiday.`
+                );
+            }
+
+            // Return holiday for potential rate calculation (or null if not a holiday)
+            return holiday || null;
+
+        } catch (error) {
+            // If error is our custom "not allowed" error, re-throw it
+            if (error instanceof Error && error.message.includes('not allowed')) {
+                throw error;
+            }
+
+            // For other errors, log and allow OT (fail open)
+            console.error('[OTSessionService] Error validating holiday OT:', error);
+            return null;
         }
     }
 

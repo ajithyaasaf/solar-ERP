@@ -36,9 +36,6 @@ export const systemPermissions = [
   "customers.view", "customers.create", "customers.edit", "customers.delete",
   "customers.export", "customers.import", "customers.archive",
 
-  // Product Management (Technical & Sales focus) 
-  "products.view", "products.create", "products.edit", "products.delete",
-  "products.pricing", "products.specifications", "products.inventory",
 
   // Quotation Management (Sales primary, others view)
   "quotations.view", "quotations.create", "quotations.edit", "quotations.delete",
@@ -887,6 +884,32 @@ export const insertAttendanceSchema = z.object({
   manualOTHours: z.number().nullish(),
   otStatus: z.enum(["not_started", "in_progress", "completed"]).default("not_started"),
   otType: z.enum(["early_arrival", "late_departure", "weekend", "holiday"]).nullish(),
+
+  // Auto-Correction & Admin Review Fields (Phases 1-3)
+  autoCorrected: z.boolean().default(false),
+  autoCorrectedAt: z.date().nullish(),
+  autoCorrectionReason: z.string().nullish(),
+  adminReviewStatus: z.enum(["pending", "accepted", "adjusted", "rejected"]).nullish(),
+  adminReviewedBy: z.string().nullish(),
+  adminReviewedAt: z.date().nullish(),
+  adminReviewNotes: z.string().nullish(),
+  originalCheckOutTime: z.date().nullish(),
+});
+
+export const insertNotificationSchema = z.object({
+  userId: z.string(),
+  type: z.enum(["auto_checkout", "admin_review", "system", "general"]).default("general"),
+  category: z.enum(["attendance", "leave", "ot", "general"]).default("general"),
+  title: z.string(),
+  message: z.string(),
+  actionUrl: z.string().nullish(),
+  actionLabel: z.string().nullish(),
+  dismissible: z.boolean().default(true),
+  status: z.enum(["unread", "read"]).default("unread"),
+  dismissedAt: z.date().nullish(),
+  expiresAt: z.date().nullish(),
+  createdAt: z.date().default(() => new Date()),
+  updatedAt: z.date().default(() => new Date()),
 });
 
 export const insertOfficeLocationSchema = z.object({
@@ -939,6 +962,7 @@ export const insertDepartmentTimingSchema = z.object({
     }),
   lateThresholdMinutes: z.number().min(0).default(15), // Grace period for late arrivals (flexible input)
   overtimeThresholdMinutes: z.number().min(0).default(30), // Minimum minutes to qualify for OT (flexible input)
+  autoCheckoutGraceMinutes: z.number().min(0).default(120), // Grace period before auto-checkout triggers
   isFlexibleTiming: z.boolean().default(false),
   flexibleCheckInStart: z.string().nullish(), // e.g., "08:00"
   flexibleCheckInEnd: z.string().nullish(),   // e.g., "10:00"
@@ -1070,10 +1094,11 @@ export const insertPayrollSettingsSchema = z.object({
   pfRate: z.number().min(0).max(100).default(12), // PF rate percentage
   esiRate: z.number().min(0).max(100).default(0.75), // ESI rate percentage
   tdsRate: z.number().min(0).max(100).default(0), // TDS rate percentage
-  overtimeMultiplier: z.number().min(1).default(2), // Overtime pay multiplier
+  overtimeMultiplier: z.number().min(1).default(1), // Overtime pay multiplier
   standardWorkingHours: z.number().min(1).default(8), // Standard working hours per day
   standardWorkingDays: z.number().min(1).default(26), // Standard working days per month
   leaveDeductionRate: z.number().min(0).max(100).default(100), // Percentage deduction for leaves
+  autoCheckoutGraceMinutes: z.number().min(0).default(5), // Global auto-checkout grace period in minutes
 
   // Salary calculation rules
   pfApplicableFromSalary: z.number().min(0).default(15000), // PF applicable from this salary amount
@@ -1156,7 +1181,7 @@ export const insertEnhancedSalaryStructureSchema = z.object({
   customEarnings: z.record(z.number()).default({}),
   customDeductions: z.record(z.number()).default({}),
   perDaySalaryBase: z.enum(["basic", "basic_hra", "gross"]).default("basic_hra"),
-  overtimeRate: z.number().min(0).default(1.5),
+  overtimeRate: z.number().min(0).default(1.0),
   epfApplicable: z.boolean().default(true),
   esiApplicable: z.boolean().default(true),
   vptAmount: z.number().min(0).default(0),
@@ -1216,6 +1241,7 @@ export const insertEnhancedPayrollSettingsSchema = z.object({
   standardWorkingDays: z.number().min(1).default(26),
   standardWorkingHours: z.number().min(1).default(8),
   overtimeThresholdHours: z.number().min(0).default(8),
+  autoCheckoutGraceMinutes: z.number().min(0).default(5), // Global auto-checkout grace period in minutes
   companyName: z.string().default("Prakash Greens Energy"),
   companyAddress: z.string().nullish(),
   companyPan: z.string().nullish(),
@@ -1271,13 +1297,13 @@ export const getDepartmentModuleAccess = (department: Department): SystemPermiss
     case "admin":
       return [...baseAccess, "users.view", "users.create", "users.edit", "departments.view", "designations.view", "analytics.departmental", "reports.basic", "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
     case "hr":
-      return [...baseAccess, "attendance.view_all", "leave.view_all", "leave.approve", "users.view", "users.create", "users.edit", "customers.view", "products.view", "quotations.view", "invoices.view"];
+      return [...baseAccess, "attendance.view_all", "leave.view_all", "leave.approve", "users.view", "users.create", "users.edit", "customers.view", "quotations.view", "invoices.view"];
     case "marketing":
-      return [...baseAccess, "customers.view", "customers.create", "customers.edit", "products.view", "quotations.view", "reports.basic", "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
+      return [...baseAccess, "customers.view", "customers.create", "customers.edit", "quotations.view", "reports.basic", "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
     case "sales":
-      return [...baseAccess, "customers.view", "customers.create", "customers.edit", "quotations.view", "quotations.create", "quotations.edit", "products.view", "reports.basic"];
+      return [...baseAccess, "customers.view", "customers.create", "customers.edit", "quotations.view", "quotations.create", "quotations.edit", "reports.basic"];
     case "technical":
-      return [...baseAccess, "products.view", "products.create", "products.edit", "products.specifications", "products.inventory", "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
+      return [...baseAccess, "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
     case "housekeeping":
       return [...baseAccess, "attendance.view_own"];
     default:
@@ -1302,12 +1328,11 @@ export const getDesignationActionPermissions = (designation: Designation): Syste
 
   // Level 2+ (Welder and above)
   if (level >= 2) {
-    permissions.push("products.view");
+
   }
 
   // Level 3+ (Technician and above)
   if (level >= 3) {
-    permissions.push("products.create", "products.edit");
   }
 
   // Level 4+ (CRE and above)
@@ -2092,6 +2117,12 @@ export const insertFixedHolidaySchema = z.object({
   type: z.enum(["national", "company", "regional"]).default("national"),
   isPaid: z.boolean().default(true),
   isOptional: z.boolean().default(false),
+
+  // OT Rate - REQUIRED for payroll calculations
+  otRateMultiplier: z.number().min(1).max(10), // e.g., 1.0 for 1x pay, 1.5 for 1.5x pay
+
+  // OT Policy - Controls whether OT can be submitted on this holiday
+  allowOT: z.boolean().default(false), // Safe default: block OT on holidays
 
   // Applicability
   applicableDepartments: z.array(z.enum(departments)).nullish(), // null = all departments

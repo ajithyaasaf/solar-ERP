@@ -16,7 +16,6 @@ import { Suspense, lazy } from "react";
 
 // Simple lazy loading without complex chunk management
 const Customers = lazy(() => import("@/pages/customers"));
-const Products = lazy(() => import("@/pages/products"));
 const Quotations = lazy(() => import("@/pages/quotations"));
 const QuotationCreation = lazy(() => import("@/pages/quotation-creation"));
 const Invoices = lazy(() => import("@/pages/invoices"));
@@ -28,11 +27,11 @@ const Leave = lazy(() => import("@/pages/leave"));
 const UserManagement = lazy(() => import("@/pages/user-management"));
 const HRManagement = lazy(() => import("@/pages/hr-management"));
 const Departments = lazy(() => import("@/pages/departments"));
-const OfficeLocations = lazy(() => import("@/pages/office-locations"));
 const SiteVisit = lazy(() => import("@/pages/site-visit"));
 const SiteVisitMonitoring = lazy(() => import("@/pages/site-visit-monitoring"));
 const EmployeeOT = lazy(() => import("@/pages/employee-ot"));
 const OTAdministration = lazy(() => import("@/pages/ot-administration"));
+const OTPendingReview = lazy(() => import("@/pages/ot-pending-review"));
 
 // Simple loading fallback component
 const PageLoader = () => (
@@ -77,18 +76,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* Product management - enterprise permission based */}
-      <Route path="/products">
-        <ProtectedRoute
-          requiredPermissions={["products.view", "products.create"]}
-        >
-          <DashboardLayout>
-            <Suspense fallback={<PageLoader />}>
-              <Products />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
+
 
       {/* Quotation management - enterprise permission based */}
       <Route path="/quotations">
@@ -240,19 +228,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* Office Locations - enterprise system administration */}
-      <Route path="/office-locations">
-        <ProtectedRoute
-          requiredPermissions="system.settings"
-          requiredRole="master_admin"
-        >
-          <DashboardLayout>
-            <Suspense fallback={<PageLoader />}>
-              <OfficeLocations />
-            </Suspense>
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
+
 
       {/* Attendance Management - master admin only */}
       <Route path="/attendance-management">
@@ -306,7 +282,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* OT Administration - Admin and Master Admin only */}
+      {/* Attendance & OT Management - Admin and Master Admin only */}
       <Route path="/ot-administration">
         <ProtectedRoute
           requiredRole={["admin", "master_admin"]}
@@ -318,6 +294,8 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
+
+
 
       {/* Fallback to 404 */}
       <Route component={NotFound} />

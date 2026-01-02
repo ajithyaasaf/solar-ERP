@@ -8,7 +8,7 @@ import { StatsCard } from "@/components/dashboard/stats-card";
 import { AttendanceCard } from "@/components/dashboard/attendance-card";
 import { PendingApprovalsCard } from "@/components/dashboard/pending-approvals-card";
 import { RecentCustomersTable } from "@/components/dashboard/recent-customers-table";
-import { LowStockProductsTable } from "@/components/dashboard/low-stock-products-table";
+
 import { RecentQuotations } from "@/components/dashboard/recent-quotations";
 import { RecentInvoices } from "@/components/dashboard/recent-invoices";
 import { QuickActions } from "@/components/dashboard/quick-actions";
@@ -32,9 +32,7 @@ export default function Dashboard() {
     queryKey: ["/api/customers"],
   });
 
-  const { data: productsData, isLoading: loadingProducts } = useQuery({
-    queryKey: ["/api/products"],
-  });
+
 
   const { data: quotationsData, isLoading: loadingQuotations } = useQuery({
     queryKey: ["/api/quotations"],
@@ -51,21 +49,19 @@ export default function Dashboard() {
   // Real solar KPIs from data (NOT fake)
   const totalUsers = Array.isArray(usersData) ? usersData.length : 0;
   const totalCustomers = Array.isArray(customersData) ? customersData.length : 0;
-  const activeQuotations = Array.isArray(quotationsData) 
-    ? quotationsData.filter((q: any) => q.status !== "rejected" && q.status !== "converted").length 
+  const activeQuotations = Array.isArray(quotationsData)
+    ? quotationsData.filter((q: any) => q.status !== "rejected" && q.status !== "converted").length
     : 0;
-  const totalRevenue = Array.isArray(invoicesData) 
-    ? invoicesData.reduce((sum: number, invoice: any) => sum + (invoice.totalAmount || 0), 0) 
+  const totalRevenue = Array.isArray(invoicesData)
+    ? invoicesData.reduce((sum: number, invoice: any) => sum + (invoice.totalAmount || 0), 0)
     : 0;
-  const paidInvoices = Array.isArray(invoicesData) 
-    ? invoicesData.filter((i: any) => i.status === "paid").length 
+  const paidInvoices = Array.isArray(invoicesData)
+    ? invoicesData.filter((i: any) => i.status === "paid").length
     : 0;
   const pendingInvoices = Array.isArray(invoicesData)
     ? invoicesData.filter((i: any) => i.status === "pending").length
     : 0;
-  const criticalStockCount = Array.isArray(productsData)
-    ? productsData.filter((p: any) => (p.quantity || 0) <= 5).length
-    : 0;
+
 
   // Format recent customers
   const recentCustomers = Array.isArray(customersData) ? customersData.slice(0, 3).map((customer: any) => ({
@@ -76,20 +72,7 @@ export default function Dashboard() {
     addedOn: new Date(customer.createdAt)
   })) : [];
 
-  // Format low stock products
-  const lowStockProducts = Array.isArray(productsData) ? productsData
-    .filter((product: any) => (product.quantity || 0) <= 10)
-    .slice(0, 3)
-    .map((product: any) => ({
-      id: product.id,
-      name: product.name,
-      type: product.type || product.make || '',
-      icon: (product.type?.toLowerCase().includes('battery') ? 'battery' : 
-            product.type?.toLowerCase().includes('inverter') ? 'plug' : 'dashboard') as 'battery' | 'plug' | 'dashboard',
-      currentStock: product.quantity || 0,
-      price: product.price,
-      status: ((product.quantity || 0) <= 5 ? 'critical' : 'low') as 'critical' | 'low'
-    })) : [];
+
 
   // Format recent quotations with status
   const recentQuotations = Array.isArray(quotationsData) ? quotationsData.slice(0, 3).map((quotation: any) => {
@@ -134,7 +117,7 @@ export default function Dashboard() {
   const recentActivity = Array.isArray(activityLogsData) ? activityLogsData.slice(0, 4).map((activity: any) => {
     let icon = "ri-history-line";
     let iconBgColor = "bg-primary";
-    
+
     if (activity.type === 'customer_created') {
       icon = "ri-user-add-line";
       iconBgColor = "bg-success";
@@ -148,7 +131,7 @@ export default function Dashboard() {
       icon = "ri-store-2-line";
       iconBgColor = "bg-primary";
     }
-    
+
     return {
       id: activity.id,
       icon,
@@ -190,7 +173,7 @@ export default function Dashboard() {
 
     // Secondary actions based on role
     const secondaryActions = [];
-    
+
     if (user?.department === "technical") {
       secondaryActions.push({
         id: "qa4",
@@ -215,14 +198,6 @@ export default function Dashboard() {
 
     if (["admin", "master_admin"].includes(user?.role || "")) {
       secondaryActions.push({
-        id: "qa6",
-        label: "Add Product",
-        icon: <Package className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />,
-        iconColor: "text-primary",
-        href: "/products/new",
-        category: "secondary" as const
-      });
-      secondaryActions.push({
         id: "qa7",
         label: "Reports",
         icon: <BarChart className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8" />,
@@ -236,7 +211,7 @@ export default function Dashboard() {
   };
 
   // Loading state
-  if (loadingUsers || loadingCustomers || loadingProducts || loadingQuotations || loadingInvoices || loadingActivityLogs) {
+  if (loadingUsers || loadingCustomers || loadingQuotations || loadingInvoices || loadingActivityLogs) {
     return (
       <div className="flex h-full items-center justify-center p-4">
         <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
@@ -277,14 +252,9 @@ export default function Dashboard() {
       </div>
 
       {/* Urgency Indicators */}
-      {(pendingInvoices > 0 || criticalStockCount > 0) && (
+      {pendingInvoices > 0 && (
         <div className="flex flex-wrap gap-3 mb-6">
-          {pendingInvoices > 0 && (
-            <UrgencyBadge type="warning" count={pendingInvoices} label="Invoices Pending" />
-          )}
-          {criticalStockCount > 0 && (
-            <UrgencyBadge type="critical" count={criticalStockCount} label="Critical Stock" />
-          )}
+          <UrgencyBadge type="warning" count={pendingInvoices} label="Invoices Pending" />
         </div>
       )}
 
@@ -333,9 +303,8 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Data Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6 mb-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:gap-6 mb-6">
         <RecentCustomersTable customers={recentCustomers} />
-        <LowStockProductsTable products={lowStockProducts} />
       </div>
 
       {/* Activity & Transactions */}

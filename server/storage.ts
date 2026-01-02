@@ -1,4 +1,5 @@
 import { db } from "./firebase";
+import { PayrollHelper } from "./services/payroll-helper";
 import {
   FieldValue,
   Timestamp,
@@ -28,6 +29,7 @@ import {
   insertLeaveBalanceSchema,
   insertLeaveApplicationSchema,
   insertFixedHolidaySchema,
+  insertNotificationSchema,
   LeaveBalance,
   LeaveApplication,
   FixedHoliday,
@@ -136,11 +138,7 @@ import { insertCustomerSchema, type UnifiedCustomer } from "@shared/schema";
 // Create Customer type alias for backward compatibility
 export type Customer = UnifiedCustomer;
 
-export const insertProductSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  price: z.number()
-});
+
 
 // Import comprehensive quotation schema from shared location
 import { insertQuotationSchema as sharedInsertQuotationSchema, type Quotation as SharedQuotation } from "@shared/schema";
@@ -276,15 +274,6 @@ export interface OfficeLocation {
   radius: number;
 }
 
-
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  createdAt: Date;
-}
-
 // Use the comprehensive quotation interface from shared
 export type Quotation = SharedQuotation;
 
@@ -319,6 +308,41 @@ export interface Attendance {
   otReason?: string;
   otStartTime?: Date;
   otEndTime?: Date;
+
+  // New OT System Fields (Multi-session support)
+  otSessions?: any[];  // Array of OT session objects
+  totalOTHours?: number;  // Aggregated total from all sessions
+
+  // Verified Firestore fields (matched to shared/schema.ts)
+  autoCorrected: boolean;  // Required field with default: false
+  workingHours?: number;  // Optional field (nullish in schema)
+  otStatus: "not_started" | "in_progress" | "completed";  // Required field with default: "not_started"
+
+  // Auto-Correction & Admin Review Fields
+  autoCorrectedAt?: Date;
+  autoCorrectionReason?: string;
+  adminReviewStatus?: 'pending' | 'accepted' | 'adjusted' | 'rejected';
+  adminReviewedBy?: string;
+  adminReviewedAt?: Date;
+  adminReviewNotes?: string;
+  originalCheckOutTime?: Date;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'auto_checkout' | 'admin_review' | 'system' | 'general';
+  category: 'attendance' | 'leave' | 'ot' | 'general';
+  title: string;
+  message: string;
+  actionUrl?: string;
+  actionLabel?: string;
+  dismissible: boolean;
+  status: 'unread' | 'read';
+  dismissedAt?: Date;
+  expiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Leave {
@@ -334,7 +358,7 @@ export interface Leave {
 // Activity Log interface
 export interface ActivityLog {
   id: string;
-  type: 'customer_created' | 'customer_updated' | 'quotation_created' | 'invoice_paid' | 'product_created' | 'attendance' | 'leave_requested' | 'follow_up_completed' | 'follow_up_scheduled';
+  type: 'customer_created' | 'customer_updated' | 'quotation_created' | 'invoice_paid' | 'attendance' | 'leave_requested' | 'follow_up_completed' | 'follow_up_scheduled';
   title: string;
   description: string;
   createdAt: Date;
@@ -344,7 +368,7 @@ export interface ActivityLog {
 }
 
 export const insertActivityLogSchema = z.object({
-  type: z.enum(['customer_created', 'customer_updated', 'quotation_created', 'invoice_paid', 'product_created', 'attendance', 'leave_requested', 'follow_up_completed', 'follow_up_scheduled']),
+  type: z.enum(['customer_created', 'customer_updated', 'quotation_created', 'invoice_paid', 'attendance', 'leave_requested', 'follow_up_completed', 'follow_up_scheduled']),
   title: z.string(),
   description: z.string(),
   entityId: z.string().optional(),
@@ -637,6 +661,7 @@ export interface PayrollSettings {
   leaveDeductionRate: number;
   pfApplicableFromSalary: number;
   esiApplicableFromSalary: number;
+  autoCheckoutGraceMinutes: number;
   companyName: string;
   companyAddress?: string;
   companyPan?: string;
@@ -797,7 +822,15 @@ export interface IStorage {
   getUsersByDepartment(department: string): Promise<User[]>;
   getUsersByDesignation(designation: string): Promise<User[]>;
   getUsersByReportingManager(managerId: string): Promise<User[]>;
-  listUsers(): Promise<User[]>;
+  // Notifications
+  createNotification(notification: any): Promise<Notification>;
+  getNotifications(userId: string, filters?: any): Promise<Notification[]>;
+  updateNotification(id: string, updates: any): Promise<Notification>;
+  deleteExpiredNotifications(date: Date): Promise<void>;
+
+  // Attendance Enhancements
+  listIncompleteAttendance(date: Date): Promise<Attendance[]>;
+  listAttendanceByReviewStatus(status: string): Promise<Attendance[]>;
   createUser(data: z.infer<typeof insertUserSchema>): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
 
@@ -976,14 +1009,6 @@ export interface IStorage {
 
   listOfficeLocations(): Promise<OfficeLocation[]>;
   getOfficeLocation(id: string): Promise<OfficeLocation | undefined>;
-  createOfficeLocation(
-    data: z.infer<typeof insertOfficeLocationSchema>,
-  ): Promise<OfficeLocation>;
-  updateOfficeLocation(
-    id: string,
-    data: Partial<z.infer<typeof insertOfficeLocationSchema>>,
-  ): Promise<OfficeLocation>;
-  deleteOfficeLocation(id: string): Promise<void>;
   listCustomers(): Promise<Customer[]>;
   getCustomer(id: string): Promise<Customer | undefined>;
   createCustomer(data: z.infer<typeof insertCustomerSchema>): Promise<Customer>;
@@ -992,14 +1017,6 @@ export interface IStorage {
     data: Partial<z.infer<typeof insertCustomerSchema>>,
   ): Promise<Customer>;
   deleteCustomer(id: string): Promise<void>;
-  listProducts(): Promise<Product[]>;
-  getProduct(id: string): Promise<Product | undefined>;
-  createProduct(data: z.infer<typeof insertProductSchema>): Promise<Product>;
-  updateProduct(
-    id: string,
-    data: Partial<z.infer<typeof insertProductSchema>>,
-  ): Promise<Product>;
-  deleteProduct(id: string): Promise<void>;
   listQuotations(): Promise<Quotation[]>;
   getQuotation(id: string): Promise<Quotation | undefined>;
   createQuotation(
@@ -1008,6 +1025,7 @@ export interface IStorage {
   updateQuotation(
     id: string,
     data: Partial<z.infer<typeof insertQuotationSchema>>,
+    updatedBy: string,
   ): Promise<Quotation>;
   deleteQuotation(id: string): Promise<void>;
   listInvoices(): Promise<Invoice[]>;
@@ -1023,7 +1041,7 @@ export interface IStorage {
   ): Promise<Attendance>;
   updateAttendance(
     id: string,
-    data: Partial<z.infer<typeof insertAttendanceSchema>>,
+    data: Partial<Attendance>,
   ): Promise<Attendance>;
   getAttendanceByUserAndDate(
     userId: string,
@@ -1105,6 +1123,10 @@ export interface IStorage {
 
   // Attendance - Date Range Query (for payroll locking)
   listAttendanceByDateRange(startDate: Date, endDate: Date): Promise<Attendance[]>;
+
+  // Missing methods restored
+  getUsersByRole(role: string): Promise<User[]>;
+  addOTSessionTransaction(attendanceId: string, sessionData: any): Promise<void>;
 }
 
 export class FirestoreStorage implements IStorage {
@@ -1669,7 +1691,7 @@ export class FirestoreStorage implements IStorage {
       const { getEffectivePermissions } = await import("@shared/schema");
       const effectivePermissions = getEffectivePermissions(user.department, user.designation);
 
-      const hasPermission = effectivePermissions.includes(permission);
+      const hasPermission = effectivePermissions.includes(permission as any);
       console.log(`SERVER PERMISSION CHECK: Effective permissions check result: ${hasPermission} for permission '${permission}'`);
 
       return hasPermission;
@@ -1679,53 +1701,9 @@ export class FirestoreStorage implements IStorage {
     }
   }
 
-  // Audit logging implementation
-  async createAuditLog(data: z.infer<typeof insertAuditLogSchema>): Promise<AuditLog> {
-    const auditDoc = this.db.collection("audit_logs").doc();
-    const auditLog = {
-      id: auditDoc.id,
-      ...data,
-      timestamp: new Date(),
-      createdAt: new Date()
-    };
 
-    await auditDoc.set({
-      ...auditLog,
-      timestamp: Timestamp.fromDate(auditLog.timestamp),
-      createdAt: Timestamp.fromDate(auditLog.createdAt)
-    });
 
-    return auditLog as AuditLog;
-  }
 
-  async getAuditLogs(filters?: { userId?: string; entityType?: string; startDate?: Date; endDate?: Date }): Promise<AuditLog[]> {
-    let query: Query = this.db.collection("audit_logs");
-
-    if (filters?.userId) {
-      query = query.where("userId", "==", filters.userId);
-    }
-    if (filters?.entityType) {
-      query = query.where("entityType", "==", filters.entityType);
-    }
-    if (filters?.startDate) {
-      query = query.where("timestamp", ">=", Timestamp.fromDate(filters.startDate));
-    }
-    if (filters?.endDate) {
-      query = query.where("timestamp", "<=", Timestamp.fromDate(filters.endDate));
-    }
-
-    const snapshot = await query.orderBy("timestamp", "desc").limit(100).get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        timestamp: data.timestamp?.toDate() || new Date(),
-        createdAt: data.createdAt?.toDate() || new Date()
-      } as AuditLog;
-    });
-  }
 
   async listOfficeLocations(): Promise<OfficeLocation[]> {
     const locationsCollection = this.db.collection("office_locations");
@@ -1752,53 +1730,6 @@ export class FirestoreStorage implements IStorage {
     return { id: docSnap.id, ...data } as OfficeLocation;
   }
 
-  async createOfficeLocation(
-    data: z.infer<typeof insertOfficeLocationSchema>,
-  ): Promise<OfficeLocation> {
-    const validatedData = insertOfficeLocationSchema.parse(data);
-    const locationsRef = this.db.collection("office_locations");
-
-    const locationDoc = await locationsRef.add({
-      ...validatedData,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
-
-    return {
-      id: locationDoc.id,
-      ...validatedData
-    } as OfficeLocation;
-  }
-
-  async updateOfficeLocation(
-    id: string,
-    data: Partial<z.infer<typeof insertOfficeLocationSchema>>,
-  ): Promise<OfficeLocation> {
-    const validatedData = insertOfficeLocationSchema.partial().parse(data);
-    const locationDoc = this.db.collection("office_locations").doc(id);
-
-    await locationDoc.update({
-      ...validatedData,
-      updatedAt: Timestamp.now(),
-    });
-
-    const updatedDoc = await locationDoc.get();
-    if (!updatedDoc.exists) throw new Error("Office location not found");
-
-    const docData = updatedDoc.data() || {};
-    return {
-      id: updatedDoc.id,
-      name: docData.name,
-      latitude: docData.latitude,
-      longitude: docData.longitude,
-      radius: docData.radius
-    } as OfficeLocation;
-  }
-
-  async deleteOfficeLocation(id: string): Promise<void> {
-    const locationDoc = this.db.collection("office_locations").doc(id);
-    await locationDoc.delete();
-  }
 
   async listCustomers(): Promise<Customer[]> {
     const customersCollection = this.db.collection("customers");
@@ -2047,85 +1978,6 @@ export class FirestoreStorage implements IStorage {
     await customerDoc.delete();
   }
 
-  async listProducts(): Promise<Product[]> {
-    const productsCollection = this.db.collection("products");
-    const snapshot = await productsCollection.get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data() || {};
-      return {
-        id: doc.id,
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        createdAt: data.createdAt?.toDate() || new Date()
-      } as Product;
-    });
-  }
-
-  async getProduct(id: string): Promise<Product | undefined> {
-    const productDoc = this.db.collection("products").doc(id);
-    const docSnap = await productDoc.get();
-
-    if (!docSnap.exists) return undefined;
-
-    const data = docSnap.data() || {};
-    return {
-      id: docSnap.id,
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      createdAt: data.createdAt?.toDate() || new Date()
-    } as Product;
-  }
-
-  async createProduct(
-    data: z.infer<typeof insertProductSchema>,
-  ): Promise<Product> {
-    const validatedData = insertProductSchema.parse(data);
-    const productsRef = this.db.collection("products");
-
-    const productDoc = await productsRef.add({
-      ...validatedData,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
-
-    return {
-      id: productDoc.id,
-      ...validatedData,
-      createdAt: new Date(),
-    } as Product;
-  }
-
-  async updateProduct(
-    id: string,
-    data: Partial<z.infer<typeof insertProductSchema>>,
-  ): Promise<Product> {
-    const validatedData = insertProductSchema.partial().parse(data);
-    const productDoc = this.db.collection("products").doc(id);
-
-    await productDoc.update({
-      ...validatedData,
-      updatedAt: Timestamp.now(),
-    });
-
-    const updatedDoc = await productDoc.get();
-    if (!updatedDoc.exists) throw new Error("Product not found");
-
-    const updatedData = updatedDoc.data() || {};
-    return {
-      id: updatedDoc.id,
-      ...updatedData,
-      createdAt: updatedData.createdAt?.toDate() || new Date(),
-    } as Product;
-  }
-
-  async deleteProduct(id: string): Promise<void> {
-    const productDoc = this.db.collection("products").doc(id);
-    await productDoc.delete();
-  }
-
   async listQuotations(): Promise<Quotation[]> {
     const quotationsCollection = this.db.collection("quotations");
     const snapshot = await quotationsCollection.get();
@@ -2186,7 +2038,7 @@ export class FirestoreStorage implements IStorage {
         ...validatedData,
         createdAt: new Date(),
       } as Quotation;
-    } catch (error) {
+    } catch (error: any) {
       console.error("\n❌ ERROR IN STORAGE.CREATE_QUOTATION ❌");
       console.error("Error type:", error instanceof z.ZodError ? "ZodError" : error.constructor.name);
       console.error("Error message:", error instanceof Error ? error.message : String(error));
@@ -2371,7 +2223,7 @@ export class FirestoreStorage implements IStorage {
     const attendanceRef = this.db.collection("attendance");
     const attendanceDoc = await attendanceRef.add({
       ...cleanData,
-      date: Timestamp.fromDate(validatedData.date),
+      date: Timestamp.fromDate(validatedData.date || new Date()),
       checkInTime: validatedData.checkInTime ? Timestamp.fromDate(validatedData.checkInTime) : Timestamp.now(),
       checkOutTime: validatedData.checkOutTime ? Timestamp.fromDate(validatedData.checkOutTime) : null,
       location: validatedData.attendanceType || "office",
@@ -2398,13 +2250,17 @@ export class FirestoreStorage implements IStorage {
       date: new Date(),
       checkInTime: validatedData.checkInTime instanceof Timestamp ? validatedData.checkInTime.toDate() : undefined,
       checkOutTime: validatedData.checkOutTime instanceof Timestamp ? validatedData.checkOutTime.toDate() : undefined,
+      location: validatedData.attendanceType || "office",
     } as Attendance;
   }
 
   async updateAttendance(
     id: string,
-    data: Partial<z.infer<typeof insertAttendanceSchema>>,
+    data: Partial<Attendance>,
   ): Promise<Attendance> {
+    // Extract OT fields that are not in the Zod schema
+    const { otSessions, totalOTHours, ...schemaData } = data as any;
+
     // Handle data type conversions before validation
     const processedData = { ...data };
 
@@ -2423,7 +2279,7 @@ export class FirestoreStorage implements IStorage {
     }
 
     // Now validate the processed data
-    const validatedData = insertAttendanceSchema.partial().parse(processedData);
+    const validatedData = insertAttendanceSchema.partial().parse(schemaData);
 
     // Then prepare for Firestore with timestamp conversion
     const firestoreData: any = {
@@ -2454,6 +2310,10 @@ export class FirestoreStorage implements IStorage {
         delete firestoreData[key];
       }
     });
+
+    // Add OT fields if present (they were extracted before Zod validation)
+    if (otSessions) firestoreData.otSessions = otSessions;
+    if (totalOTHours !== undefined) firestoreData.totalOTHours = totalOTHours;
 
     const attendanceDoc = this.db.collection("attendance").doc(id);
 
@@ -2500,6 +2360,8 @@ export class FirestoreStorage implements IStorage {
       checkOutTime: data.checkOutTime?.toDate() || null,
       otStartTime: data.otStartTime?.toDate() || undefined,
       otEndTime: data.otEndTime?.toDate() || undefined,
+      otSessions: data.otSessions || [],  // CRITICAL: Include OT sessions
+      totalOTHours: data.totalOTHours || 0,  // CRITICAL: Include total OT hours
     } as Attendance;
   }
 
@@ -2561,6 +2423,73 @@ export class FirestoreStorage implements IStorage {
       } as Attendance;
     });
   }
+
+
+
+  async listIncompleteAttendance(date: Date): Promise<Attendance[]> {
+    try {
+      // FIXED: Firestore where("field", "==", null) doesn't work for missing/undefined fields
+      // Solution: Get ALL attendance records, filter everything in-memory
+
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      console.log(`[STORAGE] Searching for incomplete attendance on ${date.toISOString().split('T')[0]}`);
+      console.log(`[STORAGE] Date range:`, { start: startOfDay.toISOString(), end: endOfDay.toISOString() });
+
+      const attendanceRef = this.db.collection("attendance");
+
+      // Get ALL attendance records (no filter on checkOutTime)
+      // We'll filter in-memory for incomplete ones
+      const snapshot = await attendanceRef.get();
+
+      console.log(`[STORAGE] Total attendance records in database: ${snapshot.docs.length}`);
+
+      const incomplete = snapshot.docs
+        .map(doc => {
+          const data = doc.data() || {};
+          return {
+            id: doc.id,
+            ...data,
+            date: data.date?.toDate() || new Date(),
+            checkInTime: data.checkInTime?.toDate() || null,
+            checkOutTime: data.checkOutTime?.toDate() || null,
+            otStartTime: data.otStartTime?.toDate() || undefined,
+            otEndTime: data.otEndTime?.toDate() || undefined,
+          } as Attendance;
+        })
+        .filter(record => {
+          // Filter for records on the specified date with check-in but NO check-out
+          if (!record.checkInTime) return false; // Must have checked in
+          if (record.checkOutTime) return false; // Must NOT have checked out
+          if (!record.date) return false;
+
+          const recordDate = record.date.getTime();
+          const isInDateRange = recordDate >= startOfDay.getTime() && recordDate <= endOfDay.getTime();
+
+          if (isInDateRange) {
+            console.log(`[STORAGE] Found incomplete record:`, {
+              id: record.id,
+              userId: record.userId,
+              date: record.date?.toISOString().split('T')[0],
+              checkInTime: record.checkInTime?.toISOString(),
+              checkOutTime: record.checkOutTime
+            });
+          }
+
+          return isInDateRange;
+        });
+
+      console.log(`[STORAGE] Found ${incomplete.length} incomplete attendance records for ${date.toISOString().split('T')[0]}`);
+      return incomplete;
+    } catch (error) {
+      console.error("Error listing incomplete attendance:", error);
+      return [];
+    }
+  }
+
 
   async listAttendanceBetweenDates(
     startDate: Date,
@@ -2644,32 +2573,7 @@ export class FirestoreStorage implements IStorage {
     return this.getAttendanceByUserAndDate(userId, targetDate);
   }
 
-  async listAttendanceBetweenDates(
-    startDate: Date,
-    endDate: Date,
-  ): Promise<Attendance[]> {
-    const start = Timestamp.fromDate(startDate);
-    const end = Timestamp.fromDate(endDate);
 
-    const attendanceRef = this.db.collection("attendance");
-    const snapshot = await attendanceRef
-      .where("date", ">=", start)
-      .where("date", "<=", end)
-      .get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data() || {};
-      return {
-        id: doc.id,
-        ...data,
-        date: data.date?.toDate() || new Date(),
-        checkInTime: data.checkInTime?.toDate() || null,
-        checkOutTime: data.checkOutTime?.toDate() || null,
-        otStartTime: data.otStartTime?.toDate() || undefined,
-        otEndTime: data.otEndTime?.toDate() || undefined,
-      } as Attendance;
-    });
-  }
 
   async getLeave(id: string): Promise<Leave | undefined> {
     const leaveDoc = this.db.collection("leaves").doc(id);
@@ -3147,7 +3051,7 @@ export class FirestoreStorage implements IStorage {
 
     const snapshot = await query.orderBy("applicationDate", "desc").get();
 
-    return snapshot.docs.map(doc => {
+    return snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -3197,7 +3101,7 @@ export class FirestoreStorage implements IStorage {
 
     const snapshot = await query.orderBy("applicationDate", "desc").get();
 
-    return snapshot.docs.map(doc => {
+    return snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -3247,7 +3151,7 @@ export class FirestoreStorage implements IStorage {
 
     const snapshot = await query.orderBy("applicationDate", "desc").get();
 
-    let results = snapshot.docs.map(doc => {
+    let results = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -3288,7 +3192,7 @@ export class FirestoreStorage implements IStorage {
 
     // Filter by month/year if provided
     if (filters?.month && filters?.year) {
-      results = results.filter(leave => {
+      results = results.filter((leave: any) => {
         const date = leave.startDate || leave.permissionDate;
         if (date) {
           return date.getMonth() + 1 === filters.month && date.getFullYear() === filters.year;
@@ -3485,9 +3389,10 @@ export class FirestoreStorage implements IStorage {
       query = query.where("year", "==", year);
     }
 
-    const snapshot = await query.orderBy("date", "asc").get();
+    // Don't use orderBy to avoid composite index requirement
+    const snapshot = await query.get();
 
-    return snapshot.docs.map(doc => {
+    const holidays = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -3503,6 +3408,11 @@ export class FirestoreStorage implements IStorage {
         createdAt: data.createdAt?.toDate() || new Date(),
       } as FixedHoliday;
     });
+
+    // Sort in memory by date
+    holidays.sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+
+    return holidays;
   }
 
   async initializeFixedHolidays(year: number, createdBy: string): Promise<void> {
@@ -3527,6 +3437,8 @@ export class FirestoreStorage implements IStorage {
           type: "national",
           isPaid: true,
           isOptional: false,
+          otRateMultiplier: 1.0, // Default for national holidays
+          allowOT: true,
           createdBy,
           createdAt: new Date(),
         });
@@ -3890,6 +3802,8 @@ export class FirestoreStorage implements IStorage {
       createdAt: new Date(),
     } as AuditLog;
   }
+
+
 
   async getAuditLogs(filters?: { userId?: string; entityType?: string; startDate?: Date; endDate?: Date }): Promise<AuditLog[]> {
     let query = this.db.collection("audit_logs").orderBy("createdAt", "desc");
@@ -4313,10 +4227,11 @@ export class FirestoreStorage implements IStorage {
     } as AttendancePolicy;
   }
 
+
+
+
   async listAttendancePolicies(): Promise<AttendancePolicy[]> {
-    const querySnapshot = await this.db.collection('attendancePolicies')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const querySnapshot = await this.db.collection('attendancePolicies').orderBy('createdAt', 'desc').get();
 
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
@@ -4396,39 +4311,50 @@ export class FirestoreStorage implements IStorage {
       pfRate: 12,
       esiRate: 1.75,
       tdsRate: 10,
-      overtimeMultiplier: 1.5,
+      overtimeMultiplier: 1.0,
       standardWorkingHours: 8,
-      standardWorkingDays: 22,
+      standardWorkingDays: 26,
       leaveDeductionRate: 1,
       pfApplicableFromSalary: 15000,
       esiApplicableFromSalary: 21000,
+      autoCheckoutGraceMinutes: 5,
     };
     const payrollSettings = settings || defaultSettings;
 
     // Calculate salary components
     const { workingDays, presentDays, absentDays, overtimeHours, leaveDays } = attendanceSummary;
 
-    // Base salary calculations
-    const dailySalary = salaryStructure.fixedSalary / payrollSettings.standardWorkingDays;
+    // Base salary calculations using PayrollHelper (Standardized 26-Day Logic)
+    const dailySalary = (PayrollHelper as any).getDailySalary({
+      fixedBasic: (salaryStructure as any).basicSalary || 0,
+      fixedHRA: (salaryStructure as any).hra || 0,
+      fixedConveyance: (salaryStructure as any).allowances || 0
+    }, payrollSettings);
+
     const adjustedSalary = dailySalary * presentDays;
 
-    // Overtime calculation
-    const overtimePay = (salaryStructure.fixedSalary / (payrollSettings.standardWorkingDays * payrollSettings.standardWorkingHours)) *
-      overtimeHours * payrollSettings.overtimeMultiplier;
+    // Overtime calculation using PayrollHelper
+    const user = await this.getUser(userId);
+    const departmentTiming = await this.getDepartmentTiming(user?.department || "");
+    const standardWorkingHours = departmentTiming?.workingHours || payrollSettings.standardWorkingHours || 8;
 
-    // Gross salary
-    const grossSalary = adjustedSalary + (salaryStructure.hra || 0) + (salaryStructure.allowances || 0) +
-      (salaryStructure.variableComponent || 0) + overtimePay;
+    const hourlyRate = PayrollHelper.getHourlyRate(dailySalary, payrollSettings, standardWorkingHours);
+    const overtimePay = hourlyRate * overtimeHours * (payrollSettings.overtimeMultiplier || 1.0);
 
-    // Deductions
-    const pfDeduction = grossSalary >= payrollSettings.pfApplicableFromSalary ?
-      (salaryStructure.basicSalary * payrollSettings.pfRate) / 100 : 0;
+    // Gross salary (including pro-rated fixed components)
+    // For simple storage calculation, we apply the presentDays ratio to the fixed salary
+    const grossSalary = adjustedSalary + (salaryStructure.variableComponent || 0) + overtimePay;
 
-    // FIXED: Use correct ESI rate (0.75%) consistent with routes.ts
-    const esiDeduction = grossSalary >= payrollSettings.esiApplicableFromSalary ? 0 :
-      (grossSalary * 0.75) / 100;
+    // Statutory Deductions using Settings or PayrollHelper if applicable
+    const epfRate = (payrollSettings.pfRate || 12) / 100;
+    const pfDeduction = ((salaryStructure as any).basicSalary || 0) >= payrollSettings.pfApplicableFromSalary ?
+      (((salaryStructure as any).basicSalary || 0) * epfRate) : 0;
 
-    const tdsDeduction = (grossSalary * payrollSettings.tdsRate) / 100;
+    const esiRate = (payrollSettings.esiRate || 0.75) / 100;
+    const esiDeduction = grossSalary <= payrollSettings.esiApplicableFromSalary ?
+      (grossSalary * esiRate) : 0;
+
+    const tdsDeduction = (grossSalary * (payrollSettings.tdsRate || 10)) / 100;
 
     // Get salary advances
     const advances = await this.listSalaryAdvances({
@@ -4440,9 +4366,13 @@ export class FirestoreStorage implements IStorage {
       .filter(advance => {
         const startDate = new Date(advance.deductionStartYear, advance.deductionStartMonth - 1);
         const currentDate = new Date(year, month - 1);
-        return startDate <= currentDate && advance.remainingAmount > 0;
+        // Check if deduction period has started
+        return startDate <= currentDate;
       })
-      .reduce((total, advance) => total + advance.monthlyDeduction, 0);
+      .reduce((total, advance) => {
+        // Calculate remaining amount logic if needed, but for now we take the monthly deduction
+        return total + (advance.monthlyDeduction || 0);
+      }, 0);
 
     const totalDeductions = pfDeduction + esiDeduction + tdsDeduction + advanceDeduction;
     const netSalary = grossSalary - totalDeductions;
@@ -4504,10 +4434,13 @@ export class FirestoreStorage implements IStorage {
       }
     }
 
-    const presentDays = attendanceRecords.filter(r => r.status === 'present' || r.status === 'late').length;
+    // FIXED: Exclude records pending review (Payroll Blocked until approved)
+    const validRecords = attendanceRecords.filter(r => r.adminReviewStatus !== 'pending');
+
+    const presentDays = validRecords.filter(r => r.status === 'present' || r.status === 'late').length;
     const absentDays = workingDays - presentDays;
-    const overtimeHours = attendanceRecords.reduce((total, r) => total + (r.overtimeHours || 0), 0);
-    const leaveDays = attendanceRecords.filter(r => r.status === 'leave').length;
+    const overtimeHours = validRecords.reduce((total, r) => total + (r.overtimeHours || 0), 0);
+    const leaveDays = validRecords.filter(r => r.status === 'leave').length;
 
     return {
       workingDays,
@@ -4518,297 +4451,37 @@ export class FirestoreStorage implements IStorage {
     };
   }
 
-  // Department timing management
-  async getDepartmentTiming(departmentId: string): Promise<any | null> {
+  async listAttendance(filters: { userId?: string; startDate?: string; endDate?: string; status?: string; adminReviewStatus?: string }): Promise<any[]> {
     try {
-      const querySnapshot = await this.db.collection('departmentTimings')
-        .where('departmentId', '==', departmentId)
-        .where('isActive', '==', true)
-        .limit(1)
-        .get();
+      let query: any = this.db.collection('attendance');
 
-      if (querySnapshot.empty) {
-        // Return department-specific default timing if none exists
-        const defaultTimings: Record<string, any> = {
-          "operations": {
-            departmentId: "operations",
-            checkInTime: "09:00",
-            checkOutTime: "18:00",
-            workingHours: 9,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "admin": {
-            departmentId: "admin",
-            checkInTime: "09:30",
-            checkOutTime: "18:30",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: true,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "hr": {
-            departmentId: "hr",
-            checkInTime: "09:00",
-            checkOutTime: "18:00",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 10,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "marketing": {
-            departmentId: "marketing",
-            checkInTime: "09:30",
-            checkOutTime: "18:30",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "sales": {
-            departmentId: "sales",
-            checkInTime: "09:00",
-            checkOutTime: "18:00",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "technical": {
-            departmentId: "technical",
-            checkInTime: "10:00",
-            checkOutTime: "19:00",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "operations": {
-            departmentId: "operations",
-            checkInTime: "09:00",
-            checkOutTime: "18:00",
-            workingHours: 9,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "admin": {
-            departmentId: "admin",
-            checkInTime: "09:30",
-            checkOutTime: "18:30",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: true,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "marketing": {
-            departmentId: "marketing",
-            checkInTime: "09:30",
-            checkOutTime: "18:30",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "sales": {
-            departmentId: "sales",
-            checkInTime: "09:00",
-            checkOutTime: "18:00",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 15,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          },
-          "housekeeping": {
-            departmentId: "housekeeping",
-            checkInTime: "08:00",
-            checkOutTime: "17:00",
-            workingHours: 8,
-            overtimeThresholdMinutes: 30,
-            lateThresholdMinutes: 10,
-            isFlexibleTiming: false,
-            breakDurationMinutes: 60,
-            weeklyOffDays: [0],
-            isActive: true
-          }
-        };
-
-        return defaultTimings[departmentId] || {
-          departmentId,
-          workingHours: 8,
-          checkInTime: "09:00",
-          checkOutTime: "18:00",
-          lateThresholdMinutes: 15,
-          overtimeThresholdMinutes: 30,
-          isFlexibleTiming: false,
-          breakDurationMinutes: 60,
-          weeklyOffDays: [0],
-          allowRemoteWork: true,
-          allowFieldWork: true,
-          allowEarlyCheckOut: false,
-          isActive: true
-        };
+      if (filters.userId) {
+        query = query.where('userId', '==', filters.userId);
+      }
+      if (filters.startDate) {
+        query = query.where('date', '>=', new Date(filters.startDate));
+      }
+      if (filters.endDate) {
+        query = query.where('date', '<=', new Date(filters.endDate));
+      }
+      if (filters.status) {
+        query = query.where('status', '==', filters.status);
+      }
+      if (filters.adminReviewStatus) {
+        query = query.where('adminReviewStatus', '==', filters.adminReviewStatus);
       }
 
-      const doc = querySnapshot.docs[0];
-      const data = doc.data();
-      return {
+      const querySnapshot = await query.get();
+      return querySnapshot.docs.map((doc: any) => ({
         id: doc.id,
-        departmentId: data.departmentId,
-        checkInTime: data.checkInTime,
-        checkOutTime: data.checkOutTime,
-        workingHours: data.workingHours,
-        overtimeThresholdMinutes: data.overtimeThresholdMinutes,
-        lateThresholdMinutes: data.lateThresholdMinutes,
-        isFlexibleTiming: data.isFlexibleTiming,
-        flexibleCheckInStart: data.flexibleCheckInStart,
-        flexibleCheckInEnd: data.flexibleCheckInEnd,
-        breakDurationMinutes: data.breakDurationMinutes,
-        weeklyOffDays: data.weeklyOffDays,
-        allowRemoteWork: data.allowRemoteWork !== undefined ? data.allowRemoteWork : true,
-        allowFieldWork: data.allowFieldWork !== undefined ? data.allowFieldWork : true,
-        allowEarlyCheckOut: data.allowEarlyCheckOut !== undefined ? data.allowEarlyCheckOut : false,
-        isActive: data.isActive,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date()
-      };
+        ...doc.data(),
+        checkInTime: doc.data().checkInTime?.toDate() || null,
+        checkOutTime: doc.data().checkOutTime?.toDate() || null,
+        date: doc.data().date?.toDate() || new Date()
+      }));
     } catch (error) {
-      console.error("Error getting department timing:", error);
-      return null;
-    }
-  }
-
-  async createDepartmentTiming(timingData: any): Promise<any> {
-    try {
-      // Deactivate existing timing for this department
-      const existingQuery = await this.db.collection('departmentTimings')
-        .where('departmentId', '==', timingData.departmentId)
-        .get();
-
-      const batch = this.db.batch();
-      existingQuery.docs.forEach(doc => {
-        batch.update(doc.ref, { isActive: false, updatedAt: Timestamp.now() });
-      });
-
-      // Create new timing record
-      const timingRef = this.db.collection('departmentTimings').doc();
-      const newTiming = {
-        ...timingData,
-        isActive: true,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      };
-
-      // Filter out undefined values to prevent Firestore errors
-      const cleanTiming = Object.fromEntries(
-        Object.entries(newTiming).filter(([_, value]) => value !== undefined)
-      );
-
-      batch.set(timingRef, cleanTiming);
-      await batch.commit();
-
-      return {
-        id: timingRef.id,
-        ...timingData,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-    } catch (error) {
-      console.error("Error creating department timing:", error);
-      throw error;
-    }
-  }
-
-  async updateDepartmentTiming(departmentId: string, timingData: any): Promise<any> {
-    try {
-      // Get current active timing
-      const querySnapshot = await this.db.collection('departmentTimings')
-        .where('departmentId', '==', departmentId)
-        .where('isActive', '==', true)
-        .limit(1)
-        .get();
-
-      if (querySnapshot.empty) {
-        // Create new if doesn't exist
-        return this.createDepartmentTiming({ ...timingData, departmentId });
-      }
-
-      const doc = querySnapshot.docs[0];
-      const updateData = {
-        ...timingData,
-        updatedAt: Timestamp.now()
-      };
-
-      await doc.ref.update(updateData);
-
-      return {
-        id: doc.id,
-        departmentId,
-        ...timingData,
-        updatedAt: new Date()
-      };
-    } catch (error) {
-      console.error("Error updating department timing:", error);
-      throw error;
-    }
-  }
-
-  async getUserAttendanceForDate(userId: string, date: string): Promise<any | null> {
-    try {
-      const querySnapshot = await this.db.collection('attendance')
-        .where('userId', '==', userId)
-        .where('dateString', '==', date)
-        .limit(1)
-        .get();
-
-      if (querySnapshot.empty) {
-        return null;
-      }
-
-      const doc = querySnapshot.docs[0];
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        checkInTime: data.checkInTime?.toDate() || null,
-        checkOutTime: data.checkOutTime?.toDate() || null,
-        date: data.date?.toDate() || new Date()
-      };
-    } catch (error) {
-      console.error("Error getting user attendance for date:", error);
-      return null;
+      console.error("Error listing attendance records:", error);
+      return [];
     }
   }
 
@@ -4860,25 +4533,7 @@ export class FirestoreStorage implements IStorage {
     }
   }
 
-  async createEnhancedPayroll(data: any): Promise<EnhancedPayroll> {
-    try {
-      const id = this.db.collection('enhanced_payrolls').doc().id;
-      const now = new Date();
 
-      const payrollData = {
-        ...data,
-        id,
-        createdAt: now,
-        updatedAt: now
-      };
-
-      await this.db.collection('enhanced_payrolls').doc(id).set(payrollData);
-      return payrollData as EnhancedPayroll;
-    } catch (error) {
-      console.error("Error creating enhanced payroll:", error);
-      throw error;
-    }
-  }
 
   // Enterprise HR Management Storage Methods
 
@@ -5146,7 +4801,7 @@ export class FirestoreStorage implements IStorage {
       // Apply search filter client-side for better text matching
       if (filters?.search) {
         const searchTerm = filters.search.toLowerCase();
-        employees = employees.filter(emp =>
+        employees = employees.filter((emp: Employee) =>
           emp.personalInfo.displayName.toLowerCase().includes(searchTerm) ||
           emp.employeeId.toLowerCase().includes(searchTerm) ||
           emp.contactInfo.primaryEmail.toLowerCase().includes(searchTerm) ||
@@ -6178,6 +5833,266 @@ export class FirestoreStorage implements IStorage {
       console.error('Error listing attendance by date range:', error);
       return [];
     }
+  }
+
+  // ============================================
+  // NOTIFICATION SYSTEM STORAGE METHODS
+  // ============================================
+
+  async createNotification(notification: any): Promise<Notification> {
+    try {
+      const id = this.db.collection('notifications').doc().id;
+      const now = new Date();
+      const notificationData = {
+        ...notification,
+        id,
+        createdAt: Timestamp.fromDate(now),
+        updatedAt: Timestamp.fromDate(now),
+        dismissedAt: notification.dismissedAt ? Timestamp.fromDate(notification.dismissedAt) : null,
+        expiresAt: notification.expiresAt ? Timestamp.fromDate(notification.expiresAt) : null,
+      };
+
+      await this.db.collection('notifications').doc(id).set(notificationData);
+
+      return {
+        ...notification,
+        id,
+        createdAt: now,
+        updatedAt: now,
+      } as Notification;
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      throw error;
+    }
+  }
+
+  async getNotifications(userId: string, filters: any = {}): Promise<Notification[]> {
+    try {
+      let query: Query = this.db.collection('notifications').where('userId', '==', userId);
+
+      if (filters.status) {
+        query = query.where('status', '==', filters.status);
+      }
+      if (filters.category) {
+        query = query.where('category', '==', filters.category);
+      }
+      if (filters.type) {
+        query = query.where('type', '==', filters.type);
+      }
+
+      // Default sorting
+      query = query.orderBy('createdAt', 'desc');
+
+      if (filters.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const snapshot = await query.get();
+
+      return snapshot.docs.map(doc => this.convertFirestoreToNotification({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      return [];
+    }
+  }
+
+  async updateNotification(id: string, updates: any): Promise<Notification> {
+    try {
+      const updateData = {
+        ...updates,
+        updatedAt: Timestamp.fromDate(new Date())
+      };
+
+      if (updates.dismissedAt) {
+        updateData.dismissedAt = Timestamp.fromDate(updates.dismissedAt);
+      }
+      if (updates.expiresAt) {
+        updateData.expiresAt = Timestamp.fromDate(updates.expiresAt);
+      }
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
+      await this.db.collection('notifications').doc(id).update(updateData);
+
+      const doc = await this.db.collection('notifications').doc(id).get();
+      if (!doc.exists) {
+        throw new Error("Notification not found");
+      }
+      return this.convertFirestoreToNotification({
+        id: doc.id,
+        ...doc.data()
+      });
+    } catch (error) {
+      console.error("Error updating notification:", error);
+      throw error;
+    }
+  }
+
+  async deleteExpiredNotifications(date: Date = new Date()): Promise<void> {
+    try {
+      const snapshot = await this.db.collection('notifications')
+        .where('expiresAt', '<=', Timestamp.fromDate(date))
+        .get();
+
+      const batch = this.db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      console.log(`[CLEANUP] Deleted ${snapshot.docs.length} expired notifications`);
+    } catch (error) {
+      console.error("Error deleting expired notifications:", error);
+    }
+  }
+
+  // ============================================
+  // ATTENDANCE REVIEW (Phases 1 & 3)
+  // ============================================
+
+  async listAttendanceByReviewStatus(status: 'pending' | 'accepted' | 'adjusted' | 'rejected'): Promise<Attendance[]> {
+    // FIXED: Removed .orderBy("autoCorrectedAt") to avoid requiring Firestore composite index
+    // Records will still be retrieved, just not sorted by auto-correction time
+    const snapshot = await this.db.collection("attendance")
+      .where("adminReviewStatus", "==", status)
+      .get();
+
+    // Enrich with user details
+    const attendancePromises = snapshot.docs.map(async doc => {
+      const data = doc.data();
+      const attendance = this.convertFirestoreToAttendance({ id: doc.id, ...data });
+
+      // Get user details
+      if (attendance.userId) {
+        const user = await this.getUser(attendance.userId);
+        return {
+          ...attendance,
+          userName: user?.displayName || `User #${attendance.userId}`,
+          userDepartment: user?.department || null,
+        };
+      }
+
+      return attendance;
+    });
+
+    // Sort in memory after fetching (client-side sort)
+    const results = await Promise.all(attendancePromises);
+    return results.sort((a, b) => {
+      const dateA = a.autoCorrectedAt?.getTime() || 0;
+      const dateB = b.autoCorrectedAt?.getTime() || 0;
+      return dateB - dateA; // Descending order (newest first)
+    });
+  }
+
+
+
+  // ============================================
+  // MISSING METHODS IMPLEMENTATION
+  // ============================================
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    const usersCollection = this.db.collection("users");
+    const snapshot = await usersCollection.where("role", "==", role).get();
+    return snapshot.docs.map((doc: any) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        uid: data.uid,
+        email: data.email,
+        displayName: data.displayName,
+        role: data.role,
+        department: data.department,
+        designation: data.designation || null,
+        employeeId: data.employeeId,
+        reportingManagerId: data.reportingManagerId || null,
+        payrollGrade: data.payrollGrade || null,
+        joinDate: data.joinDate ? (data.joinDate.toDate ? data.joinDate.toDate() : new Date(data.joinDate)) : undefined,
+        isActive: data.isActive !== false,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+        photoURL: data.photoURL,
+      } as User;
+    });
+  }
+
+  async addOTSessionTransaction(
+    attendanceId: string,
+    sessionData: any
+  ): Promise<void> {
+    await this.db.runTransaction(async (transaction) => {
+      const attendanceRef = this.db.collection("attendance").doc(attendanceId);
+      const doc = await transaction.get(attendanceRef);
+
+      if (!doc.exists) {
+        throw new Error("Attendance record not found");
+      }
+
+      const data = doc.data()!;
+      const currentSessions = data.otSessions || [];
+
+      // ZERO-FRAUD: Check for active session inside transaction (atomic)
+      const hasActiveSession = currentSessions.some(
+        (s: any) => s.status === 'in_progress'
+      );
+      if (hasActiveSession) {
+        throw new Error('ACTIVE_SESSION_EXISTS');
+      }
+
+      // Add new session
+      const updatedSessions = [...currentSessions, sessionData];
+
+      // Recalculate total hours
+      const totalOTHours = updatedSessions.reduce((sum: number, session: any) => {
+        return sum + (session.duration || 0);
+      }, 0);
+
+      transaction.update(attendanceRef, {
+        otSessions: updatedSessions,
+        totalOTHours: totalOTHours,
+        updatedAt: Timestamp.now()
+      });
+    });
+  }
+
+  // ============================================
+  // HELPERS
+  // ============================================
+
+  private safeToDate(val: any): Date | undefined {
+    if (!val) return undefined;
+    if (val instanceof Date) return val;
+    if (typeof val.toDate === 'function') return val.toDate();
+    // Fallback for strings/numbers that might be dates
+    const tryDate = new Date(val);
+    return isNaN(tryDate.getTime()) ? undefined : tryDate;
+  }
+
+  private convertFirestoreToAttendance(data: any): Attendance {
+    return {
+      ...data,
+      date: this.safeToDate(data.date) || (data.dateString ? new Date(data.dateString) : new Date()),
+      checkInTime: this.safeToDate(data.checkInTime),
+      checkOutTime: this.safeToDate(data.checkOutTime),
+      otStartTime: this.safeToDate(data.otStartTime),
+      otEndTime: this.safeToDate(data.otEndTime),
+      autoCorrectedAt: this.safeToDate(data.autoCorrectedAt),
+      adminReviewedAt: this.safeToDate(data.adminReviewedAt),
+      originalCheckOutTime: this.safeToDate(data.originalCheckOutTime),
+    } as Attendance;
+  }
+
+  private convertFirestoreToNotification(data: any): Notification {
+    return {
+      ...data,
+      createdAt: this.safeToDate(data.createdAt) || new Date(),
+      updatedAt: this.safeToDate(data.updatedAt) || new Date(),
+      dismissedAt: this.safeToDate(data.dismissedAt),
+      expiresAt: this.safeToDate(data.expiresAt),
+    } as Notification;
   }
 }
 

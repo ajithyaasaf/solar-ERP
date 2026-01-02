@@ -76,11 +76,7 @@ export default function Attendance() {
   });
 
   // Fetch current user's attendance for today - Fixed timezone issue
-<<<<<<< HEAD
-  const { data: todayAttendance, refetch: refetchTodayAttendance } = useQuery({
-=======
   const { data: todayAttendance } = useQuery({
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     queryKey: ["/api/attendance/today", user?.uid],
     queryFn: async () => {
       if (!user?.uid) return null;
@@ -161,10 +157,6 @@ export default function Attendance() {
     // Force immediate refetch of critical data
     refetchTiming();
     refetch();
-<<<<<<< HEAD
-    refetchTodayAttendance(); // **CRITICAL: Refetch today's attendance**
-=======
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
   };
 
   // Enhanced timing refresh - keeps old data visible while fetching
@@ -290,8 +282,76 @@ export default function Attendance() {
       return { state: 'no_timing', canCheckIn: false, canCheckOut: false, validTiming: false };
     }
 
-    if (!todayAttendance) return { state: 'not_started', canCheckIn: true, canCheckOut: false, validTiming: true };
-    if (todayAttendance.checkInTime && !todayAttendance.checkOutTime) return { state: 'checked_in', canCheckIn: false, canCheckOut: true, validTiming: true };
+    // NEW: Check if current time is past department checkout time
+    const parseTime = (timeStr: string): { hours: number; minutes: number } => {
+      const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)/i);
+      if (!timeParts) return { hours: 0, minutes: 0 };
+
+      let hours = parseInt(timeParts[1]);
+      const minutes = parseInt(timeParts[2]);
+      const period = timeParts[3].toUpperCase();
+
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+
+      return { hours, minutes };
+    };
+
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+
+    const deptCheckIn = parseTime(checkInTime);
+    const deptCheckout = parseTime(checkOutTime);
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+    const checkInTimeInMinutes = deptCheckIn.hours * 60 + deptCheckIn.minutes;
+    const checkoutTimeInMinutes = deptCheckout.hours * 60 + deptCheckout.minutes;
+
+    // Check if current time is BEFORE check-in time
+    const isBeforeCheckInTime = currentTimeInMinutes < checkInTimeInMinutes;
+
+    // Check if current time is AFTER checkout time
+    const isPastCheckoutTime = currentTimeInMinutes > checkoutTimeInMinutes;
+
+    if (!todayAttendance) {
+      // Cannot check in if before check-in time OR after checkout time
+      if (isBeforeCheckInTime) {
+        return {
+          state: 'before_checkin',
+          canCheckIn: false,
+          canCheckOut: false,
+          validTiming: true
+        };
+      }
+      if (isPastCheckoutTime) {
+        return {
+          state: 'past_checkout',
+          canCheckIn: false,
+          canCheckOut: false,
+          validTiming: true
+        };
+      }
+      // Within working hours - can check in
+      return {
+        state: 'not_started',
+        canCheckIn: true,
+        canCheckOut: false,
+        validTiming: true
+      };
+    }
+    if (todayAttendance.checkInTime && !todayAttendance.checkOutTime) {
+      // CRITICAL: Block checkout if already auto-corrected
+      // Prevents employee from overwriting system-corrected time
+      if (todayAttendance.autoCorrected) {
+        return {
+          state: 'auto_corrected',
+          canCheckIn: false,
+          canCheckOut: false,  // ← Checkout blocked
+          validTiming: true
+        };
+      }
+      return { state: 'checked_in', canCheckIn: false, canCheckOut: true, validTiming: true };
+    }
     if (todayAttendance.checkInTime && todayAttendance.checkOutTime) return { state: 'completed', canCheckIn: false, canCheckOut: false, validTiming: true };
     return { state: 'unknown', canCheckIn: false, canCheckOut: false, validTiming: true };
   };
@@ -530,6 +590,54 @@ export default function Attendance() {
                 </div>
               ) : (
                 <>
+                  {attendanceState.state === 'before_checkin' && (
+                    <div className="sm:col-span-2 text-center py-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="text-blue-700 font-medium mb-2 text-sm md:text-base">
+                          Check-in Time Not Started
+                        </div>
+                        <div className="text-sm text-blue-600 mb-2">
+                          Department check-in time starts at {departmentTiming?.checkInTime}.
+                          Please check in during working hours ({departmentTiming?.checkInTime} - {departmentTiming?.checkOutTime}).
+                        </div>
+                        <div className="text-xs text-blue-500">
+                          Current time is before official working hours.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {attendanceState.state === 'auto_corrected' && (
+                    <div className="sm:col-span-2 text-center py-4">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="text-amber-700 font-medium mb-2 text-sm md:text-base">
+                          Attendance Auto-Corrected
+                        </div>
+                        <div className="text-sm text-amber-600 mb-2">
+                          Your checkout was automatically recorded at {todayAttendance?.checkOutTime ? new Date(todayAttendance.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'department closing time'}.
+                          This record is pending admin review.
+                        </div>
+                        <div className="text-xs text-amber-500">
+                          Contact your supervisor if the auto-corrected time is incorrect.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {attendanceState.state === 'past_checkout' && (
+                    <div className="sm:col-span-2 text-center py-4">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="text-amber-700 font-medium mb-2 text-sm md:text-base">
+                          Check-in Time Has Passed
+                        </div>
+                        <div className="text-sm text-amber-600 mb-2">
+                          Department checkout time ({departmentTiming?.checkOutTime}) has already passed.
+                          You cannot check in for today.
+                        </div>
+                        <div className="text-xs text-amber-500">
+                          If you need to mark attendance for today, please contact your supervisor.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {canCheckIn && (
                     <Button
                       onClick={() => setShowCheckInModal(true)}

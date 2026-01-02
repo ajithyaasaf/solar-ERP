@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
+import { initializeCronJobs } from "./cron-scheduler";
 
 const app = express();
 
@@ -83,5 +84,9 @@ app.use((req, res, next) => {
   const port = 5000;
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
+
+    // Initialize automated cron jobs (auto-checkout, etc.)
+    initializeCronJobs();
+    log(`✅ Automated cron jobs initialized`);
   });
 })();

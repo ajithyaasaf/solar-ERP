@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
 import { formatDate } from "@/lib/utils";
@@ -49,7 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { Search, PlusCircle, Pencil, Trash2, UserCog, Users, Loader2, Check, Clock, Timer, Play, Square, Coffee, Shield, Home, Building, MapPin } from "lucide-react";
+import { Search, PlusCircle, Pencil, Trash2, UserCog, Users, Loader2, Check, Clock, Timer, Play, Square, Coffee, Shield, Home, Building, MapPin, Settings } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -72,12 +72,9 @@ export default function Departments() {
     checkOutTime: "6:00 PM",
     workingHours: 8,
     overtimeThresholdMinutes: 30,
-    lateThresholdMinutes: 15,
-    allowEarlyCheckOut: false,
-    allowRemoteWork: true,
-    allowFieldWork: true
+    lateThresholdMinutes: 15
   });
-  
+
   // Only master_admin can access this page
   if (user?.role !== "master_admin") {
     return (
@@ -94,7 +91,7 @@ export default function Departments() {
       </Card>
     );
   }
-  
+
   // Fetch departments
   const { data: departments, isLoading } = useQuery({
     queryKey: ["/api/departments"],
@@ -109,7 +106,42 @@ export default function Departments() {
   const { data: departmentTimings } = useQuery({
     queryKey: ["/api/departments/timings"],
   });
-  
+
+  // Fetch payroll settings for global auto-checkout
+  const { data: payrollSettings } = useQuery<any>({
+    queryKey: ["/api/payroll/settings"],
+  });
+
+  // Auto-sync form state whenever current department or timing data changes
+  useEffect(() => {
+    if (currentDepartment && showTimingDialog) {
+      const timing = departmentTimings?.[currentDepartment.id];
+
+      setTimingFormState({
+        checkInTime: timing?.checkInTime || "9:00 AM",
+        checkOutTime: timing?.checkOutTime || "6:00 PM",
+        workingHours: timing?.workingHours || 8,
+        overtimeThresholdMinutes: timing?.overtimeThresholdMinutes || 30,
+        lateThresholdMinutes: timing?.lateThresholdMinutes || 15
+      });
+    }
+  }, [currentDepartment, departmentTimings, showTimingDialog]);
+
+  // Global timing mutation
+  const updateGlobalSettingsMutation = useMutation({
+    mutationFn: (data: { autoCheckoutGraceMinutes: number }) => {
+      return apiRequest('/api/payroll/settings', 'POST', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/departments/timings"] });
+      toast({
+        title: "Settings updated",
+        description: "Global attendance settings have been updated.",
+      });
+    }
+  });
+
   // Helper function to reset form state
   const resetForm = () => {
     setFormState({
@@ -118,7 +150,7 @@ export default function Departments() {
     });
     setCurrentDepartment(null);
   };
-  
+
   // Create department mutation
   const createDepartmentMutation = useMutation({
     mutationFn: (departmentData: { name: string; description: string }) => {
@@ -126,7 +158,7 @@ export default function Departments() {
       return apiRequest('/api/departments', 'POST', sanitized);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
@@ -151,7 +183,7 @@ export default function Departments() {
       });
     }
   });
-  
+
   // Update department mutation
   const updateDepartmentMutation = useMutation({
     mutationFn: (departmentData: { id: number; name: string; description: string }) => {
@@ -160,7 +192,7 @@ export default function Departments() {
       return apiRequest(`/api/departments/${id}`, 'PATCH', sanitized);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
@@ -185,14 +217,14 @@ export default function Departments() {
       });
     }
   });
-  
+
   // Delete department mutation
   const deleteDepartmentMutation = useMutation({
     mutationFn: (id: number) => {
       return apiRequest(`/api/departments/${id}`, 'DELETE');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
@@ -226,56 +258,56 @@ export default function Departments() {
     },
     onSuccess: async (result, variables) => {
       console.log('DEPARTMENTS: Timing update successful for:', variables.departmentId);
-      
+
       // Step 1: Clear all timing-related cache
-      queryClient.removeQueries({ 
+      queryClient.removeQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
-            return queryKey.includes('/api/departments/timing') || 
-                   queryKey.includes('/api/departments/timings');
+            return queryKey.includes('/api/departments/timing') ||
+              queryKey.includes('/api/departments/timings');
           }
           return false;
         }
       });
-      
+
       // Step 2: Force immediate refetch of ALL department timings 
       console.log('DEPARTMENTS: Force refreshing ALL department timings');
       try {
-        await queryClient.refetchQueries({ 
+        await queryClient.refetchQueries({
           queryKey: ["/api/departments/timings"],
           type: 'active'
         });
-        
+
         // Also refetch the specific department timing
-        await queryClient.refetchQueries({ 
+        await queryClient.refetchQueries({
           queryKey: [`/api/departments/${variables.departmentId}/timing`],
           type: 'active'
         });
-        
+
         console.log('DEPARTMENTS: Department timings refreshed successfully');
       } catch (error) {
         console.error('DEPARTMENTS: Failed to refresh timings:', error);
       }
-      
+
       // Step 3: Invalidate ALL department and attendance queries for comprehensive refresh
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
-            return queryKey.includes('/api/departments') || 
-                   queryKey.includes('/api/attendance') ||
-                   queryKey.includes('timing');
+            return queryKey.includes('/api/departments') ||
+              queryKey.includes('/api/attendance') ||
+              queryKey.includes('timing');
           }
           return false;
         }
       });
-      
+
       // Step 4: Signal other tabs/windows about the update
       localStorage.setItem('department_timing_updated', Date.now().toString());
-      
+
       console.log('DEPARTMENTS: All cache operations completed');
-      
+
       toast({
         title: "Department timing updated",
         description: `${variables.departmentId.toUpperCase()} department timing has been successfully configured. The changes are now visible.`,
@@ -316,13 +348,49 @@ export default function Departments() {
 
   return (
     <>
+      {/* Global Attendance Settings */}
+      <Card className="mb-6 border-blue-200 bg-blue-50/30">
+        <CardHeader className="pb-3 px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Global Attendance Settings</CardTitle>
+          </div>
+          <CardDescription>Configure organization-wide attendance policies</CardDescription>
+        </CardHeader>
+        <CardContent className="px-6 pb-6">
+          <div className="flex flex-wrap items-end gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Auto-Checkout Grace Period</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  defaultValue={payrollSettings?.autoCheckoutGraceMinutes ?? 5}
+                  className="w-32 bg-white"
+                  onBlur={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val !== payrollSettings?.autoCheckoutGraceMinutes) {
+                      updateGlobalSettingsMutation.mutate({ autoCheckoutGraceMinutes: val });
+                    }
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">minutes after shift end</span>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground pb-2 max-w-md bg-white/50 p-2 rounded border border-blue-100 italic">
+              <Shield className="h-3 w-3 inline mr-1 text-blue-500" />
+              This setting applies to <strong>all departments</strong>. Employees will be automatically checked out if they forget to check out after this duration. Default is 5 minutes.
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between px-6 py-4">
           <div>
             <CardTitle className="text-xl">Departments</CardTitle>
             <CardDescription>Manage company departments</CardDescription>
           </div>
-          <Button 
+          <Button
             className="bg-primary hover:bg-primary-dark text-white"
             onClick={() => setShowAddDepartmentDialog(true)}
           >
@@ -330,7 +398,7 @@ export default function Departments() {
             Add Department
           </Button>
         </CardHeader>
-        
+
         <CardContent className="px-6">
           <div className="mb-4 flex items-center">
             <div className="relative w-full md:w-96">
@@ -374,72 +442,72 @@ export default function Departments() {
                   filteredDepartments?.map((department: any) => {
                     const timing = departmentTimings && typeof departmentTimings === 'object' ? (departmentTimings as Record<string, any>)[department.id] : null;
                     return (
-                    <TableRow key={department.id}>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                            <Users className="h-5 w-5" />
-                          </div>
-                          <div className="ml-3 font-medium">{department.name}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{department.description || "-"}</TableCell>
-                      <TableCell>{getEmployeeCount(department.name)}</TableCell>
-                      <TableCell>
-                        {timing ? (
-                          <div className="text-sm">
-                            <div>
-                              <TimeDisplay time={timing.checkInTime} format12Hour={true} /> - <TimeDisplay time={timing.checkOutTime} format12Hour={true} />
+                      <TableRow key={department.id}>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                              <Users className="h-5 w-5" />
                             </div>
-                            <div className="text-muted-foreground">{timing.workingHours}h working</div>
+                            <div className="ml-3 font-medium">{department.name}</div>
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">Not configured</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0"
-                            onClick={() => {
-                              setCurrentDepartment(department);
-                              setShowTimingDialog(true);
-                            }}
-                            title="Configure Attendance Timing"
-                          >
-                            <Clock className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0"
-                            onClick={() => {
-                              setCurrentDepartment(department);
-                              setFormState({
-                                name: department.name,
-                                description: department.description || ""
-                              });
-                              setShowEditDialog(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-destructive"
-                            onClick={() => {
-                              setCurrentDepartment(department);
-                              setShowDeleteDialog(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                        <TableCell>{department.description || "-"}</TableCell>
+                        <TableCell>{getEmployeeCount(department.name)}</TableCell>
+                        <TableCell>
+                          {timing ? (
+                            <div className="text-sm">
+                              <div>
+                                <TimeDisplay time={timing.checkInTime} format12Hour={true} /> - <TimeDisplay time={timing.checkOutTime} format12Hour={true} />
+                              </div>
+                              <div className="text-muted-foreground">{timing.workingHours}h working</div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Not configured</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setCurrentDepartment(department);
+                                setShowTimingDialog(true);
+                              }}
+                              title="Configure Attendance Timing"
+                            >
+                              <Clock className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setCurrentDepartment(department);
+                                setFormState({
+                                  name: department.name,
+                                  description: department.description || ""
+                                });
+                                setShowEditDialog(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-destructive"
+                              onClick={() => {
+                                setCurrentDepartment(department);
+                                setShowDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 )}
@@ -450,8 +518,8 @@ export default function Departments() {
       </Card>
 
       {/* Add/Edit Department Dialog */}
-      <Dialog 
-        open={showAddDepartmentDialog || showEditDialog} 
+      < Dialog
+        open={showAddDepartmentDialog || showEditDialog}
         onOpenChange={(open) => {
           if (!open) {
             resetForm();
@@ -470,10 +538,10 @@ export default function Departments() {
           <form className="space-y-4 py-4" onSubmit={(e) => {
             e.preventDefault();
             if (showEditDialog) {
-              updateDepartmentMutation.mutate({ 
-                id: currentDepartment.id, 
-                name: formState.name, 
-                description: formState.description 
+              updateDepartmentMutation.mutate({
+                id: currentDepartment.id,
+                name: formState.name,
+                description: formState.description
               });
             } else {
               createDepartmentMutation.mutate(formState);
@@ -487,21 +555,21 @@ export default function Departments() {
                   placeholder="Enter department name"
                   required
                   value={formState.name}
-                  onChange={(e) => setFormState({...formState, name: e.target.value})}
+                  onChange={(e) => setFormState({ ...formState, name: e.target.value })}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <label htmlFor="description" className="text-sm font-medium">Description</label>
                 <Input
                   id="description"
                   placeholder="Brief description of the department"
                   value={formState.description}
-                  onChange={(e) => setFormState({...formState, description: e.target.value})}
+                  onChange={(e) => setFormState({ ...formState, description: e.target.value })}
                 />
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
@@ -517,7 +585,7 @@ export default function Departments() {
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 disabled={createDepartmentMutation.isPending || updateDepartmentMutation.isPending}
               >
@@ -529,9 +597,9 @@ export default function Departments() {
             </div>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      < AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -556,10 +624,15 @@ export default function Departments() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
       {/* Advanced Department Timing Configuration Dialog */}
-      <Dialog open={showTimingDialog} onOpenChange={setShowTimingDialog}>
+      <Dialog open={showTimingDialog} onOpenChange={(open) => {
+        setShowTimingDialog(open);
+        if (!open) {
+          setCurrentDepartment(null);
+        }
+      }}>
         <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -570,7 +643,7 @@ export default function Departments() {
               Set up comprehensive work timings, shifts, and attendance policies for this department.
             </DialogDescription>
           </DialogHeader>
-          
+
           <form className="space-y-8" onSubmit={(e) => {
             e.preventDefault();
             updateTimingMutation.mutate({
@@ -579,54 +652,13 @@ export default function Departments() {
             });
           }}>
 
-            {/* Quick Shift Templates */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Quick Shift Templates
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { name: "Standard Office", start: "09:00", end: "18:00", hours: 8, display: "9:00 AM - 6:00 PM" },
-                  { name: "Early Shift", start: "07:00", end: "16:00", hours: 8, display: "7:00 AM - 4:00 PM" },
-                  { name: "Night Shift", start: "22:00", end: "06:00", hours: 8, display: "10:00 PM - 6:00 AM" },
-                  { name: "Flexible Hours", start: "09:30", end: "18:30", hours: 8, display: "9:30 AM - 6:30 PM" }
-                ].map((template) => (
-                  <Card key={template.name} 
-                    className={`cursor-pointer transition-all hover:shadow-md border-2 ${
-                      timingFormState.checkInTime === template.start && 
-                      timingFormState.checkOutTime === template.end 
-                        ? "border-green-500 bg-green-50" 
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => setTimingFormState({
-                      ...timingFormState,
-                      checkInTime: template.start,
-                      checkOutTime: template.end,
-                      workingHours: template.hours
-                    })}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <div className="font-medium text-sm">{template.name}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {template.display}
-                      </div>
-                      <div className="text-xs text-blue-600 mt-1">
-                        {template.hours}h working
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
             {/* Visual Time Picker */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Timer className="h-4 w-4" />
                 Work Schedule
               </h3>
-              
+
               {/* Visual Timeline */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between text-xs text-gray-500 mb-2">
@@ -641,9 +673,9 @@ export default function Departments() {
                     // Parse 12-hour format times properly
                     const startMatch = timingFormState.checkInTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
                     const endMatch = timingFormState.checkOutTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-                    
+
                     let startHour = 9, startMin = 0, endHour = 18, endMin = 0; // Defaults
-                    
+
                     if (startMatch) {
                       let [, hours, minutes, period] = startMatch;
                       startHour = parseInt(hours);
@@ -651,7 +683,7 @@ export default function Departments() {
                       if (period.toUpperCase() === 'PM' && startHour !== 12) startHour += 12;
                       if (period.toUpperCase() === 'AM' && startHour === 12) startHour = 0;
                     }
-                    
+
                     if (endMatch) {
                       let [, hours, minutes, period] = endMatch;
                       endHour = parseInt(hours);
@@ -659,19 +691,19 @@ export default function Departments() {
                       if (period.toUpperCase() === 'PM' && endHour !== 12) endHour += 12;
                       if (period.toUpperCase() === 'AM' && endHour === 12) endHour = 0;
                     }
-                    
+
                     const startPercent = ((startHour * 60 + startMin) / (24 * 60)) * 100;
                     let endPercent = ((endHour * 60 + endMin) / (24 * 60)) * 100;
-                    
+
                     // Handle overnight shifts
                     if (endPercent <= startPercent) {
                       endPercent = 100;
                     }
-                    
+
                     const width = endPercent - startPercent;
-                    
+
                     return (
-                      <div 
+                      <div
                         className="absolute h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full"
                         style={{
                           left: `${startPercent}%`,
@@ -709,7 +741,7 @@ export default function Departments() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <Square className="h-4 w-4 text-red-600" />
@@ -735,7 +767,7 @@ export default function Departments() {
                 <Shield className="h-4 w-4" />
                 Attendance Policies
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -755,7 +787,7 @@ export default function Departments() {
                       <span className="text-sm text-muted-foreground">minutes</span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Overtime Threshold</label>
                     <div className="flex items-center gap-2">
@@ -776,50 +808,32 @@ export default function Departments() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium">Remote Work</span>
-                      </div>
-                      <Switch
-                        checked={timingFormState.allowRemoteWork}
-                        onCheckedChange={(checked) => setTimingFormState({
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Standard Working Hours</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="24"
+                        step="0.5"
+                        value={timingFormState.workingHours}
+                        onChange={(e) => setTimingFormState({
                           ...timingFormState,
-                          allowRemoteWork: checked
+                          workingHours: parseFloat(e.target.value) || 8
                         })}
+                        className="w-32"
+                        placeholder="e.g., 8"
                       />
+                      <span className="text-sm text-muted-foreground">hours/day</span>
                     </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium">Field Work</span>
-                      </div>
-                      <Switch
-                        checked={timingFormState.allowFieldWork}
-                        onCheckedChange={(checked) => setTimingFormState({
-                          ...timingFormState,
-                          allowFieldWork: checked
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-orange-600" />
-                        <span className="text-sm font-medium">Early Check-out</span>
-                      </div>
-                      <Switch
-                        checked={timingFormState.allowEarlyCheckOut}
-                        onCheckedChange={(checked) => setTimingFormState({
-                          ...timingFormState,
-                          allowEarlyCheckOut: checked
-                        })}
-                      />
-                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Used as divisor for OT hourly rate calculation (Daily Salary / Working Hours)
+                    </p>
                   </div>
                 </div>
+
+
+
               </div>
             </div>
 
@@ -836,13 +850,13 @@ export default function Departments() {
                   <div className="text-blue-900">{timingFormState.lateThresholdMinutes} minutes</div>
                 </div>
                 <div>
-                  <span className="text-blue-700 font-medium">OT Starts:</span>
-                  <div className="text-blue-900">+{timingFormState.overtimeThresholdMinutes} minutes</div>
+                  <span className="text-blue-700 font-medium">Auto-Checkout:</span>
+                  <div className="text-blue-900">{payrollSettings?.autoCheckoutGraceMinutes ?? 5} mins (Global)</div>
                 </div>
               </div>
             </div>
 
-            
+
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <Button
                 type="button"
@@ -861,7 +875,7 @@ export default function Departments() {
             </div>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
     </>
   );
 }

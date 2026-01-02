@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMinutes, differenceInHours } from 'date-fns';
 import { CameraCaptureModal } from '@/components/ui/camera-capture-modal';
 import { getOTAuthToken } from '@/hooks/use-ot-auth';
+import { apiRequest } from '@/lib/queryClient';
 
 interface OTSession {
     sessionId: string;
@@ -55,6 +56,10 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
     const [totalOTToday, setTotalOTToday] = useState(0);
     const [cameraOpen, setCameraOpen] = useState(false);
     const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
+    const [otAvailable, setOTAvailable] = useState(false); // Fail-safe: default to disabled
+    const [otUnavailableReason, setOTUnavailableReason] = useState<string>("");
+    const [nextAvailableTime, setNextAvailableTime] = useState<string>("");
+    const [otSystemError, setOTSystemError] = useState(false); // Track if it's a technical error
     const cameraResolveRef = useRef<((value: string) => void) | null>(null);
     const cameraRejectRef = useRef<((reason: Error) => void) | null>(null);
 
@@ -69,29 +74,38 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
     // Fetch active session and today's sessions
     const fetchOTSessions = async () => {
         try {
-            const token = await getOTAuthToken();
+            // Get OT status and availability (fail-safe: disable on error)
+            try {
+                const statusRes = await apiRequest('/api/ot/status', 'GET');
+                const statusData = await statusRes.json();
+                setOTAvailable(statusData.buttonAvailable ?? false);
+                setOTUnavailableReason(statusData.buttonReason || "");
+                setNextAvailableTime(statusData.nextAvailableTime || "");
+                setOTSystemError(false); // Clear any previous errors
+            } catch (statusError) {
+                console.error('Error fetching OT status:', statusError);
+                // Technical error: Network/system failure
+                setOTAvailable(false);
+                setOTSystemError(true);
+                setOTUnavailableReason("System error. Please contact support if this persists.");
+            }
 
             // Get active session
-            const activeRes = await fetch('/api/ot/sessions/active', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (activeRes.ok) {
+            try {
+                const activeRes = await apiRequest('/api/ot/sessions/active', 'GET');
                 const { session } = await activeRes.json();
+                console.log('[FETCH] Active session from API:', session);
                 setActiveSession(session);
+                console.log('[FETCH] Active session state updated to:', session ? 'ACTIVE' : 'NULL');
+            } catch (error) {
+                // Silently handle - no active session is not an error
+                console.error('[FETCH] Error fetching active session:', error);
             }
 
             // Get today's sessions
             const today = format(new Date(), 'yyyy-MM-dd');
-            const sessionsRes = await fetch(`/api/ot/sessions?date=${today}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (sessionsRes.ok) {
+            try {
+                const sessionsRes = await apiRequest(`/api/ot/sessions?date=${today}`, 'GET');
                 const { sessions } = await sessionsRes.json();
                 setTodaySessions(sessions || []);
 
@@ -99,17 +113,16 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 const total = sessions?.reduce((sum: number, s: OTSession) =>
                     s.status === 'completed' ? sum + s.otHours : sum, 0) || 0;
                 setTotalOTToday(total);
+            } catch (error) {
+                console.error('Error fetching today sessions:', error);
+                setTodaySessions([]);
+                setTotalOTToday(0);
             }
 
             // Check if attendance exists for today
-            const todayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-            const attendanceRes = await fetch(`/api/user/attendance?userId=${userId}&date=${todayStr}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (attendanceRes.ok) {
+            const todayStr = today; // Already in YYYY-MM-DD format
+            try {
+                const attendanceRes = await apiRequest(`/api/user/attendance?userId=${userId}&date=${todayStr}`, 'GET');
                 const attendanceData = await attendanceRes.json();
                 // attendanceData is an array of attendance records
                 const todayAttendance = Array.isArray(attendanceData)
@@ -119,8 +132,8 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                     })
                     : null;
                 setHasAttendanceToday(!!(todayAttendance && todayAttendance.checkInTime));
-            } else {
-                console.warn('Failed to fetch attendance, assuming no attendance:', attendanceRes.statusText);
+            } catch (error) {
+                console.warn('Failed to fetch attendance, assuming no attendance:', error);
                 setHasAttendanceToday(false);
             }
         } catch (error) {
@@ -205,18 +218,9 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 return;
             }
 
-            const token = await getOTAuthToken();
-
             console.log('[OT START] Sending request with data:', locationData);
 
-            const response = await fetch('/api/ot/sessions/start', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(locationData)
-            });
+            const response = await apiRequest('/api/ot/sessions/start', 'POST', locationData);
 
             console.log('[OT START] Response status:', response.status);
 
@@ -224,11 +228,14 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
             console.log('[OT START] Result:', result);
 
             if (result.success) {
+                console.log('[OT START] Success! Session ID:', result.sessionId);
                 toast({
                     title: 'OT Started',
                     description: `${result.otType} OT session started successfully.`
                 });
+                console.log('[OT START] Fetching updated sessions...');
                 await fetchOTSessions();
+                console.log('[OT START] Active session after fetch:', activeSession);
                 onSuccess?.();
             } else {
                 console.error('[OT START] Failed:', result.message);
@@ -263,15 +270,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 return;
             }
 
-            const token = await getOTAuthToken();
-            const response = await fetch(`/api/ot/sessions/${activeSession.sessionId}/end`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(locationData)
-            });
+            const response = await apiRequest(`/api/ot/sessions/${activeSession.sessionId}/end`, 'POST', locationData);
 
             const result = await response.json();
 
@@ -374,8 +373,40 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                     </Alert>
                 ) : (
                     <>
+                        {/* OT Unavailability Message */}
+                        {!otAvailable && (
+                            otSystemError ? (
+                                // Technical Error: Show error-styled alert
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle className="font-semibold">
+                                        System Error
+                                    </AlertTitle>
+                                    <AlertDescription className="text-sm">
+                                        {otUnavailableReason}
+                                    </AlertDescription>
+                                </Alert>
+                            ) : (
+                                // Business Rule: Show informational alert
+                                <Alert className="border-blue-200 bg-blue-50">
+                                    <Clock className="h-4 w-4 text-blue-600" />
+                                    <AlertTitle className="text-blue-900 font-semibold">
+                                        OT Not Available Right Now
+                                    </AlertTitle>
+                                    <AlertDescription className="text-blue-800 text-sm">
+                                        {otUnavailableReason || "OT is only available before or after your department's regular work hours"}
+                                        {nextAvailableTime && (
+                                            <p className="mt-2 font-medium">
+                                                Available after: <strong>{nextAvailableTime}</strong>
+                                            </p>
+                                        )}
+                                    </AlertDescription>
+                                </Alert>
+                            )
+                        )}
+
                         {/* Warning: OT without attendance */}
-                        {!hasAttendanceToday && (
+                        {otAvailable && !hasAttendanceToday && (
                             <Alert className="border-amber-200 bg-amber-50">
                                 <AlertCircle className="h-4 w-4 text-amber-600" />
                                 <AlertTitle className="text-amber-900 font-semibold">No Regular Attendance Today</AlertTitle>
@@ -395,7 +426,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                             size="lg"
                             className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                             onClick={handleStartOT}
-                            disabled={isLoading}
+                            disabled={isLoading || !otAvailable}
                         >
                             <Zap className="mr-2 h-5 w-5" />
                             START OT

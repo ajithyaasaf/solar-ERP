@@ -20,7 +20,6 @@ export type Permission =
   | "view_all_reports" // -> reports.advanced, analytics.enterprise
   | "view_department_reports" // -> reports.basic, analytics.departmental
   | "manage_customers" // -> customers.create, customers.edit
-  | "manage_products" // -> products.create, products.edit
   | "manage_quotations" // -> quotations.create, quotations.edit
   | "manage_invoices" // -> invoices.create, invoices.edit
   | "manage_attendance" // -> attendance.view_all, attendance.approve
@@ -44,7 +43,6 @@ export function usePermissions() {
     "view_all_reports": ["reports.advanced", "analytics.enterprise"],
     "view_department_reports": ["reports.basic", "analytics.departmental"],
     "manage_customers": ["customers.create", "customers.edit"],
-    "manage_products": ["products.create", "products.edit"],
     "manage_quotations": ["quotations.create", "quotations.edit"],
     "manage_invoices": ["invoices.create", "invoices.edit"],
     "manage_attendance": ["attendance.view_all", "attendance.approve"],
@@ -54,7 +52,7 @@ export function usePermissions() {
     "admin_operations": ["invoices.create", "invoices.edit"],
     "sales_operations": ["customers.create", "quotations.create"],
     "marketing_operations": ["customers.create", "quotations.create"],
-    "technical_operations": ["products.create", "products.edit"],
+    "technical_operations": [],
   };
 
   const hasPermission = (permission: Permission): boolean => {
@@ -74,7 +72,7 @@ export function usePermissions() {
   const canAssignDepartments = (): boolean => hasPermission("assign_departments");
   const canViewAllReports = (): boolean => hasPermission("view_all_reports");
   const canManageCustomers = (): boolean => hasPermission("manage_customers");
-  const canManageProducts = (): boolean => hasPermission("manage_products");
+
   const canManageQuotations = (): boolean => hasPermission("manage_quotations");
   const canManageInvoices = (): boolean => hasPermission("manage_invoices");
   const canManageAttendance = (): boolean => hasPermission("manage_attendance");
@@ -89,7 +87,6 @@ export function usePermissions() {
     canAssignDepartments,
     canViewAllReports,
     canManageCustomers,
-    canManageProducts,
     canManageQuotations,
     canManageInvoices,
     canManageAttendance,

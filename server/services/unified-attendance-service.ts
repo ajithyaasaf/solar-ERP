@@ -56,11 +56,254 @@ export interface AttendanceCheckOutResponse {
 }
 
 export class UnifiedAttendanceService {
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
+  /**
+   * Check if a specific date is a company holiday
+   * @param date - The date to check
+   * @param department - Optional department filter
+   * @returns Object with isHoliday flag and holiday details
+   */
+  static async isHoliday(date: Date, department?: string): Promise<{
+    isHoliday: boolean;
+    holiday?: any;
+  }> {
+    try {
+      const year = date.getFullYear();
+      const holidays = await storage.listFixedHolidays(year);
+
+      // Helper to compare dates (ignoring time)
+      const isSameDay = (d1: Date, d2: Date): boolean => {
+        return d1.getFullYear() === d2.getFullYear() &&
+          d1.getMonth() === d2.getMonth() &&
+          d1.getDate() === d2.getDate();
+      };
+
+      const matchingHoliday = holidays.find(holiday => {
+        const holidayDate = new Date(holiday.date);
+        const sameDateCheck = isSameDay(holidayDate, date);
+
+        // Check if holiday applies to this department
+        const appliesToDepartment =
+          !holiday.applicableDepartments ||
+          !department ||
+          holiday.applicableDepartments.includes(department);
+
+        return sameDateCheck && appliesToDepartment;
+      });
+
+      return {
+        isHoliday: !!matchingHoliday,
+        holiday: matchingHoliday
+      };
+    } catch (error) {
+      console.error('[UnifiedAttendanceService] Error checking holiday:', error);
+      // Return false on error to avoid blocking attendance
+      return { isHoliday: false };
+    }
+  }
+
+  /**
+   * Get all holidays within a date range
+   * @param startDate - Range start date
+   * @param endDate - Range end date
+   * @param department - Optional department filter
+   * @returns Array of holidays in the range
+   */
+  static async getHolidaysInRange(
+    startDate: Date,
+    endDate: Date,
+    department?: string
+  ): Promise<any[]> {
+    try {
+      const startYear = startDate.getFullYear();
+      const endYear = endDate.getFullYear();
+
+      // Get all years in range
+      const years: number[] = [];
+      for (let year = startYear; year <= endYear; year++) {
+        years.push(year);
+      }
+
+      // Fetch holidays for all years
+      const allHolidaysPromises = years.map(year => storage.listFixedHolidays(year));
+      const allHolidaysArrays = await Promise.all(allHolidaysPromises);
+      const allHolidays = allHolidaysArrays.flat();
+
+      // Filter by date range and department
+      return allHolidays.filter(h => {
+        const holidayDate = new Date(h.date);
+        const inRange = holidayDate >= startDate && holidayDate <= endDate;
+        const appliesToDept =
+          !h.applicableDepartments ||
+          !department ||
+          h.applicableDepartments.includes(department);
+        return inRange && appliesToDept;
+      });
+    } catch (error) {
+      console.error('[UnifiedAttendanceService] Error getting holidays in range:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Enrich attendance records with holiday information
+   * For dates without attendance records, check if they're holidays and mark accordingly
+   */
+  static async enrichAttendanceWithHolidays(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    existingRecords: any[]
+  ): Promise<any[]> {
+    try {
+      const user = await storage.getUser(userId);
+      if (!user) return existingRecords;
+
+      const holidays = await this.getHolidaysInRange(startDate, endDate, user.department || undefined);
+
+      const recordsByDate = new Map();
+      existingRecords.forEach(record => {
+        const dateStr = new Date(record.date).toISOString().split('T')[0];
+        recordsByDate.set(dateStr, record);
+      });
+
+      const enrichedRecords = [...existingRecords];
+
+      for (const holiday of holidays) {
+        const holidayDateStr = new Date(holiday.date).toISOString().split('T')[0];
+
+        if (!recordsByDate.has(holidayDateStr)) {
+          enrichedRecords.push({
+            id: `holiday-${holidayDateStr}-${userId}`,
+            userId,
+            date: holiday.date,
+            status: 'holiday',
+            holidayName: holiday.name,
+            isHoliday: true,
+            checkInTime: null,
+            checkOutTime: null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+      }
+
+      enrichedRecords.sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      return enrichedRecords;
+    } catch (error) {
+      console.error('[UnifiedAttendanceService] Error enriching attendance:', error);
+      return existingRecords;
+    }
+  }
+
+  /**
+   * Enrich attendance records with weekly-off days (e.g., Sundays)
+   * For dates without attendance records that fall on configured weekly-off days,
+   * add virtual records to ensure employees get paid for these days
+   */
+  static async enrichAttendanceWithWeeklyOffs(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    existingRecords: any[]
+  ): Promise<any[]> {
+    try {
+      const user = await storage.getUser(userId);
+      if (!user || !user.department) return existingRecords;
+
+      // Get department timing to check configured weekly-off days
+      const departmentTiming = await storage.getDepartmentTiming(user.department);
+      const weeklyOffDays = departmentTiming?.weekendDays || [0]; // Default to Sunday
+
+      const recordsByDate = new Map();
+      existingRecords.forEach(record => {
+        const dateStr = new Date(record.date).toISOString().split('T')[0];
+        recordsByDate.set(dateStr, record);
+      });
+
+      const enrichedRecords = [...existingRecords];
+
+      // Iterate through all dates in the range
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+        const dateStr = currentDate.toISOString().split('T')[0];
+
+        // Check if this day is a configured weekly-off and no record exists
+        if (weeklyOffDays.includes(dayOfWeek) && !recordsByDate.has(dateStr)) {
+          enrichedRecords.push({
+            id: `weekly_off-${dateStr}-${userId}`,
+            userId,
+            date: new Date(currentDate),
+            status: 'weekly_off',
+            attendanceType: 'office',
+            isWeeklyOff: true,
+            checkInTime: null,
+            checkOutTime: null,
+            workingHours: 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      enrichedRecords.sort((a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      return enrichedRecords;
+    } catch (error) {
+      console.error('[UnifiedAttendanceService] Error enriching attendance with weekly-offs:', error);
+      return existingRecords;
+    }
+  }
+
+  /**
+   * Comprehensive attendance enrichment
+   * Combines holiday and weekly-off enrichment to ensure complete month view
+   * This is the master enrichment function to call before payroll processing
+   */
+  static async enrichAttendanceComprehensively(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+    existingRecords: any[]
+  ): Promise<any[]> {
+    try {
+      // First enrich with holidays
+      let enriched = await this.enrichAttendanceWithHolidays(
+        userId,
+        startDate,
+        endDate,
+        existingRecords
+      );
+
+      // Then enrich with weekly-offs
+      enriched = await this.enrichAttendanceWithWeeklyOffs(
+        userId,
+        startDate,
+        endDate,
+        enriched
+      );
+
+      console.log(`[UnifiedAttendanceService] Comprehensively enriched attendance for user ${userId}:`, {
+        original: existingRecords.length,
+        enriched: enriched.length,
+        added: enriched.length - existingRecords.length
+      });
+
+      return enriched;
+    } catch (error) {
+      console.error('[UnifiedAttendanceService] Error in comprehensive enrichment:', error);
+      return existingRecords;
+    }
+  }
+
   /**
    * Process attendance check-in with enterprise location validation
    */
@@ -113,39 +356,69 @@ export class UnifiedAttendanceService {
         };
       }
 
-      // Check if department timing is configured
-      const departmentTiming = await storage.getDepartmentTiming(user.department);
-      if (!departmentTiming) {
+      // Check if department timing is configured (using EnterpriseTimeService for case normalization and defaults)
+      const { EnterpriseTimeService } = await import('./enterprise-time-service');
+      const departmentTiming = await EnterpriseTimeService.getDepartmentTiming(user.department);
+
+      // EnterpriseTimeService always returns a timing object (with defaults if not configured)
+      // Only fail if the timing is explicitly marked as inactive
+      if (!departmentTiming.isActive) {
         return {
           success: false,
-          message: `Department timing not configured for ${user.department} department. Please configure working hours first.`,
+          message: `Department timing is disabled for ${user.department} department. Contact administrator.`,
           locationValidation: {
             isValid: false,
             confidence: 0,
             distance: 0,
             detectedOffice: null,
             validationType: 'failed',
-            message: 'Department timing configuration required',
+            message: 'Department timing disabled',
             recommendations: [
-              'Go to Departments page → Configure Attendance Timing',
-              'Set check-in time, check-out time, and working hours',
-              'This is required to calculate late arrivals and overtime'
+              'Contact your administrator to enable department timing',
             ],
             metadata: {
               accuracy: request.accuracy,
               effectiveRadius: 0,
               indoorDetection: false,
-              confidenceFactors: ['no_department_timing']
+              confidenceFactors: ['department_timing_disabled']
             }
           }
         };
       }
 
-<<<<<<< HEAD
       // **CRITICAL FIX: Use UTC date to avoid timezone issues**
       // When using local time with setHours(0,0,0,0), the ISO string conversion
       // causes date mismatch in timezones ahead of UTC (e.g., IST +5:30)
       const now = new Date();
+
+      // **CRITICAL: Check if today is a company holiday BEFORE allowing check-in**
+      const { isHoliday, holiday } = await this.isHoliday(now, user.department);
+      if (isHoliday) {
+        return {
+          success: false,
+          message: `Cannot check in on ${holiday?.name}. Today is a company holiday.`,
+          locationValidation: {
+            isValid: false,
+            confidence: 0,
+            distance: 0,
+            detectedOffice: null,
+            validationType: 'failed',
+            message: 'Company holiday - Attendance not allowed',
+            recommendations: [
+              `Today is ${holiday?.name}`,
+              'Enjoy your holiday!',
+              'You will not be marked absent for holidays'
+            ],
+            metadata: {
+              accuracy: request.accuracy,
+              effectiveRadius: 0,
+              indoorDetection: false,
+              confidenceFactors: ['company_holiday']
+            }
+          }
+        };
+      }
+
       const today = new Date(Date.UTC(
         now.getUTCFullYear(),
         now.getUTCMonth(),
@@ -205,58 +478,22 @@ export class UnifiedAttendanceService {
             userId: request.userId
           });
         }
-=======
-      // Check for duplicate check-in
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const existingAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
-      
-      if (existingAttendance) {
-        return {
-          success: false,
-          message: 'You have already checked in today',
-          locationValidation: {
-            isValid: false,
-            confidence: 0,
-            distance: 0,
-            detectedOffice: null,
-            validationType: 'failed',
-            message: 'Duplicate check-in attempt',
-            recommendations: ['You can only check in once per day'],
-            metadata: {
-              accuracy: request.accuracy,
-              effectiveRadius: 0,
-              indoorDetection: false,
-              confidenceFactors: ['duplicate_checkin']
-            }
-          }
-        };
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       }
 
       // Simplified location validation - accept any location
       console.log('UNIFIED SERVICE: Processing simplified attendance with location data...');
-<<<<<<< HEAD
       console.log('Location coordinates:', {
         latitude: request.latitude,
         longitude: request.longitude,
         accuracy: request.accuracy
       });
 
-=======
-      console.log('Location coordinates:', { 
-        latitude: request.latitude, 
-        longitude: request.longitude, 
-        accuracy: request.accuracy 
-      });
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       const locationValidation = {
         isValid: true,
         confidence: 1.0,
         distance: 0,
         detectedOffice: null,
-        validationType: 'simplified' as const,
+        validationType: 'proximity_based' as const,
         message: 'Location recorded successfully',
         recommendations: [] as string[],
         metadata: {
@@ -269,11 +506,7 @@ export class UnifiedAttendanceService {
 
       // Calculate timing information using Enterprise Time Service
       const timingInfo = await this.calculateTimingInfo(user, new Date());
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Handle photo upload to Cloudinary if provided
       let cloudinaryImageUrl = request.imageUrl;
       if (request.imageUrl && request.imageUrl.startsWith('data:')) {
@@ -283,11 +516,7 @@ export class UnifiedAttendanceService {
           request.userId,
           new Date()
         );
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         if (uploadResult.success) {
           cloudinaryImageUrl = uploadResult.url;
           console.log('ATTENDANCE: Photo uploaded successfully:', uploadResult.url);
@@ -296,11 +525,7 @@ export class UnifiedAttendanceService {
           // Continue without failing the check-in - photo upload is not critical
         }
       }
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       // Create attendance record
       const attendanceData = {
         userId: request.userId,
@@ -317,11 +542,7 @@ export class UnifiedAttendanceService {
         breakHours: 0,
         isWithinOfficeRadius: true, // Simplified - no office restrictions
         remarks: `Attendance recorded with location verification`,
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         // Enhanced metadata for enterprise tracking
         locationAccuracy: request.accuracy,
         locationValidationType: locationValidation.validationType,
@@ -330,11 +551,7 @@ export class UnifiedAttendanceService {
         distanceFromOffice: locationValidation.distance,
         isManualOT: false,
         otStatus: 'not_started' as const,
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         // Optional fields
         ...(request.customerName && { customerName: request.customerName }),
         ...(cloudinaryImageUrl && { checkInImageUrl: cloudinaryImageUrl })
@@ -356,11 +573,7 @@ export class UnifiedAttendanceService {
       });
 
       const actualCheckInTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       return {
         success: true,
         attendanceId: newAttendance.id,
@@ -432,30 +645,18 @@ export class UnifiedAttendanceService {
       // Get user for department timing
       const user = await storage.getUser(request.userId);
       const { EnterpriseTimeService } = await import('./enterprise-time-service');
-<<<<<<< HEAD
 
       // Calculate comprehensive time metrics using Enterprise Time Service
       const checkOutTime = new Date();
       const checkInTime = attendance.checkInTime ? new Date(attendance.checkInTime) : new Date();
 
-=======
-      
-      // Calculate comprehensive time metrics using Enterprise Time Service
-      const checkOutTime = new Date();
-      const checkInTime = attendance.checkInTime ? new Date(attendance.checkInTime) : new Date();
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       const timeMetrics = await EnterpriseTimeService.calculateTimeMetrics(
         request.userId,
         user?.department || 'operations',
         checkInTime,
         checkOutTime
       );
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       const { workingHours, overtimeHours } = timeMetrics;
 
       // Update attendance record
@@ -513,63 +714,7 @@ export class UnifiedAttendanceService {
     const { EnterpriseTimeService } = await import('./enterprise-time-service');
     const departmentTiming = await EnterpriseTimeService.getDepartmentTiming(user?.department || 'operations');
 
-    // Remote work policy validation
-    if (request.attendanceType === 'remote') {
-      if (!departmentTiming.allowRemoteWork) {
-        return {
-          isValid: false,
-          message: `Remote work is not allowed for ${user?.department || 'your'} department`,
-          recommendations: ['Please check in from office location', 'Contact your supervisor for remote work approval']
-        };
-      }
-<<<<<<< HEAD
-
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
-      if (!request.reason || request.reason.trim().length < 10) {
-        return {
-          isValid: false,
-          message: 'Remote work requires a detailed reason (minimum 10 characters)',
-          recommendations: ['Provide a clear reason for working remotely', 'Include work location and expected tasks']
-        };
-      }
-    }
-
-    // Field work policy validation
-    if (request.attendanceType === 'field_work') {
-      if (!departmentTiming.allowFieldWork) {
-        return {
-          isValid: false,
-          message: `Field work is not allowed for ${user?.department || 'your'} department`,
-          recommendations: ['Please check in from office location', 'Contact your supervisor for field work approval']
-        };
-      }
-<<<<<<< HEAD
-
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
-      if (!request.customerName || request.customerName.trim().length < 3) {
-        return {
-          isValid: false,
-          message: 'Field work requires a valid customer name (minimum 3 characters)',
-          recommendations: ['Provide the customer or site name', 'Include project or visit details in reason']
-        };
-      }
-<<<<<<< HEAD
-
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
-      if (!request.imageUrl) {
-        return {
-          isValid: false,
-          message: 'Field work requires a photo to be captured',
-          recommendations: ['Take a photo at the field location', 'Ensure photo shows your current location']
-        };
-      }
-    }
+    // Remote work validation - simplified (no policy check)
 
     // Office attendance validation
     if (request.attendanceType === 'office') {
@@ -626,7 +771,6 @@ export class UnifiedAttendanceService {
     expectedCheckInTime: string;
   }> {
     const { EnterpriseTimeService } = await import('./enterprise-time-service');
-<<<<<<< HEAD
 
     const department = user?.department || 'operations';
     const timing = await EnterpriseTimeService.getDepartmentTiming(department);
@@ -637,18 +781,6 @@ export class UnifiedAttendanceService {
 
     const isLate = checkInTime > expectedTime;
     const lateMinutes = isLate ?
-=======
-    
-    const department = user?.department || 'operations';
-    const timing = await EnterpriseTimeService.getDepartmentTiming(department);
-    
-    // Parse expected check-in time for today
-    const today = new Date(checkInTime);
-    const expectedTime = this.parseTime12ToDate(timing.checkInTime, today);
-    
-    const isLate = checkInTime > expectedTime;
-    const lateMinutes = isLate ? 
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       Math.floor((checkInTime.getTime() - expectedTime.getTime()) / (1000 * 60)) : 0;
 
     return {
@@ -665,11 +797,7 @@ export class UnifiedAttendanceService {
     console.warn('DEPRECATED: Use EnterpriseTimeService.parseTimeToDate instead');
     const timeRegex = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i;
     const match = timeStr.match(timeRegex);
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     if (!match) {
       console.error('UNIFIED_ATTENDANCE: Invalid time format:', timeStr);
       // Return safe fallback
@@ -748,11 +876,7 @@ export class UnifiedAttendanceService {
   static async generateAttendanceMetrics(userId: string, dateRange?: { start: Date; end: Date }) {
     try {
       const attendanceRecords = await storage.getAttendance(userId);
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       if (!Array.isArray(attendanceRecords)) {
         console.error('ATTENDANCE METRICS: Expected array, got:', typeof attendanceRecords);
         return {
@@ -765,34 +889,23 @@ export class UnifiedAttendanceService {
           records: []
         };
       }
-<<<<<<< HEAD
 
       // Filter by date range if provided
-      const filteredRecords = dateRange
+      let filteredRecords = dateRange
         ? attendanceRecords.filter((record: any) => {
           const checkInDate = new Date(record.checkInTime);
           return checkInDate >= dateRange.start && checkInDate <= dateRange.end;
         })
-=======
-      
-      // Filter by date range if provided
-      const filteredRecords = dateRange 
-        ? attendanceRecords.filter((record: any) => {
-            const checkInDate = new Date(record.checkInTime);
-            return checkInDate >= dateRange.start && checkInDate <= dateRange.end;
-          })
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
         : attendanceRecords;
+
+      // P2: Exclude pending reviews to match payroll logic
+      filteredRecords = filteredRecords.filter((record: any) => record.adminReviewStatus !== 'pending');
 
       const totalDays = filteredRecords.length;
       const totalWorkingHours = filteredRecords.reduce((sum: number, record: any) => sum + (record.workingHours || 0), 0);
       const totalOvertimeHours = filteredRecords.reduce((sum: number, record: any) => sum + (record.overtimeHours || 0), 0);
       const lateArrivals = filteredRecords.filter((record: any) => record.isLate).length;
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
       return {
         totalDays,
         totalWorkingHours: Math.round(totalWorkingHours * 100) / 100,
@@ -826,11 +939,7 @@ export class UnifiedAttendanceService {
     workingHours: number;
   } {
     console.warn('DEPRECATED: Using legacy getDepartmentTiming - migrate to EnterpriseTimeService');
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> d7b0360e5f812ad38e870765d33c592734271da8
     // Legacy fallback with 12-hour format
     const defaultTimings = {
       'operations': { checkInTime: '9:00 AM', checkOutTime: '6:00 PM', workingHours: 8 },

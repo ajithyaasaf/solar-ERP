@@ -121,23 +121,17 @@ export function Sidebar() {
           requiredPermissions: ["customers.view", "customers.create"]
         },
         {
-          href: "/products",
-          label: "Products",
-          icon: <i className="ri-store-2-line mr-3 text-xl"></i>,
-          requiredPermissions: ["products.view", "products.create"]
-        },
-        {
           href: "/quotations",
           label: "Quotations",
           icon: <i className="ri-file-list-3-line mr-3 text-xl"></i>,
           requiredPermissions: ["quotations.view", "quotations.create"]
         },
-        {
-          href: "/invoices",
-          label: "Invoices",
-          icon: <i className="ri-bill-line mr-3 text-xl"></i>,
-          requiredPermissions: ["invoices.view", "invoices.create"]
-        },
+        // {
+        //   href: "/invoices",
+        //   label: "Invoices",
+        //   icon: <i className="ri-bill-line mr-3 text-xl"></i>,
+        //   requiredPermissions: ["invoices.view", "invoices.create"]
+        // },
       ]
     },
     {
@@ -176,7 +170,7 @@ export function Sidebar() {
         },
         {
           href: "/ot-administration",
-          label: "OT Administration",
+          label: "Attendance & OT",
           icon: <i className="ri-settings-3-line mr-3 text-xl"></i>,
           roles: ["master_admin", "admin"]
         },
@@ -213,6 +207,12 @@ export function Sidebar() {
           roles: ["master_admin"]
         },
         {
+          href: "/ot-pending-review",
+          label: "OT Pending Review",
+          icon: <i className="ri-timer-flash-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"]
+        },
+        {
           href: "/payroll-management",
           label: "Payroll Management",
           icon: <i className="ri-money-dollar-circle-line mr-3 text-xl"></i>,
@@ -223,13 +223,6 @@ export function Sidebar() {
     {
       category: "System",
       items: [
-        {
-          href: "/office-locations",
-          label: "Office Locations",
-          icon: <i className="ri-map-pin-line mr-3 text-xl"></i>,
-          roles: ["master_admin"],
-          requiredPermissions: "system.settings"
-        },
         {
           href: "/settings",
           label: "Settings",
