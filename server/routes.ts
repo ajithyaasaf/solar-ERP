@@ -1559,11 +1559,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Handle midnight boundary: look for attendance record from today OR yesterday
-      // This covers cases where someone checked in late and is checking out after midnight
+      // CRITICAL FIX: Use UTC midnight to match UnifiedAttendanceService storage format
+      // Local time setHours(0,0,0,0) creates mismatched timestamps in IST (+5:30)
       const now = new Date();
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
+
+      const today = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        0, 0, 0, 0
+      ));
 
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
