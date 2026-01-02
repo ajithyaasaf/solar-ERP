@@ -37,9 +37,16 @@ export class OTSessionService {
                 return { success: false, message: 'User not found' };
             }
 
-            // Get today's date (normalized to midnight)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // ✅ FIX 1: Use IST-based date string for attendance lookup
+            // This ensures "today" is consistent with Asia/Kolkata regardless of server UTC time
+            const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+            const [y, m, d] = istDateStr.split('-').map(Number);
+            const today = new Date(Date.UTC(y, m - 1, d));
+
+            console.log('OT-START: Using IST-normalized date:', {
+                currentISTDate: istDateStr,
+                lookupDate: today.toISOString()
+            });
 
             // ✅ SECURITY CHECK 1: Verify user is not on approved full-day leave
             const leaveStatus = await this.checkLeaveStatus(userId, today);
@@ -202,9 +209,10 @@ export class OTSessionService {
                 return { success: false, message: 'User not found' };
             }
 
-            // Get today's date
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // ✅ FIX 1: Use IST-based date string for attendance lookup
+            const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+            const [y, m, d] = istDateStr.split('-').map(Number);
+            const today = new Date(Date.UTC(y, m - 1, d));
 
             // Check if payroll period is locked
             const isLocked = await this.checkPayrollLocked(today);
@@ -336,8 +344,10 @@ export class OTSessionService {
      */
     static async getActiveSession(userId: string): Promise<OTSession | null> {
         try {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // ✅ FIX 1: Consistency with IST-based date lookup
+            const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+            const [y, m, d] = istDateStr.split('-').map(Number);
+            const today = new Date(Date.UTC(y, m - 1, d));
 
             const attendance = await storage.getAttendanceByUserAndDate(userId, today);
             if (!attendance || !attendance.otSessions) {
@@ -400,20 +410,17 @@ export class OTSessionService {
             const { EnterpriseTimeService } = await import('./enterprise-time-service');
             const deptTiming = await EnterpriseTimeService.getDepartmentTiming(department);
 
-            // Parse department times
-            const parseTime = (timeStr: string): Date => {
-                const today = new Date(currentTime);
-                const [time, period] = timeStr.split(' ');
-                const [hours, minutes] = time.split(':').map(Number);
-                let hour = hours;
-                if (period === 'PM' && hour !== 12) hour += 12;
-                if (period === 'AM' && hour === 12) hour = 0;
-                today.setHours(hour, minutes, 0, 0);
-                return today;
-            };
+            if (!deptTiming) {
+                return 'late_departure';
+            }
 
-            const deptStartTime = parseTime(deptTiming.checkInTime);
-            const deptEndTime = parseTime(deptTiming.checkOutTime);
+            // ✅ FIX 2: Robust 12-hour parsing (copied from ManualOTService)
+            const deptStartTime = this.parseTime12Hour(deptTiming.checkInTime, currentTime);
+            const deptEndTime = this.parseTime12Hour(deptTiming.checkOutTime, currentTime);
+
+            if (!deptStartTime || !deptEndTime) {
+                return 'late_departure';
+            }
 
             if (currentTime < deptStartTime) {
                 return 'early_arrival';
@@ -424,6 +431,42 @@ export class OTSessionService {
         } catch (error) {
             console.error('Error determining OT type:', error);
             return 'late_departure'; // Default
+        }
+    }
+
+    /**
+     * Ported from ManualOTService: Robust 12-hour time format parser
+     * Handles formats like "09:30 AM", "09:30AM", "9:00 PM"
+     */
+    private static parseTime12Hour(timeStr: string, referenceDate: Date): Date | null {
+        try {
+            const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (!match) return null;
+
+            const [, hourStr, minuteStr, period] = match;
+            let hour = parseInt(hourStr);
+            const minute = parseInt(minuteStr);
+
+            // Convert to 24-hour format
+            if (period.toUpperCase() === 'PM' && hour !== 12) {
+                hour += 12;
+            } else if (period.toUpperCase() === 'AM' && hour === 12) {
+                hour = 0;
+            }
+
+            // Create date in IST timezone (UTC+5:30)
+            const istOffset = 5.5 * 60 * 60 * 1000;
+            const result = new Date(referenceDate);
+
+            // Set the time as if it were UTC first
+            result.setUTCHours(hour, minute, 0, 0);
+
+            // Adjust back to UTC by subtracting the IST offset 
+            // result is now the actual UTC time representing that IST time
+            return new Date(result.getTime() - istOffset);
+        } catch (error) {
+            console.error('Error parsing time:', error);
+            return null;
         }
     }
 
@@ -449,7 +492,6 @@ export class OTSessionService {
                 weekendDays: [0],
                 defaultOTRate: 1.0,
                 weekendOTRate: 1.0,
-                maxOTHoursPerDay: 5.0,
                 maxOTHoursPerDay: 5.0,
                 updatedAt: new Date()
             };

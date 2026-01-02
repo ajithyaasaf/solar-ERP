@@ -2352,17 +2352,7 @@ export class FirestoreStorage implements IStorage {
     const record = snapshot.docs[0];
     const data = record.data() || {};
 
-    return {
-      id: record.id,
-      ...data,
-      date: data.date?.toDate() || new Date(),
-      checkInTime: data.checkInTime?.toDate() || null,
-      checkOutTime: data.checkOutTime?.toDate() || null,
-      otStartTime: data.otStartTime?.toDate() || undefined,
-      otEndTime: data.otEndTime?.toDate() || undefined,
-      otSessions: data.otSessions || [],  // CRITICAL: Include OT sessions
-      totalOTHours: data.totalOTHours || 0,  // CRITICAL: Include total OT hours
-    } as Attendance;
+    return this.convertFirestoreToAttendance({ id: record.id, ...data });
   }
 
   async listAttendanceByUser(userId: string): Promise<Attendance[]> {
@@ -2377,18 +2367,7 @@ export class FirestoreStorage implements IStorage {
 
       const attendanceRecords = snapshot.docs.map(doc => {
         const data = doc.data() || {};
-        const record = {
-          id: doc.id,
-          ...data,
-          date: data.date?.toDate() || new Date(),
-          checkInTime: data.checkInTime?.toDate() || null,
-          checkOutTime: data.checkOutTime?.toDate() || null,
-          otStartTime: data.otStartTime?.toDate() || undefined,
-          otEndTime: data.otEndTime?.toDate() || undefined,
-        } as Attendance;
-
-        console.log(`STORAGE: Record ${doc.id} - Date: ${record.date?.toISOString()}, Status: ${record.status}, UserID: ${record.userId}`);
-        return record;
+        return this.convertFirestoreToAttendance({ id: doc.id, ...data });
       });
 
       return attendanceRecords;
@@ -2412,15 +2391,7 @@ export class FirestoreStorage implements IStorage {
 
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
-      return {
-        id: doc.id,
-        ...data,
-        date: data.date?.toDate() || new Date(),
-        checkInTime: data.checkInTime?.toDate() || null,
-        checkOutTime: data.checkOutTime?.toDate() || null,
-        otStartTime: data.otStartTime?.toDate() || undefined,
-        otEndTime: data.otEndTime?.toDate() || undefined,
-      } as Attendance;
+      return this.convertFirestoreToAttendance({ id: doc.id, ...data });
     });
   }
 
@@ -2450,15 +2421,7 @@ export class FirestoreStorage implements IStorage {
       const incomplete = snapshot.docs
         .map(doc => {
           const data = doc.data() || {};
-          return {
-            id: doc.id,
-            ...data,
-            date: data.date?.toDate() || new Date(),
-            checkInTime: data.checkInTime?.toDate() || null,
-            checkOutTime: data.checkOutTime?.toDate() || null,
-            otStartTime: data.otStartTime?.toDate() || undefined,
-            otEndTime: data.otEndTime?.toDate() || undefined,
-          } as Attendance;
+          return this.convertFirestoreToAttendance({ id: doc.id, ...data });
         })
         .filter(record => {
           // Filter for records on the specified date with check-in but NO check-out
@@ -2508,15 +2471,7 @@ export class FirestoreStorage implements IStorage {
 
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
-      return {
-        id: doc.id,
-        ...data,
-        date: data.date?.toDate() || new Date(),
-        checkInTime: data.checkInTime?.toDate() || null,
-        checkOutTime: data.checkOutTime?.toDate() || null,
-        otStartTime: data.otStartTime?.toDate() || undefined,
-        otEndTime: data.otEndTime?.toDate() || undefined,
-      } as Attendance;
+      return this.convertFirestoreToAttendance({ id: doc.id, ...data });
     });
   }
 
@@ -2539,15 +2494,7 @@ export class FirestoreStorage implements IStorage {
 
     return snapshot.docs.map(doc => {
       const data = doc.data() || {};
-      return {
-        id: doc.id,
-        ...data,
-        date: data.date?.toDate() || new Date(),
-        checkInTime: data.checkInTime?.toDate() || null,
-        checkOutTime: data.checkOutTime?.toDate() || null,
-        otStartTime: data.otStartTime?.toDate() || undefined,
-        otEndTime: data.otEndTime?.toDate() || undefined,
-      } as Attendance;
+      return this.convertFirestoreToAttendance({ id: doc.id, ...data });
     });
   }
 
@@ -2557,15 +2504,7 @@ export class FirestoreStorage implements IStorage {
     if (!docSnap.exists) return undefined;
 
     const data = docSnap.data() || {};
-    return {
-      id: docSnap.id,
-      ...data,
-      date: data.date?.toDate() || new Date(),
-      checkInTime: data.checkInTime?.toDate() || null,
-      checkOutTime: data.checkOutTime?.toDate() || null,
-      otStartTime: data.otStartTime?.toDate() || undefined,
-      otEndTime: data.otEndTime?.toDate() || undefined,
-    } as Attendance;
+    return this.convertFirestoreToAttendance({ id: docSnap.id, ...data });
   }
 
   async getUserAttendanceForDate(userId: string, date: string): Promise<Attendance | undefined> {
@@ -6072,7 +6011,7 @@ export class FirestoreStorage implements IStorage {
   }
 
   private convertFirestoreToAttendance(data: any): Attendance {
-    return {
+    const attendance = {
       ...data,
       date: this.safeToDate(data.date) || (data.dateString ? new Date(data.dateString) : new Date()),
       checkInTime: this.safeToDate(data.checkInTime),
@@ -6083,6 +6022,22 @@ export class FirestoreStorage implements IStorage {
       adminReviewedAt: this.safeToDate(data.adminReviewedAt),
       originalCheckOutTime: this.safeToDate(data.originalCheckOutTime),
     } as Attendance;
+
+    // ✅ FIX: Map nested OT sessions and convert their timestamps
+    if (data.otSessions && Array.isArray(data.otSessions)) {
+      attendance.otSessions = data.otSessions.map((s: any) => ({
+        ...s,
+        startTime: this.safeToDate(s.startTime),
+        endTime: this.safeToDate(s.endTime),
+        reviewedAt: this.safeToDate(s.reviewedAt),
+        createdAt: this.safeToDate(s.createdAt),
+        updatedAt: this.safeToDate(s.updatedAt)
+      }));
+    } else {
+      attendance.otSessions = [];
+    }
+
+    return attendance;
   }
 
   private convertFirestoreToNotification(data: any): Notification {

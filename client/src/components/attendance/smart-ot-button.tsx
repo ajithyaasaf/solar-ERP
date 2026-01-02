@@ -351,7 +351,15 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                                 <div>
                                     {getOTTypeBadge(activeSession.otType)}
                                     <p className="text-sm text-gray-700 mt-1">
-                                        Started at {format(new Date(activeSession.startTime), 'h:mm a')}
+                                        Started at {(() => {
+                                            try {
+                                                const date = new Date(activeSession.startTime);
+                                                if (isNaN(date.getTime())) return "Invalid Time";
+                                                return format(date, 'h:mm a');
+                                            } catch (e) {
+                                                return "Invalid Time";
+                                            }
+                                        })()}
                                     </p>
                                     <p className="text-lg font-bold text-orange-900 mt-1">
                                         Duration: {getActiveDuration()}
