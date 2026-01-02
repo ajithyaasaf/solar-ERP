@@ -1546,7 +1546,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/attendance/check-out", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
     try {
-      const { userId, latitude, longitude, imageUrl, reason, otReason } = req.body;
+      const { userId, latitude, longitude, imageUrl, reason } = req.body;
+      // Allow reason to be used for otReason if not explicitly provided
+      const otReason = req.body.otReason || reason;
 
       if (!userId || userId !== req.authenticatedUser?.uid || "") {
         return res.status(403).json({ message: "Access denied" });
