@@ -51,36 +51,8 @@ export interface OTEndResponse {
 }
 
 export class ManualOTService {
-  // In-memory cache for department timings (30 minute TTL)
-  private static departmentTimingCache: Map<string, {
-    timing: any;
-    timestamp: number;
-  }> = new Map();
-  private static CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-  /**
-   * Get department timing with caching
-   */
-  private static async getDepartmentTimingCached(department: string) {
-    const cached = this.departmentTimingCache.get(department);
-    const now = Date.now();
-
-    // Return cached value if still valid
-    if (cached && (now - cached.timestamp) < this.CACHE_TTL_MS) {
-      return cached.timing;
-    }
-
-    // Fetch from database
-    const timing = await storage.getDepartmentTiming(department);
-
-    // Update cache
-    this.departmentTimingCache.set(department, {
-      timing,
-      timestamp: now
-    });
-
-    return timing;
-  }
+  // NOTE: Caching is now handled by EnterpriseTimeService
+  // This service was updated to use EnterpriseTimeService for consistency
 
 
   /**
@@ -378,6 +350,7 @@ export class ManualOTService {
 
   /**
    * Determine OT type based on current time and department timing
+   * Updated to use EnterpriseTimeService for consistency
    */
   private static async determineOTType(department: string, currentTime: Date): Promise<'early_arrival' | 'late_departure' | 'weekend' | 'holiday'> {
     try {
@@ -387,16 +360,23 @@ export class ManualOTService {
         return 'weekend';
       }
 
-      // Get department timing
-      const departmentTiming = await this.getDepartmentTimingCached(department);
-      if (!departmentTiming) {
+      // Use EnterpriseTimeService for consistent timing operations
+      const { EnterpriseTimeService } = await import('./enterprise-time-service');
+      const departmentTiming = await EnterpriseTimeService.getDepartmentTiming(department);
+
+      if (!departmentTiming || !departmentTiming.isActive) {
         return 'late_departure'; // Default if no timing configured
       }
 
-      // Parse department timing
-      const { checkInTime, checkOutTime } = departmentTiming;
-      const deptStartTime = this.parseTime12Hour(checkInTime, currentTime);
-      const deptEndTime = this.parseTime12Hour(checkOutTime, currentTime);
+      // Parse department timing using EnterpriseTimeService
+      const deptStartTime = EnterpriseTimeService.parseTimeToDate(
+        departmentTiming.checkInTime,
+        currentTime
+      );
+      const deptEndTime = EnterpriseTimeService.parseTimeToDate(
+        departmentTiming.checkOutTime,
+        currentTime
+      );
 
       if (!deptStartTime || !deptEndTime) {
         return 'late_departure';
@@ -461,6 +441,7 @@ export class ManualOTService {
 
   /**
    * Check if OT button should be available based on department timing
+   * SECURITY: Fail-safe design - disables button on any error/missing data
    */
   static async isOTButtonAvailable(userId: string): Promise<{
     available: boolean;
@@ -468,62 +449,116 @@ export class ManualOTService {
     nextAvailableTime?: string;
   }> {
     try {
+      // Validate user and department
       const user = await storage.getUser(userId);
       if (!user || !user.department) {
+        console.warn('[OT-AVAILABILITY] User missing or no department assigned:', {
+          userId,
+          hasUser: !!user,
+          hasDept: !!user?.department
+        });
         return {
           available: false,
-          reason: 'Department not assigned'
+          reason: 'Department not assigned. Please contact administrator.'
         };
       }
 
       const currentTime = new Date();
       const dayOfWeek = currentTime.getDay();
 
-      // Always available on weekends
+      // Always available on weekends (Saturday=6, Sunday=0)
       if (dayOfWeek === 0 || dayOfWeek === 6) {
+        console.log('[OT-AVAILABILITY] Weekend detected - OT available');
         return { available: true };
       }
 
-      // Get department timing
-      const departmentTiming = await this.getDepartmentTimingCached(user.department);
-      if (!departmentTiming) {
-        return { available: true }; // If no timing configured, allow OT
+      // CRITICAL FIX: Use EnterpriseTimeService for consistent timing
+      // This service provides default timings if not configured and handles all edge cases
+      const { EnterpriseTimeService } = await import('./enterprise-time-service');
+      const departmentTiming = await EnterpriseTimeService.getDepartmentTiming(user.department);
+
+      // FAIL-SAFE: If timing is not active, disable button
+      if (!departmentTiming || !departmentTiming.isActive) {
+        console.warn('[OT-AVAILABILITY] Department timing not configured or inactive:', {
+          dept: user.department,
+          isActive: departmentTiming?.isActive,
+          hasTiming: !!departmentTiming
+        });
+        return {
+          available: false,
+          reason: 'Department timing not configured. Please contact administrator.'
+        };
       }
 
-      const { checkInTime, checkOutTime } = departmentTiming;
-      const deptStartTime = this.parseTime12Hour(checkInTime, currentTime);
-      const deptEndTime = this.parseTime12Hour(checkOutTime, currentTime);
+      // Parse department start and end times using EnterpriseTimeService
+      const deptStartTime = EnterpriseTimeService.parseTimeToDate(
+        departmentTiming.checkInTime,
+        currentTime
+      );
+      const deptEndTime = EnterpriseTimeService.parseTimeToDate(
+        departmentTiming.checkOutTime,
+        currentTime
+      );
 
+      // FAIL-SAFE: If time parsing fails, disable button
       if (!deptStartTime || !deptEndTime) {
-        return { available: true };
+        console.error('[OT-AVAILABILITY] Time parsing failed:', {
+          dept: user.department,
+          checkInTime: departmentTiming.checkInTime,
+          checkOutTime: departmentTiming.checkOutTime,
+          parsedStart: deptStartTime,
+          parsedEnd: deptEndTime
+        });
+        return {
+          available: false,
+          reason: 'Invalid department timing configuration. Please contact administrator.'
+        };
       }
+
+      // Debug logging for troubleshooting
+      console.log('[OT-AVAILABILITY] Time check:', {
+        userId,
+        dept: user.department,
+        currentTime: currentTime.toISOString(),
+        deptStart: deptStartTime.toISOString(),
+        deptEnd: deptEndTime.toISOString(),
+        isBeforeStart: currentTime < deptStartTime,
+        isAfterEnd: currentTime > deptEndTime
+      });
 
       // Available before department start time (early arrival OT)
       if (currentTime < deptStartTime) {
+        console.log('[OT-AVAILABILITY] Before work hours - OT available (early arrival)');
         return { available: true };
       }
 
       // Available after department end time (late departure OT)
-
       if (currentTime > deptEndTime) {
+        console.log('[OT-AVAILABILITY] After work hours - OT available (late departure)');
         return { available: true };
       }
 
-      // Not available during regular department hours  
-      // Use the original checkout time string instead of converting timezones
-      const availableAfterTime = checkOutTime;
-
-      // Debug logging removed for production
-
+      // NOT AVAILABLE: During regular department hours
+      console.log('[OT-AVAILABILITY] During work hours - OT NOT available');
       return {
         available: false,
-        reason: 'OT not available during regular work hours',
-        nextAvailableTime: availableAfterTime
+        reason: `OT is only available before ${departmentTiming.checkInTime} or after ${departmentTiming.checkOutTime}`,
+        nextAvailableTime: departmentTiming.checkOutTime
       };
 
     } catch (error) {
-      console.error('Error checking OT availability:', error);
-      return { available: true }; // Default to available on error
+      // FAIL-SAFE: On ANY error, disable button and log details for debugging
+      console.error('[OT-AVAILABILITY] Critical error - DISABLING button for security:', error);
+      console.error('[OT-AVAILABILITY] Error details:', {
+        userId,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
+      return {
+        available: false,
+        reason: 'System error checking OT availability. Please contact support if this persists.'
+      };
     }
   }
 }
