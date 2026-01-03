@@ -4,8 +4,11 @@
  */
 
 import { storage } from '../storage';
-import { EnterpriseLocationService, LocationRequest, LocationValidationResult } from './enterprise-location-service';
 import { CloudinaryService } from './cloudinary-service';
+import { EnterpriseTimeService } from './enterprise-time-service';
+import { LeaveService } from './leave-service';
+import { HolidayService } from './holiday-service';
+import { getUTCMidnight, isSameUTCDate } from '../utils/timezone-helpers';
 
 export interface AttendanceCheckInRequest {
   userId: string;
@@ -435,16 +438,12 @@ export class UnifiedAttendanceService {
       const existingAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
 
       if (existingAttendance) {
-        // **CRITICAL: Verify the existing record is actually from TODAY**
-        // This prevents blocking check-in when an old incomplete record exists
+        // **CRITICAL: Verify the existing record is actually from TODAY (UTC-safe)**
         const existingDate = new Date(existingAttendance.date);
-        existingDate.setHours(0, 0, 0, 0);
+        const todayNormalized = today;
 
-        const todayNormalized = new Date(today);
-        todayNormalized.setHours(0, 0, 0, 0);
-
-        // Only block if the existing record is genuinely from today
-        if (existingDate.getTime() === todayNormalized.getTime()) {
+        // Only block if the existing record is genuinely from today (UTC comparison)
+        if (isSameUTCDate(existingDate, todayNormalized)) {
           console.log('DUPLICATE CHECK-IN: Blocking duplicate check-in for user', request.userId, {
             existingRecordDate: existingDate.toISOString(),
             todayDate: todayNormalized.toISOString(),
@@ -617,9 +616,8 @@ export class UnifiedAttendanceService {
    */
   static async processCheckOut(request: AttendanceCheckOutRequest): Promise<AttendanceCheckOutResponse> {
     try {
-      // Find today's attendance record
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Find today's attendance record (UTC-safe)
+      const today = getUTCMidnight(new Date());
       const attendance = await storage.getAttendanceByUserAndDate(request.userId, today);
 
       if (!attendance) {

@@ -25,11 +25,9 @@ export class SiteVisitService {
    */
   async createSiteVisit(data: InsertSiteVisit): Promise<SiteVisit> {
     try {
-      console.log("SITE_VISIT_SERVICE: Creating site visit with data:", JSON.stringify(data, null, 2));
-      
       // Data is already validated in the route, so we can use it directly
       const validatedData = data;
-      
+
       // Convert dates to Firestore timestamps
       const firestoreData: any = {
         ...validatedData,
@@ -50,17 +48,13 @@ export class SiteVisitService {
         }
       });
 
-      console.log("SITE_VISIT_SERVICE: Prepared data for Firestore:", JSON.stringify(firestoreData, null, 2));
-
       const docRef = await this.collection.add(firestoreData);
-      console.log("SITE_VISIT_SERVICE: Document created with ID:", docRef.id);
-      
+
       const result = {
         id: docRef.id,
         ...this.convertFirestoreToSiteVisit(firestoreData)
       };
-      
-      console.log("SITE_VISIT_SERVICE: Returning site visit:", JSON.stringify(result, null, 2));
+
       return result;
     } catch (error) {
       console.error('SITE_VISIT_SERVICE: Error creating site visit:', error);
@@ -74,7 +68,7 @@ export class SiteVisitService {
   async updateSiteVisit(id: string, updates: Partial<InsertSiteVisit>): Promise<SiteVisit> {
     try {
       const docRef = this.collection.doc(id);
-      
+
       // Convert dates to Firestore timestamps in updates
       const firestoreUpdates: any = {
         ...updates,
@@ -84,8 +78,8 @@ export class SiteVisitService {
       if (updates.siteOutTime) {
         // Handle both Date objects and ISO strings with error handling
         try {
-          const siteOutDate = updates.siteOutTime instanceof Date 
-            ? updates.siteOutTime 
+          const siteOutDate = updates.siteOutTime instanceof Date
+            ? updates.siteOutTime
             : new Date(updates.siteOutTime);
           firestoreUpdates.siteOutTime = Timestamp.fromDate(siteOutDate);
         } catch (error) {
@@ -97,11 +91,11 @@ export class SiteVisitService {
       if (updates.sitePhotos) {
         firestoreUpdates.sitePhotos = updates.sitePhotos.map(photo => {
           const processedPhoto: any = { ...photo };
-          
+
           // Handle timestamp conversion safely with try-catch
           if (photo.timestamp) {
             try {
-              processedPhoto.timestamp = photo.timestamp instanceof Date 
+              processedPhoto.timestamp = photo.timestamp instanceof Date
                 ? Timestamp.fromDate(photo.timestamp)
                 : Timestamp.fromDate(new Date(photo.timestamp));
             } catch (error) {
@@ -112,7 +106,7 @@ export class SiteVisitService {
             // If no timestamp, use current date
             processedPhoto.timestamp = Timestamp.fromDate(new Date());
           }
-          
+
           return processedPhoto;
         });
       }
@@ -121,11 +115,11 @@ export class SiteVisitService {
       if (updates.siteOutPhotos) {
         firestoreUpdates.siteOutPhotos = updates.siteOutPhotos.map((photo: any) => {
           const processedPhoto: any = { ...photo };
-          
+
           // Handle timestamp conversion safely for checkout photos with try-catch
           if (photo.timestamp) {
             try {
-              processedPhoto.timestamp = photo.timestamp instanceof Date 
+              processedPhoto.timestamp = photo.timestamp instanceof Date
                 ? Timestamp.fromDate(photo.timestamp)
                 : Timestamp.fromDate(new Date(photo.timestamp));
             } catch (error) {
@@ -136,7 +130,7 @@ export class SiteVisitService {
             // If no timestamp, use current date
             processedPhoto.timestamp = Timestamp.fromDate(new Date());
           }
-          
+
           return processedPhoto;
         });
       }
@@ -144,8 +138,8 @@ export class SiteVisitService {
       // Handle updatedAt conversion - can be Date object or ISO string
       if (updates.updatedAt) {
         try {
-          const updatedAtDate = updates.updatedAt instanceof Date 
-            ? updates.updatedAt 
+          const updatedAtDate = updates.updatedAt instanceof Date
+            ? updates.updatedAt
             : new Date(updates.updatedAt);
           firestoreUpdates.updatedAt = Timestamp.fromDate(updatedAtDate);
         } catch (error) {
@@ -161,19 +155,8 @@ export class SiteVisitService {
         }
       });
 
-      console.log("=== FIRESTORE UPDATE PAYLOAD ===");
-      console.log("Original updates:", JSON.stringify(updates, null, 2));
-      console.log("Processed Firestore updates:", JSON.stringify({
-        ...firestoreUpdates,
-        // Convert timestamps to readable format for logging
-        siteOutTime: firestoreUpdates.siteOutTime?.toDate?.() || firestoreUpdates.siteOutTime,
-        updatedAt: firestoreUpdates.updatedAt?.toDate?.() || firestoreUpdates.updatedAt,
-        sitePhotos: firestoreUpdates.sitePhotos ? `Array of ${firestoreUpdates.sitePhotos.length} photos` : undefined,
-        siteOutPhotos: firestoreUpdates.siteOutPhotos ? `Array of ${firestoreUpdates.siteOutPhotos.length} photos` : undefined
-      }, null, 2));
-
       await docRef.update(firestoreUpdates);
-      
+
       const updatedDoc = await docRef.get();
       if (!updatedDoc.exists) {
         throw new Error('Site visit not found');
@@ -183,16 +166,6 @@ export class SiteVisitService {
         id: updatedDoc.id,
         ...this.convertFirestoreToSiteVisit(updatedDoc.data()!)
       };
-
-      console.log("=== UPDATE SUCCESS ===");
-      console.log("Site visit updated successfully:", {
-        id: result.id,
-        status: result.status,
-        siteOutTime: result.siteOutTime,
-        hasLocation: !!result.siteOutLocation,
-        hasPhoto: !!result.siteOutPhotoUrl
-      });
-      console.log("======================");
 
       return result;
     } catch (error) {
@@ -213,7 +186,7 @@ export class SiteVisitService {
   async getSiteVisitById(id: string): Promise<SiteVisit | null> {
     try {
       const doc = await this.collection.doc(id).get();
-      
+
       if (!doc.exists) {
         return null;
       }
@@ -343,44 +316,17 @@ export class SiteVisitService {
         ...this.convertFirestoreToSiteVisit(doc.data())
       }));
 
-      console.log(`SITE_VISIT_SERVICE: Retrieved ${results.length} documents from Firestore`);
-      
-      // DEBUG: Log the structure of the first result to check what data is included
-      if (results.length > 0) {
-        console.log('SITE_VISIT_DEBUG: Sample result structure:');
-        console.log('- Has customer data:', !!results[0].customer);
-        console.log('- Has marketing data:', !!results[0].marketingData);
-        console.log('- Has technical data:', !!results[0].technicalData);
-        console.log('- Has admin data:', !!results[0].adminData);
-        console.log('- Total site photos:', results[0].sitePhotos ? results[0].sitePhotos.length : 0);
-        console.log('- Checkout photos (siteOutPhotos):', results[0].siteOutPhotos ? results[0].siteOutPhotos.length : 0);
-        console.log('- Has check-in photo:', !!results[0].siteInPhotoUrl);
-        console.log('- Has check-out photo:', !!results[0].siteOutPhotoUrl);
-        console.log('- Customer name:', results[0].customer?.name || 'N/A');
-        console.log('- Status:', results[0].status);
-        console.log('- Department:', results[0].department);
-        if (results[0].marketingData) {
-          console.log('- Marketing data keys:', Object.keys(results[0].marketingData));
-        }
-      }
-
       // Apply all other filters in memory to avoid compound index requirements
       if (filters.status) {
-        const beforeCount = results.length;
         results = results.filter(sv => sv.status === filters.status);
-        console.log(`SITE_VISIT_SERVICE: Applied status filter '${filters.status}' in memory, ${beforeCount} -> ${results.length} results`);
       }
 
       if (filters.startDate) {
-        const beforeCount = results.length;
         results = results.filter(sv => sv.siteInTime >= filters.startDate!);
-        console.log(`SITE_VISIT_SERVICE: Applied start date filter ${filters.startDate.toISOString()}, ${beforeCount} -> ${results.length} results`);
       }
 
       if (filters.endDate) {
-        const beforeCount = results.length;
         results = results.filter(sv => sv.siteInTime <= filters.endDate!);
-        console.log(`SITE_VISIT_SERVICE: Applied end date filter ${filters.endDate.toISOString()}, ${beforeCount} -> ${results.length} results`);
       }
 
       if (filters.visitPurpose) {
@@ -388,13 +334,11 @@ export class SiteVisitService {
       }
 
       if (filters.customerCurrentStatus) {
-        const beforeCount = results.length;
         // Use customerCurrentStatus if available, fallback to visitOutcome for backward compatibility
         results = results.filter(sv => {
           const effectiveStatus = sv.customerCurrentStatus || sv.visitOutcome;
           return effectiveStatus === filters.customerCurrentStatus;
         });
-        console.log(`SITE_VISIT_SERVICE: Applied customerCurrentStatus filter '${filters.customerCurrentStatus}' in memory, ${beforeCount} -> ${results.length} results`);
       }
 
       // Sort results by date descending (newest first)
@@ -426,14 +370,14 @@ export class SiteVisitService {
     try {
       const docRef = this.collection.doc(siteVisitId);
       const doc = await docRef.get();
-      
+
       if (!doc.exists) {
         throw new Error('Site visit not found');
       }
 
       const currentData = doc.data()!;
       const currentPhotos = currentData.sitePhotos || [];
-      
+
       // Convert new photos to Firestore format
       const firestorePhotos = photos.map(photo => ({
         ...photo,
@@ -538,7 +482,7 @@ export class SiteVisitService {
     try {
       // Import xlsx dynamically to avoid bundling issues
       const XLSX = await import('xlsx');
-      
+
       let query: any = this.collection.orderBy('siteInTime', 'desc');
 
       // Apply filters
@@ -585,14 +529,14 @@ export class SiteVisitService {
 
         // Add marketing configuration data if available
         if (visit.marketingData) {
-          const config = visit.marketingData.onGridConfig || visit.marketingData.offGridConfig || 
-                        visit.marketingData.hybridConfig || visit.marketingData.waterPumpConfig;
-          
+          const config = visit.marketingData.onGridConfig || visit.marketingData.offGridConfig ||
+            visit.marketingData.hybridConfig || visit.marketingData.waterPumpConfig;
+
           if (config) {
             baseData['Panel Watts'] = config.panelWatts || 'N/A';
-            baseData['Panel Type'] = config.panelType ? 
-              (config.panelType === 'bifacial' ? 'Bifacial' : 
-               config.panelType === 'topcon' ? 'Topcon' : 'Mono-PERC') : 'N/A';
+            baseData['Panel Type'] = config.panelType ?
+              (config.panelType === 'bifacial' ? 'Bifacial' :
+                config.panelType === 'topcon' ? 'Topcon' : 'Mono-PERC') : 'N/A';
             baseData['DCR Panel Count'] = config.dcrPanelCount || 0;
             baseData['NON DCR Panel Count'] = config.nonDcrPanelCount || 0;
             baseData['Total Panel Count'] = config.panelCount || 'N/A';
@@ -602,18 +546,18 @@ export class SiteVisitService {
             baseData['Electrical Accessories'] = config.electricalAccessories ? 'Yes' : 'No';
             baseData['Electrical Count'] = config.electricalCount || 0;
             baseData['Lightning Arrestor'] = config.lightningArrest ? 'Yes' : 'No';
-            baseData['Structure Type'] = config.structureType ? 
+            baseData['Structure Type'] = config.structureType ?
               (config.structureType === 'gp_structure' ? 'GP Structure' : 'Mono Rail') : 'N/A';
-            
+
             if (config.gpStructure) {
               baseData['Lower End Height'] = config.gpStructure.lowerEndHeight || 'N/A';
               baseData['Higher End Height'] = config.gpStructure.higherEndHeight || 'N/A';
             }
-            
+
             if (config.monoRail) {
               baseData['Mono Rail Type'] = config.monoRail.type === 'mini_rail' ? 'Mini Rail' : 'Long Rail';
             }
-            
+
             baseData['Project Value'] = config.projectValue || 'N/A';
           }
         }
@@ -690,13 +634,8 @@ export class SiteVisitService {
     userId: string;
   }): Promise<SiteVisit> {
     try {
-      console.log("=== QUICK UPDATE STARTED ===");
-      console.log("Site visit ID:", id);
-      console.log("Action:", action);
-      console.log("Options:", JSON.stringify(options, null, 2));
-
       const docRef = this.collection.doc(id);
-      
+
       // Get existing site visit to validate
       const existingDoc = await docRef.get();
       if (!existingDoc.exists) {
@@ -748,17 +687,9 @@ export class SiteVisitService {
           throw new Error(`Invalid quick action: ${action}`);
       }
 
-      console.log("=== QUICK UPDATE PAYLOAD ===");
-      console.log("Update data:", JSON.stringify({
-        ...updateData,
-        scheduledFollowUpDate: updateData.scheduledFollowUpDate?.toDate?.() || updateData.scheduledFollowUpDate,
-        updatedAt: updateData.updatedAt?.toDate?.() || updateData.updatedAt,
-        outcomeSelectedAt: updateData.outcomeSelectedAt?.toDate?.() || updateData.outcomeSelectedAt
-      }, null, 2));
-
       // Update the document
       await docRef.update(updateData);
-      
+
       // Get the updated document
       const updatedDoc = await docRef.get();
       if (!updatedDoc.exists) {
@@ -769,17 +700,6 @@ export class SiteVisitService {
         id: updatedDoc.id,
         ...this.convertFirestoreToSiteVisit(updatedDoc.data()!)
       };
-
-      console.log("=== QUICK UPDATE SUCCESS ===");
-      console.log("Site visit quick updated successfully:", {
-        id: result.id,
-        action,
-        visitOutcome: result.visitOutcome,
-        status: result.status,
-        scheduledFollowUpDate: result.scheduledFollowUpDate,
-        outcomeNotes: result.outcomeNotes
-      });
-      console.log("===============================");
 
       return result;
     } catch (error) {
@@ -802,7 +722,7 @@ export class SiteVisitService {
       ...photo,
       timestamp: photo.timestamp?.toDate() || new Date()
     }));
-    
+
     const checkoutPhotos = (data.siteOutPhotos || []).map((photo: any) => ({
       ...photo,
       timestamp: photo.timestamp?.toDate() || new Date()
@@ -818,13 +738,13 @@ export class SiteVisitService {
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
       // Convert outcome-related timestamps to Date objects - handle different data types
-      scheduledFollowUpDate: data.scheduledFollowUpDate ? 
-        (typeof data.scheduledFollowUpDate?.toDate === 'function' ? 
-          data.scheduledFollowUpDate.toDate() : 
+      scheduledFollowUpDate: data.scheduledFollowUpDate ?
+        (typeof data.scheduledFollowUpDate?.toDate === 'function' ?
+          data.scheduledFollowUpDate.toDate() :
           data.scheduledFollowUpDate) : undefined,
-      outcomeSelectedAt: data.outcomeSelectedAt ? 
-        (typeof data.outcomeSelectedAt?.toDate === 'function' ? 
-          data.outcomeSelectedAt.toDate() : 
+      outcomeSelectedAt: data.outcomeSelectedAt ?
+        (typeof data.outcomeSelectedAt?.toDate === 'function' ?
+          data.outcomeSelectedAt.toDate() :
           data.outcomeSelectedAt) : undefined,
       sitePhotos: allPhotos,
       // Keep the original siteOutPhotos field for reference

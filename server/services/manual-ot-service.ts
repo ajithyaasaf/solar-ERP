@@ -4,8 +4,9 @@
  */
 
 import { storage } from '../storage';
-import { CloudinaryService } from './cloudinary-service';
+import { EnterpriseTimeService } from './enterprise-time-service';
 import { PayrollLockService } from './payroll-lock-service';
+import { getUTCMidnight } from '../utils/timezone-helpers';
 
 export interface OTStartRequest {
   userId: string;
@@ -81,9 +82,8 @@ export class ManualOTService {
         };
       }
 
-      // Get today's attendance record
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Get today's attendance record (UTC-safe)
+      const today = getUTCMidnight(new Date());
 
       // Security Check: Verify payroll period is not locked
       if (await PayrollLockService.isPeriodLocked(today)) {
@@ -111,6 +111,7 @@ export class ManualOTService {
           isWithinOfficeRadius: true,
           otStatus: 'in_progress' as const,
           isManualOT: true,
+          autoCorrected: false,
           otStartTime: new Date(),
           otStartLatitude: request.latitude.toString(),
           otStartLongitude: request.longitude.toString(),
@@ -171,8 +172,8 @@ export class ManualOTService {
   static async endOTSession(request: OTEndRequest): Promise<OTEndResponse> {
     try {
       // Get today's attendance record
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Get today (UTC-safe)
+      const today = getUTCMidnight(new Date());
 
       // Security Check: Verify payroll period is not locked
       if (await PayrollLockService.isPeriodLocked(today)) {
@@ -307,8 +308,8 @@ export class ManualOTService {
    */
   static async getOTStatus(userId: string) {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Get today's attendance (UTC-safe)
+      const today = getUTCMidnight(new Date());
 
       const todayAttendance = await storage.getAttendanceByUserAndDate(userId, today);
 
@@ -399,47 +400,6 @@ export class ManualOTService {
   }
 
   /**
-   * Parse 12-hour time format to Date object in IST timezone
-   */
-  private static parseTime12Hour(timeStr: string, referenceDate: Date): Date | null {
-    try {
-      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-      if (!match) return null;
-
-      const [, hourStr, minuteStr, period] = match;
-      let hour = parseInt(hourStr);
-      const minute = parseInt(minuteStr);
-
-      // Convert to 24-hour format
-      if (period.toUpperCase() === 'PM' && hour !== 12) {
-        hour += 12;
-      } else if (period.toUpperCase() === 'AM' && hour === 12) {
-        hour = 0;
-      }
-
-      // Create date in IST timezone (UTC+5:30)
-      const istOffset = 5.5 * 60 * 60 * 1000; // 5:30 hours in milliseconds
-      const result = new Date(referenceDate);
-
-      // Set the time in IST and then convert to UTC
-      result.setUTCFullYear(referenceDate.getUTCFullYear());
-      result.setUTCMonth(referenceDate.getUTCMonth());
-      result.setUTCDate(referenceDate.getUTCDate());
-      result.setUTCHours(hour, minute, 0, 0);
-
-      // Convert IST to UTC by subtracting the offset
-      const utcTime = new Date(result.getTime() - istOffset);
-
-      // Debug logging removed for production
-
-      return utcTime;
-    } catch (error) {
-      console.error('Error parsing time:', error);
-      return null;
-    }
-  }
-
-  /**
    * Check if OT button should be available based on department timing
    * SECURITY: Fail-safe design - disables button on any error/missing data
    */
@@ -466,9 +426,9 @@ export class ManualOTService {
       const currentTime = new Date();
       const dayOfWeek = currentTime.getDay();
 
-      // Always available on weekends (Saturday=6, Sunday=0)
-      if (dayOfWeek === 0 || dayOfWeek === 6) {
-        console.log('[OT-AVAILABILITY] Weekend detected - OT available');
+      // Only Sunday (day 0) is weekend - Saturday is a working day
+      if (dayOfWeek === 0) {
+        console.log('[OT-AVAILABILITY] Weekend (Sunday) detected - OT available');
         return { available: true };
       }
 
@@ -526,15 +486,35 @@ export class ManualOTService {
         isAfterEnd: currentTime > deptEndTime
       });
 
-      // Available before department start time (early arrival OT)
-      if (currentTime < deptStartTime) {
-        console.log('[OT-AVAILABILITY] Before work hours - OT available (early arrival)');
+      // Determine OT scenario
+      const isEarlyArrival = currentTime < deptStartTime;
+      const isLateDeparture = currentTime > deptEndTime;
+
+      // ✅ SMART ATTENDANCE CHECK: OT-type aware
+      // Early arrival: Employee CANNOT check in yet (before work hours)
+      //   → Allow OT without attendance (will auto-create)
+      // Late departure: Employee SHOULD have checked in already
+      //   → Require attendance to prevent abuse
+      const today = getUTCMidnight(new Date());
+      const attendance = await storage.getAttendanceByUserAndDate(userId, today);
+
+      if (!attendance && isLateDeparture) {
+        console.log('[OT-AVAILABILITY] Late departure requires attendance - OT NOT available');
+        return {
+          available: false,
+          reason: 'Please check in first before starting late departure OT.'
+        };
+      }
+
+      // Early arrival OT (before work hours)
+      if (isEarlyArrival) {
+        console.log('[OT-AVAILABILITY] Early arrival - OT available', attendance ? '(has attendance)' : '(will auto-create)');
         return { available: true };
       }
 
-      // Available after department end time (late departure OT)
-      if (currentTime > deptEndTime) {
-        console.log('[OT-AVAILABILITY] After work hours - OT available (late departure)');
+      // Late departure OT (after work hours) - attendance already validated above
+      if (isLateDeparture) {
+        console.log('[OT-AVAILABILITY] Late departure with attendance - OT available');
         return { available: true };
       }
 

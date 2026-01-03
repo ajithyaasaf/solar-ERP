@@ -376,20 +376,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
     if (user.role === "master_admin") return true; // Master admin has all permissions
 
-    console.log("=== PERMISSION CHECK ===");
-    console.log("User permissions:", permissions);
-    console.log("Required permission:", permission);
-    console.log("Permissions length:", permissions.length);
-
     if (Array.isArray(permission)) {
-      const hasAny = permission.some(p => permissions.includes(p));
-      console.log("Array check result:", hasAny);
-      return hasAny;
+      return permission.some(p => permissions.includes(p));
     }
 
-    const hasSingle = permissions.includes(permission);
-    console.log("Single check result:", hasSingle);
-    return hasSingle;
+    return permissions.includes(permission);
   };
 
   const hasRole = (role: UserRole | UserRole[]): boolean => {
@@ -429,14 +420,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Calculate permissions based on department + designation (or default for new employees)
       const effectivePermissions = getEffectivePermissions(user.department, user.designation);
 
-      console.log("=== PERMISSION CALCULATION DEBUG ===");
-      console.log("User:", user.uid);
-      console.log("Department:", user.department);
-      console.log("Designation:", user.designation);
-      console.log("Calculated permissions:", effectivePermissions);
-      console.log("Permission count:", effectivePermissions.length);
-      console.log("=====================================");
-
       setPermissions(effectivePermissions);
 
       // Set approval capabilities based on designation level
@@ -471,18 +454,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load permissions when user changes
   useEffect(() => {
-    console.log("=== PERMISSION USEEFFECT TRIGGER ===");
-    console.log("User UID:", user?.uid);
-    console.log("User Department:", user?.department);
-    console.log("User Designation:", user?.designation);
-    console.log("All conditions met:", !!(user?.uid));
-    console.log("=====================================");
-
     if (user?.uid) {
-      console.log("Calling refreshPermissions...");
       refreshPermissions();
     } else {
-      console.log("Conditions not met, clearing permissions");
       setPermissions([]);
       setCanApprove(false);
       setMaxApprovalAmount(null);

@@ -55,7 +55,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [totalOTToday, setTotalOTToday] = useState(0);
     const [cameraOpen, setCameraOpen] = useState(false);
-    const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
+
     const [otAvailable, setOTAvailable] = useState(false); // Fail-safe: default to disabled
     const [otUnavailableReason, setOTUnavailableReason] = useState<string>("");
     const [nextAvailableTime, setNextAvailableTime] = useState<string>("");
@@ -119,23 +119,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                 setTotalOTToday(0);
             }
 
-            // Check if attendance exists for today
-            const todayStr = today; // Already in YYYY-MM-DD format
-            try {
-                const attendanceRes = await apiRequest(`/api/user/attendance?userId=${userId}&date=${todayStr}`, 'GET');
-                const attendanceData = await attendanceRes.json();
-                // attendanceData is an array of attendance records
-                const todayAttendance = Array.isArray(attendanceData)
-                    ? attendanceData.find((a: any) => {
-                        const attDate = new Date(a.date);
-                        return attDate.toISOString().split('T')[0] === todayStr;
-                    })
-                    : null;
-                setHasAttendanceToday(!!(todayAttendance && todayAttendance.checkInTime));
-            } catch (error) {
-                console.warn('Failed to fetch attendance, assuming no attendance:', error);
-                setHasAttendanceToday(false);
-            }
+
         } catch (error) {
             console.error('Error fetching OT sessions:', error);
         }
@@ -413,23 +397,7 @@ export function SmartOTButton({ userId, onSuccess }: SmartOTButtonProps) {
                             )
                         )}
 
-                        {/* Warning: OT without attendance */}
-                        {otAvailable && !hasAttendanceToday && (
-                            <Alert className="border-amber-200 bg-amber-50">
-                                <AlertCircle className="h-4 w-4 text-amber-600" />
-                                <AlertTitle className="text-amber-900 font-semibold">No Regular Attendance Today</AlertTitle>
-                                <AlertDescription className="text-amber-800 text-sm">
-                                    Starting OT will automatically create an attendance record. This is normal for:
-                                    <ul className="list-disc list-inside mt-2 space-y-1">
-                                        <li>Weekend overtime work</li>
-                                        <li>Holiday project work</li>
-                                        <li>Early morning emergency tasks</li>
-                                    </ul>
-                                </AlertDescription>
-                            </Alert>
-                        )}
-
-                        {/* Start OT Button */}
+                        {/* OT Available - Start Button */}
                         <Button
                             size="lg"
                             className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"

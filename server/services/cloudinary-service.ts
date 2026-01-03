@@ -12,8 +12,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-console.log('CLOUDINARY: Service initialized with API key:', process.env.CLOUDINARY_API_KEY ? 'present' : 'missing');
-console.log('CLOUDINARY: Service initialized with API secret:', process.env.CLOUDINARY_API_SECRET ? 'present' : 'missing');
+// Removed debug log
+// Removed debug log
 
 export interface CloudinaryUploadResult {
   success: boolean;
@@ -43,8 +43,8 @@ export class CloudinaryService {
       const dateStr = timestamp.toISOString().split('T')[0];
       const publicId = `${this.EMPLOYEE_PHOTO_FOLDER}/${employeeId}_${dateStr}`;
 
-      console.log('CLOUDINARY: Uploading employee photo to folder:', this.EMPLOYEE_PHOTO_FOLDER);
-      console.log('CLOUDINARY: Public ID:', publicId);
+      // Removed debug log
+      // Removed debug log
 
       const result = await cloudinary.uploader.upload(base64Image, {
         public_id: publicId,
@@ -58,7 +58,7 @@ export class CloudinaryService {
         tags: ['employee', 'profile_photo', employeeId]
       });
 
-      console.log('CLOUDINARY: Employee photo upload successful:', result.secure_url);
+      // Removed debug log
 
       return {
         success: true,
@@ -91,8 +91,8 @@ export class CloudinaryService {
       const dateStr = timestamp.toISOString().split('T')[0];
       const publicId = `${this.AADHAR_FOLDER}/${employeeId}_${dateStr}`;
 
-      console.log('CLOUDINARY: Uploading Aadhar card to folder:', this.AADHAR_FOLDER);
-      console.log('CLOUDINARY: Public ID:', publicId);
+      // Removed debug log
+      // Removed debug log
 
       const result = await cloudinary.uploader.upload(base64Image, {
         public_id: publicId,
@@ -106,7 +106,7 @@ export class CloudinaryService {
         tags: ['employee', 'aadhar', employeeId]
       });
 
-      console.log('CLOUDINARY: Aadhar card upload successful:', result.secure_url);
+      // Removed debug log
 
       return {
         success: true,
@@ -139,8 +139,8 @@ export class CloudinaryService {
       const dateStr = timestamp.toISOString().split('T')[0];
       const publicId = `${this.PAN_FOLDER}/${employeeId}_${dateStr}`;
 
-      console.log('CLOUDINARY: Uploading PAN card to folder:', this.PAN_FOLDER);
-      console.log('CLOUDINARY: Public ID:', publicId);
+      // Removed debug log
+      // Removed debug log
 
       const result = await cloudinary.uploader.upload(base64Image, {
         public_id: publicId,
@@ -154,7 +154,7 @@ export class CloudinaryService {
         tags: ['employee', 'pan', employeeId]
       });
 
-      console.log('CLOUDINARY: PAN card upload successful:', result.secure_url);
+      // Removed debug log
 
       return {
         success: true,
@@ -189,8 +189,8 @@ export class CloudinaryService {
       const timeStr = timestamp.toTimeString().split(' ')[0].replace(/:/g, '-');
       const publicId = `${this.FOLDER_NAME}/${userId}_${dateStr}_${timeStr}`;
 
-      console.log('CLOUDINARY: Uploading photo to folder:', this.FOLDER_NAME);
-      console.log('CLOUDINARY: Public ID:', publicId);
+      // Removed debug log
+      // Removed debug log
 
       // Upload to Cloudinary
       const result = await cloudinary.uploader.upload(base64Image, {
@@ -206,7 +206,7 @@ export class CloudinaryService {
         tags: ['attendance', 'field_work', userId]
       });
 
-      console.log('CLOUDINARY: Upload successful:', result.secure_url);
+      // Removed debug log
 
       return {
         success: true,
@@ -231,7 +231,7 @@ export class CloudinaryService {
   static async deleteAttendancePhoto(publicId: string): Promise<boolean> {
     try {
       const result = await cloudinary.uploader.destroy(publicId);
-      console.log('CLOUDINARY: Delete result:', result);
+      // Removed debug log
       return result.result === 'ok';
     } catch (error) {
       console.error('CLOUDINARY: Delete failed:', error);
@@ -251,10 +251,10 @@ export class CloudinaryService {
         max_results: 1
       });
       
-      console.log('CLOUDINARY: Folder check result:', result);
+      // Removed debug log
       return true;
     } catch (error) {
-      console.log('CLOUDINARY: Folder does not exist or error checking:', error);
+      // Removed debug log
       // Folder will be created automatically on first upload
       return true;
     }

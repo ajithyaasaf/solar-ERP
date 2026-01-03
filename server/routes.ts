@@ -48,6 +48,14 @@ import { NotificationService } from "./services/notification-service";
 import { EnterpriseTimeService } from "./services/enterprise-time-service";
 import { insertNotificationSchema } from "@shared/schema";
 import { PayrollLockService } from "./services/payroll-lock-service";
+import { CloudinaryService } from './services/cloudinary-service';
+import { SiteVisitService } from './services/site-visit-service';
+import { ActivityService } from './services/activity-service';
+import { ManualOTService } from './services/manual-ot-service';
+import { LeaveService } from './services/leave-service';
+import { HolidayService } from './services/holiday-service';
+import { AdvancedQuotationService } from './services/quotation-service';
+import { getUTCMidnight, getUTCEndOfDay } from './utils/timezone-helpers';
 
 /**
  * Helper function to merge a date with a time string
@@ -1836,10 +1844,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import ManualOTService
       const { ManualOTService } = await import('./services/manual-ot-service');
 
+      console.log(`[OT-STATUS-ROUTE] Fetching OT status for user: ${userId}`);
+
       const [otStatus, otButtonAvailability] = await Promise.all([
         ManualOTService.getOTStatus(userId),
         ManualOTService.isOTButtonAvailable(userId)
       ]);
+
+      console.log(`[OT-STATUS-ROUTE] Button availability result:`, otButtonAvailability);
 
       // Return consistent response structure
       res.json({
@@ -1987,10 +1999,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "Missing required parameters: from and to dates" });
       }
 
-      const fromDate = new Date(from as string);
-      const toDate = new Date(to as string);
-      fromDate.setHours(0, 0, 0, 0);
-      toDate.setHours(23, 59, 59, 999);
+      // UTC-safe date boundaries for attendance queries
+      const fromDate = getUTCMidnight(new Date(from as string));
+      const toDate = getUTCEndOfDay(new Date(to as string));
 
       let attendanceRecords = [];
       if (userId) {
@@ -2064,10 +2075,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ message: "Missing required parameters: from and to dates" });
       }
 
-      const fromDate = new Date(from as string);
-      const toDate = new Date(to as string);
-      fromDate.setHours(0, 0, 0, 0);
-      toDate.setHours(23, 59, 59, 999);
+      const fromDate = getUTCMidnight(new Date(from as string));
+      const toDate = getUTCEndOfDay(new Date(to as string));
 
       const allUsers = await storage.listUsers();
       let filteredUsers = allUsers;
@@ -2126,8 +2135,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // UTC-safe date for today's live attendance
+      const today = getUTCMidnight(new Date());
 
       // Get all attendance records for today
       const attendanceRecords = await storage.listAttendanceByDate(today);
@@ -2175,8 +2184,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const targetDate = date ? new Date(date as string) : new Date();
-      targetDate.setHours(0, 0, 0, 0);
+      // UTC-safe date for department stats query
+      const targetDate = date ? getUTCMidnight(new Date(date as string)) : getUTCMidnight(new Date());
 
       // Get attendance records for the date
       const allRecords = await storage.listAttendanceByDate(targetDate);
@@ -7011,8 +7020,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.visitPurpose) filters.visitPurpose = req.query.visitPurpose as string;
       if (req.query.customerCurrentStatus) filters.customerCurrentStatus = req.query.customerCurrentStatus as string;
       if (req.query.startDate) {
-        const startDate = new Date(req.query.startDate as string);
-        startDate.setHours(0, 0, 0, 0); // Start of day
+        // UTC-safe date range for site visit filtering
+        const startDate = getUTCMidnight(new Date(req.query.startDate as string));
         filters.startDate = startDate;
       }
       if (req.query.endDate) {

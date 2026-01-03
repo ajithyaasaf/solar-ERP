@@ -126,34 +126,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
   // Create new quotation
   app.post("/api/quotations", verifyAuth, async (req, res) => {
     try {
-      console.log("\n🔵🔵🔵 NEW QUOTATION CREATION REQUEST 🔵🔵🔵");
-      console.log("⏰ Timestamp:", new Date().toISOString());
-      console.log("📨 Request body received:", JSON.stringify(req.body, null, 2));
-
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
       }
-
-      console.log("👤 User verified:", user.displayName);
-
-      // Log each project before validation
-      if (req.body.projects && Array.isArray(req.body.projects)) {
-        console.log(`\n📦 PROJECTS TO VALIDATE: ${req.body.projects.length} projects`);
-        req.body.projects.forEach((project: any, idx: number) => {
-          console.log(`\n📦 PROJECT ${idx}:`);
-          console
-          console.log(`  Type: ${project.projectType}`);
-          console.log(`  Full data:`, JSON.stringify(project, null, 2));
-        });
-      }
-
-      // Validate request body
-      console.log("\n🔍 Starting schema validation...");
-      console.log("🔍 BACKEND RECEIVED preparedBy:", req.body.preparedBy);
-      console.log("🔍 Type:", typeof req.body.preparedBy);
-      console.log("🔍 Is falsy?", !req.body.preparedBy);
-      console.log("🔍 User display name:", user.displayName);
 
       const quotationData = insertQuotationSchema.parse({
         ...req.body,
@@ -161,23 +137,15 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         quotationNumber: QuotationTemplateService.generateQuotationNumber()
       });
 
-      console.log("✅ Schema validation PASSED");
-      console.log("Validated quotation data:", JSON.stringify(quotationData, null, 2));
-
       // Convert "-" qty to 0 in customBillOfMaterials before saving (Installation & Commissioning)
       if (quotationData.customBillOfMaterials && Array.isArray(quotationData.customBillOfMaterials)) {
-        console.log("🔄 Converting '-' qty values to 0 in customBillOfMaterials...");
         quotationData.customBillOfMaterials = quotationData.customBillOfMaterials.map((item: any) => ({
           ...item,
           qty: item.qty === "-" ? 0 : item.qty
         }));
-        console.log("✅ Conversion complete. Updated BOM:", JSON.stringify(quotationData.customBillOfMaterials, null, 2));
       }
 
       const quotation = await storage.createQuotation(quotationData);
-
-      console.log("✅ Quotation created successfully:", quotation.id);
-      console.log("🔍 PREPARED BY SAVED:", quotation.preparedBy);
       res.status(201).json(quotation);
     } catch (error) {
       console.error("\n❌❌❌ ERROR IN QUOTATION CREATION ❌❌❌");
@@ -227,12 +195,10 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       // Convert "-" qty to 0 in customBillOfMaterials before saving (Installation & Commissioning)
       if (updateData.customBillOfMaterials && Array.isArray(updateData.customBillOfMaterials)) {
-        console.log("🔄 [PATCH] Converting '-' qty values to 0 in customBillOfMaterials...");
         updateData.customBillOfMaterials = updateData.customBillOfMaterials.map((item: any) => ({
           ...item,
           qty: item.qty === "-" ? 0 : item.qty
         }));
-        console.log("✅ [PATCH] Conversion complete. Updated BOM:", JSON.stringify(updateData.customBillOfMaterials, null, 2));
       }
 
       const updatedQuotation = await storage.updateQuotation(req.params.id, {
@@ -372,11 +338,6 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
   // Create quotation from site visit
   app.post("/api/quotations/from-site-visit/:siteVisitId", verifyAuth, async (req, res) => {
     try {
-      console.log("\n🟢🟢🟢 FROM SITE VISIT QUOTATION CREATION 🟢🟢🟢");
-      console.log("⏰ Timestamp:", new Date().toISOString());
-      console.log("Site Visit ID:", req.params.siteVisitId);
-      console.log("Request body:", JSON.stringify(req.body, null, 2));
-
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "quotations.create"))) {
         return res.status(403).json({ message: "Access denied" });
@@ -388,15 +349,12 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
       const { siteVisitService } = await import("../services/site-visit-service");
       const siteVisit = await siteVisitService.getSiteVisitById(req.params.siteVisitId);
 
-      console.log("📍 Site visit retrieved:", siteVisit?.id);
-
       if (!siteVisit) {
         return res.status(404).json({ message: "Site visit not found" });
       }
 
       // Check if user provided modified projects in request body
       const hasModifiedProjects = req.body.projects && Array.isArray(req.body.projects) && req.body.projects.length > 0;
-      console.log("🔍 Checking for user modifications: hasModifiedProjects =", hasModifiedProjects);
 
       let quotationData: any;
       let mappingResult: any;
@@ -404,18 +362,8 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
 
       if (hasModifiedProjects) {
         // User has modified the projects in the form - use those instead of mapping from site visit
-        console.log("📝 Using user-modified projects from request body");
-        console.log("Modified projects:", JSON.stringify(req.body.projects, null, 2));
-
         // Map site visit data for customer and other context, but use modified projects
         mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
-
-        console.log("🔍🔍🔍 PREPARED BY DEBUG (hasModifiedProjects=true) 🔍🔍🔍");
-        console.log("  req.body.preparedBy:", req.body.preparedBy);
-        console.log("  Type:", typeof req.body.preparedBy);
-        console.log("  Is truthy?:", !!req.body.preparedBy);
-        console.log("  mappingResult.quotationData.preparedBy:", mappingResult.quotationData.preparedBy);
-        console.log("  user.displayName:", user.displayName);
 
         // Merge all user modifications from request body with mapped data
         quotationData = {
@@ -430,12 +378,9 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           // CRITICAL: Ensure preparedBy from request body takes precedence
           preparedBy: req.body.preparedBy || mappingResult.quotationData.preparedBy || user.displayName || user.email || user.uid
         };
-        console.log("🔍 FINAL preparedBy in quotationData:", quotationData.preparedBy);
-        console.log("✅ Merged user modifications with mapping result");
       } else {
         // No modifications - use standard site visit mapping with completeness check
         completenessAnalysis = DataCompletenessAnalyzer.analyze(siteVisit);
-        console.log("📊 Completeness analysis:", JSON.stringify(completenessAnalysis, null, 2));
 
         if (!completenessAnalysis.canCreateQuotation) {
           return res.status(400).json({
@@ -445,9 +390,7 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
         }
 
         // Map site visit data to quotation
-        console.log("🔄 Starting mapping from site visit to quotation...");
         mappingResult = await SiteVisitDataMapper.mapToQuotation(siteVisit, user.uid);
-        console.log("✅ Mapping complete. Quotation data:", JSON.stringify(mappingResult.quotationData, null, 2));
 
         quotationData = {
           ...mappingResult.quotationData,
@@ -460,35 +403,17 @@ export function registerQuotationRoutes(app: Express, verifyAuth: any) {
           // CRITICAL: Ensure preparedBy from request body takes precedence
           preparedBy: req.body.preparedBy || mappingResult.quotationData.preparedBy || user.displayName || user.email || user.uid
         };
-        console.log("🔍 SITE VISIT (no modifications) - preparedBy:", quotationData.preparedBy);
-      }
-
-      console.log("📋 Final quotation data to validate:", JSON.stringify(quotationData, null, 2));
-
-      // Log each project in detail
-      if (quotationData.projects && Array.isArray(quotationData.projects)) {
-        console.log(`\n📦 PROJECTS IN QUOTATION DATA: ${quotationData.projects.length} projects`);
-        quotationData.projects.forEach((project: any, idx: number) => {
-          console.log(`\n📦 PROJECT ${idx}:`);
-          console.log(`  Type: ${project.projectType}`);
-          console.log(`  Full data:`, JSON.stringify(project, null, 2));
-        });
       }
 
       // Convert "-" qty to 0 in customBillOfMaterials before saving (Installation & Commissioning)
       if (quotationData.customBillOfMaterials && Array.isArray(quotationData.customBillOfMaterials)) {
-        console.log("🔄 [FROM-SITE-VISIT] Converting '-' qty values to 0 in customBillOfMaterials...");
         quotationData.customBillOfMaterials = quotationData.customBillOfMaterials.map((item: any) => ({
           ...item,
           qty: item.qty === "-" ? 0 : item.qty
         }));
-        console.log("✅ [FROM-SITE-VISIT] Conversion complete. Updated BOM:", JSON.stringify(quotationData.customBillOfMaterials, null, 2));
       }
 
-      console.log("\n🔍 Starting schema validation...");
       const quotation = await storage.createQuotation(quotationData);
-
-      console.log("✅ Quotation created successfully:", quotation.id);
       res.status(201).json({
         quotation,
         mappingAnalysis: completenessAnalysis,

@@ -10,6 +10,7 @@
  */
 
 import { storage } from '../storage';
+import { getUTCMidnight, getUTCEndOfDay } from '../utils/timezone-helpers';
 import type {
     OTSession,
     StartOTSessionRequest,
@@ -124,14 +125,57 @@ export class OTSessionService {
             // Transaction verifies "No Active Session".
             // If checking fails, it aborts. SAFE.
 
-            const attendance = await storage.getAttendanceByUserAndDate(userId, today);
+            let attendance = await storage.getAttendanceByUserAndDate(userId, today);
 
-            // Must have attendance record to start OT (user must check-in first)
-            if (!attendance) {
+            // ✅ SMART ATTENDANCE CHECK: OT-type aware (matches ManualOTService)
+            // Determine if this is early arrival or late departure
+            const { EnterpriseTimeService } = await import('./enterprise-time-service');
+            const departmentTiming = await EnterpriseTimeService.getDepartmentTiming(user.department || 'operations');
+
+            let isEarlyArrival = false;
+            let isLateDeparture = false;
+
+            if (departmentTiming && departmentTiming.isActive) {
+                const currentTime = new Date();
+                const deptStartTime = EnterpriseTimeService.parseTimeToDate(departmentTiming.checkInTime, currentTime);
+                const deptEndTime = EnterpriseTimeService.parseTimeToDate(departmentTiming.checkOutTime, currentTime);
+
+                if (deptStartTime && deptEndTime) {
+                    isEarlyArrival = currentTime < deptStartTime;
+                    isLateDeparture = currentTime > deptEndTime;
+                }
+            }
+
+            // SMART LOGIC: Only require attendance for late departure
+            // Early arrival: Employee CANNOT check in yet (before work hours) → Allow without attendance
+            // Late departure: Employee SHOULD have checked in already → Require attendance  
+            if (!attendance && isLateDeparture) {
                 return {
                     success: false,
-                    message: 'No attendance record found for today. Please check in first before starting OT.'
+                    message: 'No attendance record found for today. Please check in first before starting late departure OT.'
                 };
+            }
+
+            // Early arrival or weekend: Allowed without attendance (will auto-create if needed)
+
+            // ✅ AUTO-CREATE ATTENDANCE: For early arrival/weekend OT
+            if (!attendance) {
+                console.log('[OT-SESSION] No attendance found - auto-creating for early arrival/weekend OT');
+                const newAttendanceData = {
+                    userId,
+                    date: today,
+                    attendanceType: 'office' as const,
+                    status: 'present' as const,
+                    isLate: false,
+                    isWithinOfficeRadius: true,
+                    isManualOT: true,
+                    otStatus: 'not_started' as const,
+                    autoCorrected: false,
+                    otSessions: [] // Initialize empty OT sessions array
+                };
+
+                attendance = await storage.createAttendance(newAttendanceData);
+                console.log('[OT-SESSION] Attendance auto-created:', attendance.id);
             }
 
             const currentCount = attendance.otSessions?.length || 0;
@@ -535,28 +579,20 @@ export class OTSessionService {
 
                 // ✅ BLOCK: Casual leave (full-day)
                 if (leave.leaveType === 'casual_leave' && leave.startDate && leave.endDate) {
-                    const start = new Date(leave.startDate);
-                    const end = new Date(leave.endDate);
-
-                    // Normalize dates
-                    start.setHours(0, 0, 0, 0);
-                    end.setHours(23, 59, 59, 999);
+                    // UTC-safe date matching
+                    const start = getUTCMidnight(new Date(leave.startDate));
+                    const end = getUTCEndOfDay(new Date(leave.endDate));
                     const checkDate = new Date(date);
-                    checkDate.setHours(12, 0, 0, 0);
 
                     return checkDate >= start && checkDate <= end;
                 }
 
                 // ✅ BLOCK: Unpaid leave (full-day)
                 if (leave.leaveType === 'unpaid_leave' && leave.startDate && leave.endDate) {
-                    const start = new Date(leave.startDate);
-                    const end = new Date(leave.endDate);
-
-                    // Normalize dates
-                    start.setHours(0, 0, 0, 0);
-                    end.setHours(23, 59, 59, 999);
+                    // UTC-safe date matching
+                    const start = getUTCMidnight(new Date(leave.startDate));
+                    const end = getUTCEndOfDay(new Date(leave.endDate));
                     const checkDate = new Date(date);
-                    checkDate.setHours(12, 0, 0, 0);
 
                     return checkDate >= start && checkDate <= end;
                 }

@@ -7,9 +7,20 @@ import {
   CollectionReference,
   DocumentReference,
   DocumentData,
-  Query
+  Query,
+  Filter
 } from "firebase-admin/firestore";
 import { z } from "zod";
+import { getUTCMidnight, getUTCEndOfDay } from "./utils/timezone-helpers";
+import type {
+  User,
+  Attendance,
+  LeaveApplication,
+  Designation,
+  OfficeLocation,
+  FixedHoliday,
+  LeaveBalance
+} from "@shared/schema";
 import {
   insertAttendanceSchema,
   insertOfficeLocationSchema,
@@ -2378,10 +2389,9 @@ export class FirestoreStorage implements IStorage {
   }
 
   async listAttendanceByDate(date: Date): Promise<Attendance[]> {
-    const startOfDay = Timestamp.fromDate(new Date(date.setHours(0, 0, 0, 0)));
-    const endOfDay = Timestamp.fromDate(
-      new Date(date.setHours(23, 59, 59, 999)),
-    );
+    // UTC-safe date boundaries for consistent querying
+    const startOfDay = Timestamp.fromDate(getUTCMidnight(date));
+    const endOfDay = Timestamp.fromDate(getUTCEndOfDay(date));
 
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
@@ -2402,10 +2412,9 @@ export class FirestoreStorage implements IStorage {
       // FIXED: Firestore where("field", "==", null) doesn't work for missing/undefined fields
       // Solution: Get ALL attendance records, filter everything in-memory
 
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
+      // UTC-safe date boundaries
+      const startOfDay = getUTCMidnight(date);
+      const endOfDay = getUTCEndOfDay(date);
 
       console.log(`[STORAGE] Searching for incomplete attendance on ${date.toISOString().split('T')[0]}`);
       console.log(`[STORAGE] Date range:`, { start: startOfDay.toISOString(), end: endOfDay.toISOString() });
@@ -2458,10 +2467,9 @@ export class FirestoreStorage implements IStorage {
     startDate: Date,
     endDate: Date,
   ): Promise<Attendance[]> {
-    const startTimestamp = Timestamp.fromDate(new Date(startDate.setHours(0, 0, 0, 0)));
-    const endTimestamp = Timestamp.fromDate(
-      new Date(endDate.setHours(23, 59, 59, 999)),
-    );
+    // UTC-safe date range boundaries
+    const startTimestamp = Timestamp.fromDate(getUTCMidnight(startDate));
+    const endTimestamp = Timestamp.fromDate(getUTCEndOfDay(endDate));
 
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
@@ -2480,10 +2488,9 @@ export class FirestoreStorage implements IStorage {
     startDate: Date,
     endDate: Date,
   ): Promise<Attendance[]> {
-    const startTimestamp = Timestamp.fromDate(new Date(startDate.setHours(0, 0, 0, 0)));
-    const endTimestamp = Timestamp.fromDate(
-      new Date(endDate.setHours(23, 59, 59, 999)),
-    );
+    // UTC-safe date range for payroll queries (CRITICAL)
+    const startTimestamp = Timestamp.fromDate(getUTCMidnight(startDate));
+    const endTimestamp = Timestamp.fromDate(getUTCEndOfDay(endDate));
 
     const attendanceRef = this.db.collection("attendance");
     const snapshot = await attendanceRef
@@ -5530,8 +5537,8 @@ export class FirestoreStorage implements IStorage {
    */
   async getHolidaysByDate(date: Date): Promise<any[]> {
     try {
-      const normalizedDate = new Date(date);
-      normalizedDate.setHours(0, 0, 0, 0);
+      // UTC-safe date normalization
+      const normalizedDate = getUTCMidnight(date);
 
       const snapshot = await this.db.collection('holidays')
         .where('date', '==', Timestamp.fromDate(normalizedDate))

@@ -1,6 +1,7 @@
 import { IStorage } from "../storage";
 import { InsertLeaveApplication, LeaveApplication, FIXED_ANNUAL_HOLIDAYS } from "@shared/schema";
 import { PayrollHelper } from "./payroll-helper";
+import { getUTCMidnight, getUTCEndOfDay } from "../utils/timezone-helpers";
 
 export class LeaveService {
   constructor(private storage: IStorage) { }
@@ -131,28 +132,25 @@ export class LeaveService {
    */
   async hasLeaveOnDate(userId: string, date: Date): Promise<boolean> {
     const leaves = await this.storage.listLeaveApplicationsByUser(userId);
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
+    // Use UTC midnight for consistent date comparison
+    const targetDate = getUTCMidnight(date);
 
     for (const leave of leaves) {
       // Only check approved leaves
       if (leave.status !== "approved") continue;
 
       if (leave.leaveType === "permission") {
-        // For permission, check if it's on the same day
+        // For permission, check if it's on the same day (UTC-safe)
         if (leave.permissionDate) {
-          const permDate = new Date(leave.permissionDate);
-          permDate.setHours(0, 0, 0, 0);
+          const permDate = getUTCMidnight(new Date(leave.permissionDate));
           if (permDate.getTime() === targetDate.getTime()) {
             return true;
           }
         }
       } else if (leave.startDate && leave.endDate) {
-        // For full-day leaves, check if date falls within range
-        const leaveStart = new Date(leave.startDate);
-        const leaveEnd = new Date(leave.endDate);
-        leaveStart.setHours(0, 0, 0, 0);
-        leaveEnd.setHours(23, 59, 59, 999);
+        // For full-day leaves, check if date falls within range (UTC-safe)
+        const leaveStart = getUTCMidnight(new Date(leave.startDate));
+        const leaveEnd = getUTCEndOfDay(new Date(leave.endDate));
 
         if (targetDate >= leaveStart && targetDate <= leaveEnd) {
           return true;

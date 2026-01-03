@@ -14,6 +14,7 @@
 import * as cron from 'node-cron';
 import { storage } from '../storage';
 import type { OTSession } from '../types/ot-types';
+import { getUTCMidnight, getUTCEndOfDay } from '../utils/timezone-helpers';
 
 export class OTAutoCloseService {
     private static cronJob: cron.ScheduledTask | null = null;
@@ -61,13 +62,13 @@ export class OTAutoCloseService {
             // ZERO-FRAUD FIX: Look back 3 days to catch "Zombie Sessions"
             // If we only look at "yesterday", a late-night session (e.g. 10 PM) might not be 
             // 16h old during the first pass, and would be ignored forever in subsequent runs.
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - 3); // Look back 3 days
-            startDate.setHours(0, 0, 0, 0);
+            const threeDaysAgo = new Date();
+            threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+            const startDate = getUTCMidnight(threeDaysAgo); // UTC-safe
 
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() - 1); // Up to yesterday end
-            endDate.setHours(23, 59, 59, 999);
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const endDate = getUTCEndOfDay(yesterday); // UTC-safe
 
             // Get attendance records from last 3 days
             const attendanceRecords = await storage.listAttendanceByDateRange(

@@ -22,41 +22,33 @@ export class FollowUpService {
    */
   async createFollowUp(data: InsertFollowUpSiteVisit): Promise<FollowUpSiteVisit> {
     try {
-      console.log("FOLLOW_UP_SERVICE: Creating follow-up with dynamic status management:", JSON.stringify(data, null, 2));
-      
       // Validate data
       const validatedData = insertFollowUpSiteVisitSchema.parse(data);
-      
+
       // Get original visit to extract current customer status
       const originalVisitRef = this.siteVisitsCollection.doc(validatedData.originalVisitId);
       const originalVisitDoc = await originalVisitRef.get();
-      
+
       if (!originalVisitDoc.exists) {
         throw new Error(`Original visit ${validatedData.originalVisitId} not found`);
       }
-      
+
       const originalVisitData = originalVisitDoc.data()!;
-      console.log("FOLLOW_UP_SERVICE: Original visit data:", {
-        id: validatedData.originalVisitId,
-        visitOutcome: originalVisitData.visitOutcome,
-        customerCurrentStatus: originalVisitData.customerCurrentStatus,
-        status: originalVisitData.status
-      });
-      
+
       // Determine current customer status - use customerCurrentStatus if available, fallback to visitOutcome
       const currentCustomerStatus = originalVisitData.customerCurrentStatus || originalVisitData.visitOutcome;
-      
+
       if (!currentCustomerStatus) {
         throw new Error(`Original visit ${validatedData.originalVisitId} has no customer status - cannot create follow-up`);
       }
-      
+
       // Enhance follow-up data with status management context
       const enhancedData = {
         ...validatedData,
         originalCustomerStatus: currentCustomerStatus,
         affectsCustomerStatus: true
       };
-      
+
       // Convert dates to Firestore timestamps
       const firestoreData: any = {
         ...enhancedData,
@@ -73,12 +65,9 @@ export class FollowUpService {
         }
       });
 
-      console.log("FOLLOW_UP_SERVICE: Enhanced data with status context:", JSON.stringify(firestoreData, null, 2));
-
       // Create the follow-up document
       const docRef = await this.collection.add(firestoreData);
-      console.log("FOLLOW_UP_SERVICE: Follow-up document created with ID:", docRef.id);
-      
+
       // Update the original visit with dynamic status management
       try {
         const currentCount = originalVisitData.followUpCount || 0;
@@ -92,34 +81,20 @@ export class FollowUpService {
           activeFollowUpId: docRef.id,
           updatedAt: Timestamp.fromDate(new Date())
         };
-        
+
         await originalVisitRef.update(updateData);
-        
-        console.log("FOLLOW_UP_SERVICE: Updated original visit with dynamic status management:", {
-          originalVisitId: validatedData.originalVisitId,
-          oldStatus: currentCustomerStatus,
-          newStatus: "on_process",
-          activeFollowUpId: docRef.id,
-          followUpCount: currentCount + 1
-        });
       } catch (error) {
         console.error("FOLLOW_UP_SERVICE: Error updating original visit with status management:", error);
         // Clean up the created follow-up if original visit update fails
         await docRef.delete();
         throw new Error('Failed to update original visit status - follow-up creation aborted');
       }
-      
+
       const result = {
         id: docRef.id,
         ...this.convertFirestoreToFollowUp(firestoreData)
       };
-      
-      console.log("FOLLOW_UP_SERVICE: Follow-up created with dynamic status management:", {
-        followUpId: result.id,
-        originalCustomerStatus: result.originalCustomerStatus,
-        customerMovedToOnProcess: true
-      });
-      
+
       return result;
     } catch (error) {
       console.error('FOLLOW_UP_SERVICE: Error creating follow-up with status management:', error);
@@ -132,22 +107,17 @@ export class FollowUpService {
    */
   async updateFollowUp(id: string, updates: Partial<InsertFollowUpSiteVisit>): Promise<FollowUpSiteVisit> {
     try {
-      console.log("FOLLOW_UP_SERVICE: Updating follow-up with dynamic status management:", {
-        followUpId: id,
-        updates: JSON.stringify(updates, null, 2)
-      });
-      
       const docRef = this.collection.doc(id);
-      
+
       // Get current follow-up data to access original visit info
       const currentFollowUpDoc = await docRef.get();
       if (!currentFollowUpDoc.exists) {
         throw new Error(`Follow-up ${id} not found`);
       }
-      
+
       const currentFollowUpData = currentFollowUpDoc.data()!;
       const originalVisitId = currentFollowUpData.originalVisitId;
-      
+
       // Convert dates to Firestore timestamps in updates
       const firestoreUpdates: any = {
         ...updates,
@@ -160,8 +130,6 @@ export class FollowUpService {
 
       // Handle visit outcome completion with status transition logic
       if (updates.visitOutcome && updates.status === 'completed') {
-        console.log("FOLLOW_UP_SERVICE: Processing follow-up completion with outcome:", updates.visitOutcome);
-        
         // Map follow-up outcome to customer status
         let newCustomerStatus: "converted" | "on_process" | "cancelled";
         switch (updates.visitOutcome) {
@@ -177,20 +145,15 @@ export class FollowUpService {
           default:
             throw new Error(`Invalid follow-up outcome: ${updates.visitOutcome}`);
         }
-        
+
         // Store the new customer status in the follow-up
         firestoreUpdates.newCustomerStatus = newCustomerStatus;
-        
-        console.log("FOLLOW_UP_SERVICE: Mapped follow-up outcome to customer status:", {
-          followUpOutcome: updates.visitOutcome,
-          newCustomerStatus: newCustomerStatus
-        });
-        
+
         // Update original visit with the new customer status
         try {
           const originalVisitRef = this.siteVisitsCollection.doc(originalVisitId);
           const originalVisitDoc = await originalVisitRef.get();
-          
+
           if (originalVisitDoc.exists) {
             const originalUpdateData = {
               // Update dynamic status based on follow-up outcome
@@ -200,15 +163,8 @@ export class FollowUpService {
               activeFollowUpId: null, // Clear active follow-up
               updatedAt: Timestamp.fromDate(new Date())
             };
-            
+
             await originalVisitRef.update(originalUpdateData);
-            
-            console.log("FOLLOW_UP_SERVICE: Updated original visit with follow-up outcome:", {
-              originalVisitId: originalVisitId,
-              newCustomerStatus: newCustomerStatus,
-              followUpCompleted: true,
-              activeFollowUpCleared: true
-            });
           } else {
             console.error("FOLLOW_UP_SERVICE: Original visit not found for status update:", originalVisitId);
           }
@@ -220,8 +176,6 @@ export class FollowUpService {
 
       // Handle siteOutPhotos - FIXED: Ensure proper URL string storage
       if (updates.siteOutPhotos && Array.isArray(updates.siteOutPhotos)) {
-        console.log("FOLLOW_UP_SERVICE: Processing siteOutPhotos:", updates.siteOutPhotos);
-        
         // Always convert to simple string array to prevent corruption
         firestoreUpdates.siteOutPhotos = updates.siteOutPhotos.map((photo: any) => {
           if (typeof photo === 'string') {
@@ -233,9 +187,7 @@ export class FollowUpService {
             return null;
           }
         }).filter(Boolean); // Remove null/undefined values
-        
-        console.log("FOLLOW_UP_SERVICE: Cleaned siteOutPhotos:", firestoreUpdates.siteOutPhotos);
-        
+
         // Additional validation to ensure all are strings
         const allStrings = firestoreUpdates.siteOutPhotos.every((url: any) => typeof url === 'string');
         if (!allStrings) {
@@ -251,15 +203,8 @@ export class FollowUpService {
         }
       });
 
-      console.log("=== FOLLOW-UP SERVICE UPDATE WITH STATUS MANAGEMENT ===");
-      console.log("Follow-up ID:", id);
-      console.log("Original Visit ID:", originalVisitId);
-      console.log("Status transition:", updates.visitOutcome ? `${updates.visitOutcome} -> ${firestoreUpdates.newCustomerStatus}` : 'none');
-      console.log("Firestore updates:", JSON.stringify(firestoreUpdates, null, 2));
-      console.log("======================================================");
-
       await docRef.update(firestoreUpdates);
-      
+
       const updatedDoc = await docRef.get();
       if (!updatedDoc.exists) {
         throw new Error('Follow-up visit not found after update');
@@ -269,14 +214,7 @@ export class FollowUpService {
         id: updatedDoc.id,
         ...this.convertFirestoreToFollowUp(updatedDoc.data()!)
       };
-      
-      console.log("FOLLOW_UP_SERVICE: Follow-up updated with dynamic status management complete:", {
-        followUpId: result.id,
-        originalCustomerStatus: result.originalCustomerStatus,
-        newCustomerStatus: result.newCustomerStatus,
-        statusTransitionApplied: !!updates.visitOutcome
-      });
-      
+
       return result;
     } catch (error) {
       console.error('FOLLOW_UP_SERVICE: Error updating follow-up with status management:', error);
@@ -333,18 +271,14 @@ export class FollowUpService {
    * Get follow-ups by user with filtering
    */
   async getFollowUpsByUser(
-    userId: string, 
+    userId: string,
     department?: string,
     status?: string
   ): Promise<FollowUpSiteVisit[]> {
     try {
-      console.log("FOLLOW_UP_SERVICE: Getting follow-ups for user:", userId);
-      
       // Simple query to avoid index issues
       const snapshot = await this.collection.where('userId', '==', userId).get();
-      
-      console.log("FOLLOW_UP_SERVICE: Found", snapshot.size, "documents");
-      
+
       // Filter and map in memory
       const docs = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -355,9 +289,6 @@ export class FollowUpService {
         if (status && doc.status !== status) return false;
         return true;
       });
-
-      console.log("FOLLOW_UP_SERVICE: After filtering:", docs.length, "documents");
-      console.log("FOLLOW_UP_SERVICE: Documents:", docs);
 
       return docs.sort((a, b) => {
         const aTime = new Date(a.createdAt).getTime();
@@ -378,7 +309,7 @@ export class FollowUpService {
     if (!Array.isArray(siteOutPhotos)) {
       return [];
     }
-    
+
     // For follow-ups, siteOutPhotos are stored as simple string URLs
     // For regular site visits, they might be complex objects
     return siteOutPhotos.map((photo: any) => {
@@ -422,12 +353,12 @@ export class FollowUpService {
       customer: data.customer,
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
-      
+
       // Dynamic Status Management fields
       originalCustomerStatus: data.originalCustomerStatus,
       affectsCustomerStatus: data.affectsCustomerStatus ?? true,
       newCustomerStatus: data.newCustomerStatus,
-      
+
       // Optional visit outcome fields
       visitOutcome: data.visitOutcome,
       outcomeNotes: data.outcomeNotes,

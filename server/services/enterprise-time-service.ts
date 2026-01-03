@@ -329,15 +329,19 @@ export class EnterpriseTimeService {
       date.setHours(hours, minutes, 0, 0);
       return date;
     } catch (error) {
-      console.error('ENTERPRISE_TIME: Error parsing 12-hour time:', timeStr, error);
-      // Return reasonable business hours as fallback
-      const fallbackDate = new Date(baseDate);
-      if (timeStr && (timeStr.toLowerCase().includes('pm') || timeStr.includes('out'))) {
-        fallbackDate.setHours(18, 0, 0, 0); // 6:00 PM default checkout
-      } else {
-        fallbackDate.setHours(9, 0, 0, 0); // 9:00 AM default checkin
-      }
-      return fallbackDate;
+      // FAIL-SAFE: Throw error instead of silent fallback
+      // This ensures invalid department timing is caught, not hidden
+      console.error('[ENTERPRISE_TIME] Time parsing failed:', {
+        input: timeStr,
+        expected: 'h:mm AM/PM format (e.g., "9:00 AM")',
+        baseDate: baseDate?.toISOString(),
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      throw new Error(
+        `Invalid time format: "${timeStr}". Expected "h:mm AM/PM" (e.g., "9:00 AM"). ` +
+        `Please update department timing in Admin > Departments.`
+      );
     }
   }
 

@@ -10,6 +10,7 @@ import { CompanySettingsService } from '../services/company-settings-service';
 import { PayrollLockService } from '../services/payroll-lock-service';
 import { auth } from '../firebase';
 import { storage } from '../storage';
+import { getUTCMidnight } from '../utils/timezone-helpers';
 
 const router = Router();
 
@@ -173,8 +174,10 @@ router.get('/sessions', verifyAuth, async (req: any, res) => {
         const userId = req.user.uid;
         const { date } = req.query;
 
-        const targetDate = date ? new Date(date as string) : new Date();
-        targetDate.setHours(0, 0, 0, 0);
+        // UTC-safe date for session query
+        const targetDate = date
+            ? getUTCMidnight(new Date(date as string))
+            : getUTCMidnight(new Date());
 
         const sessions = await OTSessionService.getSessionsForDate(userId, targetDate);
 

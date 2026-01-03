@@ -10,6 +10,7 @@
 
 import { storage } from '../storage';
 import type { Holiday } from '../types/ot-types';
+import { getUTCMidnight } from '../utils/timezone-helpers';
 
 export class HolidayService {
 
@@ -22,9 +23,8 @@ export class HolidayService {
         department?: string
     ): Promise<Holiday | null> {
         try {
-            // Normalize date to midnight
-            const normalizedDate = new Date(date);
-            normalizedDate.setHours(0, 0, 0, 0);
+            // Normalize date to UTC midnight for consistent querying
+            const normalizedDate = getUTCMidnight(date);
 
             // Get all active holidays for this date
             const holidays = await storage.getHolidaysByDate(normalizedDate);
