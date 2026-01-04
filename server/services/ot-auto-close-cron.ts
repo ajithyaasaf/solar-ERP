@@ -91,13 +91,13 @@ export class OTAutoCloseService {
                         // FILTER: Only auto-close 'in_progress' sessions
                         if (s.status !== 'in_progress') return false;
 
-                        // PROTECTION: Don't close sessions started recently (e.g. Night Shifts)
-                        // If session started < 16 hours ago, assume it's still valid
+                        // PROTECTION: Don't close sessions started recently
+                        // If session started < 8 hours ago, assume it's still valid
                         const startTime = new Date(s.startTime);
                         const now = new Date();
                         const hoursRunning = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
 
-                        return hoursRunning > 16; // Only close if running longer than 16 hours
+                        return hoursRunning > 8; // Only close if running longer than 8 hours (no night shifts)
                     }
                 );
 

@@ -31,9 +31,9 @@ export function initializeCronJobs() {
 
     console.log('[CRON] ✅ Auto-checkout job scheduled: Every 2 hours');
 
-    // OT Auto-Close Job: Runs daily at 12:05 AM
-    // Cron expression: "5 0 * * *" = At 00:05 (12:05 AM) every day
-    const otAutoCloseJob = cron.schedule('5 0 * * *', async () => {
+    // OT Auto-Close Job: Runs every hour (at minute 5)
+    // Cron expression: "5 * * * *" = At minute 5 of every hour
+    const otAutoCloseJob = cron.schedule('5 * * * *', async () => {
         console.log('[CRON] OT auto-close job triggered at:', new Date().toISOString());
         try {
             await OTAutoCloseService.runNow();
@@ -45,7 +45,7 @@ export function initializeCronJobs() {
         timezone: "Asia/Kolkata" // IST timezone
     });
 
-    console.log('[CRON] ✅ OT auto-close job scheduled: Daily at 12:05 AM IST');
+    console.log('[CRON] ✅ OT auto-close job scheduled: Every hour (at minute 5)');
 
     // Optional: Run auto-checkout immediately on server start (for testing)
     // Remove this in production if you don't want immediate execution
