@@ -6,7 +6,7 @@ import { LeaveService } from './leave-service';
 export class AutoCheckoutService {
     /**
      * Main job to process incomplete attendance records
-     * Should be called via CRON every 2 hours
+     * Should be called via CRON every 5 minutes
      */
     static async processAutoCheckouts() {
         console.log('[AUTO-CHECKOUT] ========================================');
@@ -47,6 +47,24 @@ export class AutoCheckoutService {
                 const leaveService = new LeaveService(storage);
                 const hasLeave = await leaveService.hasLeaveOnDate(record.userId, record.date);
                 if (hasLeave) {
+                    continue;
+                }
+
+                // 🛡️ HOLIDAY AWARENESS: Skip auto-checkout on company holidays
+                // If it's a holiday, employees are not expected to work, so we shouldn't auto-checkout 
+                // any lingering records which might be data artifacts or special cases.
+                const { UnifiedAttendanceService } = await import('./unified-attendance-service');
+                const { isHoliday } = await UnifiedAttendanceService.isHoliday(record.date, record.userDepartment);
+                if (isHoliday) {
+                    console.log(`[AUTO-CHECKOUT] 🌴 Skipping record ${record.id} - today is a company holiday`);
+                    continue;
+                }
+
+                // 🛡️ WEEKEND AWARENESS: Skip auto-checkout on weekly off days
+                const { CompanySettingsService } = await import('./company-settings-service');
+                const isWeekend = await CompanySettingsService.isWeekend(record.date);
+                if (isWeekend) {
+                    console.log(`[AUTO-CHECKOUT] 😴 Skipping record ${record.id} - today is a weekly off (weekend)`);
                     continue;
                 }
 

@@ -342,6 +342,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Other routes continue...
 
+  // Test endpoint for admins to manually trigger OT auto-close (development/testing)
+  app.post("/api/test/run-ot-auto-close", verifyAuth, async (req, res) => {
+    console.log("[TEST] Starting manual OT auto-close...");
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || (user.role !== "master_admin" && user.role !== "admin")) {
+        return res.status(403).json({ success: false, message: "Access denied - admin only" });
+      }
+
+      const { OTAutoCloseService } = await import("./services/ot-auto-close-cron");
+      await OTAutoCloseService.runNow();
+
+      res.json({ success: true, message: "OT auto-close job processed successfully" });
+    } catch (error) {
+      console.error("[TEST] Error in manual OT auto-close:", error);
+      res.status(500).json({ success: false, message: "Internal server error during OT auto-close" });
+    }
+  });
+
+  // Diagnostic endpoint to check OT sessions for current user
+  app.get("/api/test/my-ot-sessions", verifyAuth, async (req, res) => {
+    try {
+      const userId = req.authenticatedUser?.uid || "";
+
+      // Get last 7 days of attendance
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const records = await storage.listAttendanceByDateRange(sevenDaysAgo, new Date());
+      const myRecords = records.filter(r => r.userId === userId);
+
+      const sessionsInfo = myRecords.map(r => ({
+        date: r.date,
+        otSessions: r.otSessions?.map((s: any) => ({
+          sessionId: s.sessionId,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          status: s.status,
+          otHours: s.otHours,
+          autoClosedAt: s.autoClosedAt,
+          hoursRunning: s.startTime ? ((new Date().getTime() - new Date(s.startTime).getTime()) / (1000 * 60 * 60)).toFixed(2) : 0
+        })) || []
+      })).filter(r => r.otSessions.length > 0);
+
+      res.json({
+        success: true,
+        userId,
+        records: sessionsInfo,
+        totalSessions: sessionsInfo.reduce((sum, r) => sum + r.otSessions.length, 0)
+      });
+    } catch (error) {
+      console.error("[TEST] Error checking OT sessions:", error);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
   // Admin Review Routes (Phase 3)
   app.get("/api/admin/attendance/pending-review", verifyAuth, async (req, res) => {
     try {
@@ -6008,12 +6064,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { department } = req.params;
       const { user } = req.authenticatedUser;
 
+      // 🔥 CRITICAL: Disable caching to ensure enriched data (isHoliday, isWeekend) always reaches frontend
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
       console.log(`BACKEND: Fast-fetching timing for department ${department}`);
 
       // Users can view their own department timing or master_admin can view all
       if (user.role !== "master_admin" && user.department !== department) {
         return res.status(403).json({ message: "Access denied" });
       }
+
+      console.log('🚨🚨🚨 [TIMING-ROUTE] ROUTE HIT! Department:', department, 'Day of week:', new Date().getDay());
 
       const { AttendanceCacheService } = await import("./services/attendance-cache-service");
 
@@ -6022,7 +6085,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return await EnterpriseTimeService.getDepartmentTiming(department);
       });
 
-      res.json(timing);
+      // 🛡️ ENRICHMENT: Add holiday and weekend metadata for the frontend
+      console.log('[TIMING-API] 🔍 Starting enrichment for department:', department);
+      const { UnifiedAttendanceService } = await import("./services/unified-attendance-service");
+      const { CompanySettingsService } = await import("./services/company-settings-service");
+
+      const now = new Date();
+      const { isHoliday, holiday } = await UnifiedAttendanceService.isHoliday(now, department);
+      const isWeekend = await CompanySettingsService.isWeekend(now);
+
+      console.log('[TIMING-API] 📅 Enrichment results:', {
+        isHoliday,
+        holidayName: holiday?.name,
+        isWeekend,
+        dayOfWeek: now.getDay()
+      });
+
+      const enrichedResponse = {
+        ...timing,
+        isHoliday,
+        holidayName: holiday?.name || null,
+        isWeekend
+      };
+
+      console.log('[TIMING-API] 📤 Sending response:', enrichedResponse);
+      res.json(enrichedResponse);
     } catch (error) {
       console.error(`Error fetching timing for department ${req.params.department}:`, error);
       res.status(500).json({ message: "Failed to fetch department timing" });

@@ -313,6 +313,26 @@ export default function Attendance() {
     // Check if current time is AFTER checkout time
     const isPastCheckoutTime = currentTimeInMinutes > checkoutTimeInMinutes;
 
+    // NEW: Check if it's a holiday or weekend (from enriched timing data)
+    if (departmentTiming.isHoliday) {
+      return {
+        state: 'holiday',
+        canCheckIn: false,
+        canCheckOut: false,
+        validTiming: true,
+        holidayName: departmentTiming.holidayName
+      };
+    }
+
+    if (departmentTiming.isWeekend) {
+      return {
+        state: 'weekend',
+        canCheckIn: false,
+        canCheckOut: false,
+        validTiming: true
+      };
+    }
+
     if (!todayAttendance) {
       // Cannot check in if before check-in time OR after checkout time
       if (isBeforeCheckInTime) {
@@ -590,6 +610,37 @@ export default function Attendance() {
                 </div>
               ) : (
                 <>
+                  {attendanceState.state === 'holiday' && (
+                    <div className="sm:col-span-2 text-center py-4">
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div className="text-purple-700 font-medium mb-2 text-sm md:text-base">
+                          Today is a Company Holiday
+                        </div>
+                        <div className="text-sm text-purple-600 mb-2">
+                          {attendanceState.holidayName ? `It's ${attendanceState.holidayName}!` : "Today is a scheduled company holiday."}
+                          {" "}Enjoy your day off! Regular attendance is not required today.
+                        </div>
+                        <div className="text-xs text-purple-500">
+                          If you are working today, please use the OT system.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {attendanceState.state === 'weekend' && (
+                    <div className="sm:col-span-2 text-center py-4">
+                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <div className="text-indigo-700 font-medium mb-2 text-sm md:text-base">
+                          Today is a Weekly Off
+                        </div>
+                        <div className="text-sm text-indigo-600 mb-2">
+                          It's the weekend! Regular attendance is not required today.
+                        </div>
+                        <div className="text-xs text-indigo-500">
+                          If you are working today, please use the OT system for weekend work.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {attendanceState.state === 'before_checkin' && (
                     <div className="sm:col-span-2 text-center py-4">
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

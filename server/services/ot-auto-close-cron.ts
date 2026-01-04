@@ -76,6 +76,44 @@ export class OTAutoCloseService {
                 endDate
             );
 
+            // ⚡ PERFORMANCE: Batch load users in PARALLEL (not sequential!)
+            // Senior best practice: Use Promise.allSettled() for true parallel execution
+            const uniqueUserIds = Array.from(new Set(attendanceRecords.map(a => a.userId)));
+
+            console.log(`[OT-AUTO-CLOSE] Loading ${uniqueUserIds.length} unique users in parallel...`);
+            const userResults = await Promise.allSettled(
+                uniqueUserIds.map(userId => storage.getUser(userId))
+            );
+
+            // Build user map from successful fetches only
+            const userMap = new Map<string, any>();
+            userResults.forEach((result, index) => {
+                if (result.status === 'fulfilled' && result.value) {
+                    userMap.set(uniqueUserIds[index], result.value);
+                } else if (result.status === 'rejected') {
+                    console.error(`[OT-AUTO-CLOSE] Failed to load user ${uniqueUserIds[index]}:`, result.reason);
+                }
+            });
+
+            // Load department timings in PARALLEL
+            const { EnterpriseTimeService } = await import('./enterprise-time-service');
+            const uniqueDepartments = Array.from(new Set(Array.from(userMap.values()).map(u => u.department).filter(Boolean)));
+
+            console.log(`[OT-AUTO-CLOSE] Loading ${uniqueDepartments.length} department timings in parallel...`);
+            const timingResults = await Promise.allSettled(
+                uniqueDepartments.map(dept => EnterpriseTimeService.getDepartmentTiming(dept))
+            );
+
+            // Build timing cache from successful fetches only
+            const deptTimingCache = new Map<string, any>();
+            timingResults.forEach((result, index) => {
+                if (result.status === 'fulfilled' && result.value) {
+                    deptTimingCache.set(uniqueDepartments[index], result.value);
+                } else if (result.status === 'rejected') {
+                    console.error(`[OT-AUTO-CLOSE] Failed to load timing for ${uniqueDepartments[index]}:`, result.reason);
+                }
+            });
+
             let closedCount = 0;
             let errorCount = 0;
 
@@ -85,21 +123,69 @@ export class OTAutoCloseService {
                     continue;
                 }
 
-                // Find open sessions
-                const openSessions = attendance.otSessions.filter(
-                    (s: OTSession) => {
-                        // FILTER: Only auto-close 'in_progress' sessions
-                        if (s.status !== 'in_progress') return false;
+                // SMART AUTO-CLOSE: Find sessions that need closing (async-safe)
+                const openSessions: OTSession[] = [];
 
-                        // PROTECTION: Don't close sessions started recently
-                        // If session started < 8 hours ago, assume it's still valid
-                        const startTime = new Date(s.startTime);
-                        const now = new Date();
-                        const hoursRunning = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+                for (const session of attendance.otSessions) {
+                    // Only consider 'in_progress' sessions
+                    if (session.status !== 'in_progress') continue;
 
-                        return hoursRunning > 8; // Only close if running longer than 8 hours (no night shifts)
+                    const startTime = new Date(session.startTime);
+                    const now = new Date();
+                    const hoursRunning = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+
+                    let shouldClose = false;
+
+                    // 🛡️ FRAUD PREVENTION: Auto-close early_arrival OT before regular work begins
+                    if (session.otType === 'early_arrival') {
+                        try {
+                            const user = userMap.get(attendance.userId);
+                            if (user && user.department) {
+                                const timing = deptTimingCache.get(user.department);
+
+                                if (timing && timing.checkInTime) {
+                                    // Parse department check-in time (e.g., "9:00 AM")
+                                    const checkInTime = OTAutoCloseService.parseTime12ToDate(timing.checkInTime, now);
+
+                                    // Auto-close 5 minutes before check-in time
+                                    const autoCloseTime = new Date(checkInTime.getTime() - 5 * 60 * 1000);
+
+                                    // 🛡️ DEFENSIVE EDGE CASE: Validate session started BEFORE auto-close time
+                                    // Scenario: Employee starts "early" OT at 10:00 AM when check-in is 9:00 AM
+                                    // This is invalid data (corruption or API bypass) - session can't be "early" if started after check-in
+                                    if (startTime >= autoCloseTime) {
+                                        console.warn(`[OT-AUTO-CLOSE] ⚠️ Invalid early_arrival OT detected: ${session.sessionId} started at ${startTime.toISOString()} but auto-close time is ${autoCloseTime.toISOString()}. Using standard 5h threshold.`);
+                                        // Fallback: Use standard 5-hour threshold for this edge case
+                                        shouldClose = hoursRunning > 5;
+                                    } else if (now >= autoCloseTime) {
+                                        // ✅ Valid early OT: started before auto-close time, now it's time to close
+                                        console.log(`[OT-AUTO-CLOSE] ⚡ Early arrival OT auto-closing: ${session.sessionId}, started ${startTime.toISOString()}, dept check-in: ${timing.checkInTime}`);
+                                        shouldClose = true;
+                                    }
+                                    // else: Not yet time to auto-close (now < autoCloseTime), keep running
+                                } else {
+                                    // No timing configured - fallback to 5-hour threshold
+                                    console.log(`[OT-AUTO-CLOSE] No check-in time for ${user.department}, using 5h threshold`);
+                                    shouldClose = hoursRunning > 5;
+                                }
+                            } else {
+                                // User/department not found - fallback to 5-hour threshold
+                                shouldClose = hoursRunning > 5;
+                            }
+                        } catch (error) {
+                            console.error(`[OT-AUTO-CLOSE] Error checking early OT for ${session.sessionId}:`, error);
+                            // Fallback to 5-hour threshold on error
+                            shouldClose = hoursRunning > 5;
+                        }
+                    } else {
+                        // 📊 STANDARD AUTO-CLOSE: late_departure and weekend OT (5-hour threshold)
+                        shouldClose = hoursRunning > 5;
                     }
-                );
+
+                    if (shouldClose) {
+                        openSessions.push(session);
+                    }
+                }
 
                 if (openSessions.length === 0) {
                     continue;
@@ -226,5 +312,35 @@ export class OTAutoCloseService {
     static async runNow(): Promise<void> {
         console.log('[OT-AUTO-CLOSE] Manual run triggered');
         await this.runAutoClose();
+    }
+
+    /**
+     * Helper: Parse 12-hour time format to Date object
+     * TODO: Replace with normalized time storage (checkInMinutesFromMidnight) in future
+     * @param time12 Time in 12-hour format (e.g., "9:00 AM", "11:30 PM")
+     * @param baseDate Base date to use for the time
+     * @returns Date object set to the specified time on baseDate
+     */
+    private static parseTime12ToDate(time12: string, baseDate: Date = new Date()): Date {
+        const match = time12.trim().match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!match) {
+            throw new Error(`Invalid 12-hour time format: "${time12}". Expected format: "9:00 AM" or "11:30 PM"`);
+        }
+
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const meridiem = match[3].toUpperCase();
+
+        // Convert to 24-hour format
+        if (meridiem === 'PM' && hours !== 12) {
+            hours += 12;
+        } else if (meridiem === 'AM' && hours === 12) {
+            hours = 0;
+        }
+
+        // Create new date with parsed time
+        const result = new Date(baseDate);
+        result.setHours(hours, minutes, 0, 0);
+        return result;
     }
 }

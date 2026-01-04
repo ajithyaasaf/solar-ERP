@@ -15,9 +15,9 @@ import { OTAutoCloseService } from './services/ot-auto-close-cron';
 export function initializeCronJobs() {
     console.log('[CRON] Initializing automated cron jobs...');
 
-    // Auto-Checkout Job: Runs every 2 hours
-    // Cron expression: "0 */2 * * *" = At minute 0 past every 2nd hour
-    const autoCheckoutJob = cron.schedule('0 */2 * * *', async () => {
+    // Auto-Checkout Job: Runs every 5 minutes
+    // Cron expression: "*/5 * * * *" = Every 5 minutes
+    const autoCheckoutJob = cron.schedule('*/5 * * * *', async () => {
         console.log('[CRON] Auto-checkout job triggered at:', new Date().toISOString());
         try {
             await AutoCheckoutService.processAutoCheckouts();
@@ -29,7 +29,7 @@ export function initializeCronJobs() {
         timezone: "Asia/Kolkata" // IST timezone
     });
 
-    console.log('[CRON] ✅ Auto-checkout job scheduled: Every 2 hours');
+    console.log('[CRON] ✅ Auto-checkout job scheduled: Every 5 minutes');
 
     // OT Auto-Close Job: Runs every hour (at minute 5)
     // Cron expression: "5 * * * *" = At minute 5 of every hour

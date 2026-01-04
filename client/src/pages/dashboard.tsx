@@ -12,7 +12,7 @@ import { RecentCustomersTable } from "@/components/dashboard/recent-customers-ta
 import { RecentQuotations } from "@/components/dashboard/recent-quotations";
 import { RecentInvoices } from "@/components/dashboard/recent-invoices";
 import { QuickActions } from "@/components/dashboard/quick-actions";
-import { CheckInModal } from "@/components/dashboard/check-in-modal";
+import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
 import { LeaveBalanceWidget } from "@/components/leave/leave-balance-widget";
 import { Loader2, Users, Zap, Home, BarChart3 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -317,7 +317,14 @@ export default function Dashboard() {
       <QuickActions actions={getRoleBasedActions()} />
 
       {/* Check-in Modal */}
-      <CheckInModal open={showCheckInModal} onOpenChange={setShowCheckInModal} />
+      <EnterpriseAttendanceCheckIn
+        isOpen={showCheckInModal}
+        onClose={() => setShowCheckInModal(false)}
+        onSuccess={() => {
+          // Refresh dashboard data after successful check-in
+          setShowCheckInModal(false);
+        }}
+      />
     </>
   );
 }

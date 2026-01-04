@@ -422,6 +422,35 @@ export class UnifiedAttendanceService {
         };
       }
 
+      // **🛡️ WEEKEND BLOCKING: Block regular attendance on weekends**
+      const { CompanySettingsService } = await import('./company-settings-service');
+      const isWeekend = await CompanySettingsService.isWeekend(now);
+      if (isWeekend) {
+        return {
+          success: false,
+          message: `Today is a weekly off (weekend). Regular attendance is not required. Please use the OT system if you are working today.`,
+          locationValidation: {
+            isValid: false,
+            confidence: 0,
+            distance: 0,
+            detectedOffice: null,
+            validationType: 'failed',
+            message: 'Weekly Off - Regular attendance blocked',
+            recommendations: [
+              'It is a weekend!',
+              'Use the OT system for weekend work',
+              'Regular check-ins are disabled today'
+            ],
+            metadata: {
+              accuracy: request.accuracy,
+              effectiveRadius: 0,
+              indoorDetection: false,
+              confidenceFactors: ['weekend_blocking']
+            }
+          }
+        };
+      }
+
       const today = new Date(Date.UTC(
         now.getUTCFullYear(),
         now.getUTCMonth(),
@@ -443,7 +472,8 @@ export class UnifiedAttendanceService {
         const todayNormalized = today;
 
         // Only block if the existing record is genuinely from today (UTC comparison)
-        if (isSameUTCDate(existingDate, todayNormalized)) {
+        // AND already has a checkInTime set (allows regular check-in after early OT start)
+        if (isSameUTCDate(existingDate, todayNormalized) && existingAttendance.checkInTime) {
           console.log('DUPLICATE CHECK-IN: Blocking duplicate check-in for user', request.userId, {
             existingRecordDate: existingDate.toISOString(),
             todayDate: todayNormalized.toISOString(),

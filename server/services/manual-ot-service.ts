@@ -351,13 +351,21 @@ export class ManualOTService {
 
   /**
    * Determine OT type based on current time and department timing
-   * Updated to use EnterpriseTimeService for consistency
+   * Unified method used by all services
    */
-  private static async determineOTType(department: string, currentTime: Date): Promise<'early_arrival' | 'late_departure' | 'weekend' | 'holiday'> {
+  public static async determineOTType(department: string, currentTime: Date): Promise<'early_arrival' | 'late_departure' | 'weekend' | 'holiday'> {
     try {
-      // Check if weekend (Sunday only)
-      const dayOfWeek = currentTime.getDay();
-      if (dayOfWeek === 0) { // Sunday only
+      // 1. Check if it's a company holiday (Priority 1)
+      const { UnifiedAttendanceService } = await import('./unified-attendance-service');
+      const { isHoliday } = await UnifiedAttendanceService.isHoliday(currentTime, department);
+      if (isHoliday) {
+        return 'holiday';
+      }
+
+      // 2. Check if weekend (Priority 2)
+      const { CompanySettingsService } = await import('./company-settings-service');
+      const isWeekend = await CompanySettingsService.isWeekend(currentTime);
+      if (isWeekend) {
         return 'weekend';
       }
 
@@ -426,10 +434,34 @@ export class ManualOTService {
       const currentTime = new Date();
       const dayOfWeek = currentTime.getDay();
 
-      // Only Sunday (day 0) is weekend - Saturday is a working day
-      if (dayOfWeek === 0) {
-        console.log('[OT-AVAILABILITY] Weekend (Sunday) detected - OT available');
+      // ✅ CONFIGURABLE WEEKEND: Use CompanySettingsService for weekend detection
+      const { CompanySettingsService } = await import('./company-settings-service');
+      const isWeekend = await CompanySettingsService.isWeekend(currentTime);
+
+      if (isWeekend) {
+        console.log('[OT-AVAILABILITY] Weekend detected - OT available');
         return { available: true };
+      }
+
+      // 🛡️ CRITICAL: Check if today is a company holiday
+      const { UnifiedAttendanceService } = await import('./unified-attendance-service');
+      const { isHoliday, holiday } = await UnifiedAttendanceService.isHoliday(
+        currentTime,
+        user.department
+      );
+
+      if (isHoliday) {
+        // Check if OT is allowed on this specific holiday
+        if (!holiday || !holiday.allowOT) {
+          console.log('[OT-AVAILABILITY] Holiday detected - OT NOT allowed:', holiday?.name);
+          return {
+            available: false,
+            reason: `OT is not allowed on ${holiday?.name}. This is a company holiday.`
+          };
+        }
+        // Holiday allows OT - continue to normal OT availability checks
+        console.log('[OT-AVAILABILITY] Holiday detected - OT allowed:', holiday.name);
+        // Note: Will still need to check department timing for early/late classification
       }
 
       // CRITICAL FIX: Use EnterpriseTimeService for consistent timing

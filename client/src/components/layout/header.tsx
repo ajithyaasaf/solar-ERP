@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { PlusCircle, Bell, Search, Menu, UserPlus, Package, FileText, Receipt, Clock, Calendar } from "lucide-react";
-import { CheckInModal } from "@/components/dashboard/check-in-modal";
+import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
 import { useAuthContext } from "@/contexts/auth-context";
 
 interface HeaderProps {
@@ -165,7 +165,11 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
       </header>
 
-      <CheckInModal open={showCheckInModal} onOpenChange={setShowCheckInModal} />
+      <EnterpriseAttendanceCheckIn
+        isOpen={showCheckInModal}
+        onClose={() => setShowCheckInModal(false)}
+        onSuccess={() => setShowCheckInModal(false)}
+      />
     </>
   );
 }

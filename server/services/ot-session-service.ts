@@ -430,51 +430,18 @@ export class OTSessionService {
 
     /**
      * Determine OT type based on current time and company settings
+     * Delegated to ManualOTService for cross-system consistency
      */
     private static async determineOTType(
         department: string,
         currentTime: Date
     ): Promise<'early_arrival' | 'late_departure' | 'weekend' | 'holiday'> {
         try {
-            // 1. Check holiday FIRST (highest priority)
-            const { HolidayService } = await import('./holiday-service');
-            const holiday = await HolidayService.getHolidayForDate(currentTime, department);
-            if (holiday) {
-                return 'holiday';
-            }
-
-            // 2. Check weekend (configurable, not hardcoded)
-            const settings = await this.getCompanySettings();
-            const dayOfWeek = currentTime.getDay();
-            if (settings.weekendDays.includes(dayOfWeek)) {
-                return 'weekend';
-            }
-
-            // 3. Check early/late based on department timing
-            const { EnterpriseTimeService } = await import('./enterprise-time-service');
-            const deptTiming = await EnterpriseTimeService.getDepartmentTiming(department);
-
-            if (!deptTiming) {
-                return 'late_departure';
-            }
-
-            // ✅ FIX 2: Robust 12-hour parsing (copied from ManualOTService)
-            const deptStartTime = this.parseTime12Hour(deptTiming.checkInTime, currentTime);
-            const deptEndTime = this.parseTime12Hour(deptTiming.checkOutTime, currentTime);
-
-            if (!deptStartTime || !deptEndTime) {
-                return 'late_departure';
-            }
-
-            if (currentTime < deptStartTime) {
-                return 'early_arrival';
-            } else {
-                return 'late_departure';
-            }
-
+            const { ManualOTService } = await import('./manual-ot-service');
+            return await ManualOTService.determineOTType(department, currentTime);
         } catch (error) {
-            console.error('Error determining OT type:', error);
-            return 'late_departure'; // Default
+            console.error('[OTSessionService] Error determining OT type via ManualOTService:', error);
+            return 'late_departure'; // Safe fallback
         }
     }
 
