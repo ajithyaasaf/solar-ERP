@@ -321,8 +321,8 @@ export class OTSessionService {
                 statusMessage = `Daily OT limit exceeded (${maxDaily}h). Session saved but requires admin approval. Total: ${totalOTAfter.toFixed(2)}h.`;
             }
 
-            // Update session
-            sessions[sessionIndex] = {
+            // Update session - Remove undefined fields to prevent Firestore errors
+            const updatedSession: any = {
                 ...session,
                 endTime,
                 otHours,
@@ -334,14 +334,34 @@ export class OTSessionService {
                 updatedAt: new Date()
             };
 
+            // Remove undefined fields
+            Object.keys(updatedSession).forEach(key => {
+                if (updatedSession[key] === undefined) {
+                    delete updatedSession[key];
+                }
+            });
+
+            sessions[sessionIndex] = updatedSession;
+
             // Calculate total APPROVED OT for today (for attendance record)
             const approvedOTToday = sessions
                 .filter(s => s.status === 'APPROVED' || s.status === 'completed')
                 .reduce((sum, s) => sum + s.otHours, 0);
 
+            // Clean all sessions - remove undefined fields
+            const cleanedSessions = sessions.map(s => {
+                const cleaned: any = { ...s };
+                Object.keys(cleaned).forEach(key => {
+                    if (cleaned[key] === undefined) {
+                        delete cleaned[key];
+                    }
+                });
+                return cleaned;
+            });
+
             // Update attendance
             await storage.updateAttendance(attendance.id, {
-                otSessions: sessions,
+                otSessions: cleanedSessions,
                 totalOTHours: approvedOTToday  // Only count approved hours
             });
 

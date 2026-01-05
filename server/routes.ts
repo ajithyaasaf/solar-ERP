@@ -398,6 +398,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Migration endpoint for converting legacy OT to new session format
+  app.post("/api/migrate/legacy-ot", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user || user.role !== 'master_admin') {
+        return res.status(403).json({ success: false, message: "Only master admin can run migrations" });
+      }
+
+      console.log(`[MIGRATION-ROUTE] Migration triggered by admin: ${user.email}`);
+
+      const { migrateLegacyOTSessions } = await import("./migrations/migrate-legacy-ot");
+      const result = await migrateLegacyOTSessions(storage);
+
+      res.json(result);
+    } catch (error) {
+      console.error('[MIGRATION-ROUTE] Error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Migration failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+
   // Admin Review Routes (Phase 3)
   app.get("/api/admin/attendance/pending-review", verifyAuth, async (req, res) => {
     try {
