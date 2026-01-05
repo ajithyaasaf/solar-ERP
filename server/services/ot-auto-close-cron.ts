@@ -29,8 +29,9 @@ export class OTAutoCloseService {
             return;
         }
 
-        // Schedule: Run at 12:05 AM every day
-        this.cronJob = cron.schedule('5 0 * * *', async () => {
+        // Schedule: Run at :05 past every hour (e.g., 1:05, 2:05, 3:05...)
+        // This ensures early OT sessions are closed ~5min before check-in time
+        this.cronJob = cron.schedule('5 * * * *', async () => {
             try {
                 await this.runAutoClose();
             } catch (error) {
@@ -38,7 +39,7 @@ export class OTAutoCloseService {
             }
         });
 
-        console.log('[OT-AUTO-CLOSE] ✅ Cron scheduled (runs daily at 12:05 AM)');
+        console.log('[OT-AUTO-CLOSE] ✅ Cron scheduled (runs hourly at :05 past the hour)');
     }
 
     /**

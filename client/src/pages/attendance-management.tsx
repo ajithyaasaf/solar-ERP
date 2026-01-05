@@ -34,6 +34,7 @@ import { CommandBar } from "@/components/attendance/command-bar";
 import { ExceptionAlert } from "@/components/attendance/exception-alert";
 import { AttendanceTrendChart } from "@/components/attendance/attendance-trend-chart";
 import { DepartmentBreakdownChart } from "@/components/attendance/department-breakdown-chart";
+import { AttendancePhotoViewer } from "@/components/attendance/attendance-photo-viewer";
 
 export default function AttendanceManagement() {
   const { user } = useAuthContext();
@@ -57,19 +58,10 @@ export default function AttendanceManagement() {
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
-  const [showImageModal, setShowImageModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
+  const [photoViewerRecord, setPhotoViewerRecord] = useState<any>(null);
   const [selectedAttendanceRecord, setSelectedAttendanceRecord] = useState<any>(null);
-  const [selectedImage, setSelectedImage] = useState<{
-    url: string;
-    employeeName: string;
-    date: string;
-    time: string;
-    attendanceType: string;
-    customerName?: string;
-    location?: string;
-  } | null>(null);
-  const [imageLoading, setImageLoading] = useState(false);
   const [editingAttendance, setEditingAttendance] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     checkInTime: '',
@@ -859,71 +851,6 @@ export default function AttendanceManagement() {
     }
   };
 
-  // Handle image viewing with preloading
-  const handleViewImage = async (record: any) => {
-    if (!record.checkInImageUrl) {
-      toast({
-        title: "No Image Available",
-        description: "This attendance record doesn't have an associated photo",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setImageLoading(true);
-    setShowImageModal(true);
-    setSelectedImage(null); // Reset previous image
-
-    // Prepare image metadata
-    const imageData = {
-      url: record.checkInImageUrl,
-      employeeName: record.userName || 'Unknown Employee',
-      date: formatDate(new Date(record.date)),
-      time: record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 'Unknown Time',
-      attendanceType: record.attendanceType === 'field_work' ? 'Field Work' :
-        record.attendanceType === 'remote' ? 'Remote Work' : 'Office',
-      customerName: record.customerName,
-      location: record.location
-    };
-
-    // Preload image with timeout for better UX
-    const img = new Image();
-    const timeout = setTimeout(() => {
-      setImageLoading(false);
-      toast({
-        title: "Loading Timeout",
-        description: "Image is taking too long to load. Please try again.",
-        variant: "destructive",
-      });
-    }, 10000); // 10 second timeout
-
-    img.onload = () => {
-      clearTimeout(timeout);
-      setSelectedImage(imageData);
-      setImageLoading(false);
-    };
-
-    img.onerror = () => {
-      clearTimeout(timeout);
-      setImageLoading(false);
-      setShowImageModal(false);
-      toast({
-        title: "Image Load Failed",
-        description: "Unable to load the attendance photo. The image may be corrupted or unavailable.",
-        variant: "destructive",
-      });
-    };
-
-    img.src = record.checkInImageUrl;
-  };
-
-  // Reset image modal state
-  const handleCloseImageModal = () => {
-    setShowImageModal(false);
-    setSelectedImage(null);
-    setImageLoading(false);
-  };
-
   // Handle view details modal
   const handleViewDetails = (record: any) => {
     setSelectedAttendanceRecord(record);
@@ -1339,8 +1266,11 @@ export default function AttendanceManagement() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => handleViewImage(record)}
-                                      title="View Field Work Photo"
+                                      onClick={() => {
+                                        setPhotoViewerRecord(record);
+                                        setShowPhotoViewer(true);
+                                      }}
+                                      title="View Photos"
                                     >
                                       <Camera className="h-4 w-4" />
                                     </Button>
@@ -1414,8 +1344,11 @@ export default function AttendanceManagement() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => handleViewImage(record)}
-                                      title="View Field Work Photo"
+                                      onClick={() => {
+                                        setPhotoViewerRecord(record);
+                                        setShowPhotoViewer(true);
+                                      }}
+                                      title="View Photos"
                                     >
                                       <Camera className="h-3 w-3" />
                                     </Button>
@@ -1482,8 +1415,11 @@ export default function AttendanceManagement() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => handleViewImage(record)}
-                                      title="View Field Work Photo"
+                                      onClick={() => {
+                                        setPhotoViewerRecord(record);
+                                        setShowPhotoViewer(true);
+                                      }}
+                                      title="View Photos"
                                     >
                                       <Camera className="h-4 w-4" />
                                     </Button>
@@ -1601,8 +1537,11 @@ export default function AttendanceManagement() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => handleViewImage(record)}
-                                      title="View Field Work Photo"
+                                      onClick={() => {
+                                        setPhotoViewerRecord(record);
+                                        setShowPhotoViewer(true);
+                                      }}
+                                      title="View Photos"
                                     >
                                       <Camera className="h-3 w-3" />
                                     </Button>
@@ -1928,14 +1867,28 @@ export default function AttendanceManagement() {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenReview(record)}
-                                  className="bg-amber-600 hover:bg-amber-700"
-                                >
-                                  <Eye className="h-3 w-3 mr-1" />
-                                  Review
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setPhotoViewerRecord(record);
+                                      setShowPhotoViewer(true);
+                                    }}
+                                    title="View check-in/checkout photos"
+                                  >
+                                    <Camera className="h-3 w-3 mr-1" />
+                                    Photos
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleOpenReview(record)}
+                                    className="bg-amber-600 hover:bg-amber-700"
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    Review
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -2064,117 +2017,6 @@ export default function AttendanceManagement() {
 
         </Tabs>
       </div>
-
-      {/* Image Viewer Modal */}
-      <Dialog open={showImageModal} onOpenChange={handleCloseImageModal}>
-        <DialogContent className="max-w-4xl h-[90vh] p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle className="flex items-center gap-2">
-              <Camera className="h-5 w-5" />
-              Field Work Attendance Photo
-            </DialogTitle>
-            <DialogDescription>
-              {selectedImage ? `Photo taken by ${selectedImage.employeeName} on ${selectedImage.date} at ${selectedImage.time}` : 'Loading...'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Image Container */}
-            <div className="flex-1 relative bg-gray-50 flex items-center justify-center overflow-hidden">
-              {imageLoading ? (
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <p className="text-sm text-gray-600">Loading image...</p>
-                </div>
-              ) : selectedImage ? (
-                <div className="w-full h-full flex items-center justify-center p-4">
-                  <img
-                    src={selectedImage.url}
-                    alt="Field work attendance photo"
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg cursor-zoom-in"
-                    onClick={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      if (img.style.transform === 'scale(2)') {
-                        img.style.transform = 'scale(1)';
-                        img.style.cursor = 'zoom-in';
-                      } else {
-                        img.style.transform = 'scale(2)';
-                        img.style.cursor = 'zoom-out';
-                      }
-                    }}
-                    style={{ transition: 'transform 0.3s ease' }}
-                  />
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No image available</p>
-                </div>
-              )}
-            </div>
-
-            {/* Image Metadata */}
-            {selectedImage && (
-              <div className="p-6 border-t bg-white">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Employee</Label>
-                    <p className="font-medium">{selectedImage.employeeName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Date & Time</Label>
-                    <p className="font-medium">{selectedImage.date}</p>
-                    <p className="text-gray-600">{selectedImage.time}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Attendance Type</Label>
-                    <Badge variant="outline" className="mt-1">
-                      {selectedImage.attendanceType}
-                    </Badge>
-                  </div>
-                  {selectedImage.customerName && (
-                    <div>
-                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer</Label>
-                      <p className="font-medium">{selectedImage.customerName}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <CheckCircle className="h-3 w-3" />
-                    Verified attendance photo
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (selectedImage?.url) {
-                          const link = document.createElement('a');
-                          link.href = selectedImage.url;
-                          link.download = `attendance-${selectedImage.employeeName}-${selectedImage.date}.jpg`;
-                          link.click();
-                        }
-                      }}
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCloseImageModal}
-                    >
-                      Close
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Attendance Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
@@ -2595,13 +2437,6 @@ export default function AttendanceManagement() {
                           `${selectedAttendanceRecord.lateMinutes} minutes` : 'On Time'
                         }
                       </p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Attendance Type</Label>
-                      <Badge variant="outline" className="mt-1">
-                        {selectedAttendanceRecord.attendanceType === 'field_work' ? 'Field Work' :
-                          selectedAttendanceRecord.attendanceType === 'remote' ? 'Remote Work' : 'Office'}
-                      </Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -3031,6 +2866,18 @@ export default function AttendanceManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Attendance Photo Viewer */}
+      {photoViewerRecord && (
+        <AttendancePhotoViewer
+          isOpen={showPhotoViewer}
+          onClose={() => {
+            setShowPhotoViewer(false);
+            setPhotoViewerRecord(null);
+          }}
+          attendanceRecord={photoViewerRecord}
+        />
+      )}
 
       {/* Undo Manager */}
       <UndoManager

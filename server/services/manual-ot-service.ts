@@ -99,19 +99,23 @@ export class ManualOTService {
       let todayAttendance = await storage.getAttendanceByUserAndDate(request.userId, today);
       console.log('MANUAL OT SERVICE: Found attendance record:', todayAttendance ? 'YES' : 'NO');
 
-      // If no attendance record exists, create one for OT
+      // If no attendance record exists, create one ONLY to hold OT session data
+      // ✅ FIX: Do NOT set checkInTime or mark as "present" - this is OT-only!
       if (!todayAttendance) {
         const otType = await this.determineOTType(user.department, new Date());
         const newAttendanceData = {
           userId: request.userId,
           date: today,
+          // ✅ OT-ONLY FLAGS: No check-in, no status showing as "present"
+          // Status 'absent' means "no regular attendance yet" - updated to 'present' on check-in
           attendanceType: 'office' as const,
-          status: 'present' as const,
+          status: 'absent' as const, // ✅ Changed from 'present' - will update on actual check-in
           isLate: false,
           isWithinOfficeRadius: true,
           otStatus: 'in_progress' as const,
           isManualOT: true,
           autoCorrected: false,
+          // ✅ LEGACY FIELDS: Store for backward compatibility but don't use for display
           otStartTime: new Date(),
           otStartLatitude: request.latitude.toString(),
           otStartLongitude: request.longitude.toString(),
@@ -119,9 +123,11 @@ export class ManualOTService {
           otStartAddress: request.address,
           otReason: request.reason,
           otType,
+          // ✅ CRITICAL: Do NOT set checkInTime - this creates the fake check-in bug!
         };
 
         todayAttendance = await storage.createAttendance(newAttendanceData);
+        console.log('MANUAL OT SERVICE: Created OT-only attendance record (no check-in)');
       } else {
         // Update existing attendance record with OT start
         const otType = await this.determineOTType(user.department, new Date());
@@ -138,6 +144,7 @@ export class ManualOTService {
         };
 
         todayAttendance = await storage.updateAttendance(todayAttendance.id, updateData);
+        console.log('MANUAL OT SERVICE: Updated existing attendance with OT start');
       }
 
       const otType = await this.determineOTType(user.department, new Date());

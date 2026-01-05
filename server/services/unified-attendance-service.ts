@@ -555,38 +555,65 @@ export class UnifiedAttendanceService {
         }
       }
 
-      // Create attendance record
-      const attendanceData = {
-        userId: request.userId,
-        date: today,
-        checkInTime: new Date(),
-        attendanceType: request.attendanceType,
-        reason: request.reason || '',
-        checkInLatitude: request.latitude.toString(),
-        checkInLongitude: request.longitude.toString(),
-        status: (timingInfo.isLate ? 'late' : 'present') as 'late' | 'present',
-        isLate: timingInfo.isLate,
-        lateMinutes: timingInfo.lateMinutes,
-        workingHours: 0,
-        breakHours: 0,
-        isWithinOfficeRadius: true, // Simplified - no office restrictions
-        remarks: `Attendance recorded with location verification`,
-
-        // Enhanced metadata for enterprise tracking
-        locationAccuracy: request.accuracy,
-        locationValidationType: locationValidation.validationType,
-        locationConfidence: locationValidation.confidence,
-        detectedOfficeId: locationValidation.detectedOffice?.id || null,
-        distanceFromOffice: locationValidation.distance,
-        isManualOT: false,
-        otStatus: 'not_started' as const,
-
-        // Optional fields
-        ...(request.customerName && { customerName: request.customerName }),
-        ...(cloudinaryImageUrl && { checkInImageUrl: cloudinaryImageUrl })
-      };
-
-      const newAttendance = await storage.createAttendance(attendanceData);
+      // ✅ CRITICAL FIX: If attendance record exists (e.g., from early OT) but has no check-in time,
+      // UPDATE it instead of creating a duplicate!
+      let newAttendance;
+      if (existingAttendance && !existingAttendance.checkInTime) {
+        // Update existing OT-only record with regular check-in data
+        console.log('CHECK-IN: Updating existing OT-only attendance with regular check-in data');
+        newAttendance = await storage.updateAttendance(existingAttendance.id, {
+          checkInTime: new Date(),
+          attendanceType: request.attendanceType,
+          reason: request.reason || '',
+          checkInLatitude: request.latitude.toString(),
+          checkInLongitude: request.longitude.toString(),
+          status: (timingInfo.isLate ? 'late' : 'present') as 'late' | 'present',
+          isLate: timingInfo.isLate,
+          lateMinutes: timingInfo.lateMinutes,
+          workingHours: 0,
+          breakHours: 0,
+          isWithinOfficeRadius: true,
+          remarks: `Attendance recorded with location verification`,
+          locationAccuracy: request.accuracy,
+          locationValidationType: locationValidation.validationType,
+          locationConfidence: locationValidation.confidence,
+          detectedOfficeId: locationValidation.detectedOffice?.id || null,
+          distanceFromOffice: locationValidation.distance,
+          isManualOT: existingAttendance.isManualOT, // Preserve OT flag
+          ...(request.customerName && { customerName: request.customerName }),
+          ...(cloudinaryImageUrl && { checkInImageUrl: cloudinaryImageUrl })
+        });
+      } else {
+        // No existing record (or has check-in already) - create new
+        console.log('CHECK-IN: Creating new attendance record');
+        const attendanceData = {
+          userId: request.userId,
+          date: today,
+          checkInTime: new Date(),
+          attendanceType: request.attendanceType,
+          reason: request.reason || '',
+          checkInLatitude: request.latitude.toString(),
+          checkInLongitude: request.longitude.toString(),
+          status: (timingInfo.isLate ? 'late' : 'present') as 'late' | 'present',
+          isLate: timingInfo.isLate,
+          lateMinutes: timingInfo.lateMinutes,
+          workingHours: 0,
+          breakHours: 0,
+          isWithinOfficeRadius: true,
+          remarks: `Attendance recorded with location verification`,
+          locationAccuracy: request.accuracy,
+          locationValidationType: locationValidation.validationType,
+          locationConfidence: locationValidation.confidence,
+          detectedOfficeId: locationValidation.detectedOffice?.id || null,
+          distanceFromOffice: locationValidation.distance,
+          isManualOT: false,
+          otStatus: 'not_started' as const,
+          autoCorrected: false,
+          ...(request.customerName && { customerName: request.customerName }),
+          ...(cloudinaryImageUrl && { checkInImageUrl: cloudinaryImageUrl })
+        };
+        newAttendance = await storage.createAttendance(attendanceData);
+      }
 
       // Log simplified attendance acceptance
       console.log('UNIFIED SERVICE: Simplified attendance accepted for user:', request.userId);
