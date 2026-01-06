@@ -606,9 +606,28 @@ export class UnifiedAttendanceService {
           locationConfidence: locationValidation.confidence,
           detectedOfficeId: locationValidation.detectedOffice?.id || null,
           distanceFromOffice: locationValidation.distance,
-          isManualOT: false,
-          otStatus: 'not_started' as const,
+          location: {
+            latitude: request.latitude,
+            longitude: request.longitude,
+            accuracy: request.accuracy,
+            effectiveRadius: locationValidation.metadata.effectiveRadius,
+            indoorDetection: locationValidation.metadata.indoorDetection,
+            confidenceFactors: locationValidation.metadata.confidenceFactors,
+            validationType: locationValidation.validationType,
+            message: locationValidation.message,
+            detectedOffice: locationValidation.detectedOffice ? {
+              id: locationValidation.detectedOffice.id,
+              name: locationValidation.detectedOffice.name,
+              latitude: locationValidation.detectedOffice.latitude,
+              longitude: locationValidation.detectedOffice.longitude,
+              radius: locationValidation.detectedOffice.radius,
+            } : null,
+            distance: locationValidation.distance,
+          },
           autoCorrected: false,
+          // ✅ REMOVED: otStatus (legacy field) - use otSessions[] array instead
+          otSessions: [], // Initialize empty OT sessions array
+          isManualOT: false,
           ...(request.customerName && { customerName: request.customerName }),
           ...(cloudinaryImageUrl && { checkInImageUrl: cloudinaryImageUrl })
         };

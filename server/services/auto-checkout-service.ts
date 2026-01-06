@@ -69,13 +69,7 @@ export class AutoCheckoutService {
                 }
 
                 // 🛡️ OT PROTECTION: Skip auto-checkout if there's an active OT session
-                // This prevents closing attendance while employee is doing overtime
-                if (record.otStatus === 'in_progress') {
-                    console.log(`[AUTO-CHECKOUT] ⏰ Skipping record ${record.id} - OT session in progress`);
-                    continue;
-                }
-
-                // Also check new session-based OT format
+                // Check session-based OT format (otSessions[] array)
                 if (record.otSessions && Array.isArray(record.otSessions)) {
                     const hasActiveOT = record.otSessions.some((s: any) => s.status === 'in_progress');
                     if (hasActiveOT) {

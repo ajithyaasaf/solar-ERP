@@ -212,6 +212,20 @@ export class OTAutoCloseService {
     }
 
     /**
+     * Utility: Remove undefined fields from object
+     * Firestore rejects updates containing undefined values
+     */
+    private static filterUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
+        const filtered: any = {};
+        for (const key in obj) {
+            if (obj[key] !== undefined) {
+                filtered[key] = obj[key];
+            }
+        }
+        return filtered;
+    }
+
+    /**
      * Close a single session
      */
     private static async closeSession(
@@ -249,15 +263,18 @@ export class OTAutoCloseService {
             );
 
             // Update session with PENDING_REVIEW status
-            sessions[sessionIndex] = {
+            // ✅ CRITICAL FIX: Filter undefined fields before Firestore write
+            const updatedSession = this.filterUndefined({
                 ...session,
                 endTime: endOfDay,
                 otHours: 0,  // CRITICAL: Set to 0 for payroll (admin must approve actual hours)
-                status: 'PENDING_REVIEW',
+                status: 'PENDING_REVIEW' as const,
                 autoClosedAt: now,
                 autoClosedNote: `Session auto-closed at midnight. Employee forgot to end session. Calculated ${calculatedHours.toFixed(2)}h (needs admin verification).`,
                 updatedAt: now
-            };
+            });
+
+            sessions[sessionIndex] = updatedSession as OTSession;
 
             // Update attendance (no change to totalOTHours since this is pending)
             await storage.updateAttendance(attendanceId, {

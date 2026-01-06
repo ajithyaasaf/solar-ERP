@@ -57,10 +57,10 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
   // Format OT duration
   const formatOTDuration = () => {
     if (!otStartTime) return "0h 0m";
-    
+
     try {
       let start: Date;
-      
+
       // Handle Firestore Timestamp objects
       if (typeof otStartTime === 'object' && '_seconds' in otStartTime) {
         const timestamp = otStartTime as { _seconds: number; _nanoseconds?: number };
@@ -68,25 +68,25 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
       } else {
         start = new Date(otStartTime as string);
       }
-      
+
       const now = new Date();
-      
+
       // Check if the start date is valid
       if (isNaN(start.getTime())) {
         console.error('Invalid otStartTime:', otStartTime);
         return "Invalid Date";
       }
-      
+
       const diffMs = now.getTime() - start.getTime();
-      
+
       // Ensure we don't have negative time
       if (diffMs < 0) {
         return "0h 0m";
       }
-      
+
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
       const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      
+
       return `${hours}h ${minutes}m`;
     } catch (error) {
       console.error('Error formatting OT duration:', error, 'otStartTime:', otStartTime);
@@ -97,16 +97,16 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
   // Fetch address from location using Google Maps API
   const fetchLocationAddress = async () => {
     if (!location) return;
-    
+
     setIsAddressLoading(true);
     try {
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY;
-      
+
       if (apiKey) {
         const response = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${apiKey}`
         );
-        
+
         if (response.ok) {
           const data = await response.json();
           if (data.results && data.results.length > 0) {
@@ -116,7 +116,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
           }
         }
       }
-      
+
       // Fallback to coordinates
       setCurrentAddress(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
     } catch (error) {
@@ -142,7 +142,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
         video: { facingMode: "user" },
         audio: false
       });
-      
+
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -168,12 +168,12 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
       const canvas = canvasRef.current;
       const video = videoRef.current;
       const ctx = canvas.getContext('2d');
-      
+
       if (ctx) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
-        
+
         const photoData = canvas.toDataURL('image/jpeg', 0.8);
         setCapturedPhoto(photoData);
         stopCamera();
@@ -214,12 +214,28 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
         throw new Error('Missing required data');
       }
 
-      // Upload photo first
+      // ✅ STEP 1: Fetch active session to get sessionId
+      console.log('[FRONTEND] Fetching active OT session...');
+      const activeSessionResponse = await apiRequest('/api/ot/sessions/active', 'GET');
+
+      if (!activeSessionResponse.ok) {
+        throw new Error('Failed to fetch active session');
+      }
+
+      const { session } = await activeSessionResponse.json();
+
+      if (!session || !session.sessionId) {
+        throw new Error('No active OT session found');
+      }
+
+      console.log('[FRONTEND] Active session found:', session.sessionId);
+
+      // ✅ STEP 2: Upload photo
       const imageUrl = await uploadPhoto(capturedPhoto);
 
-      // End OT session
-      const response = await apiRequest('/api/attendance/ot-end', 'POST', {
-        userId: user.uid,
+      // ✅ STEP 3: End OT session using new endpoint
+      // MIGRATED: POST /api/ot/sessions/:id/end (uses otSessions[] array)
+      const response = await apiRequest(`/api/ot/sessions/${session.sessionId}/end`, 'POST', {
         latitude: location.latitude,
         longitude: location.longitude,
         accuracy: location.accuracy,
@@ -240,16 +256,16 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
         title: "OT Session Completed",
         description: `${data.otHours} hours of overtime recorded successfully.`,
       });
-      
+
       // Invalidate attendance queries
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
-          return typeof queryKey === 'string' && 
-                 (queryKey.includes('/api/attendance') || queryKey.includes('/api/attendance/ot-status'));
+          return typeof queryKey === 'string' &&
+            (queryKey.includes('/api/attendance') || queryKey.includes('/api/ot/status'));
         }
       });
-      
+
       onSuccess();
       onClose();
       resetForm();
@@ -328,7 +344,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
                     {(() => {
                       try {
                         let startDate: Date;
-                        
+
                         // Handle Firestore Timestamp objects
                         if (typeof otStartTime === 'object' && '_seconds' in otStartTime) {
                           const timestamp = otStartTime as { _seconds: number; _nanoseconds?: number };
@@ -336,14 +352,14 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
                         } else {
                           startDate = new Date(otStartTime as string);
                         }
-                        
+
                         if (isNaN(startDate.getTime())) {
                           return "Started at Invalid Date";
                         }
-                        return `Started at ${startDate.toLocaleTimeString('en-IN', { 
-                          hour: 'numeric', 
-                          minute: '2-digit', 
-                          hour12: true 
+                        return `Started at ${startDate.toLocaleTimeString('en-IN', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
                         })}`;
                       } catch (error) {
                         return "Started at Invalid Date";
@@ -369,8 +385,8 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
                   {locationStatus.text}
                 </Badge>
                 {!location && !locationLoading && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={getCurrentLocation}
                   >
@@ -379,7 +395,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
                   </Button>
                 )}
               </div>
-              
+
               {currentAddress && (
                 <div className="mt-2 text-sm text-muted-foreground">
                   {isAddressLoading ? (
@@ -405,8 +421,8 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
             </CardHeader>
             <CardContent>
               {!isCameraActive && !capturedPhoto && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={startCamera}
                   className="w-full"
                 >
@@ -425,7 +441,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
                     muted
                   />
                   <canvas ref={canvasRef} className="hidden" />
-                  
+
                   {isVideoReady && (
                     <div className="flex gap-2">
                       <Button onClick={capturePhoto} className="flex-1">
@@ -442,13 +458,13 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
 
               {capturedPhoto && (
                 <div className="space-y-2">
-                  <img 
-                    src={capturedPhoto} 
-                    alt="Captured selfie" 
+                  <img
+                    src={capturedPhoto}
+                    alt="Captured selfie"
                     className="w-full rounded-lg"
                   />
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setCapturedPhoto(null);
                       startCamera();

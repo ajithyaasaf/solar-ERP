@@ -13,10 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { sanitizeFormData } from "../../../../shared/utils/form-sanitizer";
-import { 
-  MapPin, 
-  Camera, 
-  CheckCircle, 
+import {
+  MapPin,
+  Camera,
+  CheckCircle,
   User,
   AlertTriangle,
   RotateCcw,
@@ -43,21 +43,21 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
   // Core states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reason, setReason] = useState('');
-  
+
   // Location states
   const [location, setLocation] = useState<LocationData | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  
+
   // Photo states
   const [photo, setPhoto] = useState<string | null>(null);
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  
+
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -69,7 +69,7 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
       setPhoto(null);
       setLocationError(null);
       setIsCapturingPhoto(false);
-      
+
       // Auto-detect location when modal opens
       detectLocation();
     } else {
@@ -94,7 +94,7 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
   const detectLocation = async () => {
     setIsLoadingLocation(true);
     setLocationError(null);
-    
+
     try {
       if (!navigator.geolocation) {
         throw new Error('Location services not supported');
@@ -109,19 +109,19 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
       });
 
       const { latitude, longitude, accuracy } = position.coords;
-      
+
       // Reverse geocode to get address
       let address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-      
+
       try {
         // Try to get Google Maps API key from environment
         const googleMapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        
+
         if (googleMapsKey) {
           const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapsKey}`;
           const geocodeResponse = await fetch(geocodeUrl);
           const geocodeData = await geocodeResponse.json();
-          
+
           if (geocodeData.results?.[0]?.formatted_address) {
             address = geocodeData.results[0].formatted_address;
           }
@@ -134,7 +134,7 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
               const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`;
               const geocodeResponse = await fetch(geocodeUrl);
               const geocodeData = await geocodeResponse.json();
-              
+
               if (geocodeData.results?.[0]?.formatted_address) {
                 address = geocodeData.results[0].formatted_address;
               }
@@ -148,17 +148,17 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
       }
 
       setLocation({ latitude, longitude, address, accuracy });
-      
+
       toast({
         title: "Location Captured",
         description: "Your checkout location has been detected",
       });
 
     } catch (error: any) {
-      const errorMessage = error.code === 1 
+      const errorMessage = error.code === 1
         ? "Location access denied. Please enable location services and try again."
         : "Unable to detect location. Please try again.";
-      
+
       setLocationError(errorMessage);
       toast({
         title: "Location Error",
@@ -173,10 +173,10 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
   // Camera Functions
   const startCamera = async () => {
     setIsCapturingPhoto(true);
-    
+
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
+        video: {
           facingMode: 'user',
           width: { ideal: 1280 },
           height: { ideal: 720 }
@@ -185,7 +185,7 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
       });
 
       setStream(mediaStream);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         await videoRef.current.play();
@@ -213,22 +213,22 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
     // Set canvas size to video size
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    
+
     // Draw video frame to canvas
     context.drawImage(video, 0, 0);
-    
+
     // Add timestamp overlay
     context.fillStyle = 'rgba(0, 0, 0, 0.7)';
     context.fillRect(0, canvas.height - 80, canvas.width, 80);
-    
+
     context.fillStyle = 'white';
     context.font = '14px Arial';
     context.fillText(
-      `Checkout: ${new Date().toLocaleString()}`, 
-      10, 
+      `Checkout: ${new Date().toLocaleString()}`,
+      10,
       canvas.height - 50
     );
-    
+
     if (location) {
       // Handle long addresses by wrapping text
       const maxWidth = canvas.width - 20;
@@ -236,13 +236,13 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
       let line = '';
       let lineHeight = 14;
       let y = canvas.height - 30;
-      
+
       let isFirstLine = true;
-      
+
       for (let word of words) {
         const testLine = line + word + ' ';
         const metrics = context.measureText(testLine);
-        
+
         if (metrics.width > maxWidth && line !== '') {
           const prefix = isFirstLine ? 'Location: ' : '';
           context.fillText(`${prefix}${line.trim()}`, 10, y);
@@ -253,20 +253,20 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
           line = testLine;
         }
       }
-      
+
       if (line.trim()) {
         const prefix = isFirstLine ? 'Location: ' : '';
         context.fillText(`${prefix}${line.trim()}`, 10, y);
       }
     }
-    
+
     // Convert to base64
     const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
     setPhoto(photoDataUrl);
-    
+
     // Stop camera
     stopCamera();
-    
+
     toast({
       title: "Photo Captured",
       description: "Checkout verification photo taken successfully",
@@ -341,12 +341,12 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
         title: "Checkout Successful",
         description: "You have successfully checked out for the day",
       });
-      
+
       // Refresh attendance data
       queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
       queryClient.invalidateQueries({ queryKey: ['/api/attendance/today'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/attendance/ot-status'] });
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/ot/status'] });
+
       onSuccess?.();
       onClose();
     },
@@ -484,9 +484,9 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
               {isCapturingPhoto ? (
                 <div className="space-y-3">
                   <div className="relative bg-black rounded overflow-hidden">
-                    <video 
-                      ref={videoRef} 
-                      autoPlay 
+                    <video
+                      ref={videoRef}
+                      autoPlay
                       playsInline
                       muted
                       className="w-full h-48 object-cover"
@@ -509,14 +509,14 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
               ) : photo ? (
                 <div className="space-y-3">
                   <div className="relative">
-                    <img 
-                      src={photo} 
-                      alt="Checkout verification" 
+                    <img
+                      src={photo}
+                      alt="Checkout verification"
                       className="w-full h-32 object-cover rounded border"
                     />
-                    <Button 
-                      onClick={retakePhoto} 
-                      size="sm" 
+                    <Button
+                      onClick={retakePhoto}
+                      size="sm"
                       variant="outline"
                       className="absolute top-2 right-2"
                     >
@@ -556,8 +556,8 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
               />
               <div className="flex justify-between items-center mt-1 text-xs">
                 <span className={reason.trim().length < 10 ? "text-red-500" : "text-green-600"}>
-                  {reason.trim().length < 10 
-                    ? `Minimum 10 characters required (${10 - reason.trim().length} more needed)` 
+                  {reason.trim().length < 10
+                    ? `Minimum 10 characters required (${10 - reason.trim().length} more needed)`
                     : "✓ Requirement met"
                   }
                 </span>
@@ -574,8 +574,8 @@ export function SmartUnifiedCheckout({ isOpen, onClose, onSuccess, currentAttend
           <Button onClick={onClose} variant="outline" disabled={isSubmitting} className="flex-1">
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={!canSubmit}
             className="flex-1 bg-red-600 hover:bg-red-700"
           >

@@ -170,7 +170,7 @@ export class OTSessionService {
                     isLate: false,
                     isWithinOfficeRadius: true,
                     isManualOT: true,
-                    otStatus: 'not_started' as const,
+                    // ✅ REMOVED: otStatus (legacy field) - use otSessions[] array instead
                     autoCorrected: false,
                     otSessions: [] // Initialize empty OT sessions array
                 };
@@ -687,6 +687,76 @@ export class OTSessionService {
         } catch (error) {
             console.error('Error locking sessions:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Get OT status for user (reads from otSessions[] array)
+     * Replaces legacy ManualOTService.getOTStatus
+     */
+    static async getOTStatus(userId: string): Promise<{
+        hasActiveOT: boolean;
+        otStatus: 'not_started' | 'in_progress' | 'completed';
+        canStartOT: boolean;
+        canEndOT: boolean;
+        activeSession?: OTSession;
+        otStartTime?: Date;
+        otType?: string;
+        currentOTHours?: number;
+    }> {
+        try {
+            // Get today's attendance using IST-normalized date
+            const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+            const [y, m, d] = istDateStr.split('-').map(Number);
+            const today = new Date(Date.UTC(y, m - 1, d));
+
+            const attendance = await storage.getAttendanceByUserAndDate(userId, today);
+
+            if (!attendance || !attendance.otSessions || attendance.otSessions.length === 0) {
+                return {
+                    hasActiveOT: false,
+                    otStatus: 'not_started',
+                    canStartOT: true,
+                    canEndOT: false
+                };
+            }
+
+            // Find active session (if any)
+            const activeSession = attendance.otSessions.find((s: OTSession) => s.status === 'in_progress');
+
+            if (activeSession) {
+                const currentOTHours = Number(
+                    ((new Date().getTime() - new Date(activeSession.startTime).getTime()) / (1000 * 60 * 60)).toFixed(2)
+                );
+
+                return {
+                    hasActiveOT: true,
+                    otStatus: 'in_progress',
+                    canStartOT: false,
+                    canEndOT: true,
+                    activeSession,
+                    // ✅ REMOVED: otStartTime (legacy field) - use activeSession.startTime instead
+                    otType: activeSession.otType,
+                    currentOTHours
+                };
+            }
+
+            // Has completed sessions but none active
+            return {
+                hasActiveOT: false,
+                otStatus: 'completed',
+                canStartOT: true,
+                canEndOT: false
+            };
+
+        } catch (error) {
+            console.error('Error getting OT status:', error);
+            return {
+                hasActiveOT: false,
+                otStatus: 'not_started',
+                canStartOT: false,
+                canEndOT: false
+            };
         }
     }
 }

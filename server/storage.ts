@@ -327,7 +327,7 @@ export interface Attendance {
   // Verified Firestore fields (matched to shared/schema.ts)
   autoCorrected: boolean;  // Required field with default: false
   workingHours?: number;  // Optional field (nullish in schema)
-  otStatus: "not_started" | "in_progress" | "completed";  // Required field with default: "not_started"
+  otStatus?: "not_started" | "in_progress" | "completed";  // ⚠️ DEPRECATED: Legacy field, use otSessions[] instead
 
   // Auto-Correction & Admin Review Fields
   autoCorrectedAt?: Date;

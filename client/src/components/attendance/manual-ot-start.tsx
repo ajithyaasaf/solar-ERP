@@ -56,16 +56,16 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
   // Fetch address from location using Google Maps API
   const fetchLocationAddress = async () => {
     if (!location) return;
-    
+
     setIsAddressLoading(true);
     try {
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.GOOGLE_MAPS_API_KEY;
-      
+
       if (apiKey) {
         const response = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${apiKey}`
         );
-        
+
         if (response.ok) {
           const data = await response.json();
           if (data.results && data.results.length > 0) {
@@ -75,7 +75,7 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
           }
         }
       }
-      
+
       // Fallback to coordinates
       setCurrentAddress(`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
     } catch (error) {
@@ -101,7 +101,7 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
         video: { facingMode: "user" },
         audio: false
       });
-      
+
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -127,12 +127,12 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
       const canvas = canvasRef.current;
       const video = videoRef.current;
       const ctx = canvas.getContext('2d');
-      
+
       if (ctx) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
-        
+
         const photoData = canvas.toDataURL('image/jpeg', 0.8);
         setCapturedPhoto(photoData);
         stopCamera();
@@ -179,7 +179,7 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
       }
 
       console.log('FRONTEND: Starting OT process...');
-      
+
       // Upload photo first
       console.log('FRONTEND: Uploading photo...');
       const imageUrl = await uploadPhoto(capturedPhoto);
@@ -195,11 +195,12 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
         address: currentAddress,
         reason: reason.trim() || undefined
       };
-      
+
       console.log('FRONTEND: Sending OT start request:', requestData);
-      
-      const response = await apiRequest('/api/attendance/ot-start', 'POST', requestData);
-      
+
+      // ✅ MIGRATED: Use new OT session endpoint (writes to otSessions[] array)
+      const response = await apiRequest('/api/ot/sessions/start', 'POST', requestData);
+
       console.log('FRONTEND: OT start response status:', response.status);
 
       if (!response.ok) {
@@ -217,16 +218,16 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
         title: "OT Session Started",
         description: data.message,
       });
-      
+
       // Invalidate attendance queries
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
-          return typeof queryKey === 'string' && 
-                 (queryKey.includes('/api/attendance') || queryKey.includes('/api/attendance/ot-status'));
+          return typeof queryKey === 'string' &&
+            (queryKey.includes('/api/attendance') || queryKey.includes('/api/ot/status'));
         }
       });
-      
+
       onSuccess();
       onClose();
       resetForm();
@@ -324,8 +325,8 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
                   {locationStatus.text}
                 </Badge>
                 {!location && !locationLoading && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={getCurrentLocation}
                   >
@@ -334,7 +335,7 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
                   </Button>
                 )}
               </div>
-              
+
               {currentAddress && (
                 <div className="mt-2 text-sm text-muted-foreground">
                   {isAddressLoading ? (
@@ -360,8 +361,8 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
             </CardHeader>
             <CardContent>
               {!isCameraActive && !capturedPhoto && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={startCamera}
                   className="w-full"
                 >
@@ -380,7 +381,7 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
                     muted
                   />
                   <canvas ref={canvasRef} className="hidden" />
-                  
+
                   {isVideoReady && (
                     <div className="flex gap-2">
                       <Button onClick={capturePhoto} className="flex-1">
@@ -397,13 +398,13 @@ export function ManualOTStart({ isOpen, onClose, onSuccess, otType }: ManualOTSt
 
               {capturedPhoto && (
                 <div className="space-y-2">
-                  <img 
-                    src={capturedPhoto} 
-                    alt="Captured selfie" 
+                  <img
+                    src={capturedPhoto}
+                    alt="Captured selfie"
                     className="w-full rounded-lg"
                   />
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setCapturedPhoto(null);
                       startCamera();

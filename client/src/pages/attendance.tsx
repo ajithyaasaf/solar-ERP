@@ -127,10 +127,11 @@ export default function Attendance() {
 
   // Fetch manual OT status
   const { data: otStatus } = useQuery({
-    queryKey: ["/api/attendance/ot-status", user?.uid],
+    queryKey: ["/api/ot/status", user?.uid],  // ✅ FIXED: Corrected endpoint
     queryFn: async () => {
       if (!user?.uid) return null;
-      const response = await apiRequest(`/api/attendance/ot-status?userId=${user.uid}`, 'GET');
+      // ✅ FIXED: Use /api/ot/status (no userId param - derived from auth token)
+      const response = await apiRequest('/api/ot/status', 'GET');
       if (response.ok) {
         return await response.json();
       }
@@ -1133,7 +1134,7 @@ export default function Attendance() {
         isOpen={showOTEndModal}
         onClose={() => setShowOTEndModal(false)}
         onSuccess={refreshAttendance}
-        otStartTime={otStatus?.otStartTime}
+        otStartTime={otStatus?.activeSession?.startTime}  // ✅ FIXED: Use activeSession.startTime
         currentOTHours={otStatus?.currentOTHours}
       />
     </div>

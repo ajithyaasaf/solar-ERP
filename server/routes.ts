@@ -1810,104 +1810,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Manual Overtime APIs
-
-  // Start manual OT session
-  app.post("/api/attendance/ot-start", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
-    try {
-      const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
-
-      if (!userId || userId !== req.authenticatedUser?.uid || "") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      if (!latitude || !longitude || !imageUrl) {
-        return res.status(400).json({ message: "Location and photo are required for OT start" });
-      }
-
-      // Import ManualOTService
-      const { ManualOTService } = await import('./services/manual-ot-service');
-
-      const result = await ManualOTService.startOTSession({
-        userId,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        accuracy: parseFloat(accuracy) || 0,
-        imageUrl,
-        address,
-        reason
-      });
-
-      if (result.success) {
-        // Log activity
-        const user = await storage.getUser(userId);
-        await storage.createActivityLog({
-          type: 'attendance',
-          title: `Manual OT Started (${result.otType})`,
-          description: `${user?.displayName} started ${result.otType} overtime session`,
-          entityId: result.otSessionId || '',
-          entityType: 'attendance',
-          userId
-        });
-      }
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("ROUTES ERROR - OT START:", error);
-      console.error("Error details:", {
-        message: error.message,
-        stack: error.stack,
-        body: req.body
-      });
-      res.status(500).json({ message: "Failed to start OT session" });
-    }
-  });
-
-  // End manual OT session
-  app.post("/api/attendance/ot-end", createRateLimitMiddleware(attendanceRateLimiter), verifyAuth, async (req, res) => {
-    try {
-      const { userId, latitude, longitude, accuracy, imageUrl, address, reason } = req.body;
-
-      if (!userId || userId !== req.authenticatedUser?.uid || "") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      if (!latitude || !longitude || !imageUrl) {
-        return res.status(400).json({ message: "Location and photo are required for OT end" });
-      }
-
-      // Import ManualOTService
-      const { ManualOTService } = await import('./services/manual-ot-service');
-
-      const result = await ManualOTService.endOTSession({
-        userId,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        accuracy: parseFloat(accuracy) || 0,
-        imageUrl,
-        address,
-        reason
-      });
-
-      if (result.success) {
-        // Log activity
-        const user = await storage.getUser(userId);
-        await storage.createActivityLog({
-          type: 'attendance',
-          title: 'Manual OT Completed',
-          description: `${user?.displayName} completed overtime session (${result.otHours} hours)`,
-          entityId: '', // Would need attendance ID
-          entityType: 'attendance',
-          userId
-        });
-      }
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error ending OT session:", error);
-      res.status(500).json({ message: "Failed to end OT session" });
-    }
-  });
+  // ✅ REMOVED: Legacy Manual OT routes (/api/attendance/ot-start, /api/attendance/ot-end)
+  // Frontend migrated to /api/ot/sessions/start and /api/ot/sessions/:id/end
+  // These new routes use OTSessionService and write to otSessions[] array only
 
   // Get OT status for user
   app.get("/api/ot/status", verifyAuth, async (req, res) => {
@@ -1922,14 +1827,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.authenticatedUser.uid;
 
-      // Import ManualOTService
+      // ✅ MIGRATION: Use OTSessionService (reads from otSessions[] array)
+      // This replaces legacy ManualOTService which used old otStatus/otStartTime fields
+      const { OTSessionService } = await import('./services/ot-session-service');
       const { ManualOTService } = await import('./services/manual-ot-service');
 
       console.log(`[OT-STATUS-ROUTE] Fetching OT status for user: ${userId}`);
 
       const [otStatus, otButtonAvailability] = await Promise.all([
-        ManualOTService.getOTStatus(userId),
-        ManualOTService.isOTButtonAvailable(userId)
+        OTSessionService.getOTStatus(userId),  // ✅ NEW: Reads from otSessions[]
+        ManualOTService.isOTButtonAvailable(userId)  // ⚠️ KEEP: Holiday/weekend check logic
       ]);
 
       console.log(`[OT-STATUS-ROUTE] Button availability result:`, otButtonAvailability);
