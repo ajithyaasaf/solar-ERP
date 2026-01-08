@@ -1,5 +1,4 @@
 import { storage } from "../storage";
-import { type Notification } from "@shared/schema";
 
 export class NotificationService {
     /**
@@ -89,4 +88,32 @@ export class NotificationService {
             status: 'unread',
         });
     }
+
+    /**
+     * Notify employee when site visit is auto-closed
+     */
+    static async sendSiteVisitAutoCloseNotification(
+        userId: string,
+        customerName: string,
+        visitStartTime: Date
+    ) {
+        const formattedDate = visitStartTime.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        return await storage.createNotification({
+            userId,
+            type: 'system',
+            category: 'attendance',
+            title: 'Site Visit Auto-Closed',
+            message: `Your site visit to ${customerName} (${formattedDate}) was auto-closed because checkout was not completed within 24 hours. No action is required.`,
+            actionLabel: 'View Site Visits',
+            actionUrl: '/site-visits',
+            dismissible: true,
+            status: 'unread',
+        });
+    }
 }
+

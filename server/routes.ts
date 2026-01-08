@@ -398,6 +398,202 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Investigation endpoint for OT bug analysis (NO AUTH for debugging)
+  app.get("/api/test/investigate-ot-bug", async (req, res) => {
+    try {
+      console.log('\n\n═══════════════════════════════════════════════');
+      console.log('🔍 OT BUG INVESTIGATION STARTED');
+      console.log('═══════════════════════════════════════════════\n');
+
+      console.log('🔍 Starting OT Bug Investigation...');
+      const results: any = {};
+
+      // Q1: Find Vishnu's session
+      const allUsers = await storage.listUsers();
+      const vishnu = allUsers.find((u: any) =>
+        u.displayName?.toLowerCase().includes('vishnu') ||
+        u.email?.toLowerCase().includes('vishnu')
+      );
+
+      if (!vishnu) {
+        return res.json({ success: false, message: "User 'vishnu' not found" });
+      }
+
+      results.user = {
+        name: vishnu.displayName,
+        email: vishnu.email,
+        id: vishnu.id,
+        department: vishnu.department,
+        designation: vishnu.designation
+      };
+
+      // Get attendance for Jan 5, 2026
+      const targetDate = new Date('2026-01-05');
+      const attendance = await storage.getAttendanceByUserAndDate(vishnu.id, targetDate);
+
+      if (!attendance || !attendance.otSessions || attendance.otSessions.length === 0) {
+        return res.json({
+          success: false,
+          message: "No OT sessions found for Jan 5, 2026",
+          user: results.user
+        });
+      }
+
+      // Find early_arrival session
+      const targetSession = attendance.otSessions.find((s: any) => s.otType === 'early_arrival');
+
+      if (!targetSession) {
+        return res.json({
+          success: false,
+          message: "No early_arrival session found for Jan 5, 2026",
+          user: results.user,
+          availableSessions: attendance.otSessions.map((s: any) => ({
+            type: s.otType,
+            hours: s.otHours,
+            status: s.status
+          }))
+        });
+      }
+
+      // Calculate actual hours
+      const start = new Date(targetSession.startTime);
+      const end = new Date(targetSession.endTime);
+      const calculatedHours = Number(((end.getTime() - start.getTime()) / (1000 * 60 * 60)).toFixed(2));
+
+      // Q1 Answer: Session State
+      results.question1_sessionState = {
+        sessionId: targetSession.sessionId,
+        sessionNumber: targetSession.sessionNumber,
+        date: attendance.date,
+        otType: targetSession.otType,
+        status: targetSession.status,
+        startTime: targetSession.startTime,
+        startTimeFormatted: start.toLocaleString(),
+        endTime: targetSession.endTime,
+        endTimeFormatted: end.toLocaleString(),
+        otHours: targetSession.otHours,
+        calculatedHours,
+        discrepancy: calculatedHours - targetSession.otHours,
+        autoClosedAt: targetSession.autoClosedAt || null,
+        autoClosedNote: targetSession.autoClosedNote || null,
+        reviewAction: targetSession.reviewAction || null,
+        reviewedBy: targetSession.reviewedBy || null,
+        reviewedAt: targetSession.reviewedAt || null,
+        reviewNotes: targetSession.reviewNotes || null,
+        originalOTHours: targetSession.originalOTHours || null,
+        adjustedOTHours: targetSession.adjustedOTHours || null
+      };
+
+      // Q2 Answer: Approval method
+      results.question2_approvalMethod = {
+        action: targetSession.reviewAction || 'NOT_REVIEWED',
+        interpretation: targetSession.reviewAction === 'APPROVED'
+          ? 'SYSTEM BUG - Should have recalculated hours'
+          : targetSession.reviewAction === 'ADJUSTED'
+            ? 'ADMIN MANUALLY SET - Intentional or mistake'
+            : 'NOT REVIEWED YET'
+      };
+
+      // Q3 Answer: Capping logic
+      const settings = await storage.getCompanySettings();
+      results.question3_cappingLogic = {
+        maxOTHoursPerDay: settings?.maxOTHoursPerDay || null,
+        defaultOTRate: settings?.defaultOTRate || null,
+        weekendOTRate: settings?.weekendOTRate || null,
+        weekendDays: settings?.weekendDays || null,
+        isStoredHoursEqualToMax: targetSession.otHours === settings?.maxOTHoursPerDay
+      };
+
+      // Q4 Answer: Other affected sessions
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      const allAttendance = await storage.listAttendanceBetweenDates(threeMonthsAgo, new Date());
+
+      let affectedSessions: any[] = [];
+      for (const att of allAttendance) {
+        if (att.otSessions && Array.isArray(att.otSessions)) {
+          for (const session of att.otSessions) {
+            if (
+              session.status === 'APPROVED' &&
+              session.autoClosedAt &&
+              session.otHours === 0
+            ) {
+              const sessionUser = await storage.getUser(att.userId);
+              affectedSessions.push({
+                date: att.date,
+                userName: sessionUser?.displayName || 'Unknown',
+                userId: att.userId,
+                sessionId: session.sessionId,
+                otHours: session.otHours,
+                reviewAction: session.reviewAction
+              });
+            }
+          }
+        }
+      }
+
+      results.question4_otherAffectedSessions = {
+        totalAttendanceChecked: allAttendance.length,
+        affectedSessionsCount: affectedSessions.length,
+        affectedSessions: affectedSessions.slice(0, 10),
+        hasMoreThan10: affectedSessions.length > 10
+      };
+
+      // Print all answers to console
+      console.log('\n📊 SUMMARY:');
+      console.log(`   Stored Hours:      ${targetSession.otHours}h`);
+      console.log(`   Calculated Hours:  ${calculatedHours}h`);
+      console.log(`   DISCREPANCY:       ${(calculatedHours - targetSession.otHours).toFixed(2)}h ❌\n`);
+
+      console.log('1️⃣ SESSION STATE:');
+      console.log(`   Auto Closed:       ${targetSession.autoClosedAt ? 'YES ✓' : 'NO'}`);
+      console.log(`   Review Action:     ${targetSession.reviewAction || 'NOT REVIEWED'}`);
+      console.log(`   Status:            ${targetSession.status}\n`);
+
+      console.log('2️⃣ APPROVAL METHOD:');
+      if (targetSession.reviewAction === 'APPROVED') {
+        console.log('   ❌ SYSTEM BUG - Was APPROVED but hours not recalculated\n');
+      } else if (targetSession.reviewAction === 'ADJUSTED') {
+        console.log('   ✓ Was ADJUSTED - Admin manually set hours\n');
+      } else {
+        console.log('   ⚠️  Not yet reviewed\n');
+      }
+
+      console.log('3️⃣ CAPPING LOGIC:');
+      console.log(`   Max OT/Day:        ${settings?.maxOTHoursPerDay}h`);
+      console.log(`   Equals stored?     ${targetSession.otHours === settings?.maxOTHoursPerDay ? 'YES' : 'NO'}\n`);
+
+      // Q5 Answer: Design recommendation
+      results.question5_designDecision = {
+        currentBehavior: 'APPROVED preserves existing otHours (does not recalculate)',
+        recommendedFix: 'APPROVED should recalculate hours if autoClosedAt exists',
+        needsUserDecision: true
+      };
+
+      res.json({
+        success: true,
+        summary: {
+          sessionFound: true,
+          storedHours: targetSession.otHours,
+          calculatedHours,
+          discrepancy: calculatedHours - targetSession.otHours,
+          wasAutoCompleted: !!targetSession.autoClosedAt,
+          reviewAction: targetSession.reviewAction || 'NOT_REVIEWED',
+          affectedSessionsFound: affectedSessions.length
+        },
+        detailedAnswers: results
+      });
+
+    } catch (error: any) {
+      console.error("Error in OT bug investigation:", error);
+      res.status(500).json({
+        success: false,
+        message: "Investigation failed",
+        error: error.message
+      });
+    }
+  });
+
   // Migration endpoint for converting legacy OT to new session format
   app.post("/api/migrate/legacy-ot", verifyAuth, async (req, res) => {
     try {
@@ -790,7 +986,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(targetUser);
+
+      // ✅ FIX: Add isManager flag by checking if user has subordinates
+      const subordinates = await storage.getUsersByReportingManager(targetUser.id);
+      const isManager = subordinates.length > 0;
+
+      console.log(`[isManager Debug] Checking for user: ${targetUser.displayName} (${targetUser.id})`);
+      console.log(`[isManager Debug] Found ${subordinates.length} subordinates`);
+      if (subordinates.length > 0) {
+        console.log(`[isManager Debug] Subordinates:`, subordinates.map(s => `${s.displayName} (${s.id})`));
+      }
+      console.log(`[isManager Debug] isManager = ${isManager}`);
+
+      res.json({
+        ...targetUser,
+        isManager // Include in response
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -4472,6 +4683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ✅ RESTORED: Pending manager leaves route
   app.get("/api/leave-applications/pending-manager", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
@@ -4492,8 +4704,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leave-applications/pending-hr", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || user.department !== "hr") {
-        return res.status(403).json({ message: "Access denied - HR only" });
+      // ✅ FIX: Allow HR department or master_admin
+      if (!user || (user.department !== "hr" && user.role !== "master_admin")) {
+        return res.status(403).json({ message: "Access denied - HR department access required" });
       }
 
       console.log("Fetching pending HR leaves...");
@@ -4561,8 +4774,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/leave-applications/:id/approve-manager", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.approve"))) {
-        return res.status(403).json({ message: "Access denied - Leave approval permission required" });
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const leave = await storage.getLeaveApplication(req.params.id);
@@ -4570,8 +4783,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Leave application not found" });
       }
 
+      // ✅ FIX: Simple check - is user the reporting manager for this leave?
       if (leave.reportingManagerId !== user.id) {
-        return res.status(403).json({ message: "Access denied - You are not the reporting manager" });
+        return res.status(403).json({ message: "Access denied - You are not the reporting manager for this employee" });
       }
 
       if (leave.status !== "pending_manager") {
@@ -4600,8 +4814,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/leave-applications/:id/approve-hr", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.approve")) || user.department !== "hr") {
-        return res.status(403).json({ message: "Access denied - HR department with leave approval permission required" });
+      // ✅ FIX: Simple check - HR department or master_admin
+      if (!user || (user.department !== "hr" && user.role !== "master_admin")) {
+        return res.status(403).json({ message: "Access denied - HR department access required" });
       }
 
       const leave = await storage.getLeaveApplication(req.params.id);
@@ -4634,8 +4849,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/leave-applications/:id/reject", verifyAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
-      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "leave.reject"))) {
-        return res.status(403).json({ message: "Access denied - Leave rejection permission required" });
+      if (!user) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const leave = await storage.getLeaveApplication(req.params.id);
@@ -4643,22 +4858,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Leave application not found" });
       }
 
-      // Determine role: manager or hr
-      let rejectedByRole: 'manager' | 'hr';
-      if (user.department === "hr") {
-        rejectedByRole = "hr";
-      } else if (leave.reportingManagerId === user.id) {
-        rejectedByRole = "manager";
-      } else {
-        return res.status(403).json({ message: "Access denied" });
+      // ✅ FIX: Simple check - is user the reporting manager OR HR?
+      const isReportingManager = leave.reportingManagerId === user.id;
+      const isHR = user.department === "hr" || user.role === "master_admin";
+
+      if (!isReportingManager && !isHR) {
+        return res.status(403).json({ message: "Access denied - Only reporting manager or HR can reject leaves" });
       }
 
-      // Validate reason input
-      const rejectSchema = z.object({
-        reason: z.string().min(10, "Rejection reason must be at least 10 characters")
+      // Determine role: manager or hr
+      let rejectedByRole: 'manager' | 'hr';
+      if (leave.status === "pending_manager" && isReportingManager) {
+        rejectedByRole = 'manager';
+      } else if (leave.status === "pending_hr" && isHR) {
+        rejectedByRole = 'hr';
+      } else {
+        return res.status(400).json({ message: "Invalid leave status for rejection" });
+      }
+
+      // Validate remarks input
+      const rejectionSchema = z.object({
+        reason: z.string().min(1, "Rejection reason is required")
       });
 
-      const { reason } = rejectSchema.parse(req.body);
+      const { reason } = rejectionSchema.parse(req.body);
       const updatedLeave = await storage.rejectLeave(req.params.id, user.id, reason, rejectedByRole);
 
       res.json(updatedLeave);

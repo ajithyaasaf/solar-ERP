@@ -101,6 +101,17 @@ export default function AttendanceManagement() {
 
   const pendingOTSessions = otResponse?.sessions || [];
 
+  // ✅ FIX: Calculate hours from timestamps (otHours is 0 for pending review)
+  const calculateOTHours = (session: any) => {
+    if (!session.startTime || !session.endTime) return 0;
+    const start = new Date(session.startTime);
+    const end = new Date(session.endTime);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+    const durationMs = end.getTime() - start.getTime();
+    const hours = durationMs / (1000 * 60 * 60);
+    return Math.max(0, hours);
+  };
+
   // OT Review mutation
   const otReviewMutation = useMutation({
     mutationFn: async ({ sessionId, action, adjustedHours, notes, attendanceId }: {
@@ -120,6 +131,7 @@ export default function AttendanceManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ot/sessions/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ot/reports'] }); // ✅ FIX: Invalidate reports cache
       // Also invalidate attendance queries as status changes affect payload
       queryClient.invalidateQueries({ queryKey: ['/api/attendance/live'] });
       refetchOT();
@@ -1980,7 +1992,7 @@ export default function AttendanceManagement() {
                             }
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            {session.otHours?.toFixed(2) || '0.00'}h
+                            {calculateOTHours(session).toFixed(2)}h  {/* ✅ FIX: Calculate from timestamps */}
                           </TableCell>
                           <TableCell>
                             {session.autoClosedAt ? (
@@ -1988,7 +2000,7 @@ export default function AttendanceManagement() {
                                 <AlertCircle className="h-3 w-3" />
                                 Auto-Closed
                               </Badge>
-                            ) : session.otHours > 5 ? (
+                            ) : calculateOTHours(session) > 5 ? (
                               <Badge variant="outline" className="gap-1">
                                 <Clock className="h-3 w-3" />
                                 Exceeds Limit
@@ -2868,16 +2880,18 @@ export default function AttendanceManagement() {
       </Dialog>
 
       {/* Attendance Photo Viewer */}
-      {photoViewerRecord && (
-        <AttendancePhotoViewer
-          isOpen={showPhotoViewer}
-          onClose={() => {
-            setShowPhotoViewer(false);
-            setPhotoViewerRecord(null);
-          }}
-          attendanceRecord={photoViewerRecord}
-        />
-      )}
+      {
+        photoViewerRecord && (
+          <AttendancePhotoViewer
+            isOpen={showPhotoViewer}
+            onClose={() => {
+              setShowPhotoViewer(false);
+              setPhotoViewerRecord(null);
+            }}
+            attendanceRecord={photoViewerRecord}
+          />
+        )
+      }
 
       {/* Undo Manager */}
       <UndoManager

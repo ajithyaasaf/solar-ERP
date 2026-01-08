@@ -114,7 +114,7 @@ export default function UserManagement() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
@@ -165,15 +165,15 @@ export default function UserManagement() {
         const betterName =
           user.email && !user.email.includes("@example.com")
             ? user.email
-                .split("@")[0]
-                .replace(/\./g, " ")
-                .replace(/_/g, " ")
-                .split(" ")
-                .map(
-                  (word: string) =>
-                    word.charAt(0).toUpperCase() + word.slice(1),
-                )
-                .join(" ")
+              .split("@")[0]
+              .replace(/\./g, " ")
+              .replace(/_/g, " ")
+              .split(" ")
+              .map(
+                (word: string) =>
+                  word.charAt(0).toUpperCase() + word.slice(1),
+              )
+              .join(" ")
             : `Employee ${user.id.slice(0, 8)}`;
 
         const sanitized = sanitizeFormData({
@@ -185,7 +185,7 @@ export default function UserManagement() {
           role: user.role || "employee",
           department: user.department || null,
         }, ['displayName', 'email']);
-        
+
         await updateUserMutation.mutateAsync(sanitized);
       }
 
@@ -209,14 +209,14 @@ export default function UserManagement() {
   // Filter users by search query
   const filteredUsers = Array.isArray(users)
     ? users.filter((user: any) => {
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-          user.displayName?.toLowerCase().includes(query) ||
-          user.email?.toLowerCase().includes(query) ||
-          (user.department && user.department.toLowerCase().includes(query))
-        );
-      })
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        user.displayName?.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query) ||
+        (user.department && user.department.toLowerCase().includes(query))
+      );
+    })
     : [];
 
   // Role badge styles
@@ -229,7 +229,7 @@ export default function UserManagement() {
   // Department display names (updated for new organizational structure)
   const departmentNames: Record<string, string> = {
     operations: "Operations",
-    admin: "Administration", 
+    admin: "Administration",
     hr: "Human Resources",
     marketing: "Marketing",
     sales: "Sales",
@@ -240,7 +240,7 @@ export default function UserManagement() {
   // Designation display names (updated based on organizational chart)
   const designationNames: Record<string, string> = {
     ceo: "CEO",
-    gm: "GM", 
+    gm: "GM",
     officer: "Officer",
     executive: "Executive",
     cre: "CRE",
@@ -364,8 +364,8 @@ export default function UserManagement() {
                               <span>
                                 {getInitials(
                                   userData.displayName ||
-                                    userData.email ||
-                                    "User",
+                                  userData.email ||
+                                  "User",
                                 )}
                               </span>
                             )}
@@ -384,8 +384,8 @@ export default function UserManagement() {
                             "font-medium capitalize",
                             userData.role in roleStyles
                               ? roleStyles[
-                                  userData.role as keyof typeof roleStyles
-                                ]
+                              userData.role as keyof typeof roleStyles
+                              ]
                               : "bg-gray-100",
                           )}
                         >
@@ -521,16 +521,16 @@ export default function UserManagement() {
                   <SelectContent>
                     {(user?.role === "master_admin" ||
                       editUser.role !== "master_admin") && (
-                      <>
-                        <SelectItem value="employee">Employee</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        {user?.role === "master_admin" && (
-                          <SelectItem value="master_admin">
-                            Master Admin
-                          </SelectItem>
-                        )}
-                      </>
-                    )}
+                        <>
+                          <SelectItem value="employee">Employee</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          {user?.role === "master_admin" && (
+                            <SelectItem value="master_admin">
+                              Master Admin
+                            </SelectItem>
+                          )}
+                        </>
+                      )}
                   </SelectContent>
                 </Select>
                 {user?.role !== "master_admin" &&
@@ -605,6 +605,18 @@ export default function UserManagement() {
 
               <div className="space-y-1">
                 <Label htmlFor="edit-reporting-manager">Reporting Manager</Label>
+                {/* ✅ FIX: Show currently assigned manager */}
+                {editUser.reportingManagerId && (() => {
+                  const manager = users.find((u: any) => u.id === editUser.reportingManagerId);
+                  return manager ? (
+                    <div className="text-sm mb-2 p-2 bg-blue-50 rounded border border-blue-200 flex items-center justify-between">
+                      <span>
+                        <strong>Current:</strong> {manager.displayName || manager.email}
+                        {manager.designation && ` (${designationNames[manager.designation] || manager.designation})`}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
                 <Select
                   value={editUser.reportingManagerId || "none"}
                   onValueChange={(value) =>
@@ -615,20 +627,20 @@ export default function UserManagement() {
                   }
                 >
                   <SelectTrigger id="edit-reporting-manager" data-testid="select-reporting-manager">
-                    <SelectValue placeholder="Select reporting manager" />
+                    <SelectValue placeholder="Change reporting manager" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No Reporting Manager</SelectItem>
                     {Array.isArray(users) &&
                       users
-                        .filter((u: any) => 
-                          u.id !== editUser.id && 
-                          (u.role === "admin" || u.role === "master_admin" || 
-                           ["ceo", "gm", "officer", "team_leader"].includes(u.designation))
+                        .filter((u: any) =>
+                          u.id !== editUser.id &&
+                          (u.role === "admin" || u.role === "master_admin" ||
+                            ["ceo", "gm", "officer", "team_leader"].includes(u.designation))
                         )
                         .map((u: any) => (
                           <SelectItem key={u.id} value={u.id}>
-                            {u.displayName || u.email} 
+                            {u.displayName || u.email}
                             {u.designation && ` (${designationNames[u.designation] || u.designation})`}
                           </SelectItem>
                         ))}

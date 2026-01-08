@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 export interface Notification {
     id: string;
     userId: string;
-    type: "auto_checkout" | "admin_review" | "system" | "general";
+    type: "auto_checkout" | "admin_review" | "site_visit_auto_closed" | "system" | "general";
     category: "attendance" | "leave" | "ot" | "general";
     title: string;
     message: string;

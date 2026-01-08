@@ -262,7 +262,7 @@ export function ManualOTEnd({ isOpen, onClose, onSuccess, otStartTime, currentOT
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           return typeof queryKey === 'string' &&
-            (queryKey.includes('/api/attendance') || queryKey.includes('/api/ot/status'));
+            (queryKey.includes('/api/attendance') || queryKey.includes('/api/ot/status') || queryKey.includes('/api/ot/reports'));
         }
       });
 

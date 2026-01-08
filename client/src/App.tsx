@@ -32,6 +32,7 @@ const SiteVisitMonitoring = lazy(() => import("@/pages/site-visit-monitoring"));
 const EmployeeOT = lazy(() => import("@/pages/employee-ot"));
 const OTAdministration = lazy(() => import("@/pages/ot-administration"));
 const OTPendingReview = lazy(() => import("@/pages/ot-pending-review"));
+const OTReports = lazy(() => import("@/pages/ot-reports"));
 
 // Simple loading fallback component
 const PageLoader = () => (
@@ -290,6 +291,19 @@ function Router() {
           <DashboardLayout>
             <Suspense fallback={<PageLoader />}>
               <OTAdministration />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* OT Reports - Admin and Master Admin only */}
+      <Route path="/ot-reports">
+        <ProtectedRoute
+          requiredRole={["admin", "master_admin"]}
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <OTReports />
             </Suspense>
           </DashboardLayout>
         </ProtectedRoute>

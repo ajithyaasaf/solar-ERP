@@ -540,7 +540,12 @@ export const insertSiteVisitSchema = z.object({
   followUpDescription: z.string().nullish(), // Simple description for follow-ups
 
   // Status and metadata
-  status: z.enum(["in_progress", "completed", "cancelled"]).default("in_progress"),
+  status: z.enum(["in_progress", "completed", "cancelled", "auto_closed"]).default("in_progress"),
+
+  // Auto-close metadata fields
+  autoCorrected: z.boolean().default(false).nullish(),
+  autoClosedAt: z.date().nullish(),
+  autoCorrectionReason: z.string().nullish(),
 
   // Visit outcome for business classification (selected at checkout)
   visitOutcome: z.enum(visitOutcomes).nullish(),

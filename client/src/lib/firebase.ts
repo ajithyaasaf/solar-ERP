@@ -1,14 +1,14 @@
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  GoogleAuthProvider, 
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   signInWithPopup,
   signOut,
   updateProfile,
   onAuthStateChanged,
-  type User 
+  type User
 } from "firebase/auth";
 import { getFirestore, collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
@@ -18,7 +18,7 @@ console.log("Loading Firebase config with API key:", "present");
 
 const firebaseConfig = {
   apiKey: "AIzaSyBo8D4pTG6oNGg4qy7V4AaC73qfAB0HRcc",
-  authDomain: "solar-energy-56bc8.firebaseapp.com", 
+  authDomain: "solar-energy-56bc8.firebaseapp.com",
   databaseURL: "https://solar-energy-56bc8-default-rtdb.firebaseio.com",
   projectId: "solar-energy-56bc8",
   storageBucket: "solar-energy-56bc8.firebasestorage.app",
@@ -31,9 +31,9 @@ const firebaseConfig = {
 export const hasValidFirebaseConfig = () => {
   // Firebase is configured with hardcoded values for this project
   return Boolean(
-    firebaseConfig.apiKey && 
+    firebaseConfig.apiKey &&
     firebaseConfig.authDomain &&
-    firebaseConfig.projectId && 
+    firebaseConfig.projectId &&
     firebaseConfig.storageBucket &&
     firebaseConfig.appId
   );
@@ -56,11 +56,11 @@ try {
   console.error("Error initializing Firebase:", error);
   // Create dummy objects to prevent app crashes
   app = {} as ReturnType<typeof initializeApp>;
-  auth = { 
-    currentUser: null, 
-    onAuthStateChanged: (cb: (user: User | null) => void) => { cb(null); return () => {}; } 
+  auth = {
+    currentUser: null,
+    onAuthStateChanged: (cb: (user: User | null) => void) => { cb(null); return () => { }; }
   } as ReturnType<typeof getAuth>;
-  db = { 
+  db = {
     collection: () => ({}),
     type: 'firestore',
     app: {} as any,
@@ -101,31 +101,31 @@ export const fetchFirestoreUsers = async () => {
     // First get data from Firestore
     const usersCollectionRef = collection(db, "users");
     const usersSnapshot = await getDocs(usersCollectionRef);
-    
+
     const firestoreUsers = usersSnapshot.docs.map(doc => ({
       uid: doc.id,
       ...doc.data()
     }));
-    
+
     // Then get additional data from Firebase Auth
     const { getAuth } = await import("firebase/auth");
     const firebaseAuth = getAuth();
-    
+
     // Use Firebase Admin SDK functions available through our backend API
     const response = await fetch('/api/firebase/list-users');
     let authUsers: any[] = [];
-    
+
     if (response.ok) {
       authUsers = await response.json();
     } else {
       console.warn("Failed to fetch Firebase Auth users from backend API");
     }
-    
+
     // Merge Firestore data with Auth data
     const mergedUsers = firestoreUsers.map(firestoreUser => {
       // Try to find matching auth user
       const authUser = authUsers.find(au => au.uid === firestoreUser.uid);
-      
+
       if (authUser) {
         return {
           ...firestoreUser,
@@ -133,10 +133,10 @@ export const fetchFirestoreUsers = async () => {
           displayName: authUser.displayName || firestoreUser.displayName || null
         };
       }
-      
+
       return firestoreUser;
     });
-    
+
     return mergedUsers;
   } catch (error) {
     console.error("Error fetching Firestore users:", error);
@@ -149,7 +149,7 @@ export const getFirestoreUserData = async (uid: string) => {
   try {
     const userDocRef = doc(db, "users", uid);
     const userDoc = await getDoc(userDocRef);
-    
+
     if (userDoc.exists()) {
       const userData = userDoc.data();
       console.log("Firestore user data:", uid, userData);
@@ -159,7 +159,7 @@ export const getFirestoreUserData = async (uid: string) => {
         ...userData
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error("Error getting Firestore user data:", error);
@@ -170,7 +170,7 @@ export const getFirestoreUserData = async (uid: string) => {
 // Function to get auth user data for a specific uid
 export const getAuthUserData = async (uid: string) => {
   const currentUser = auth.currentUser;
-  
+
   // If this is the current user, we can directly use their data
   if (currentUser && currentUser.uid === uid) {
     return {
@@ -180,7 +180,7 @@ export const getAuthUserData = async (uid: string) => {
       photoURL: currentUser.photoURL
     };
   }
-  
+
   // Otherwise return null - we'll need to create placeholders
   return null;
 };
@@ -200,15 +200,30 @@ export const syncUser = async (uid: string, forceFull = false) => {
   try {
     // Get user data from Firestore
     const firestoreUser = await getFirestoreUserData(uid) as FirestoreUser | null;
-    
+
     // Get user auth data if available
     const authUser = await getAuthUserData(uid);
-    
+
     // If we have Firestore data with a master_admin role, use it directly
     if (firestoreUser && firestoreUser.role === "master_admin") {
       console.log("Found master_admin in Firestore, using it directly");
-      return { 
-        status: 'direct_firestore', 
+
+      // ✅ FIX: Compute isManager for master_admin too
+      let isManager = false;
+      try {
+        const usersCollection = collection(db, "users");
+        const { query, where, getDocs } = await import("firebase/firestore");
+        const subordinatesQuery = query(usersCollection, where("reportingManagerId", "==", uid));
+        const subordinatesSnapshot = await getDocs(subordinatesQuery);
+        isManager = subordinatesSnapshot.size > 0;
+        console.log(`[syncUser-master_admin] User has ${subordinatesSnapshot.size} subordinates, isManager=${isManager}`);
+      } catch (error) {
+        console.error("Error checking subordinates for master_admin:", error);
+        isManager = false;
+      }
+
+      return {
+        status: 'direct_firestore',
         user: {
           uid: uid,
           id: uid,
@@ -218,25 +233,26 @@ export const syncUser = async (uid: string, forceFull = false) => {
           department: firestoreUser.department || null,
           designation: firestoreUser.designation || null,
           isActive: firestoreUser.isActive !== false,
+          isManager, // ✅ Include isManager flag
           createdAt: new Date()
         }
       };
     }
-    
+
     // Skip API calls for now - user sync should happen through auth context
     let existingUser = null;
-    
+
     // Merge data with priority to auth data
     let email = authUser?.email || firestoreUser?.email || `user-${uid}@example.com`;
     let displayName = authUser?.displayName || firestoreUser?.displayName || email.split('@')[0] || "User";
-    
+
     // Make sure we correctly get the role from Firestore
     const role = firestoreUser?.role || "employee";
     console.log("SyncUser - User role from Firestore:", uid, firestoreUser?.role);
-    
+
     const department = firestoreUser?.department || null;
     const designation = firestoreUser?.designation || null;
-    
+
     console.log("SyncUser - Complete user data:", {
       uid,
       role,
@@ -244,10 +260,24 @@ export const syncUser = async (uid: string, forceFull = false) => {
       designation,
       isActive: firestoreUser?.isActive
     });
-    
+
+    // ✅ FIX: Compute isManager by checking for subordinates
+    let isManager = false;
+    try {
+      const usersCollection = collection(db, "users");
+      const { query, where, getDocs } = await import("firebase/firestore");
+      const subordinatesQuery = query(usersCollection, where("reportingManagerId", "==", uid));
+      const subordinatesSnapshot = await getDocs(subordinatesQuery);
+      isManager = subordinatesSnapshot.size > 0;
+      console.log(`[syncUser] User ${displayName} (${uid}) has ${subordinatesSnapshot.size} subordinates, isManager=${isManager}`);
+    } catch (error) {
+      console.error("Error checking subordinates:", error);
+      isManager = false;
+    }
+
     // Return user data from Firestore - API calls handled through auth context
-    return { 
-      status: 'firestore_only', 
+    return {
+      status: 'firestore_only',
       user: {
         uid,
         id: uid,
@@ -261,6 +291,7 @@ export const syncUser = async (uid: string, forceFull = false) => {
         reportingManagerId: firestoreUser?.reportingManagerId || null,
         payrollGrade: firestoreUser?.payrollGrade || null,
         joinDate: firestoreUser?.joinDate ? new Date(firestoreUser.joinDate) : null,
+        isManager, // ✅ Include isManager flag
         createdAt: new Date()
       }
     };
@@ -282,14 +313,14 @@ export const syncFirestoreUsers = async () => {
     // Get all Firestore users (from firestore collection)
     const usersCollectionRef = collection(db, "users");
     const usersSnapshot = await getDocs(usersCollectionRef);
-    
+
     const firestoreUsers = usersSnapshot.docs.map(doc => ({
       uid: doc.id
     }));
-    
+
     // Track successful syncs
     const syncResults = [];
-    
+
     // Process each Firestore user
     for (const firestoreUser of firestoreUsers) {
       const result = await syncUser(firestoreUser.uid);
@@ -299,7 +330,7 @@ export const syncFirestoreUsers = async () => {
         ...result.user
       });
     }
-    
+
     console.log("User sync results:", syncResults);
     return syncResults;
   } catch (error) {

@@ -856,5 +856,138 @@ router.post('/sessions/:sessionId/review', verifyAuth, requireAdmin, async (req:
     }
 });
 
+// ============================================
+// OT REPORTS ENDPOINT (Admin Only)
+// ============================================
+
+/**
+ * GET /api/ot/reports
+ * Get OT sessions for reporting (monthly export)
+ * Query params: startDate, endDate, userId, department
+ */
+router.get('/reports', verifyAuth, requireAdmin, async (req: any, res) => {
+    try {
+        const { startDate, endDate, userId, department } = req.query;
+
+        // Parse and validate dates
+        const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const end = endDate ? new Date(endDate as string) : new Date();
+
+        // Validate date range
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid date format. Use YYYY-MM-DD format.'
+            });
+        }
+
+        if (start > end) {
+            return res.status(400).json({
+                success: false,
+                message: 'Start date must be before end date.'
+            });
+        }
+
+        // Query attendance records within date range using the correct storage method
+        const attendanceRecords = await storage.listAttendanceBetweenDates(start, end);
+
+        // Get all users for enrichment - fetch individually as needed
+        const userCache = new Map<string, any>();
+
+        // Flatten OT sessions from attendance records
+        const otSessions: any[] = [];
+
+        for (const attendance of attendanceRecords) {
+            // Get user from cache or fetch
+            let user = userCache.get(attendance.userId);
+            if (!user) {
+                user = await storage.getUser(attendance.userId);
+                if (user) {
+                    userCache.set(attendance.userId, user);
+                }
+            }
+            if (!user) continue;
+
+            // Apply filters
+            if (userId && attendance.userId !== userId) continue;
+            if (department && user.department !== department) continue;
+
+            // Extract OT sessions from attendance
+            if (attendance.otSessions && Array.isArray(attendance.otSessions)) {
+                for (const session of attendance.otSessions) {
+                    otSessions.push({
+                        // Session info
+                        sessionId: session.sessionId,
+                        sessionNumber: session.sessionNumber,
+                        startTime: session.startTime,
+                        endTime: session.endTime,
+                        otHours: session.otHours || 0,
+                        otType: session.otType,
+                        status: session.status,
+
+                        // Employee info
+                        userId: attendance.userId,
+                        userName: user.displayName || user.email,
+                        userEmail: user.email,
+                        userDepartment: user.department || null,
+                        userDesignation: user.designation || null,
+
+                        // Date
+                        date: attendance.date,
+
+                        // Admin review info (if applicable)
+                        autoClosedAt: session.autoClosedAt,
+                        autoClosedNote: session.autoClosedNote,
+                        reviewedBy: session.reviewedBy,
+                        reviewNotes: session.reviewNotes,
+                        reviewedAt: session.reviewedAt
+                    });
+                }
+            }
+        }
+
+        // Sort by date (newest first)
+        otSessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        // Calculate summary statistics
+        const summary = {
+            totalSessions: otSessions.length,
+            totalHours: otSessions.reduce((sum, s) => sum + (s.otHours || 0), 0),
+            approvedHours: otSessions
+                .filter(s => s.status === 'APPROVED' || s.status === 'completed')
+                .reduce((sum, s) => sum + (s.otHours || 0), 0),
+            pendingHours: otSessions
+                .filter(s => s.status === 'PENDING_REVIEW')
+                .reduce((sum, s) => sum + (s.otHours || 0), 0),
+            rejectedCount: otSessions.filter(s => s.status === 'REJECTED').length,
+            byType: {
+                early_arrival: otSessions.filter(s => s.otType === 'early_arrival').length,
+                late_departure: otSessions.filter(s => s.otType === 'late_departure').length,
+                weekend: otSessions.filter(s => s.otType === 'weekend').length,
+                holiday: otSessions.filter(s => s.otType === 'holiday').length
+            }
+        };
+
+        return res.json({
+            success: true,
+            sessions: otSessions,
+            summary,
+            filters: {
+                startDate: start,
+                endDate: end,
+                userId: userId || null,
+                department: department || null
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching OT reports:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch OT reports'
+        });
+    }
+});
+
 export default router;
 

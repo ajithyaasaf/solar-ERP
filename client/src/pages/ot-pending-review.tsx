@@ -57,6 +57,7 @@ export default function OTPendingReview() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['/api/ot/sessions/pending'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/ot/reports'] }); // ✅ FIX: Invalidate reports cache
             refetch();
             setShowReviewModal(false);
             resetForm();
@@ -74,6 +75,22 @@ export default function OTPendingReview() {
         },
     });
 
+    // ✅ FIX: Calculate hours from timestamps (otHours is 0 for pending review)
+    // MUST be defined before handleReview to avoid "undefined" error
+    const calculateHours = (session: any) => {
+        if (!session.startTime || !session.endTime) return 0;
+
+        const start = new Date(session.startTime);
+        const end = new Date(session.endTime);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+
+        const durationMs = end.getTime() - start.getTime();
+        const hours = durationMs / (1000 * 60 * 60);
+
+        return Math.max(0, hours); // Prevent negative hours
+    };
+
     const resetForm = () => {
         setSelectedSession(null);
         setReviewAction('APPROVED');
@@ -84,7 +101,7 @@ export default function OTPendingReview() {
     const handleReview = (session: any) => {
         setSelectedSession(session);
         setReviewAction('APPROVED');
-        setAdjustedHours(session.otHours?.toString() || '0');
+        setAdjustedHours(calculateHours(session).toFixed(2));  // ✅ FIX: Pre-fill with calculated hours
         setReviewNotes('');
         setShowReviewModal(true);
     };
@@ -133,7 +150,7 @@ export default function OTPendingReview() {
                 Auto-Closed
             </Badge>;
         }
-        if (session.otHours > 5) {
+        if (calculateHours(session) > 5) {  // ✅ FIX: Use calculated hours
             return <Badge variant="outline" className="gap-1">
                 <Clock className="h-3 w-3" />
                 Exceeds Limit
@@ -206,7 +223,7 @@ export default function OTPendingReview() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {pendingSessions.filter((s: any) => s.otHours > 5).length}
+                            {pendingSessions.filter((s: any) => calculateHours(s) > 5).length}  {/* ✅ FIX: Use calculated hours */}
                         </div>
                     </CardContent>
                 </Card>
@@ -270,7 +287,7 @@ export default function OTPendingReview() {
                                             }
                                         </TableCell>
                                         <TableCell className="text-right font-mono font-semibold">
-                                            {session.otHours?.toFixed(2) || '0.00'}h
+                                            {calculateHours(session).toFixed(2)}h  {/* ✅ FIX: Calculate from timestamps */}
                                         </TableCell>
                                         <TableCell>{getStatusBadge(session)}</TableCell>
                                         <TableCell className="text-right">
@@ -323,7 +340,7 @@ export default function OTPendingReview() {
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Hours Claimed:</span>
-                                        <p className="font-mono font-bold text-lg">{selectedSession.otHours?.toFixed(2)}h</p>
+                                        <p className="font-mono font-bold text-lg">{calculateHours(selectedSession).toFixed(2)}h</p>  {/* ✅ FIX: Show calculated hours */}
                                     </div>
                                     {selectedSession.autoClosedAt && (
                                         <div className="col-span-2">
@@ -380,7 +397,7 @@ export default function OTPendingReview() {
                                             placeholder="Enter corrected hours"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Original: {selectedSession.otHours?.toFixed(2)}h
+                                            Calculated: {calculateHours(selectedSession).toFixed(2)}h  {/* ✅ FIX: Show calculated hours */}
                                         </p>
                                     </div>
                                 )}

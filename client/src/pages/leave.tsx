@@ -50,11 +50,15 @@ export default function Leave() {
                 <Clock className="h-4 w-4" />
                 <span className="text-xs sm:text-sm">Cal</span>
               </TabsTrigger>
-              <TabsTrigger value="manager-approvals" data-testid="tab-manager-approvals" className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-1 sm:px-3">
-                <UserCheck className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Mgr</span>
-              </TabsTrigger>
-              {(isHR || user?.role === "admin" || user?.role === "master_admin") && (
+              {/* ✅ FIX: Only show to actual managers or master_admin */}
+              {(user?.isManager || user?.role === "master_admin") && (
+                <TabsTrigger value="manager-approvals" data-testid="tab-manager-approvals" className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-1 sm:px-3">
+                  <UserCheck className="h-4 w-4" />
+                  <span className="text-xs sm:text-sm">Mgr</span>
+                </TabsTrigger>
+              )}
+              {/* ✅ FIX: Only show to HR department or master_admin */}
+              {(user?.department === "hr" || user?.role === "master_admin") && (
                 <TabsTrigger value="hr-approvals" data-testid="tab-hr-approvals" className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 px-1 sm:px-3">
                   <Shield className="h-4 w-4" />
                   <span className="text-xs sm:text-sm">HR</span>

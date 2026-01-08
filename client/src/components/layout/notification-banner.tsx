@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Info, X, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle, Info, X, Clock, MapPin } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const notificationIcons = {
     auto_checkout: Clock,
     admin_review: AlertCircle,
+    site_visit_auto_closed: MapPin,
     system: Info,
     general: Info,
 };
@@ -14,6 +15,7 @@ const notificationIcons = {
 const notificationColors = {
     auto_checkout: "bg-amber-50 border-amber-300 text-amber-900",
     admin_review: "bg-blue-50 border-blue-300 text-blue-900",
+    site_visit_auto_closed: "bg-teal-50 border-teal-300 text-teal-900",
     system: "bg-gray-50 border-gray-300 text-gray-900",
     general: "bg-gray-50 border-gray-300 text-gray-900",
 };
@@ -21,6 +23,7 @@ const notificationColors = {
 const notificationIconColors = {
     auto_checkout: "text-amber-600",
     admin_review: "text-blue-600",
+    site_visit_auto_closed: "text-teal-600",
     system: "text-gray-600",
     general: "text-gray-600",
 };

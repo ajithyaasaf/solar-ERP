@@ -22,6 +22,7 @@ interface AuthUser {
   joinDate?: Date;
   isActive: boolean;
   id?: number;
+  isManager?: boolean; // ✅ FIX: Add manager status flag
   firebaseUser?: User;
 }
 
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           joinDate: userData.joinDate ? new Date(userData.joinDate) : undefined,
           isActive: userData.isActive !== false,
           id: userData.id,
+          isManager: userData.isManager || false, // ✅ FIX: Include isManager
           firebaseUser: firebaseUser
         });
       } else {
@@ -280,6 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             joinDate: userData?.joinDate ? new Date(userData.joinDate) : undefined,
             isActive: userData.isActive !== false,
             id: userData.id,
+            isManager: userData?.isManager || false, // ✅ FIX: Include isManager
           };
 
           // Set the complete user data
