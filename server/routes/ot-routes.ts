@@ -315,23 +315,14 @@ router.get('/holidays', verifyAuth, requireAdmin, async (req: any, res) => {
  */
 router.post('/holidays', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
-        const { date, name, type, otRateMultiplier, applicableDepartments, notes } = req.body;
+        const { date, name, type, applicableDepartments, notes } = req.body;
         const adminId = req.user.uid;
 
         // Validate required fields
-        if (!date || !name || !otRateMultiplier) {
+        if (!date || !name) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: date, name, otRateMultiplier'
-            });
-        }
-
-        // Validate OT rate
-        const rate = parseFloat(otRateMultiplier);
-        if (isNaN(rate) || rate <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'OT rate multiplier must be a positive number'
+                message: 'Missing required fields: date, name'
             });
         }
 
@@ -339,7 +330,6 @@ router.post('/holidays', verifyAuth, requireAdmin, async (req: any, res) => {
             date: new Date(date),
             name,
             type: type || 'company',
-            otRateMultiplier: rate,
             isActive: true,
             applicableDepartments,
             notes
@@ -363,25 +353,13 @@ router.post('/holidays', verifyAuth, requireAdmin, async (req: any, res) => {
 router.put('/holidays/:id', verifyAuth, requireAdmin, async (req: any, res) => {
     try {
         const { id } = req.params;
-        const { date, name, type, otRateMultiplier, applicableDepartments, notes, isActive } = req.body;
+        const { date, name, type, applicableDepartments, notes, isActive } = req.body;
         const adminId = req.user.uid;
-
-        // Validate OT rate if provided
-        if (otRateMultiplier !== undefined) {
-            const rate = parseFloat(otRateMultiplier);
-            if (isNaN(rate) || rate <= 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'OT rate multiplier must be a positive number'
-                });
-            }
-        }
 
         const updates: any = {};
         if (date !== undefined) updates.date = new Date(date);
         if (name !== undefined) updates.name = name;
         if (type !== undefined) updates.type = type;
-        if (otRateMultiplier !== undefined) updates.otRateMultiplier = parseFloat(otRateMultiplier);
         if (applicableDepartments !== undefined) updates.applicableDepartments = applicableDepartments;
         if (notes !== undefined) updates.notes = notes;
         if (isActive !== undefined) updates.isActive = isActive;

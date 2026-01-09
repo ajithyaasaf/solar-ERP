@@ -2123,10 +2123,9 @@ export const insertFixedHolidaySchema = z.object({
   isPaid: z.boolean().default(true),
   isOptional: z.boolean().default(false),
 
-  // OT Rate - REQUIRED for payroll calculations
-  otRateMultiplier: z.number().min(1).max(10), // e.g., 1.0 for 1x pay, 1.5 for 1.5x pay
-
   // OT Policy - Controls whether OT can be submitted on this holiday
+  // Note: OT rate is calculated from employee salary (monthly salary / working days / working hours)
+  // No need to store multiplier per-holiday - that's a payroll setting, not holiday config
   allowOT: z.boolean().default(false), // Safe default: block OT on holidays
 
   // Applicability

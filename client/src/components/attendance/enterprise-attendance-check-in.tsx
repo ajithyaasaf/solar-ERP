@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAuthContext } from "@/contexts/auth-context";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,20 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
 
   // Network status
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Check if user has blocking leave today (for frontend UX)
+  const { data: todayLeaveStatus } = useQuery({
+    queryKey: ['/api/leave/today-status'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/leave/today-status', 'GET');
+      if (!response.ok) return { hasBlockingLeave: false };
+      return response.json();
+    },
+    enabled: isOpen && !!user, // Only fetch when dialog is open
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  const hasBlockingLeave = todayLeaveStatus?.hasBlockingLeave || false;
 
   // Simple location status display
   const getLocationStatus = () => {
@@ -573,6 +587,35 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Leave Warning - Show if user has blocking leave */}
+          {hasBlockingLeave && (
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-900">
+                <div className="font-semibold mb-1">You are on approved leave today</div>
+                <div className="text-sm">
+                  You have approved{" "}
+                  {todayLeaveStatus?.leaveType === 'casual_leave' ? 'casual leave' : 'unpaid leave'}
+                  {todayLeaveStatus?.leaveDetails?.startDate && todayLeaveStatus?.leaveDetails?.endDate && (
+                    <span>
+                      {" from "}
+                      {new Date(todayLeaveStatus.leaveDetails.startDate).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short'
+                      })}
+                      {" to "}
+                      {new Date(todayLeaveStatus.leaveDetails.endDate).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short'
+                      })}
+                    </span>
+                  )}
+                  . Attendance marking is disabled. Contact HR if this is a mistake.
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Network Status */}
           <div className="flex items-center gap-2 text-sm">
             {isOnline ? (
@@ -787,13 +830,18 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           {/* Submit Button with Context-Aware Messaging */}
           <Button
             onClick={handleSubmit}
-            disabled={!isFormValid() || checkInMutation.isPending || !isOnline}
+            disabled={!isFormValid() || checkInMutation.isPending || !isOnline || hasBlockingLeave}
             className="w-full"
           >
             {checkInMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Processing Check-in...
+              </>
+            ) : hasBlockingLeave ? (
+              <>
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Check-in Disabled (On Leave)
               </>
             ) : (
               <>

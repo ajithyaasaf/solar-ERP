@@ -385,12 +385,9 @@ export class PayrollCalculationService {
             if (s.otType === 'weekend') {
               multiplier = settings.weekendOTRate || 1.0;
             } else if (s.otType === 'holiday') {
-              const sDate = new Date(s.startTime).toISOString().split('T')[0];
-              const holiday = holidayMap.get(sDate);
-              // Use specific holiday rate if found, otherwise fall back to default
-              if (holiday) {
-                multiplier = holiday.otRateMultiplier || 1.0;
-              }
+              // Holiday OT uses standard rate (1.0x)
+              // OT rate is calculated from employee salary, not per-holiday multiplier
+              multiplier = 1.0;
             }
 
             // Return weighted hours (e.g. 5 hours * 2.0 rate = 10 effective hours)

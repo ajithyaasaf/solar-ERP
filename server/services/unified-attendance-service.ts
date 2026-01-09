@@ -399,24 +399,77 @@ export class UnifiedAttendanceService {
       if (isHoliday) {
         return {
           success: false,
-          message: `Cannot check in on ${holiday?.name}. Today is a company holiday.`,
+          message: `Today is ${holiday.name}. Office is closed. Attendance marking is not allowed.`,
           locationValidation: {
             isValid: false,
             confidence: 0,
             distance: 0,
             detectedOffice: null,
-            validationType: 'failed',
-            message: 'Company holiday - Attendance not allowed',
+            validationType: 'holiday',
+            message: 'Company holiday',
             recommendations: [
-              `Today is ${holiday?.name}`,
-              'Enjoy your holiday!',
-              'You will not be marked absent for holidays'
+              'Company is closed for holiday',
+              'Enjoy your day off!',
+              'Contact supervisor if you need to report emergency work'
             ],
             metadata: {
               accuracy: request.accuracy,
               effectiveRadius: 0,
               indoorDetection: false,
               confidenceFactors: ['company_holiday']
+            }
+          }
+        };
+      }
+
+      // **CRITICAL: Check if user has approved LEAVE (casual/unpaid) BEFORE allowing check-in**
+      // IMPORTANT: Permission is NOT checked here - it's a paid allowance, not leave
+      // Permission allows attendance because employee is still working that day
+      const approvedLeave = await storage.getApprovedLeaveForDate(request.userId, now);
+
+      if (approvedLeave) {
+        // Build user-friendly leave description
+        const leaveTypeLabel = approvedLeave.leaveType === 'casual_leave' ? 'casual leave' : 'unpaid leave';
+        let dateInfo = '';
+
+        if (approvedLeave.startDate && approvedLeave.endDate) {
+          const startStr = approvedLeave.startDate.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          });
+          const endStr = approvedLeave.endDate.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          });
+          dateInfo = startStr === endStr ? startStr : `${startStr} to ${endStr}`;
+        }
+
+        // Log for debugging and audit trail
+        console.log(`[Attendance-Leave Block] User ${request.userId} attempted check-in while on approved ${approvedLeave.leaveType}`);
+        console.log(`[Attendance-Leave Block] Leave ID: ${approvedLeave.id}, Date: ${dateInfo}`);
+
+        return {
+          success: false,
+          message: `You have approved ${leaveTypeLabel} for today (${dateInfo}). Attendance marking is not allowed while on leave.`,
+          locationValidation: {
+            isValid: false,
+            confidence: 0,
+            distance: 0,
+            detectedOffice: null,
+            validationType: 'blocked',
+            message: 'On approved leave',
+            recommendations: [
+              'You cannot mark attendance while on approved leave',
+              'Your leave has been approved and is already recorded in the system',
+              'Contact HR if you believe this is a mistake or if you need to cancel your leave'
+            ],
+            metadata: {
+              accuracy: request.accuracy,
+              effectiveRadius: 0,
+              indoorDetection: false,
+              confidenceFactors: ['approved_leave_full_day']
             }
           }
         };

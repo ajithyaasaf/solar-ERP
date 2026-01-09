@@ -60,8 +60,8 @@ export interface Holiday {
     name: string;
     type: 'national' | 'state' | 'company' | 'optional';
 
-    // OT rate multiplier (MUST be configured by admin - no default)
-    otRateMultiplier: number;
+    // OT Policy
+    allowOT?: boolean;  // Whether OT submissions are allowed on this holiday
 
     // Applicability
     isActive: boolean;

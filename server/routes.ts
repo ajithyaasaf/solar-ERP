@@ -4639,6 +4639,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Ensure unpaid leave always affects payroll (salary deduction)
+      if (leaveData.leaveType === "unpaid_leave") {
+        leaveData.affectsPayroll = true;
+      }
+
       // Validate balance availability
       if (leaveData.leaveType === "casual_leave" && leaveData.totalDays) {
         const available = balance.casualLeaveBalance - balance.casualLeaveUsed;
@@ -4665,6 +4670,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating leave application:", error);
       res.status(500).json({ message: "Failed to create leave application" });
+    }
+  });
+
+  // GET /api/leave/today-status - Check if user has blocking leave today (for frontend UX)
+  app.get("/api/leave/today-status", verifyAuth, async (req, res) => {
+    try {
+      const userId = req.authenticatedUser?.uid;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Check if user has approved leave for today
+      const leave = await storage.getApprovedLeaveForDate(userId, new Date());
+
+      res.json({
+        hasBlockingLeave: !!leave,
+        leaveType: leave?.leaveType || null,
+        leaveDetails: leave ? {
+          type: leave.leaveType,
+          startDate: leave.startDate?.toISOString(),
+          endDate: leave.endDate?.toISOString(),
+          reason: leave.reason
+        } : null
+      });
+    } catch (error) {
+      console.error("Error checking today's leave status:", error);
+      // Return false on error (fail-open for UX)
+      res.json({ hasBlockingLeave: false, leaveType: null, leaveDetails: null });
     }
   });
 
@@ -4932,19 +4965,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("[Holiday Creation] Request body:", JSON.stringify(req.body, null, 2));
 
       // Extract and validate required fields
-      const { date, name, type, applicableDepartments, notes, otRateMultiplier, allowOT } = req.body;
+      const { date, name, type, applicableDepartments, notes, allowOT } = req.body;
 
       if (!date || !name) {
         return res.status(400).json({
           success: false,
           message: "Missing required fields: date and name are required"
-        });
-      }
-
-      if (!otRateMultiplier || otRateMultiplier < 1 || otRateMultiplier > 10) {
-        return res.status(400).json({
-          success: false,
-          message: "OT Rate Multiplier is required and must be between 1 and 10"
         });
       }
 
@@ -4958,7 +4984,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: type || "national",
         isPaid: true,
         isOptional: false,
-        otRateMultiplier: parseFloat(otRateMultiplier),
         allowOT: allowOT === true, // Explicit boolean, defaults to false if not provided
         applicableDepartments: applicableDepartments || null,
         description: notes || null,
@@ -4990,19 +5015,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("[Holiday Update] Request body:", JSON.stringify(req.body, null, 2));
 
       // Extract and validate required fields
-      const { date, name, type, applicableDepartments, notes, otRateMultiplier, allowOT } = req.body;
+      const { date, name, type, applicableDepartments, notes, allowOT } = req.body;
 
       if (!date || !name) {
         return res.status(400).json({
           success: false,
           message: "Missing required fields: date and name are required"
-        });
-      }
-
-      if (!otRateMultiplier || otRateMultiplier < 1 || otRateMultiplier > 10) {
-        return res.status(400).json({
-          success: false,
-          message: "OT Rate Multiplier is required and must be between 1 and 10"
         });
       }
 
@@ -5016,7 +5034,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: type || "national",
         isPaid: true,
         isOptional: false,
-        otRateMultiplier: parseFloat(otRateMultiplier),
         allowOT: allowOT === true,
         applicableDepartments: applicableDepartments || null,
         description: notes || null,

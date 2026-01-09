@@ -3261,6 +3261,91 @@ export class FirestoreStorage implements IStorage {
     return result;
   }
 
+  /**
+   * Check if user has approved LEAVE (casual/unpaid) for a specific date
+   * Used by attendance system to prevent check-in on leave days
+   * 
+   * IMPORTANT: Permission is NOT leave - it's a paid allowance
+   * Permission should NOT block attendance
+   * 
+   * @param userId - User ID to check
+   * @param date - Date to check for leave
+   * @returns Leave application if found, null otherwise
+   * 
+   * Business Rule: 
+   * - Casual/Unpaid Leave → Full-day absence → Blocks attendance
+   * - Permission → Brief paid absence → Does NOT block attendance
+   */
+  async getApprovedLeaveForDate(
+    userId: string,
+    date: Date
+  ): Promise<LeaveApplication | null> {
+    try {
+      const leaveRef = this.db.collection("leave_applications");
+
+      // Query ONLY for full-day leaves (casual_leave, unpaid_leave)
+      // Permission is EXCLUDED because it's not a leave
+      const snapshot = await leaveRef
+        .where("userId", "==", userId)
+        .where("status", "==", "approved")
+        .where("leaveType", "in", ["casual_leave", "unpaid_leave"])
+        .get();
+
+      // Normalize check date to midnight for accurate comparison
+      // Critical for timezone consistency (especially IST +5:30)
+      const checkDate = new Date(date);
+      checkDate.setHours(0, 0, 0, 0);
+
+      // Check each approved leave to see if it covers this date
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const startDate = data.startDate?.toDate();
+        const endDate = data.endDate?.toDate();
+
+        if (startDate && endDate) {
+          // Normalize leave dates for comparison
+          const leaveStart = new Date(startDate);
+          leaveStart.setHours(0, 0, 0, 0);
+
+          const leaveEnd = new Date(endDate);
+          leaveEnd.setHours(23, 59, 59, 999);
+
+          // Check if date falls within leave range (inclusive)
+          if (checkDate.getTime() >= leaveStart.getTime() &&
+            checkDate.getTime() <= leaveEnd.getTime()) {
+            return {
+              id: doc.id,
+              userId: data.userId,
+              employeeId: data.employeeId,
+              userName: data.userName,
+              userDepartment: data.userDepartment,
+              userDesignation: data.userDesignation,
+              leaveType: data.leaveType,
+              status: data.status,
+              startDate,
+              endDate,
+              totalDays: data.totalDays,
+              reason: data.reason,
+              reportingManagerId: data.reportingManagerId,
+              reportingManagerName: data.reportingManagerName,
+              applicationDate: data.applicationDate?.toDate(),
+              managerApprovedAt: data.managerApprovedAt?.toDate(),
+              hrApprovedAt: data.hrApprovedAt?.toDate(),
+            } as LeaveApplication;
+          }
+        }
+      }
+
+      // No approved leave found for this date
+      return null;
+    } catch (error) {
+      console.error('[Storage] Error checking leave for date:', error);
+      // Return null on error to allow attendance (fail-open for user convenience)
+      // This prevents a database issue from blocking all check-ins
+      return null;
+    }
+  }
+
   // Fixed Holidays Management
   async getFixedHoliday(id: string): Promise<FixedHoliday | undefined> {
     const holidayDoc = this.db.collection("fixed_holidays").doc(id);
@@ -3383,8 +3468,7 @@ export class FirestoreStorage implements IStorage {
           type: "national",
           isPaid: true,
           isOptional: false,
-          otRateMultiplier: 1.0, // Default for national holidays
-          allowOT: true,
+          allowOT: true, // National holidays allow OT
           createdBy,
           createdAt: new Date(),
         });

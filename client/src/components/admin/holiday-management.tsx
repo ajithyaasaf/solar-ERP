@@ -1,13 +1,16 @@
 /**
  * Holiday Management Component
- * Admin UI for managing company holidays with OT rate configuration
+ * Admin UI for managing company holidays
  * 
  * Features:
  * - Calendar view of holidays
  * - Add/Edit/Delete functionality
- * - OT rate configuration (NO defaults)
+ * - OT submission control (allow/block per holiday)
  * - Department-specific holidays
  * - Month/Year navigation
+ * 
+ * Note: OT rate is calculated from employee salary (monthly / days / hours)
+ * No need to configure per-holiday multipliers
  */
 
 import { useState, useEffect } from 'react';
@@ -33,8 +36,7 @@ interface Holiday {
     year: number;
     isPaid: boolean;
     isOptional: boolean;
-    otRateMultiplier: number;  // Required for payroll
-    allowOT: boolean;  // NEW: Controls OT submission on this holiday
+    allowOT: boolean;  // Controls whether OT can be submitted on this holiday
     applicableDepartments?: string[];
     description?: string;
     createdBy: string;
@@ -58,7 +60,6 @@ export function HolidayManagement() {
         name: '',
         type: 'national' as 'national' | 'regional' | 'company',
         applicableDepartments: [] as string[],
-        otRateMultiplier: 2, // Default 2x pay for holidays
         allowOT: false, // Default: strict holiday (no OT allowed)
         notes: ''  // Ensure default value
     });
@@ -128,7 +129,6 @@ export function HolidayManagement() {
                     date: formData.date,
                     name: formData.name,
                     type: formData.type,
-                    otRateMultiplier: formData.otRateMultiplier,
                     allowOT: formData.allowOT,
                     applicableDepartments: formData.applicableDepartments.length > 0
                         ? formData.applicableDepartments
@@ -211,7 +211,6 @@ export function HolidayManagement() {
             name: holiday.name,
             type: holiday.type,
             applicableDepartments: holiday.applicableDepartments || [],
-            otRateMultiplier: holiday.otRateMultiplier || 2,
             allowOT: holiday.allowOT || false,
             notes: holiday.description || ''
         });
@@ -225,7 +224,6 @@ export function HolidayManagement() {
             name: '',
             type: 'national',
             applicableDepartments: [],
-            otRateMultiplier: 2,
             allowOT: false,
             notes: ''
         });
@@ -275,7 +273,7 @@ export function HolidayManagement() {
                                             {editingHoliday ? 'Edit Holiday' : 'Add New Holiday'}
                                         </DialogTitle>
                                         <DialogDescription>
-                                            Configure holiday details and OT rate multiplier
+                                            Configure holiday details and OT submission policy
                                         </DialogDescription>
                                     </DialogHeader>
 
@@ -348,24 +346,6 @@ export function HolidayManagement() {
                                                     </label>
                                                 ))}
                                             </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="otRate">OT Rate Multiplier (Required)</Label>
-                                            <Input
-                                                id="otRate"
-                                                type="number"
-                                                min="1"
-                                                max="10"
-                                                step="0.5"
-                                                value={formData.otRateMultiplier}
-                                                onChange={(e) => setFormData({ ...formData, otRateMultiplier: parseFloat(e.target.value) || 2 })}
-                                                placeholder="e.g., 2 for double pay, 2.5 for 2.5x pay"
-                                                required
-                                            />
-                                            <p className="text-xs text-muted-foreground">
-                                                Employees working on this holiday will receive this multiplier on their hourly rate
-                                            </p>
                                         </div>
 
                                         <div className="space-y-2">

@@ -68,14 +68,6 @@ export class HolidayService {
         adminId: string
     ): Promise<{ success: boolean; message: string; id?: string }> {
         try {
-            // Validate OT rate multiplier
-            if (!holiday.otRateMultiplier || holiday.otRateMultiplier <= 0) {
-                return {
-                    success: false,
-                    message: 'OT rate multiplier must be specified and greater than 0'
-                };
-            }
-
             // Check if holiday already exists for this date
             const existing = await storage.getHolidaysByDate(holiday.date);
             if (existing.length > 0) {
@@ -104,7 +96,7 @@ export class HolidayService {
             await storage.createActivityLog({
                 type: 'holiday',
                 title: 'Holiday Created',
-                description: `${holiday.name} created with ${holiday.otRateMultiplier}x OT rate`,
+                description: `${holiday.name} created`,
                 entityId: id,
                 entityType: 'holiday',
                 userId: adminId
@@ -135,14 +127,6 @@ export class HolidayService {
         adminId: string
     ): Promise<{ success: boolean; message: string }> {
         try {
-            // Validate OT rate if being updated
-            if (updates.otRateMultiplier !== undefined && updates.otRateMultiplier <= 0) {
-                return {
-                    success: false,
-                    message: 'OT rate multiplier must be greater than 0'
-                };
-            }
-
             // Update holiday
             await storage.updateHoliday(id, {
                 ...updates,
