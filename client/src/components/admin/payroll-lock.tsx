@@ -51,7 +51,7 @@ export function PayrollLockManager() {
         setIsLoading(true);
         try {
             const token = await getOTAuthToken();
-            const response = await fetch(`/api/payroll/periods/${selectedYear}`, {
+            const response = await fetch(`/api/ot/payroll/periods/${selectedYear}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -83,7 +83,7 @@ export function PayrollLockManager() {
         setIsLoading(true);
         try {
             const token = await getOTAuthToken();
-            const response = await fetch('/api/payroll/lock', {
+            const response = await fetch('/api/ot/payroll/lock', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ export function PayrollLockManager() {
         setIsLoading(true);
         try {
             const token = await getOTAuthToken();
-            const response = await fetch('/api/payroll/unlock', {
+            const response = await fetch('/api/ot/payroll/unlock', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

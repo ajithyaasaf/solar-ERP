@@ -52,7 +52,8 @@ export interface OTSession {
 
 /**
  * Holiday Interface
- * Company holiday calendar for OT rate calculation
+ * Company holiday calendar for OT tracking and submission control
+ * Note: OT rate is calculated from employee salary, not stored per-holiday
  */
 export interface Holiday {
     id: string;
@@ -84,9 +85,9 @@ export interface CompanySettings {
     // Weekend configuration (configurable, not hardcoded)
     weekendDays: number[];  // [0] = Sunday only, [0, 6] = Sat+Sun, etc.
 
-    // Default OT rates
-    defaultOTRate: number;     // e.g., 1.0x
-    weekendOTRate: number;     // e.g., 1.0x
+    // OT rate (uniform for all types: weekday, weekend, holiday)
+    defaultOTRate: number;     // e.g., 1.0x (applies to all OT)
+    weekendOTRate: number;     // Kept for backward compatibility, synced with defaultOTRate
 
     // Daily OT cap
     maxOTHoursPerDay: number;

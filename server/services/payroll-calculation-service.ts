@@ -379,18 +379,12 @@ export class PayrollCalculationService {
           })
           .reduce((hours: number, s: any) => {
             const rawHours = s.otHours || 0;
-            let multiplier = settings.defaultOTRate || 1.0;
 
-            // Apply specific multipliers
-            if (s.otType === 'weekend') {
-              multiplier = settings.weekendOTRate || 1.0;
-            } else if (s.otType === 'holiday') {
-              // Holiday OT uses standard rate (1.0x)
-              // OT rate is calculated from employee salary, not per-holiday multiplier
-              multiplier = 1.0;
-            }
+            // Use uniform OT rate for all types (weekday, weekend, holiday)
+            // OT rate is calculated from employee salary, no day-type premium
+            const multiplier = settings.defaultOTRate || 1.0;
 
-            // Return weighted hours (e.g. 5 hours * 2.0 rate = 10 effective hours)
+            // Return weighted hours (e.g. 5 hours * 1.0 rate = 5 effective hours)
             return hours + (rawHours * multiplier);
           }, 0);
         return sum + approvedWeightedHours;

@@ -4,8 +4,9 @@
  * 
  * Features:
  * - Configurable weekend days (no hardcoded Sat/Sun)
- * - Default OT rates
+ * - Uniform OT rate for all types (weekday, weekend, holiday)
  * - Daily OT caps
+ * - Pure salary-based calculation
  */
 
 import { storage } from '../storage';
@@ -82,10 +83,12 @@ export class CompanySettingsService {
                 };
             }
 
+            // Note: weekendOTRate kept for backward compatibility
+            // Frontend auto-syncs it with defaultOTRate for uniform rate
             if (updates.weekendOTRate !== undefined && updates.weekendOTRate <= 0) {
                 return {
                     success: false,
-                    message: 'Weekend OT rate must be greater than 0'
+                    message: 'OT rate must be greater than 0'
                 };
             }
 
@@ -181,21 +184,15 @@ export class CompanySettingsService {
 
     /**
      * Get OT rate for a specific type
+     * Note: Returns uniform rate (defaultOTRate) for all types
      */
     static async getOTRate(otType: 'regular' | 'weekend' | 'holiday'): Promise<number> {
         try {
             const settings = await this.getSettings();
 
-            switch (otType) {
-                case 'weekend':
-                    return settings.weekendOTRate;
-                case 'holiday':
-                    // Holiday rate from holiday record, but use weekend as fallback
-                    return settings.weekendOTRate;
-                case 'regular':
-                default:
-                    return settings.defaultOTRate;
-            }
+            // Uniform rate for all OT types - pure salary-based calculation
+            return settings.defaultOTRate;
+
         } catch (error) {
             console.error('Error getting OT rate:', error);
             return 1.0; // Safe default

@@ -24,7 +24,8 @@ The new Overtime (OT) System is a comprehensive, enterprise-grade solution desig
 - ✅ GPS + Photo verification for anti-fraud
 - ✅ Payroll period locking to prevent retroactive tampering
 - ✅ Department-specific holiday management
-- ✅ **Holiday-level OT policy control** (NEW: `allowOT` field)
+- ✅ **Holiday-level OT policy control** (`allowOT` field)
+- ✅ **Uniform OT rate** - Pure salary-based calculation
 - ✅ Real-time tracking with live timers
 
 
@@ -44,10 +45,10 @@ The new Overtime (OT) System is a comprehensive, enterprise-grade solution desig
   - `status`: `'in_progress' | 'completed' | 'APPROVED' | 'PENDING_REVIEW' | 'REJECTED' | 'locked'`
 
 - **`holidays` Collection**: Stores company/department-specific holidays with:
-  - `otRateMultiplier`: OT pay rate (e.g., 2.5x)
   - `allowOT`: Controls if OT submissions allowed
   - `applicableDepartments`: Department filtering (null = all departments)
   - **Integration**: Used for check-in blocking, OT validation, and attendance enrichment
+  - **Note**: Per-holiday OT rate multipliers removed - uniform rate now applies
 - **`company_settings` Collection**: Single document for global OT rules.
 - **`payroll_periods` Collection**: Tracks locked/unlocked months with audit trail.
 
@@ -180,8 +181,8 @@ If no attendance record exists (e.g., Sunday work), the system creates:
 | Setting | Type | Example | Description |
 |---------|------|---------|-------------|
 | `weekendDays` | `number[]` | `[0, 6]` | 0=Sunday, 6=Saturday |
-| `defaultOTRate` | `number` | `1.0` | Multiplier for regular OT |
-| `weekendOTRate` | `number` | `1.0` | Multiplier for weekend OT |
+| `defaultOTRate` | `number` | `1.0` | Uniform multiplier for ALL OT types |
+| `weekendOTRate` | `number` | `1.0` | (Backward compatibility - auto-synced with defaultOTRate) |
 | `maxOTHoursPerDay` | `number` | `5.0` | Daily cap before warning |
 
 
@@ -189,7 +190,7 @@ If no attendance record exists (e.g., Sunday work), the system creates:
 **Accessible By:** Admin, Master Admin  
 **Features:**
 - Create holidays with custom names (e.g., "Republic Day")
-- Set `otRateMultiplier` (e.g., `2.5x` for national holidays)
+- **OT Rate**: Uniform rate applies to all holidays (no per-holiday multipliers)
 - Filter by `applicableDepartments`:
   - `null` or `[]` = All departments
   - `["technical", "operations"]` = Specific departments only
@@ -202,20 +203,19 @@ If no attendance record exists (e.g., Sunday work), the system creates:
   "name": "Republic Day",
   "date": "2025-01-26",
   "type": "national",
-  "otRateMultiplier": 2.5,
   "allowOT": false,
   "applicableDepartments": null,
   "isActive": true
 }
 ```
 
-**`allowOT` Field (NEW):**
+**`allowOT` Field:**
 - **`false` (default)**: Strict holiday - System blocks all OT submissions
   - Example: National holidays, religious festivals
   - Error message: "OT submissions are not allowed on Republic Day. This is a strict holiday."
-- **`true`**: Flexible holiday - OT allowed at configured multiplier
+- **`true`**: Flexible holiday - OT allowed at uniform rate (same as weekday)
   - Example: Year-end work days, project deadlines
-  - Employees can submit OT, rate = `baseRate × otRateMultiplier`
+  - Employees can submit OT at standard rate
 
 
 ### C. Payroll Locking
@@ -285,10 +285,9 @@ Prevents employees/admins from retroactively adding OT hours after payroll is pr
 - Table view of all holidays for selected year
 - Filter by month
 - Add/Edit/Delete holidays
-- Set custom multipliers per holiday
-- **NEW**: Set OT policy per holiday (`allowOT` checkbox)
+- **OT Policy**: Set OT submission policy per holiday (`allowOT` checkbox)
   - **Unchecked (default)**: Strict holiday - OT submissions blocked
-  - **Checked**: Flexible holiday - OT allowed at configured rate
+  - **Checked**: Flexible holiday - OT allowed at uniform rate
 - Department filtering
 
 
@@ -515,7 +514,6 @@ Automatically close OT sessions employees forgot to end, preventing indefinite o
   "date": "2025-01-26",
   "name": "Republic Day",
   "type": "national",
-  "otRateMultiplier": 2.5,
   "allowOT": false,
   "applicableDepartments": null
 }
@@ -539,7 +537,6 @@ Automatically close OT sessions employees forgot to end, preventing indefinite o
       "name": "Republic Day",
       "date": "2025-01-26",
       "type": "national",
-      "otRateMultiplier": 2.5,
       "allowOT": false,
       "applicableDepartments": null
     }
@@ -696,12 +693,13 @@ const otRecords = snapshot.docs.map(doc => ({
 
 ### Rate Application
 For each OT session:
-1. Determine `otType`
-2. Lookup applicable rate:
-   - **Holiday**: `holiday.otRateMultiplier` (e.g., 2.5x)
-   - **Weekend**: `company_settings.weekendOTRate` (e.g., 1.0x)
-   - **Early/Late**: `company_settings.defaultOTRate` (e.g., 1.0x)
-3. Calculate: `otPay = otHours × hourlyRate × multiplier`
+1. Determine `otType` (for reporting/categorization)
+2. Apply uniform rate:
+   - **All OT Types**: `company_settings.defaultOTRate` (e.g., 1.0x)
+   - **Calculation**: Pure salary-based
+3. Calculate: `otPay = otHours × (monthlySalary / 26 / 8) × 1.0`
+
+**Note**: Weekend and holiday types are tracked for reporting, but all use the same rate.
 
 ### Locking Enforcement
 - Payroll can only process **locked** periods

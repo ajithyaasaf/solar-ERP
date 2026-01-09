@@ -82,7 +82,7 @@ After comprehensive testing and verification, the overtime calculation and payro
 2. **Late Departure OT**: After department end time ✅
 3. **Combined OT**: Early arrival + late departure ✅
 4. **Manual OT Sessions**: User-controlled sessions ✅
-5. **Weekend OT**: Available on weekends ✅
+5. **Weekend OT**: Available on weekends (uniform rate - same as weekday) ✅
 
 ### ✅ Payroll Connectivity:
 

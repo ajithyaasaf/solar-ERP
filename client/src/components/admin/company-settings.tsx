@@ -4,9 +4,9 @@
  * 
  * Features:
  * - Configurable weekend days (NO hardcoded Sat/Sun)
- * - Default OT rates configuration
+ * - Uniform OT rate for all types (weekday, weekend, holiday)
  * - Daily OT cap settings
- * - Weekend OT rate configuration
+ * - Pure salary-based calculation (Monthly/26/8)
  */
 
 import { useState, useEffect } from 'react';
@@ -24,7 +24,7 @@ interface CompanySettings {
     id: string;
     weekendDays: number[];
     defaultOTRate: number;
-    weekendOTRate: number;
+    weekendOTRate: number; // Kept for backward compatibility, auto-synced with defaultOTRate
     maxOTHoursPerDay: number;
     updatedAt: string;
 }
@@ -39,8 +39,7 @@ export function CompanySettings() {
 
     // Form state
     const [weekendDays, setWeekendDays] = useState<number[]>([]);
-    const [defaultOTRate, setDefaultOTRate] = useState('');
-    const [weekendOTRate, setWeekendOTRate] = useState('');
+    const [otRate, setOTRate] = useState(''); // Single rate for all OT types
     const [maxOTHoursPerDay, setMaxOTHoursPerDay] = useState('');
 
     // Fetch settings
@@ -48,7 +47,7 @@ export function CompanySettings() {
         setIsLoading(true);
         try {
             const token = await getOTAuthToken();
-            const response = await fetch('/api/settings', {
+            const response = await fetch('/api/ot/settings', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -58,8 +57,7 @@ export function CompanySettings() {
 
                 // Populate form
                 setWeekendDays(data.weekendDays || []);
-                setDefaultOTRate(data.defaultOTRate?.toString() || '');
-                setWeekendOTRate(data.weekendOTRate?.toString() || '');
+                setOTRate(data.defaultOTRate?.toString() || '1.0');
                 setMaxOTHoursPerDay(data.maxOTHoursPerDay?.toString() || '');
             }
         } catch (error) {
@@ -80,17 +78,20 @@ export function CompanySettings() {
     // Handle save
     const handleSave = async () => {
         // Validation
+        const otRateNum = parseFloat(otRate);
+        const maxOTNum = parseFloat(maxOTHoursPerDay);
+
         const rates = {
-            defaultOTRate: parseFloat(defaultOTRate),
-            weekendOTRate: parseFloat(weekendOTRate),
-            maxOTHoursPerDay: parseFloat(maxOTHoursPerDay)
+            defaultOTRate: otRateNum,
+            weekendOTRate: otRateNum, // Same as default for uniform rate
+            maxOTHoursPerDay: maxOTNum
         };
 
-        if (Object.values(rates).some(v => isNaN(v) || v <= 0)) {
+        if (isNaN(otRateNum) || otRateNum <= 0 || isNaN(maxOTNum) || maxOTNum <= 0) {
             toast({
                 variant: 'destructive',
                 title: 'Invalid Input',
-                description: 'All numeric fields must be greater than 0'
+                description: 'OT rate and max hours must be greater than 0'
             });
             return;
         }
@@ -98,7 +99,7 @@ export function CompanySettings() {
         setIsSaving(true);
         try {
             const token = await getOTAuthToken();
-            const response = await fetch('/api/settings', {
+            const response = await fetch('/api/ot/settings', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -187,41 +188,23 @@ export function CompanySettings() {
 
                     <Separator />
 
-                    {/* OT Rates */}
+                    {/* OT Rate */}
                     <div className="space-y-3">
-                        <Label className="text-base font-semibold">OT Rate Multipliers</Label>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="defaultOTRate">Default OT Rate *</Label>
-                                <Input
-                                    id="defaultOTRate"
-                                    type="number"
-                                    step="0.1"
-                                    min="1"
-                                    value={defaultOTRate}
-                                    onChange={(e) => setDefaultOTRate(e.target.value)}
-                                    placeholder="e.g., 1.0"
-                                />
-                                <p className="text-xs text-gray-500">
-                                    For regular weekday OT (e.g., 1.0 = 1.0x base pay)
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="weekendOTRate">Weekend OT Rate *</Label>
-                                <Input
-                                    id="weekendOTRate"
-                                    type="number"
-                                    step="0.1"
-                                    min="1"
-                                    value={weekendOTRate}
-                                    onChange={(e) => setWeekendOTRate(e.target.value)}
-                                    placeholder="e.g., 1.0"
-                                />
-                                <p className="text-xs text-gray-500">
-                                    For OT on configured weekend days (e.g., 1.0 = 1.0x base pay)
-                                </p>
-                            </div>
+                        <Label className="text-base font-semibold">OT Rate Multiplier</Label>
+                        <div className="max-w-md space-y-2">
+                            <Label htmlFor="otRate">Uniform OT Rate *</Label>
+                            <Input
+                                id="otRate"
+                                type="number"
+                                step="0.1"
+                                min="0.1"
+                                value={otRate}
+                                onChange={(e) => setOTRate(e.target.value)}
+                                placeholder="e.g., 1.0"
+                            />
+                            <p className="text-xs text-gray-500">
+                                Applies to ALL OT types: weekday, weekend, and holiday (e.g., 1.0 = 1.0x base pay from salary)
+                            </p>
                         </div>
                     </div>
 

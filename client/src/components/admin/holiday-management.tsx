@@ -253,7 +253,7 @@ export function HolidayManagement() {
                         <div>
                             <CardTitle>Holiday Management</CardTitle>
                             <CardDescription>
-                                Configure company holidays and OT rates
+                                Configure company holidays and OT submission policy
                             </CardDescription>
                         </div>
                         <Dialog open={isDialogOpen} onOpenChange={(open) => {

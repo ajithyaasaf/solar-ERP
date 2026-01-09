@@ -1,11 +1,13 @@
 /**
  * Holiday Service
- * Manages company holiday calendar for OT rate calculation
+ * Manages company holiday calendar and OT submission policy
  * 
  * Features:
  * - Manual holiday management (no API import)
  * - Department-specific holidays
- * - Configurable OT rates per holiday
+ * - OT submission control per holiday (allow/block)
+ * 
+ * Note: OT rate is calculated from employee salary, not configured per-holiday
  */
 
 import { storage } from '../storage';
