@@ -30,7 +30,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { departments } from "@shared/schema";
 import * as XLSX from 'xlsx';
 import { KPICards } from "@/components/attendance/kpi-cards";
-import { CommandBar } from "@/components/attendance/command-bar";
 import { ExceptionAlert } from "@/components/attendance/exception-alert";
 import { AttendanceTrendChart } from "@/components/attendance/attendance-trend-chart";
 import { DepartmentBreakdownChart } from "@/components/attendance/department-breakdown-chart";
@@ -536,11 +535,11 @@ export default function AttendanceManagement() {
   // Pending review count
   const pendingReviewCount = Array.isArray(pendingReviews) ? pendingReviews.length : 0;
 
-  // Calculate KPI metrics
+  // Calculate KPI metrics from filtered data
   const kpiMetrics = {
-    totalPresent: dailyAttendance.filter((r: any) => r.status === 'present' || r.status === 'late').length,
-    totalAbsent: dailyAttendance.filter((r: any) => r.status === 'absent').length,
-    totalLate: dailyAttendance.filter((r: any) => r.status === 'late').length,
+    totalPresent: filteredDailyAttendance.filter((r: any) => r.status === 'present' || r.status === 'late').length,
+    totalAbsent: filteredDailyAttendance.filter((r: any) => r.status === 'absent').length,
+    totalLate: filteredDailyAttendance.filter((r: any) => r.status === 'late').length,
     totalIncomplete: incompleteRecords.length,
   };
 
@@ -966,9 +965,15 @@ export default function AttendanceManagement() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-
-
-
+            <Button
+              onClick={handleExportAttendance}
+              variant="outline"
+              className="gap-2"
+              data-testid="button-export"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
 
             <Link href="/attendance-reports">
               <Button
@@ -983,23 +988,6 @@ export default function AttendanceManagement() {
           </div>
         </div>
       </div>
-
-      {/* Command Bar */}
-      <CommandBar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedDepartment={selectedDepartment}
-        onDepartmentChange={setSelectedDepartment}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
-        onExport={handleExportAttendance}
-        onRefresh={handleRefresh}
-        lastUpdated={lastUpdated}
-        isRefreshing={isRefreshing}
-        datePresets={datePresets}
-        selectedDate={selectedDate}
-        departments={uniqueDepartments}
-      />
 
       {/* Main Content Area */}
       <div className="p-4 md:p-6 space-y-6">
@@ -1068,73 +1056,80 @@ export default function AttendanceManagement() {
             )}
           </TabsList>
 
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                placeholder="Search employees..."
-                className="pl-10 text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+          {/* Filters - Show only on tabs that need filtering */}
+          {(activeTab === "live" || activeTab === "daily" || activeTab === "corrections") && (
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  placeholder="Search employees..."
+                  className="pl-10 text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
 
-            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="All Departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept.charAt(0).toUpperCase() + dept.slice(1).replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept.charAt(0).toUpperCase() + dept.slice(1).replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {activeTab === "daily" && (
-              <>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="w-full sm:w-32">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="present">Present</SelectItem>
-                    <SelectItem value="absent">Absent</SelectItem>
-                    <SelectItem value="late">Late</SelectItem>
-                    <SelectItem value="leave">Leave</SelectItem>
-                    <SelectItem value="holiday">Holiday</SelectItem>
-                  </SelectContent>
-                </Select>
+              {activeTab === "daily" && (
+                <>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger className="w-full sm:w-32">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="present">Present</SelectItem>
+                      <SelectItem value="absent">Absent</SelectItem>
+                      <SelectItem value="late">Late</SelectItem>
+                      <SelectItem value="leave">Leave</SelectItem>
+                      <SelectItem value="holiday">Holiday</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-gray-50 w-full sm:w-auto">
-                  <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                  <span className="text-sm font-medium flex-1 sm:flex-none">{formatDate(selectedDate)}</span>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedDate(new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000))}
-                      className="h-6 w-6 p-0"
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedDate(new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000))}
-                      className="h-6 w-6 p-0"
-                    >
-                      →
-                    </Button>
+                  <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-gray-50 w-full sm:w-auto">
+                    <CalendarIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                    <span className="text-sm font-medium flex-1 sm:flex-none">{formatDate(selectedDate)}</span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const newDate = new Date(selectedDate);
+                          newDate.setDate(selectedDate.getDate() - 1);
+                          setSelectedDate(newDate);
+                        }}
+                        className="h-6 w-6 p-0"
+                        aria-label="Previous day"
+                      >
+                        ←
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedDate(new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000))}
+                        className="h-6 w-6 p-0"
+                      >
+                        →
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Dashboard Tab - New Professional Overview */}
           <TabsContent value="dashboard" className="space-y-6">
