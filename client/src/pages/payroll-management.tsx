@@ -61,7 +61,7 @@ interface EnhancedSalaryStructure {
   customEarnings: Record<string, number>;
   customDeductions: Record<string, number>;
   perDaySalaryBase: "basic" | "basic_hra" | "gross";
-  overtimeRate: number;
+  // Note: All employees use CompanySettings.defaultOTRate (1.0x)
   epfApplicable: boolean;
   esiApplicable: boolean;
   vptAmount: number;
@@ -1598,7 +1598,7 @@ function SalaryStructuresTable({
                     <TableCell>
                       <div className="space-y-1 text-sm">
                         <div>Base: {structure.perDaySalaryBase || 'basic'}</div>
-                        <div>OT Rate: {structure.overtimeRate || 1.0}x</div>
+                        {/* OT Rate removed - company-wide 1.0x for all */}
                         <div className="text-muted-foreground">Per day calculated</div>
                       </div>
                     </TableCell>
@@ -1748,10 +1748,7 @@ function SalaryStructuresTable({
                                   <span>Per Day Base:</span>
                                   <span className="font-medium capitalize">{structure.perDaySalaryBase || 'basic'}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span>Overtime Rate:</span>
-                                  <span className="font-medium">{structure.overtimeRate || 1.0}x</span>
-                                </div>
+                                {/* OT Rate removed - company-wide 1.0x */}
                                 <div className="flex justify-between">
                                   <span>EPF Applicable:</span>
                                   <Badge className={structure.epfApplicable ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
@@ -2023,7 +2020,7 @@ function SalaryStructureForm({
     workingDays: settings?.standardWorkingDays || 26,
     monthWorkingHours: 0,
     perDayWorkingHours: 8,
-    overtimeRate: 1.0,
+    // Note: OT rate is company-wide (1.0x for all)
 
     // Earnings
     earnedBasic: 0,
@@ -2031,7 +2028,7 @@ function SalaryStructureForm({
     earnedConveyance: 0,
     otherEarnings: 0,
     grossSalary: 0,
-    overtimePay: 0,
+    // Note: OT Hours/Pay removed - calculated monthly from OT sessions
 
     // Deductions
     epfDeduction: 0,
@@ -2062,6 +2059,9 @@ function SalaryStructureForm({
     remarks: ""
   });
 
+  // Note: OT calculation removed from Salary Structure form
+  // OT Hours come from OT sessions and are calculated during monthly payroll processing
+
   const selectedUser = users.find(u => u.id === formData.userId);
 
   // Auto-calculation when values change
@@ -2089,9 +2089,9 @@ function SalaryStructureForm({
         formData.tdsDeduction + formData.loanDeduction + formData.advanceDeduction +
         formData.fineDeduction + formData.creditDeduction;
 
-      // Calculate total earnings for net salary
+      // Calculate total earnings for net salary (OT added in monthly payroll)
       const totalEarnings = formData.earnedBasic + formData.earnedHRA + formData.earnedConveyance +
-        formData.otherEarnings + formData.overtimePay;
+        formData.otherEarnings; // OT Pay calculated monthly from OT sessions
       const netSalary = totalEarnings - totalDeductions;
 
       setFormData(prev => ({
@@ -2132,11 +2132,13 @@ function SalaryStructureForm({
     const esiRate = (settings?.esiEmployeeRate || 0.75) / 100;
 
     if (formData.epfApplicable) {
-      // Logic: apply rate to actual salary if below ceiling, otherwise apply to ceiling
-      const epfBasis = Math.min(gross, epfCeiling);
+      // EPF is calculated ONLY on Basic salary (statutory requirement)
+      // Apply to actual Basic if below ceiling, otherwise apply to ceiling
+      const epfBasis = Math.min(formData.fixedBasic, epfCeiling);
       epf = epfBasis * epfRate;
     }
     if (formData.esiApplicable && gross <= esiThreshold) {
+      // ESI is calculated on Gross salary
       esi = gross * esiRate;
     }
 
@@ -2144,7 +2146,7 @@ function SalaryStructureForm({
       formData.loanDeduction + formData.advanceDeduction +
       formData.fineDeduction + formData.creditDeduction;
 
-    const totalEarnings = earnedBasic + earnedHRA + earnedConveyance + formData.otherEarnings + formData.overtimePay;
+    const totalEarnings = earnedBasic + earnedHRA + earnedConveyance + formData.otherEarnings; // OT in monthly payroll
     const netSalary = totalEarnings - totalDeductions;
 
     setFormData(prev => ({
@@ -2337,28 +2339,20 @@ function SalaryStructureForm({
               required
             />
           </div>
-          <div>
-            <Label htmlFor="overtimeRate">OT Rate (x)</Label>
-            <Input
-              id="overtimeRate"
-              type="number"
-              step="0.1"
-              value={formData.overtimeRate}
-              onChange={(e) => setFormData(prev => ({ ...prev, overtimeRate: parseFloat(e.target.value) || 1.0 }))}
-            />
-          </div>
+          {/* OT Rate removed - using company-wide rate (1.0x) */}
         </div>
       </div>
 
-      {/* Earnings */}
+      {/* Fixed Salary Section */}
       <div className="bg-yellow-50 p-6 rounded-lg">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          Earned Salary & Overtime
+          <DollarSign className="h-5 w-5" />
+          Projected Monthly Salary (Based on Full Attendance)
         </h3>
+        <p className="text-sm text-gray-600 mb-4">Preview of monthly salary with full attendance. Actual monthly pay calculated from attendance + OT sessions.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <div>
-            <Label htmlFor="earnedBasic">Earned Basic</Label>
+            <Label htmlFor="earnedBasic">Monthly Basic (Auto-calculated from attendance)</Label>
             <Input
               id="earnedBasic"
               type="number"
@@ -2368,7 +2362,7 @@ function SalaryStructureForm({
             />
           </div>
           <div>
-            <Label htmlFor="earnedHRA">Earned HRA</Label>
+            <Label htmlFor="earnedHRA">Monthly HRA (Auto-calculated from attendance)</Label>
             <Input
               id="earnedHRA"
               type="number"
@@ -2378,7 +2372,7 @@ function SalaryStructureForm({
             />
           </div>
           <div>
-            <Label htmlFor="earnedConveyance">Earned Conveyance</Label>
+            <Label htmlFor="earnedConveyance">Monthly Conveyance (Auto-calculated from attendance)</Label>
             <Input
               id="earnedConveyance"
               type="number"
@@ -2396,15 +2390,7 @@ function SalaryStructureForm({
               onChange={(e) => setFormData(prev => ({ ...prev, otherEarnings: parseFloat(e.target.value) || 0 }))}
             />
           </div>
-          <div>
-            <Label htmlFor="overtimePay">Overtime Pay</Label>
-            <Input
-              id="overtimePay"
-              type="number"
-              value={formData.overtimePay}
-              onChange={(e) => setFormData(prev => ({ ...prev, overtimePay: parseFloat(e.target.value) || 0 }))}
-            />
-          </div>
+          {/* Overtime Pay removed - calculated monthly from OT sessions during payroll processing */}
           <div>
             <Label htmlFor="grossSalary">Gross Salary</Label>
             <Input

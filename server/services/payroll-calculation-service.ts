@@ -31,9 +31,9 @@ export class PayrollCalculationService {
     const fixedConveyance = salaryStructure.fixedConveyance || 0;
     const totalFixedSalary = fixedBasic + fixedHRA + fixedConveyance;
 
-    // Get overtime rate (default 1.0x if not specified)
-    // precise-edit: Use settings logic
-    const overtimeRate = salaryStructure.overtimeRate || settings?.overtimeMultiplier || 1.0;
+    // All employees use uniform company rate (1.0x)
+    // No employee-specific overrides
+    const overtimeRate = 1.0;
 
     // Calculate hourly rate based on standard working days and hours
     // If departmentId is provided, get department-specific working hours
@@ -405,7 +405,7 @@ export class PayrollCalculationService {
       userId,
       finalWeightedHours,
       salaryStructure,
-      { ...safeSettings, overtimeMultiplier: 1.0 }, // Override to 1.0
+      safeSettings, // Use settings as-is (OT rate in CompanySettings)
       departmentId
     );
 

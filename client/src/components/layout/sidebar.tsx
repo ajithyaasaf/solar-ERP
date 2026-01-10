@@ -213,12 +213,6 @@ export function Sidebar() {
           roles: ["master_admin", "admin"]
         },
         {
-          href: "/ot-reports",
-          label: "OT Reports",
-          icon: <i className="ri-file-chart-line mr-3 text-xl"></i>,
-          roles: ["master_admin", "admin"]
-        },
-        {
           href: "/payroll-management",
           label: "Payroll Management",
           icon: <i className="ri-money-dollar-circle-line mr-3 text-xl"></i>,
@@ -226,6 +220,30 @@ export function Sidebar() {
         },
       ]
     },
+    {
+      category: "Reports",
+      items: [
+        {
+          href: "/attendance-reports",
+          label: "Attendance Reports",
+          icon: <i className="ri-file-chart-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"]
+        },
+        {
+          href: "/ot-reports",
+          label: "OT Reports",
+          icon: <i className="ri-file-chart-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"]
+        },
+        {
+          href: "/leave-reports",
+          label: "Leave Reports",
+          icon: <i className="ri-file-list-line mr-3 text-xl"></i>,
+          roles: ["master_admin", "admin"]
+        },
+      ]
+    },
+
     {
       category: "System",
       items: [

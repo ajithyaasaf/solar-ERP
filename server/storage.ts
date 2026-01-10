@@ -666,7 +666,7 @@ export interface PayrollSettings {
   pfRate: number;
   esiRate: number;
   tdsRate: number;
-  overtimeMultiplier: number;
+  // Note: OT rate configured in CompanySettings.defaultOTRate (single source of truth)
   standardWorkingHours: number;
   standardWorkingDays: number;
   leaveDeductionRate: number;
@@ -776,7 +776,7 @@ export interface EnhancedSalaryStructure {
   customEarnings: Record<string, number>;
   customDeductions: Record<string, number>;
   perDaySalaryBase: "basic" | "basic_hra" | "gross";
-  overtimeRate: number;
+  // Note: All employees use CompanySettings.defaultOTRate (no per-employee rates)
   epfApplicable: boolean;
   esiApplicable: boolean;
   vptAmount: number;
@@ -4341,7 +4341,7 @@ export class FirestoreStorage implements IStorage {
       pfRate: 12,
       esiRate: 1.75,
       tdsRate: 10,
-      overtimeMultiplier: 1.0,
+      // Note: OT rate in CompanySettings.defaultOTRate
       standardWorkingHours: 8,
       standardWorkingDays: 26,
       leaveDeductionRate: 1,
@@ -4369,7 +4369,7 @@ export class FirestoreStorage implements IStorage {
     const standardWorkingHours = departmentTiming?.workingHours || payrollSettings.standardWorkingHours || 8;
 
     const hourlyRate = PayrollHelper.getHourlyRate(dailySalary, payrollSettings, standardWorkingHours);
-    const overtimePay = hourlyRate * overtimeHours * (payrollSettings.overtimeMultiplier || 1.0);
+    const overtimePay = hourlyRate * overtimeHours * 1.0; // Legacy: uses 1.0x rate
 
     // Gross salary (including pro-rated fixed components)
     // For simple storage calculation, we apply the presentDays ratio to the fixed salary

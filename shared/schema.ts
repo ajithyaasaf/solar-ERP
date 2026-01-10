@@ -1099,7 +1099,7 @@ export const insertPayrollSettingsSchema = z.object({
   pfRate: z.number().min(0).max(100).default(12), // PF rate percentage
   esiRate: z.number().min(0).max(100).default(0.75), // ESI rate percentage
   tdsRate: z.number().min(0).max(100).default(0), // TDS rate percentage
-  overtimeMultiplier: z.number().min(1).default(1), // Overtime pay multiplier
+  // Note: OT rate in CompanySettings.defaultOTRate (single source of truth)
   standardWorkingHours: z.number().min(1).default(8), // Standard working hours per day
   standardWorkingDays: z.number().min(1).default(26), // Standard working days per month
   leaveDeductionRate: z.number().min(0).max(100).default(100), // Percentage deduction for leaves
@@ -1186,7 +1186,7 @@ export const insertEnhancedSalaryStructureSchema = z.object({
   customEarnings: z.record(z.number()).default({}),
   customDeductions: z.record(z.number()).default({}),
   perDaySalaryBase: z.enum(["basic", "basic_hra", "gross"]).default("basic_hra"),
-  overtimeRate: z.number().min(0).default(1.0),
+  // Note: All employees use CompanySettings.defaultOTRate (no per-employee rates)
   epfApplicable: z.boolean().default(true),
   esiApplicable: z.boolean().default(true),
   vptAmount: z.number().min(0).default(0),

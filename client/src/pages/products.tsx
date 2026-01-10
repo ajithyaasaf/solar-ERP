@@ -40,16 +40,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { 
-  Battery, 
-  Plug, 
-  Activity, 
-  Search, 
-  PlusCircle, 
-  Pencil, 
-  Trash2, 
-  Loader2, 
-  ChevronLeft, 
+import {
+  Battery,
+  Plug,
+  Activity,
+  Search,
+  PlusCircle,
+  Pencil,
+  Trash2,
+  Loader2,
+  ChevronLeft,
   ChevronRight,
   ArrowUp,
   ArrowDown
@@ -102,30 +102,30 @@ export default function Products() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const observerRef = useRef<IntersectionObserver | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  
+
   // Debounce search input
   useEffect(() => {
     const timerId = setTimeout(() => {
       setDebouncedSearch(searchQuery);
       setCurrentPage(1); // Reset to first page on new search
     }, 300);
-    
+
     return () => clearTimeout(timerId);
   }, [searchQuery]);
-  
+
   // Fetch products with pagination
-  const { 
-    data: productsResponse, 
-    isLoading, 
+  const {
+    data: productsResponse,
+    isLoading,
     isFetching,
-    isError 
+    isError
   } = useQuery({
     queryKey: [`/api/products?page=${currentPage}&limit=${itemsPerPage}&search=${debouncedSearch}&sortBy=${sortBy}&sortOrder=${sortOrder}`]
   });
-  
+
   const products = (productsResponse as any)?.data || [];
   const pagination = (productsResponse as any)?.pagination;
-  
+
   // Prefetch next page for smoother pagination
   useEffect(() => {
     if (pagination?.hasNextPage) {
@@ -134,7 +134,7 @@ export default function Products() {
       });
     }
   }, [queryClient, currentPage, itemsPerPage, debouncedSearch, pagination?.hasNextPage, sortBy, sortOrder]);
-  
+
   // Delete product mutation
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
@@ -146,7 +146,7 @@ export default function Products() {
     },
     onSuccess: () => {
       // Invalidate all product queries to refresh the UI immediately
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         predicate: (query) => {
           const queryKey = query.queryKey[0];
           if (typeof queryKey === 'string') {
@@ -155,7 +155,7 @@ export default function Products() {
           return false;
         }
       });
-      
+
       toast({
         title: "Product deleted",
         description: "The product has been deleted successfully",
@@ -176,11 +176,11 @@ export default function Products() {
     setSelectedProduct(product);
     setShowDeleteDialog(true);
   };
-  
+
   // Function to render product icon
   const renderProductIcon = (product: Product) => {
     const type = product.type?.toLowerCase() || '';
-    
+
     if (type.includes('battery') || type.includes('power')) {
       return <Battery className="h-5 w-5 text-gray-500" />;
     } else if (type.includes('inverter') || type.includes('plug')) {
@@ -200,7 +200,7 @@ export default function Products() {
       return { label: "In Stock", style: "bg-green-100 text-green-800" };
     }
   };
-  
+
   // Function to handle sort changes
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -213,13 +213,13 @@ export default function Products() {
     }
     setCurrentPage(1); // Reset to first page
   };
-  
+
   // Render sort indicator
   const renderSortIndicator = (field: string) => {
     if (sortBy !== field) return null;
-    
-    return sortOrder === "asc" 
-      ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
+
+    return sortOrder === "asc"
+      ? <ArrowUp className="inline h-4 w-4 ml-1" />
       : <ArrowDown className="inline h-4 w-4 ml-1" />;
   };
 
@@ -231,7 +231,7 @@ export default function Products() {
             <CardTitle className="text-xl">Products</CardTitle>
             <CardDescription>Manage your product inventory</CardDescription>
           </div>
-          <Button 
+          <Button
             className="bg-primary hover:bg-primary-dark text-white"
             onClick={() => setShowAddForm(true)}
           >
@@ -240,7 +240,7 @@ export default function Products() {
           </Button>
         </CardHeader>
         <CardContent className="px-6">
-          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center  sm:justify-between space-y-2 sm:space-y-0">
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
@@ -250,10 +250,10 @@ export default function Products() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <Select 
-                value={itemsPerPage.toString()} 
+              <Select
+                value={itemsPerPage.toString()}
                 onValueChange={(value) => {
                   setItemsPerPage(parseInt(value));
                   setCurrentPage(1); // Reset to first page
@@ -269,7 +269,7 @@ export default function Products() {
                   <SelectItem value="100">100 items</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select
                 value={sortBy}
                 onValueChange={(value) => {
@@ -287,7 +287,7 @@ export default function Products() {
                   <SelectItem value="type">Type</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Button
                 variant="outline"
                 size="icon"
@@ -334,7 +334,7 @@ export default function Products() {
                 ) : (
                   products.map((product: Product) => {
                     const status = getStockStatus(product.quantity);
-                    
+
                     return (
                       <TableRow key={product.id}>
                         <TableCell>
@@ -365,9 +365,9 @@ export default function Products() {
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-8 w-8 p-0 text-destructive"
                               onClick={() => handleDeleteProduct(product)}
                             >
@@ -379,7 +379,7 @@ export default function Products() {
                     );
                   })
                 )}
-                
+
                 {/* Loading indicator for next page */}
                 {isFetching && products.length > 0 && (
                   <TableRow>
@@ -388,21 +388,21 @@ export default function Products() {
                     </TableCell>
                   </TableRow>
                 )}
-                
+
                 {/* Intersection observer target for infinite scroll */}
                 <div ref={bottomRef}></div>
               </TableBody>
             </Table>
           </div>
         </CardContent>
-        
+
         {/* Pagination Controls */}
         {pagination && (
           <CardFooter className="flex items-center justify-between px-6 py-4 border-t">
             <div className="text-sm text-gray-500">
               Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.totalItems)} of {pagination.totalItems} products
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
@@ -413,12 +413,12 @@ export default function Products() {
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
               </Button>
-              
+
               {/* Page number indicator */}
               <span className="text-sm">
                 Page {pagination.page} of {pagination.totalPages}
               </span>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -458,14 +458,14 @@ export default function Products() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowDeleteDialog(false)}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => deleteProductMutation.mutate(selectedProduct?.id || "")}
               disabled={deleteProductMutation.isPending}
             >

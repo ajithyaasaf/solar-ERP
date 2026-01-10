@@ -57,6 +57,9 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
     { href: "/departments", label: "Departments", icon: "ri-building-line", roles: ["master_admin"], requiredPermissions: ["departments.view", "departments.create"] },
     { href: "/attendance-management", label: "Attendance Mgmt", icon: "ri-shield-user-line", roles: ["master_admin"] },
     { href: "/ot-pending-review", label: "OT Review", icon: "ri-timer-flash-line", roles: ["master_admin", "admin"] },
+    { href: "/attendance-reports", label: "Attendance Reports", icon: "ri-file-chart-line", roles: ["master_admin", "admin"] },
+    { href: "/ot-reports", label: "OT Reports", icon: "ri-file-chart-line", roles: ["master_admin", "admin"] },
+    { href: "/leave-reports", label: "Leave Reports", icon: "ri-file-list-line", roles: ["master_admin", "admin"] },
     { href: "/payroll-management", label: "Payroll Mgmt", icon: "ri-money-dollar-circle-line", roles: ["master_admin"] },
     { href: "/settings", label: "Settings", icon: "ri-settings-4-line" },
   ];

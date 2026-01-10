@@ -966,34 +966,8 @@ export default function AttendanceManagement() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              onClick={() => setShowPolicyModal(true)}
-              variant="outline"
-              className="gap-2"
-              data-testid="button-policies"
-            >
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Policies</span>
-            </Button>
-            {/* Admin-only test button for manual auto-checkout trigger */}
-            {user && (user.role === 'master_admin' || user.role === 'admin') && (
-              <Button
-                onClick={() => testAutoCheckoutMutation.mutate()}
-                variant="default"
-                className="gap-2 bg-orange-600 hover:bg-orange-700"
-                disabled={testAutoCheckoutMutation.isPending}
-                data-testid="button-test-auto-checkout"
-              >
-                {testAutoCheckoutMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-                <span className="hidden sm:inline">
-                  {testAutoCheckoutMutation.isPending ? 'Running...' : 'Test Auto-Checkout'}
-                </span>
-              </Button>
-            )}
+
+
 
 
             <Link href="/attendance-reports">

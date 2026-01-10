@@ -4480,6 +4480,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===================== Comprehensive Leave Management System API Routes =====================
 
+  /**
+   * GET /api/reports/leaves - Leave Reports API
+   * Returns filtered leave data with summary statistics for HR/Admin
+   * 
+   * Permissions: admin, master_admin (role) OR hr (department)
+   * Query params:
+   * - startDate (required): ISO date string (YYYY-MM-DD)
+   * - endDate (required): ISO date string (YYYY-MM-DD) 
+   * - department (optional): filter by department
+   * - leaveType (optional): filter by leave type
+   * - status (optional): filter by status
+   */
+  app.get('/api/reports/leaves', verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Permission Guard: admin/master_admin (role) OR hr (department)
+      const hasAccess =
+        ['admin', 'master_admin'].includes(user.role) ||
+        user.department === 'hr';
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied. Only admins and HR can access leave reports." });
+      }
+
+      // Parse and validate query parameters
+      const { startDate, endDate, department, leaveType, status } = req.query;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "startDate and endDate are required" });
+      }
+
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD" });
+      }
+
+      // Fetch all leave applications (HR can see all, no status filter)
+      const allLeaves = await storage.listLeaveApplicationsByHR();
+
+      // Filter by date overlap
+      // Include leaves that overlap with [startDate, endDate]
+      // Logic: leave starts before range ends AND leave ends after range starts
+      const dateFilteredLeaves = allLeaves.filter(leave => {
+        if (!leave.startDate || !leave.endDate) return false;
+
+        const leaveStart = new Date(leave.startDate);
+        const leaveEnd = new Date(leave.endDate);
+
+        // Date overlap logic
+        return leaveStart <= end && leaveEnd >= start;
+      });
+
+      // Apply additional filters
+      let filteredLeaves = dateFilteredLeaves;
+
+      // Fetch all users once for both filtering and enrichment
+      const allUsers = await storage.listUsers();
+      const userMapByUid = new Map(allUsers.map(u => [u.uid, u]));
+
+      if (department && department !== 'all') {
+        // Filter by department
+        filteredLeaves = filteredLeaves.filter(leave => {
+          const user = userMapByUid.get(leave.userId);
+          return user?.department === department;
+        });
+      }
+
+      if (leaveType && leaveType !== 'all') {
+        filteredLeaves = filteredLeaves.filter(leave =>
+          leave.leaveType === leaveType
+        );
+      }
+
+      if (status && status !== 'all') {
+        filteredLeaves = filteredLeaves.filter(leave =>
+          leave.status === status
+        );
+      }
+
+      // Enrich with employee names (reuse userMap from above)
+      const enrichedLeaves = filteredLeaves.map(leave => ({
+        ...leave,
+        employeeName: userMapByUid.get(leave.userId)?.displayName || 'Unknown',
+        employeeEmail: userMapByUid.get(leave.userId)?.email || '',
+        department: userMapByUid.get(leave.userId)?.department || 'Unknown'
+      }));
+
+      // Calculate summary statistics
+      const stats = {
+        total: filteredLeaves.length,
+        casualCount: filteredLeaves.filter(l => l.leaveType === 'casual_leave').length,
+        unpaidCount: filteredLeaves.filter(l => l.leaveType === 'unpaid_leave').length,
+        permissionCount: filteredLeaves.filter(l => l.leaveType === 'permission').length
+      };
+
+      res.json({
+        leaves: enrichedLeaves,
+        stats
+      });
+
+    } catch (error) {
+      console.error('==== LEAVE REPORTS API ERROR ====');
+      console.error('Full error:', error);
+      console.error('==================================');
+      res.status(500).json({ message: "Failed to fetch leave reports" });
+    }
+  });
+
   // Leave Balance Routes
   app.get("/api/leave-balance/current", verifyAuth, async (req, res) => {
     try {
@@ -5716,7 +5830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pfRate: 12,
         esiRate: 1.75,
         tdsRate: 10,
-        overtimeMultiplier: 1.0,
+        // Note: OT rate in CompanySettings.defaultOTRate
         standardWorkingHours: 8,
         standardWorkingDays: 26,
         leaveDeductionRate: 1,

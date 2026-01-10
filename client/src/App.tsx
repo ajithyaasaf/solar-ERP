@@ -33,6 +33,7 @@ const EmployeeOT = lazy(() => import("@/pages/employee-ot"));
 const OTAdministration = lazy(() => import("@/pages/ot-administration"));
 const OTPendingReview = lazy(() => import("@/pages/ot-pending-review"));
 const OTReports = lazy(() => import("@/pages/ot-reports"));
+const LeaveReports = lazy(() => import("@/pages/leave-reports"));
 
 // Simple loading fallback component
 const PageLoader = () => (
@@ -309,6 +310,20 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
+      {/* Leave Reports - Admin, Master Admin, and HR only */}
+      <Route path="/leave-reports">
+        <ProtectedRoute
+          requiredRole={["admin", "master_admin"]}
+          requiredDepartment={["hr"]}
+          allowMasterAdmin={true}
+        >
+          <DashboardLayout>
+            <Suspense fallback={<PageLoader />}>
+              <LeaveReports />
+            </Suspense>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
 
 
       {/* Fallback to 404 */}

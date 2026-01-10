@@ -106,7 +106,7 @@ export function SalaryStructuresTable({ structures, users, earningsFields, deduc
                 </div>
               </div>
             </CardHeader>
-            
+
             {isExpanded && (
               <CardContent className="pt-0">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -214,10 +214,7 @@ export function SalaryStructuresTable({ structures, users, earningsFields, deduc
                         <span>Per Day Rate:</span>
                         <span className="font-medium">{formatCurrency(structure.perDayRate || 0)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Overtime Rate:</span>
-                        <span className="font-medium">{formatCurrency(structure.overtimeRate || 0)}</span>
-                      </div>
+                      {/* OT Rate removed - company-wide 1.0x for all */}
                       <div className="flex justify-between">
                         <span>Status:</span>
                         <Badge variant={structure.isActive ? 'default' : 'secondary'}>
