@@ -237,12 +237,6 @@ const CustomerVisitGroupCard = ({
         {/* Action buttons and visit timeline toggle */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t">
           <div className="flex flex-wrap items-center gap-2">
-            {group.primaryVisit.siteInLocation && (
-              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                <Navigation className="h-2 w-2 sm:h-3 sm:w-3" />
-                Location Tracked
-              </Badge>
-            )}
             {group.primaryVisit.sitePhotos?.length > 0 && (
               <Badge variant="outline" className="flex items-center gap-1 text-xs">
                 <Camera className="h-2 w-2 sm:h-3 sm:w-3" />
@@ -251,13 +245,13 @@ const CustomerVisitGroupCard = ({
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             {group.totalVisits > 1 && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="text-xs"
+                className="text-xs w-full sm:w-auto"
               >
                 <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 {isExpanded ? 'Hide' : 'Show'} All ({group.totalVisits})
@@ -266,11 +260,11 @@ const CustomerVisitGroupCard = ({
             <Button
               variant="outline"
               size="sm"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-xs"
               onClick={() => onViewDetails(group.primaryVisit)}
             >
               <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              <span className="text-xs sm:text-sm">View Latest</span>
+              <span>View Latest</span>
             </Button>
           </div>
         </div>
@@ -467,8 +461,24 @@ export default function SiteVisitMonitoring() {
     enabled: !!hasAccess
   });
 
+  // All visits (including follow-ups) are in siteVisits with isFollowUp flag
+  // No separate API call needed - follow-ups are site visits with isFollowUp=true
+  const allVisits = siteVisits;
+
+  console.log('ALL_VISITS_DEBUG:', {
+    totalVisits: siteVisits.length,
+    followUpsCount: siteVisits.filter((v: any) => v.isFollowUp).length,
+    originalVisitsCount: siteVisits.filter((v: any) => !v.isFollowUp).length,
+    visits: siteVisits.map((v: any) => ({
+      id: v.id,
+      customer: v.customer?.name,
+      mobile: v.customer?.mobile,
+      isFollowUp: v.isFollowUp
+    }))
+  });
+
   // Debug: Log all site visits data to understand the structure (can be removed after testing)
-  console.log('SITE_VISITS_RAW_DATA:', siteVisits.map((visit: SiteVisit) => ({
+  console.log('SITE_VISITS_RAW_DATA:', allVisits.map((visit: SiteVisit) => ({
     id: visit.id,
     customerName: visit.customer?.name,
     status: visit.status,
@@ -481,19 +491,19 @@ export default function SiteVisitMonitoring() {
 
   // Enhanced dashboard statistics with follow-up metrics
   const stats = {
-    total: siteVisits.length,
-    inProgress: siteVisits.filter((v: SiteVisit) => v.status === 'in_progress').length,
-    completed: siteVisits.filter((v: SiteVisit) => v.status === 'completed').length,
-    today: siteVisits.filter((v: SiteVisit) => {
+    total: allVisits.length,
+    inProgress: allVisits.filter((v: SiteVisit) => v.status === 'in_progress').length,
+    completed: allVisits.filter((v: SiteVisit) => v.status === 'completed').length,
+    today: allVisits.filter((v: SiteVisit) => {
       const today = new Date();
       const visitDate = new Date(v.siteInTime);
       return visitDate.toDateString() === today.toDateString();
     }).length,
     // Enhanced follow-up metrics
-    followUps: siteVisits.filter((v: SiteVisit) => v.isFollowUp).length,
-    originalVisits: siteVisits.filter((v: SiteVisit) => !v.isFollowUp).length,
-    withFollowUps: siteVisits.filter((v: SiteVisit) => v.hasFollowUps).length,
-    totalFollowUpCount: siteVisits.reduce((sum: number, v: SiteVisit) => sum + (v.followUpCount || 0), 0)
+    followUps: allVisits.filter((v: SiteVisit) => v.isFollowUp).length,
+    originalVisits: allVisits.filter((v: SiteVisit) => !v.isFollowUp).length,
+    withFollowUps: allVisits.filter((v: SiteVisit) => v.hasFollowUps).length,
+    totalFollowUpCount: allVisits.reduce((sum: number, v: SiteVisit) => sum + (v.followUpCount || 0), 0)
   };
 
   console.log('SITE_VISITS_STATS:', stats);
@@ -566,7 +576,7 @@ export default function SiteVisitMonitoring() {
   };
 
   // Enhanced filtered data with follow-up awareness
-  const filteredVisits = siteVisits.filter((visit: SiteVisit) => {
+  const filteredVisits = allVisits.filter((visit: SiteVisit) => {
     const matchesSearch = !searchQuery ||
       visit.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       visit.customer?.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
