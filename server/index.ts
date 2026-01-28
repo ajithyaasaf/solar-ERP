@@ -70,11 +70,17 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  const env = app.get("env");
+  log(`Current environment: ${env}`);
+  log(`API_ONLY: ${process.env.API_ONLY}`);
+
+  if (env === "development") {
     await setupVite(app, server);
   } else if (!process.env.API_ONLY) {
-    // Only serve static files if not in API-only mode (split deployment)
+    log("Starting static file serving...");
     serveStatic(app);
+  } else {
+    log("Skipping static file serving (API_ONLY mode)");
   }
   // If API_ONLY=true, we don't serve static files (backend runs separately)
 
