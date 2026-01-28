@@ -76,7 +76,7 @@ app.use((req, res, next) => {
 
   if (env === "development") {
     await setupVite(app, server);
-  } else if (!process.env.API_ONLY) {
+  } else if (process.env.API_ONLY !== "true") {
     log("Starting static file serving...");
     serveStatic(app);
   } else {
