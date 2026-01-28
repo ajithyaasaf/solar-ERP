@@ -181,6 +181,17 @@ export function MobileSidebar({ isOpen, setIsOpen }: MobileSidebarProps) {
             </div>
           </div>
         )}
+
+        <div className="py-2 pb-4 text-center border-t border-gray-100 bg-gray-50/50">
+          <a
+            href="https://godivatech.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-gray-400 hover:text-primary transition-colors font-medium"
+          >
+            Developed by Godivatech
+          </a>
+        </div>
       </div>
     </>
   );

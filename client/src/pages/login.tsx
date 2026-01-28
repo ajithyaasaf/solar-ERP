@@ -10,7 +10,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
   const [showLoginForm, setShowLoginForm] = useState<boolean>(false);
-  
+
   // Check if we are in the middle of an auth transition
   useEffect(() => {
     // Check for auth transitioning flag and clear it if present
@@ -18,13 +18,13 @@ export default function Login() {
     if (authTransitioning === 'true') {
       sessionStorage.removeItem('auth_transitioning');
       setIsTransitioning(true);
-      
+
       // Keep showing the loading screen for a smooth experience
       const timer = setTimeout(() => {
         setIsTransitioning(false);
         setShowLoginForm(true);
       }, 500);
-      
+
       return () => clearTimeout(timer);
     } else {
       setShowLoginForm(true);
@@ -38,14 +38,14 @@ export default function Login() {
         // Prevent login UI flash by showing loading state during transition
         setIsTransitioning(true);
         setShowLoginForm(false);
-        
+
         // Slight delay for better visual transition
         setTimeout(() => {
           setLocation("/dashboard");
         }, 100);
       }
     });
-    
+
     return () => checkAuthState();
   }, [setLocation]);
 
@@ -64,15 +64,27 @@ export default function Login() {
       title="Log in to your account"
       description="Enter your credentials to access your account"
       footer={
-        <div className="text-sm text-center">
-          Don't have an account?{" "}
-          <Link href="/register" className="text-secondary hover:underline">
-            Create an account
-          </Link>
+        <div className="w-full flex flex-col items-center gap-4">
+          <div className="text-sm text-center">
+            Don't have an account?{" "}
+            <Link href="/register" className="text-secondary hover:underline">
+              Create an account
+            </Link>
+          </div>
+          <div className="text-center">
+            <a
+              href="https://godivatech.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-400 hover:text-secondary transition-colors"
+            >
+              Powered by Godivatech
+            </a>
+          </div>
         </div>
       }
     >
       <LoginForm />
-    </AuthForm>
+    </AuthForm >
   );
 }
