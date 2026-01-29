@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Camera, MapPin, Clock, AlertTriangle, CheckCircle, XCircle, 
+import {
+  Camera, MapPin, Clock, AlertTriangle, CheckCircle, XCircle,
   Loader2, Timer, Zap, Wifi, WifiOff, RefreshCw
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,12 +25,12 @@ interface AttendanceCheckOutProps {
 }
 
 
-export function AttendanceCheckOut({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  currentAttendance, 
-  departmentTiming 
+export function AttendanceCheckOut({
+  isOpen,
+  onClose,
+  onSuccess,
+  currentAttendance,
+  departmentTiming
 }: AttendanceCheckOutProps) {
   const { user } = useAuthContext();
   const { toast } = useToast();
@@ -40,12 +40,15 @@ export function AttendanceCheckOut({
   const [otReason, setOtReason] = useState("");
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Simple location state
-  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [location, setLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [locationAddress, setLocationAddress] = useState<string | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+
+  // Track last geocoded location to avoid redundant API calls
+  const lastGeocodedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Camera states
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -61,15 +64,15 @@ export function AttendanceCheckOut({
     if (!currentAttendance?.checkInTime || !departmentTiming) {
       return { hasOvertime: false, overtimeHours: 0, overtimeMinutes: 0, requiresPhoto: false };
     }
-    
+
     const checkInTime = new Date(currentAttendance.checkInTime);
     const currentTime = new Date();
     const workingMinutes = Math.floor((currentTime.getTime() - checkInTime.getTime()) / (1000 * 60));
-    
+
     // Parse department checkout time for basic UI display
     const checkOutTimeStr = departmentTiming.checkOutTime || "6:00 PM";
     const currentTimeMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-    
+
     // Simple time parsing for UI estimation only
     let departmentCheckoutMinutes = 18 * 60; // Default 6:00 PM
     const timeMatch = checkOutTimeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
@@ -80,11 +83,11 @@ export function AttendanceCheckOut({
       if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
       departmentCheckoutMinutes = hour24 * 60 + parseInt(minutes);
     }
-    
+
     // FIXED: Early arrival + late departure overtime calculation
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Parse department schedule times
     const parseTime12Hour = (timeStr: string): Date => {
       const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
@@ -93,38 +96,38 @@ export function AttendanceCheckOut({
         fallback.setHours(timeStr.includes('out') ? 18 : 9, 0, 0, 0);
         return fallback;
       }
-      
+
       let [, hours, minutes, period] = timeMatch;
       let hour24 = parseInt(hours);
       if (period.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
       if (period.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
-      
+
       const date = new Date(today);
       date.setHours(hour24, parseInt(minutes), 0, 0);
       return date;
     };
-    
+
     const departCheckIn = parseTime12Hour(departmentTiming.checkInTime);
     const departCheckOut = parseTime12Hour(departmentTiming.checkOutTime);
-    
+
     // Calculate early arrival + late departure overtime
     let overtimeMinutes = 0;
-    
+
     // Early arrival overtime
     if (checkInTime < departCheckIn) {
       overtimeMinutes += Math.floor((departCheckIn.getTime() - checkInTime.getTime()) / (1000 * 60));
     }
-    
+
     // Late departure overtime
     if (currentTime > departCheckOut) {
       overtimeMinutes += Math.floor((currentTime.getTime() - departCheckOut.getTime()) / (1000 * 60));
     }
-    
+
     const hasOvertime = overtimeMinutes > 0;
     const totalWorkingMinutes = Math.floor((currentTime.getTime() - checkInTime.getTime()) / (1000 * 60));
     const overtimeThreshold = departmentTiming.overtimeThresholdMinutes || 30;
     const requiresPhoto = overtimeMinutes >= overtimeThreshold;
-    
+
     return {
       hasOvertime,
       overtimeHours: Math.floor(overtimeMinutes / 60),
@@ -145,16 +148,16 @@ export function AttendanceCheckOut({
     if (!currentAttendance?.checkInTime || !departmentTiming) {
       return { isEarlyCheckout: false, earlyMinutes: 0 };
     }
-    
+
     const checkInTime = new Date(currentAttendance.checkInTime);
     const currentTime = new Date();
     const workingMinutes = Math.floor((currentTime.getTime() - checkInTime.getTime()) / (1000 * 60));
     const workingHours = workingMinutes / 60;
     const expectedHours = departmentTiming.workingHours || 8;
-    
+
     const isEarlyCheckout = workingHours < expectedHours;
     const earlyMinutes = isEarlyCheckout ? Math.floor((expectedHours - workingHours) * 60) : 0;
-    
+
     return {
       isEarlyCheckout,
       earlyMinutes,
@@ -164,13 +167,13 @@ export function AttendanceCheckOut({
   };
 
   const earlyCheckoutInfo = calculateEarlyCheckoutInfo();
-  
+
   // Overtime warning for any work beyond department checkout time
   const getOvertimeWarning = () => {
     if (!overtimeInfo.hasOvertime) return null;
-    
+
     const overtimeTotal = overtimeInfo.overtimeMinutes + (overtimeInfo.overtimeHours * 60);
-    
+
     return {
       type: 'overtime_detected',
       message: `Working ${overtimeTotal} minutes beyond department checkout time. Photo and reason required for overtime verification.`
@@ -183,7 +186,7 @@ export function AttendanceCheckOut({
     const handleOnlineStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleOnlineStatus);
     window.addEventListener('offline', handleOnlineStatus);
-    
+
     return () => {
       window.removeEventListener('online', handleOnlineStatus);
       window.removeEventListener('offline', handleOnlineStatus);
@@ -210,11 +213,11 @@ export function AttendanceCheckOut({
     }
   }, [isOpen, stream]);
 
-  // Simple location fetching with Google Maps API
+  // Simple location fetching with Google Maps API (with caching)
   const getCurrentLocationWithAddress = async () => {
     setIsLoadingLocation(true);
     setLocationError(null);
-    
+
     try {
       // Get user's coordinates
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -222,7 +225,7 @@ export function AttendanceCheckOut({
           reject(new Error('Geolocation is not supported'));
           return;
         }
-        
+
         navigator.geolocation.getCurrentPosition(
           resolve,
           reject,
@@ -233,17 +236,34 @@ export function AttendanceCheckOut({
           }
         );
       });
-      
+
       const { latitude, longitude } = position.coords;
+
+      // Check if location changed significantly (>50m) before updating
+      if (lastGeocodedLocationRef.current) {
+        const distance = Math.sqrt(
+          Math.pow((latitude - lastGeocodedLocationRef.current.lat) * 111000, 2) +
+          Math.pow((longitude - lastGeocodedLocationRef.current.lng) * 111000, 2)
+        );
+
+        if (distance < 50 && locationAddress) {
+          console.log('Location change too small (<50m), reusing cached address');
+          setLocation({ latitude, longitude });
+          setIsLoadingLocation(false);
+          return;
+        }
+      }
+
       setLocation({ latitude, longitude });
-      
+
       // Get readable address using Google Maps API
       try {
         const response = await apiRequest(`/api/reverse-geocode?lat=${latitude}&lng=${longitude}`);
         const data = await response.json();
-        
+
         if (data.address) {
           setLocationAddress(data.address);
+          lastGeocodedLocationRef.current = { lat: latitude, lng: longitude };
         } else {
           setLocationAddress(`Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
         }
@@ -251,11 +271,11 @@ export function AttendanceCheckOut({
         console.error('Address lookup failed:', addressError);
         setLocationAddress(`Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
       }
-      
+
     } catch (error: any) {
       console.error('Location error:', error);
       let errorMessage = 'Unable to get location';
-      
+
       if (error.code === 1) {
         errorMessage = 'Location access denied. Please allow location access and try again.';
       } else if (error.code === 2) {
@@ -263,7 +283,7 @@ export function AttendanceCheckOut({
       } else if (error.code === 3) {
         errorMessage = 'Location request timed out. Please try again.';
       }
-      
+
       setLocationError(errorMessage);
     } finally {
       setIsLoadingLocation(false);
@@ -284,7 +304,7 @@ export function AttendanceCheckOut({
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Camera not supported on this device');
       }
-      
+
       // Enhanced video constraints for better compatibility
       const constraints = {
         video: {
@@ -294,34 +314,34 @@ export function AttendanceCheckOut({
         },
         audio: false
       };
-      
+
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
+
       // Check if video tracks are available
       const videoTracks = mediaStream.getVideoTracks();
       if (videoTracks.length === 0) {
         throw new Error('No video tracks found in stream');
       }
-      
+
       setStream(mediaStream);
       setIsCameraActive(true);
-      
+
       if (videoRef.current) {
         const video = videoRef.current;
-        
+
         // Clear any existing content and reset state
         video.srcObject = null;
         video.load();
-        
+
         // Set essential video properties
         video.muted = true;
         video.playsInline = true;
         video.autoplay = true;
         video.controls = false;
-        
+
         // Assign the stream
         video.srcObject = mediaStream;
-        
+
         // Force play
         setTimeout(async () => {
           try {
@@ -344,7 +364,7 @@ export function AttendanceCheckOut({
           errorMessage += error.message;
         }
       }
-      
+
       toast({
         title: "Camera Access Failed",
         description: errorMessage,
@@ -359,7 +379,7 @@ export function AttendanceCheckOut({
       const video = videoRef.current;
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      
+
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0);
@@ -388,11 +408,23 @@ export function AttendanceCheckOut({
     if (!location) return "Location access is required for check-out";
     if (!navigator.onLine) return "Internet connection is required";
     if (!capturedPhoto) return "Selfie photo is required for checkout verification";
-    
+
     return null;
   };
 
   const handleSubmit = async () => {
+    // Auto-fetch location if missing
+    if (!location) {
+      setIsLoadingLocation(true);
+      try {
+        await getCurrentLocationWithAddress();
+      } catch (error) {
+        console.error('Auto location fetch failed:', error);
+      } finally {
+        setIsLoadingLocation(false);
+      }
+    }
+
     const validationError = validateForm();
     if (validationError) {
       toast({
@@ -417,7 +449,7 @@ export function AttendanceCheckOut({
           });
 
           const uploadData = await uploadResponse.json();
-          
+
           if (uploadData.success) {
             photoUploadUrl = uploadData.url;
           } else {
@@ -457,7 +489,7 @@ export function AttendanceCheckOut({
         },
         body: JSON.stringify(checkOutData),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to check out');
@@ -469,7 +501,7 @@ export function AttendanceCheckOut({
         title: "Check-out Successful",
         description: `Work session completed${overtimeInfo.hasOvertime ? ' with overtime recorded' : ''}`,
       });
-      
+
       resetForm();
       onSuccess();
       onClose();
@@ -487,7 +519,7 @@ export function AttendanceCheckOut({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] md:max-w-2xl max-h-[85vh] md:max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Timer className="h-5 w-5" />
@@ -532,7 +564,7 @@ export function AttendanceCheckOut({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Check-in Time:</span>
                   <span className="text-sm">
-                    {currentAttendance?.checkInTime 
+                    {currentAttendance?.checkInTime
                       ? <TimeDisplay time={currentAttendance.checkInTime} format12Hour={true} />
                       : 'Not available'
                     }
@@ -609,9 +641,9 @@ export function AttendanceCheckOut({
                   <div className="text-xs text-red-700 bg-red-50 p-2 rounded border">
                     {locationError}
                   </div>
-                  <Button 
-                    onClick={getCurrentLocationWithAddress} 
-                    variant="outline" 
+                  <Button
+                    onClick={getCurrentLocationWithAddress}
+                    variant="outline"
                     size="sm"
                     className="w-full"
                   >
@@ -647,13 +679,13 @@ export function AttendanceCheckOut({
               {/* Camera view */}
               <div className="space-y-2" style={{ display: isCameraActive ? 'block' : 'none' }}>
                 <div className="relative bg-black rounded border overflow-hidden">
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
+                  <video
+                    ref={videoRef}
+                    autoPlay
                     playsInline
                     muted
                     className="w-full h-64 object-cover"
-                    style={{ 
+                    style={{
                       transform: 'scaleX(-1)',
                       minHeight: '16rem',
                       backgroundColor: '#000'
@@ -694,20 +726,20 @@ export function AttendanceCheckOut({
           <Button onClick={onClose} variant="outline" disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={
-              isSubmitting || 
-              !location || 
-              !navigator.onLine || 
-              !capturedPhoto
+              isSubmitting ||
+              !navigator.onLine ||
+              !capturedPhoto ||
+              (isLoadingLocation && !location)
             }
             className="bg-red-600 hover:bg-red-700"
           >
-            {isSubmitting ? (
+            {isSubmitting || isLoadingLocation ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Checking Out...
+                {isLoadingLocation ? 'Getting Location...' : 'Checking Out...'}
               </>
             ) : (
               <>

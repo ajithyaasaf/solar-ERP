@@ -78,9 +78,26 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
 
   const locationStatus = getLocationStatus();
 
-  // Fetch address from location using Google Maps API
+  // Track last geocoded location to avoid redundant API calls
+  const lastGeocodedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Fetch address from location using Google Maps API (with caching)
   const fetchLocationAddress = async () => {
     if (!location) return;
+
+    // Check if we've already geocoded a very similar location (within 50m)
+    if (lastGeocodedLocationRef.current) {
+      const distance = Math.sqrt(
+        Math.pow((location.latitude - lastGeocodedLocationRef.current.lat) * 111000, 2) +
+        Math.pow((location.longitude - lastGeocodedLocationRef.current.lng) * 111000, 2)
+      );
+
+      // If location hasn't changed significantly, skip API call
+      if (distance < 50 && currentAddress) {
+        console.log('Location change too small (<50m), reusing cached address');
+        return;
+      }
+    }
 
     setIsAddressLoading(true);
     try {
@@ -97,6 +114,8 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           if (data.results && data.results.length > 0) {
             const address = data.results[0].formatted_address;
             setCurrentAddress(address);
+            // Cache this location to avoid redundant calls
+            lastGeocodedLocationRef.current = { lat: location.latitude, lng: location.longitude };
             console.log('Google Maps address resolved:', address);
             return;
           }
@@ -114,10 +133,21 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
     }
   };
 
-  // Fetch address when location changes
+  // Fetch address when location changes (only if significantly different)
   useEffect(() => {
-    if (location && !currentAddress && !isAddressLoading) {
-      fetchLocationAddress();
+    if (location && !isAddressLoading) {
+      // Only fetch if we don't have an address yet, or location changed significantly
+      if (!currentAddress) {
+        fetchLocationAddress();
+      } else if (lastGeocodedLocationRef.current) {
+        const distance = Math.sqrt(
+          Math.pow((location.latitude - lastGeocodedLocationRef.current.lat) * 111000, 2) +
+          Math.pow((location.longitude - lastGeocodedLocationRef.current.lng) * 111000, 2)
+        );
+        if (distance >= 50) {
+          fetchLocationAddress();
+        }
+      }
     }
   }, [location]);
 
@@ -141,6 +171,13 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       fetchDepartmentPolicies();
     }
   }, [isOpen, user?.department]);
+
+  // Auto-fetch location when dialog opens
+  useEffect(() => {
+    if (isOpen && !location && !isLocationRefreshing) {
+      refreshLocation();
+    }
+  }, [isOpen]);
 
   const fetchDepartmentPolicies = async () => {
     try {
@@ -211,8 +248,10 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
 
   // Enhanced check-in mutation with enterprise validation and photo upload
   const checkInMutation = useMutation({
-    mutationFn: async () => {
-      if (!user?.uid || !location) {
+    mutationFn: async (explicitLocation?: any) => {
+      const activeLocation = explicitLocation || location;
+
+      if (!user?.uid || !activeLocation) {
         throw new Error('Location data not available');
       }
 
@@ -264,14 +303,14 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       const deviceInfo = {
         type: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' as const : 'desktop' as const,
         userAgent: navigator.userAgent,
-        locationCapability: location.accuracy <= 10 ? 'excellent' as const : location.accuracy <= 50 ? 'good' as const : 'limited' as const
+        locationCapability: activeLocation.accuracy <= 10 ? 'excellent' as const : activeLocation.accuracy <= 50 ? 'good' as const : 'limited' as const
       };
 
       const requestData = sanitizeFormData({
         userId: user.uid,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
+        latitude: activeLocation.latitude,
+        longitude: activeLocation.longitude,
+        accuracy: activeLocation.accuracy,
         attendanceType: 'office',
         imageUrl: photoUploadUrl,
         deviceInfo
@@ -279,9 +318,9 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
 
       console.log('FRONTEND: Sending simplified check-in request');
       console.log('Location data:', {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
+        latitude: activeLocation.latitude,
+        longitude: activeLocation.longitude,
+        accuracy: activeLocation.accuracy,
         hasPhoto: !!photoUploadUrl,
         address: currentAddress
       });
@@ -297,8 +336,6 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       }
 
       const result = await response.json();
-
-
 
       return result;
     },
@@ -564,21 +601,35 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
       return;
     }
 
-    if (!location) {
+    let activeLocation = location;
+
+    // Auto-fetch location if missing
+    if (!activeLocation) {
+      setIsLocationRefreshing(true);
+      try {
+        activeLocation = await getCurrentLocation();
+      } catch (error) {
+        console.error('Auto location fetch failed:', error);
+      } finally {
+        setIsLocationRefreshing(false);
+      }
+    }
+
+    if (!activeLocation) {
       toast({
         title: "Location Required",
-        description: "Please enable location services and refresh your location.",
+        description: "Please enable location services and try again.",
         variant: "destructive",
       });
       return;
     }
 
-    checkInMutation.mutate();
+    checkInMutation.mutate(activeLocation);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] md:max-w-md max-h-[85vh] md:max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -830,13 +881,19 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
           {/* Submit Button with Context-Aware Messaging */}
           <Button
             onClick={handleSubmit}
-            disabled={!isFormValid() || checkInMutation.isPending || !isOnline || hasBlockingLeave}
             className="w-full"
+            disabled={
+              (!capturedPhoto) ||
+              checkInMutation.isPending ||
+              hasBlockingLeave ||
+              !isOnline ||
+              (isLocationRefreshing && !location)
+            }
           >
-            {checkInMutation.isPending ? (
+            {checkInMutation.isPending || isLocationRefreshing ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing Check-in...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isLocationRefreshing ? "Getting Location..." : "Checking In..."}
               </>
             ) : hasBlockingLeave ? (
               <>
@@ -846,7 +903,7 @@ export function EnterpriseAttendanceCheckIn({ isOpen, onClose, onSuccess }: Ente
             ) : (
               <>
                 <Timer className="h-4 w-4 mr-2" />
-                {isFormValid() ? 'Check In Now' : 'Complete Requirements Above'}
+                Check In Now
               </>
             )}
           </Button>

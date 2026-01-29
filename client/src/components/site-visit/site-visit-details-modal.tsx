@@ -394,7 +394,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-        <DialogContent className={`w-[95vw] max-w-4xl max-h-[90vh] p-4 sm:p-6 ${lightboxOpen ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}>
+        <DialogContent className={`w-[95vw] max-w-4xl max-h-[90vh] p-3 sm:p-6 ${lightboxOpen ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}>
           <DialogHeader className="space-y-2">
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -1712,7 +1712,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       <div key={key} className="space-y-2">
                         <h5 className="font-medium text-gray-700">{fieldLabels[key] || key.replace(/([A-Z])/g, ' $1')}</h5>
                         <div className="bg-gray-50 p-3 rounded-lg border">
-                          <p className="text-sm whitespace-pre-wrap">{value as string}</p>
+                          <p className="text-sm whitespace-pre-wrap break-words">{value as string}</p>
                         </div>
                       </div>
                     );
@@ -1785,7 +1785,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <div className="space-y-2">
                       <h5 className="font-medium text-yellow-700">Pending Work Details</h5>
                       <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                        <p className="text-sm whitespace-pre-wrap">{siteVisit.technicalData.pendingRemarks}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{siteVisit.technicalData.pendingRemarks}</p>
                       </div>
                     </div>
                   )}
@@ -1812,7 +1812,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                     <div className="space-y-2">
                       <h5 className="font-medium text-gray-700">Additional Description</h5>
                       <div className="bg-gray-50 p-3 rounded-lg border">
-                        <p className="text-sm whitespace-pre-wrap">{siteVisit.technicalData.description}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">{siteVisit.technicalData.description}</p>
                       </div>
                     </div>
                   )}
@@ -1842,7 +1842,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <img
                           src={siteVisit.siteInPhotoUrl}
                           alt="Check-in photo"
-                          className="max-w-md w-auto h-64 object-contain rounded-lg border transition-transform hover:scale-105 cursor-pointer bg-gray-50"
+                          className="w-full h-auto max-h-64 object-contain rounded-lg border transition-transform hover:scale-105 cursor-pointer bg-gray-50"
                           onClick={() => openLightbox(siteVisit.siteInPhotoUrl!)}
                         />
                         <Badge className="absolute top-2 right-2 text-xs bg-green-600 text-white">
@@ -1871,7 +1871,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         <img
                           src={siteVisit.siteOutPhotoUrl}
                           alt="Check-out photo"
-                          className="max-w-md w-auto h-64 object-contain rounded-lg border transition-transform hover:scale-105 cursor-pointer bg-gray-50"
+                          className="w-full h-auto max-h-64 object-contain rounded-lg border transition-transform hover:scale-105 cursor-pointer bg-gray-50"
                           onClick={() => openLightbox(siteVisit.siteOutPhotoUrl!)}
                         />
                         <Badge className="absolute top-2 right-2 text-xs bg-red-600 text-white">
@@ -1906,7 +1906,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                       </div>
 
                       {/* Enhanced Grid Layout for Multiple Photos */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                         {filteredSitePhotos.map((photo, index) => {
                           // Handle both string URLs (follow-ups) and objects (site visits)
                           const photoUrl = typeof photo === 'string' ? photo : photo.url;
@@ -1922,7 +1922,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                                 <img
                                   src={photoUrl}
                                   alt={`Site photo ${index + 1}`}
-                                  className="w-full h-32 sm:h-36 object-cover rounded-lg transition-all duration-200 hover:scale-105 cursor-pointer border-2 border-transparent hover:border-blue-300"
+                                  className="w-full h-28 sm:h-36 object-cover rounded-lg transition-all duration-200 hover:scale-105 cursor-pointer border-2 border-transparent hover:border-blue-300"
                                   onClick={() => openLightbox(photoUrl)}
                                 />
 
@@ -1962,7 +1962,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm whitespace-pre-wrap">{siteVisit.notes}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{siteVisit.notes}</p>
                 </CardContent>
               </Card>
             )}

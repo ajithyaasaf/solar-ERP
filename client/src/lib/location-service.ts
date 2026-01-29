@@ -20,6 +20,7 @@ export interface LocationStatus {
 
 class LocationService {
   private apiKey: string;
+  private lastGeocodedLocation: { lat: number; lng: number; address: string; formattedAddress: string } | null = null;
 
   constructor() {
     // Try multiple environment variable sources
@@ -164,12 +165,29 @@ class LocationService {
   }
 
   /**
-   * Convert coordinates to address using Google Maps reverse geocoding
+   * Convert coordinates to address using Google Maps reverse geocoding (with caching)
    */
   private async reverseGeocode(latitude: number, longitude: number): Promise<{
     address: string;
     formattedAddress: string;
   }> {
+    // Check if we've already geocoded a very similar location (within 50m)
+    if (this.lastGeocodedLocation) {
+      const distance = Math.sqrt(
+        Math.pow((latitude - this.lastGeocodedLocation.lat) * 111000, 2) +
+        Math.pow((longitude - this.lastGeocodedLocation.lng) * 111000, 2)
+      );
+
+      // If location hasn't changed significantly, return cached address
+      if (distance < 50) {
+        console.log('📍 Location change too small (<50m), reusing cached address');
+        return {
+          address: this.lastGeocodedLocation.address,
+          formattedAddress: this.lastGeocodedLocation.formattedAddress
+        };
+      }
+    }
+
     let apiKey = this.apiKey;
 
     // If no API key, try to fetch from backend
@@ -222,10 +240,20 @@ class LocationService {
         // Extract shorter address for display
         const shortAddress = this.extractShortAddress(data.results[0]?.address_components || []);
 
-        return {
+        const result = {
           address: shortAddress || address,
           formattedAddress: address
         };
+
+        // Cache this location to avoid redundant calls
+        this.lastGeocodedLocation = {
+          lat: latitude,
+          lng: longitude,
+          address: result.address,
+          formattedAddress: result.formattedAddress
+        };
+
+        return result;
       } else {
         console.warn('❌ Geocoding failed:', data.status, data.error_message);
         throw new Error(`Geocoding failed: ${data.status}`);
