@@ -55,7 +55,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-[100dvh] overflow-hidden bg-gray-50">
       {/* Sidebar for desktop */}
       <Sidebar />
 
@@ -74,7 +74,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }} />
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto px-3 py-4 sm:p-4 md:p-6 bg-gray-50" style={{ overscrollBehavior: 'contain' }}>
+        <main className="flex-1 overflow-y-auto px-3 py-4 pb-20 sm:p-4 md:p-6 bg-gray-50" style={{ overscrollBehavior: 'contain' }}>
           <div className="max-w-[1600px] mx-auto">
             {/* Notification banner for auto-checkout and admin alerts */}
             <div className="mb-4">

@@ -813,7 +813,7 @@ export default function Attendance() {
             <h2 className="text-xl font-semibold">Attendance History</h2>
             <p className="text-sm text-muted-foreground">Track your daily attendance records and patterns</p>
           </div>
-          <TabsList className="grid w-full sm:w-auto grid-cols-4">
+          <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:grid-cols-4 gap-1">
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="week">This Week</TabsTrigger>
             <TabsTrigger value="month">This Month</TabsTrigger>
@@ -850,7 +850,7 @@ export default function Attendance() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-md border">
+                  <div className="rounded-md border overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1017,7 +1017,7 @@ export default function Attendance() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-md border">
+                  <div className="rounded-md border overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1102,7 +1102,7 @@ export default function Attendance() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-md border">
+                  <div className="rounded-md border overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
