@@ -813,7 +813,7 @@ export default function Attendance() {
             <h2 className="text-xl font-semibold">Attendance History</h2>
             <p className="text-sm text-muted-foreground">Track your daily attendance records and patterns</p>
           </div>
-          <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:grid-cols-4 gap-1">
+          <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:grid-cols-4 gap-1 h-auto">
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="week">This Week</TabsTrigger>
             <TabsTrigger value="month">This Month</TabsTrigger>
