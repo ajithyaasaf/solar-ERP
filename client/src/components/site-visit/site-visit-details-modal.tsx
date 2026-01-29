@@ -35,6 +35,8 @@ import {
   CircleX
 } from "lucide-react";
 import { format } from "date-fns";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
 
 interface SiteVisit {
   id: string;
@@ -138,9 +140,9 @@ interface SiteVisitDetailsModalProps {
 export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitDetailsModalProps) {
   if (!siteVisit) return null;
 
-  // Bullet-proof Lightbox State: Single index source of truth (-1 = closed)
-  const [lightboxIndex, setLightboxIndex] = useState(-1);
-  const lightboxOpen = lightboxIndex >= 0;
+  // Separate Lightbox States - Attendance vs Site Photos
+  const [attendanceLightboxIndex, setAttendanceLightboxIndex] = useState(-1);
+  const [sitePhotosLightboxIndex, setSitePhotosLightboxIndex] = useState(-1);
 
   // Determine truly unique site photos (filtering out cross-duplicates from check-in/out and deduping)
   const filteredSitePhotos = useMemo(() => {
@@ -170,8 +172,16 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
 
   const uniqueSitePhotosCount = filteredSitePhotos.length;
 
-  // Complete gallery for lightbox - includes ALL photos in logical order
-  const allGalleryPhotos = useMemo(() => {
+  // 1. Attendance Photos (Check-in & Check-out ONLY)
+  const attendancePhotos = useMemo(() => {
+    const photos: string[] = [];
+    if (siteVisit.siteInPhotoUrl) photos.push(siteVisit.siteInPhotoUrl);
+    if (siteVisit.siteOutPhotoUrl) photos.push(siteVisit.siteOutPhotoUrl);
+    return photos;
+  }, [siteVisit]);
+
+  // 2. Site Work Photos (Documentation ONLY - excludes attendance)
+  const siteWorkPhotos = useMemo(() => {
     const gallery: any[] = [];
     const clean = (u: any) => typeof u === 'string' ? u.split('?')[0] : '';
     const seen = new Set<string>();
@@ -188,16 +198,10 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
       }
     };
 
-    // 1. Check-in Photo (attendance)
-    if (siteVisit.siteInPhotoUrl) addUnique(siteVisit.siteInPhotoUrl);
-
-    // 2. Site Photos (field photos only - already filtered)
+    // Site Photos (field photos only - already filtered)
     filteredSitePhotos.forEach(p => addUnique(p));
 
-    // 3. Check-out Photo (attendance)
-    if (siteVisit.siteOutPhotoUrl) addUnique(siteVisit.siteOutPhotoUrl);
-
-    // 4. Additional Checkout Photos (if any)
+    // Additional Checkout Photos (if any)
     if (siteVisit.siteOutPhotos) {
       siteVisit.siteOutPhotos.forEach(p => addUnique(p));
     }
@@ -205,54 +209,26 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
     return gallery;
   }, [siteVisit, filteredSitePhotos]);
 
-  // Simplified Navigation Logic
-  const openLightbox = (photoUrl: any) => {
+  // Attendance Lightbox Handlers
+  const openAttendanceLightbox = (photoUrl: any) => {
+    if (!photoUrl) return;
+    const index = attendancePhotos.indexOf(photoUrl);
+    setAttendanceLightboxIndex(index >= 0 ? index : 0);
+  };
+
+  // Site Photos Lightbox Handlers
+  const openSitePhotosLightbox = (photoUrl: any) => {
     if (!photoUrl) return;
     const clean = (u: any) => typeof u === 'string' ? u.split('?')[0] : '';
     const target = clean(photoUrl);
-
-    // Find index in the complete gallery
-    const index = allGalleryPhotos.findIndex(p => {
+    const index = siteWorkPhotos.findIndex(p => {
       const pUrl = typeof p === 'string' ? p : p.url;
       return clean(pUrl) === target;
     });
-
-    setLightboxIndex(index >= 0 ? index : 0);
+    setSitePhotosLightboxIndex(index >= 0 ? index : 0);
   };
 
-  const closeLightbox = () => setLightboxIndex(-1);
 
-  const navigateLightbox = (direction: 'next' | 'prev') => {
-    if (lightboxIndex === -1 || allGalleryPhotos.length === 0) return;
-
-    setLightboxIndex(current => {
-      if (direction === 'next') {
-        return (current + 1) % allGalleryPhotos.length;
-      } else {
-        return (current - 1 + allGalleryPhotos.length) % allGalleryPhotos.length;
-      }
-    });
-  };
-
-  // Keyboard support & Scroll Lock
-  useEffect(() => {
-    if (lightboxIndex === -1) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowRight') navigateLightbox('next');
-      if (e.key === 'ArrowLeft') navigateLightbox('prev');
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    // Prevent body scroll when lightbox is open
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [lightboxIndex, allGalleryPhotos.length]);
 
   // Helper functions to handle both legacy string values and new array values
   const formatStringOrArray = (value: string | string[] | undefined): string => {
@@ -378,23 +354,12 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
   };
 
   // Prevent closing the main dialog when lightbox is open
-  const handleDialogClose = (open: boolean) => {
-    // If trying to close the dialog (open = false)
-    if (!open) {
-      // If lightbox is open, close only the lightbox, not the dialog
-      if (lightboxOpen) {
-        closeLightbox();
-        return; // Don't close the dialog
-      }
-      // Otherwise, close the dialog normally
-      onClose();
-    }
-  };
+
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-        <DialogContent className={`w-[95vw] max-w-4xl max-h-[90vh] p-3 sm:p-6 ${lightboxOpen ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className={`w-[95vw] max-w-4xl max-h-[90vh] p-3 sm:p-6 ${attendanceLightboxIndex >= 0 || sitePhotosLightboxIndex >= 0 ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}>
           <DialogHeader className="space-y-2">
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -1843,7 +1808,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           src={siteVisit.siteInPhotoUrl}
                           alt="Check-in photo"
                           className="w-full h-auto max-h-64 object-contain rounded-lg border transition-transform hover:scale-105 cursor-pointer bg-gray-50"
-                          onClick={() => openLightbox(siteVisit.siteInPhotoUrl!)}
+                          onClick={() => openAttendanceLightbox(siteVisit.siteInPhotoUrl!)}
                         />
                         <Badge className="absolute top-2 right-2 text-xs bg-green-600 text-white">
                           Check-in
@@ -1852,7 +1817,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         {/* Eye icon overlay for viewing */}
                         <div
                           className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center cursor-pointer"
-                          onClick={() => openLightbox(siteVisit.siteInPhotoUrl!)}
+                          onClick={() => openAttendanceLightbox(siteVisit.siteInPhotoUrl!)}
                         >
                           <Eye className="h-8 w-8 text-white" />
                         </div>
@@ -1872,7 +1837,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                           src={siteVisit.siteOutPhotoUrl}
                           alt="Check-out photo"
                           className="w-full h-auto max-h-64 object-contain rounded-lg border transition-transform hover:scale-105 cursor-pointer bg-gray-50"
-                          onClick={() => openLightbox(siteVisit.siteOutPhotoUrl!)}
+                          onClick={() => openAttendanceLightbox(siteVisit.siteOutPhotoUrl!)}
                         />
                         <Badge className="absolute top-2 right-2 text-xs bg-red-600 text-white">
                           Check-out
@@ -1881,7 +1846,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                         {/* Eye icon overlay for viewing */}
                         <div
                           className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center cursor-pointer"
-                          onClick={() => openLightbox(siteVisit.siteOutPhotoUrl!)}
+                          onClick={() => openAttendanceLightbox(siteVisit.siteOutPhotoUrl!)}
                         >
                           <Eye className="h-8 w-8 text-white" />
                         </div>
@@ -1923,7 +1888,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                                   src={photoUrl}
                                   alt={`Site photo ${index + 1}`}
                                   className="w-full h-28 sm:h-36 object-cover rounded-lg transition-all duration-200 hover:scale-105 cursor-pointer border-2 border-transparent hover:border-blue-300"
-                                  onClick={() => openLightbox(photoUrl)}
+                                  onClick={() => openSitePhotosLightbox(photoUrl)}
                                 />
 
                                 {/* Photo Number Badge */}
@@ -1934,7 +1899,7 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
                                 {/* Hover Overlay - Eye Icon */}
                                 <div
                                   className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center cursor-pointer"
-                                  onClick={() => openLightbox(photoUrl)}
+                                  onClick={() => openSitePhotosLightbox(photoUrl)}
                                 >
                                   <Eye className="h-8 w-8 text-white" />
                                 </div>
@@ -1977,65 +1942,23 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
         </DialogContent>
       </Dialog>
 
-      {/* Photo Lightbox Modal - Rendered outside Dialog for proper z-index */}
-      {/* Bullet-proof Lightbox UI */}
-      {lightboxIndex >= 0 && allGalleryPhotos[lightboxIndex] && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 transition-opacity duration-300">
-          {/* Close Button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              closeLightbox();
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              closeLightbox();
-            }}
-            className="absolute top-4 right-4 z-[10000] p-4 hover:bg-white/10 active:bg-white/20 rounded-full text-white/80 hover:text-white transition-all touch-manipulation"
-            aria-label="Close Lightbox"
-          >
-            <X className="h-8 w-8 pointer-events-none" />
-          </button>
+      {/* Attendance Lightbox - Check-in/out photos ONLY */}
+      <Lightbox
+        open={attendanceLightboxIndex >= 0}
+        close={() => setAttendanceLightboxIndex(-1)}
+        slides={attendancePhotos.map(url => ({ src: url }))}
+        index={attendanceLightboxIndex >= 0 ? attendanceLightboxIndex : 0}
+      />
 
-          {/* Main Image Container */}
-          <div className="relative w-full h-full flex items-center justify-center p-4">
-            <img
-              src={typeof allGalleryPhotos[lightboxIndex] === 'string' ? allGalleryPhotos[lightboxIndex] : (allGalleryPhotos[lightboxIndex] as any).url}
-              className="max-h-[90vh] max-w-[95vw] object-contain shadow-2xl rounded-sm select-none"
-              alt={`Photo ${lightboxIndex + 1}`}
-            />
-          </div>
-
-          {/* Navigation Controls */}
-          {allGalleryPhotos.length > 1 && (
-            <>
-              <button
-                onClick={() => navigateLightbox('prev')}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-[10000] p-4 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all border border-white/10"
-                aria-label="Previous Photo"
-              >
-                <ChevronLeft className="h-10 w-10" />
-              </button>
-
-              <button
-                onClick={() => navigateLightbox('next')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-[10000] p-4 text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full transition-all border border-white/10"
-                aria-label="Next Photo"
-              >
-                <ChevronRight className="h-10 w-10" />
-              </button>
-
-              {/* Counter Badge */}
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-6 py-2 rounded-full text-white text-base font-medium border border-white/10">
-                {lightboxIndex + 1} / {allGalleryPhotos.length}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {/* Site Photos Lightbox - Documentation photos ONLY */}
+      <Lightbox
+        open={sitePhotosLightboxIndex >= 0}
+        close={() => setSitePhotosLightboxIndex(-1)}
+        slides={siteWorkPhotos.map(photo => ({
+          src: typeof photo === 'string' ? photo : photo.url
+        }))}
+        index={sitePhotosLightboxIndex >= 0 ? sitePhotosLightboxIndex : 0}
+      />
     </>
   );
 }
