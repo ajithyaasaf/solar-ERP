@@ -8,13 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Camera, 
-  X, 
-  Download, 
-  ExternalLink, 
-  Clock, 
-  MapPin,
+import {
+  Camera,
+  Download,
+  Clock,
   User,
   Loader2,
   AlertCircle,
@@ -68,7 +65,7 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
 
   const handleDownload = async () => {
     if (!imageUrl) return;
-    
+
     try {
       const response = await fetch(imageUrl);
       const blob = await response.blob();
@@ -112,7 +109,7 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
               )}
             </div>
           </div>
-          
+
           {/* Action buttons */}
           {imageUrl && !hasError && (
             <div className="flex gap-1">
@@ -134,15 +131,7 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
               >
                 <Download className="h-3 w-3" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleExternalView}
-                className="h-7 w-7 p-0"
-                title="Open in new tab"
-              >
-                <ExternalLink className="h-3 w-3" />
-              </Button>
+
             </div>
           )}
         </div>
@@ -164,16 +153,16 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               )}
-              
+
               {/* Error state */}
               {hasError && (
                 <div className="aspect-video bg-red-50 rounded-lg flex items-center justify-center border border-red-200">
                   <div className="text-center text-red-500">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2" />
                     <p className="text-sm">Failed to load photo</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleExternalView}
                       className="mt-2 h-7 text-xs"
                     >
@@ -182,16 +171,14 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
                   </div>
                 </div>
               )}
-              
+
               {/* Photo */}
               <img
                 src={imageUrl}
                 alt={`${title} verification photo`}
-                className={`w-full rounded-lg shadow-sm transition-all duration-300 ${
-                  isLoading ? 'hidden' : hasError ? 'hidden' : 'block'
-                } ${
-                  isZoomed ? 'scale-110 shadow-lg' : 'hover:shadow-md'
-                }`}
+                className={`w-full rounded-lg shadow-sm transition-all duration-300 ${isLoading ? 'hidden' : hasError ? 'hidden' : 'block'
+                  } ${isZoomed ? 'scale-110 shadow-lg' : 'hover:shadow-md'
+                  }`}
                 style={{ aspectRatio: '16/9', objectFit: 'cover' }}
                 onLoad={handleImageLoad}
                 onError={handleImageError}
@@ -201,14 +188,7 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
         </div>
 
         {/* Location info */}
-        {latitude && longitude && (
-          <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <span>Location: {parseFloat(latitude).toFixed(4)}, {parseFloat(longitude).toFixed(4)}</span>
-            </div>
-          </div>
-        )}
+
       </CardContent>
     </Card>
   );
@@ -245,14 +225,7 @@ export function AttendancePhotoViewer({ isOpen, onClose, attendanceRecord }: Att
                 </div>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+
           </div>
         </DialogHeader>
 
@@ -300,11 +273,11 @@ export function AttendancePhotoViewer({ isOpen, onClose, attendanceRecord }: Att
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center gap-4">
                 <span>
-                  {hasCheckInPhoto && hasCheckOutPhoto 
+                  {hasCheckInPhoto && hasCheckOutPhoto
                     ? "Both check-in and check-out photos available"
-                    : hasCheckInPhoto 
-                    ? "Check-in photo available"
-                    : "Check-out photo available"
+                    : hasCheckInPhoto
+                      ? "Check-in photo available"
+                      : "Check-out photo available"
                   }
                 </span>
               </div>
