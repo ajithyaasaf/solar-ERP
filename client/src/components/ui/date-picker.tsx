@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface DatePickerProps {
   date: Date | undefined
@@ -72,7 +73,7 @@ interface DateRangePickerProps {
 const getEnterprisePresets = () => {
   const now = new Date()
   const today = startOfDay(now)
-  
+
   return [
     {
       label: "Today",
@@ -80,7 +81,7 @@ const getEnterprisePresets = () => {
       description: "Current day"
     },
     {
-      label: "Yesterday", 
+      label: "Yesterday",
       value: { from: startOfDay(subDays(now, 1)), to: endOfDay(subDays(now, 1)) },
       description: "Previous day"
     },
@@ -137,7 +138,7 @@ const getEnterprisePresets = () => {
   ]
 }
 
-export function DateRangePicker({ 
+export function DateRangePicker({
   dateRange,
   setDateRange,
   className,
@@ -153,83 +154,84 @@ export function DateRangePicker({
   const [manualInput, setManualInput] = React.useState(false)
   const [fromInput, setFromInput] = React.useState('')
   const [toInput, setToInput] = React.useState('')
-  
+  const isMobile = useIsMobile()
+
   const presets = getEnterprisePresets()
-  
+
   const validateDateRange = (from: Date | undefined, to: Date | undefined): string | null => {
     if (!from || !to) return null
-    
+
     if (!isValid(from) || !isValid(to)) {
       return "Invalid date format"
     }
-    
+
     if (isAfter(from, to)) {
       return "Start date must be before end date"
     }
-    
+
     if (minDate && isBefore(from, minDate)) {
       return `Date cannot be before ${format(minDate, 'MMM dd, yyyy')}`
     }
-    
+
     if (maxDate && isAfter(to, maxDate)) {
       return `Date cannot be after ${format(maxDate, 'MMM dd, yyyy')}`
     }
-    
+
     if (maxRange) {
       const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
       if (daysDiff > maxRange) {
         return `Date range cannot exceed ${maxRange} days`
       }
     }
-    
+
     return null
   }
-  
+
   const handleDateChange = (selected: any) => {
     const newRange = {
       from: selected?.from,
       to: selected?.to,
     }
-    
+
     const validationError = validateDateRange(newRange.from, newRange.to)
-    
+
     if (validationError) {
       setError(validationError)
       onError?.(validationError)
       return
     }
-    
+
     setError(null)
     setDateRange(newRange)
   }
-  
+
   const handlePresetClick = (preset: any) => {
     const validationError = validateDateRange(preset.value.from, preset.value.to)
-    
+
     if (validationError) {
       setError(validationError)
       onError?.(validationError)
       return
     }
-    
+
     setError(null)
     setDateRange(preset.value)
     setOpen(false)
   }
-  
+
   const handleManualInput = () => {
     try {
       const fromDate = fromInput ? new Date(fromInput) : undefined
       const toDate = toInput ? new Date(toInput) : undefined
-      
+
       const validationError = validateDateRange(fromDate, toDate)
-      
+
       if (validationError) {
         setError(validationError)
         onError?.(validationError)
         return
       }
-      
+
       setError(null)
       setDateRange({ from: fromDate, to: toDate })
       setManualInput(false)
@@ -238,11 +240,11 @@ export function DateRangePicker({
       onError?.("Invalid date format")
     }
   }
-  
+
   const formatDisplayRange = (from: Date | undefined, to: Date | undefined) => {
     if (!from) return placeholder
     if (!to) return format(from, "MMM dd, yyyy")
-    
+
     // Smart formatting for same month/year
     if (from.getFullYear() === to.getFullYear()) {
       if (from.getMonth() === to.getMonth()) {
@@ -250,10 +252,10 @@ export function DateRangePicker({
       }
       return `${format(from, "MMM dd")} - ${format(to, "MMM dd, yyyy")}`
     }
-    
+
     return `${format(from, "MMM dd, yyyy")} - ${format(to, "MMM dd, yyyy")}`
   }
-  
+
   React.useEffect(() => {
     if (dateRange.from) {
       setFromInput(format(dateRange.from, 'yyyy-MM-dd'))
@@ -262,7 +264,7 @@ export function DateRangePicker({
       setToInput(format(dateRange.to, 'yyyy-MM-dd'))
     }
   }, [dateRange])
-  
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover open={open} onOpenChange={setOpen}>
@@ -282,41 +284,40 @@ export function DateRangePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <div className="flex">
+          <div className="flex flex-col sm:flex-row">
             {/* Presets Panel */}
             {showPresets && (
-              <div className="border-r p-3 space-y-2 w-48">
-                <div className="text-sm font-medium text-gray-900">Quick Select</div>
-                <div className="space-y-1">
-                  {presets.map((preset) => (
-                    <Button
-                      key={preset.label}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start text-xs h-auto py-1.5"
-                      onClick={() => handlePresetClick(preset)}
-                    >
-                      <div>
-                        <div className="font-medium">{preset.label}</div>
-                        <div className="text-xs text-gray-500">{preset.description}</div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-                
-                <Separator />
-                
+              <div className="border-b sm:border-b-0 sm:border-r p-3 sm:space-y-2 w-full sm:w-48 overflow-x-auto flex flex-row sm:flex-col gap-2 sm:gap-0">
+                <div className="text-sm font-medium text-gray-900 hidden sm:block">Quick Select</div>
+
+                {presets.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    variant="ghost"
+                    size="sm"
+                    className="w-auto sm:w-full justify-start text-xs h-auto py-1.5 shrink-0"
+                    onClick={() => handlePresetClick(preset)}
+                  >
+                    <div>
+                      <div className="font-medium whitespace-nowrap">{preset.label}</div>
+                      <div className="text-xs text-gray-500 hidden sm:block">{preset.description}</div>
+                    </div>
+                  </Button>
+                ))}
+
+                <Separator className="hidden sm:block" />
+
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start text-xs"
+                  className="w-auto sm:w-full justify-start text-xs shrink-0"
                   onClick={() => setManualInput(!manualInput)}
                 >
                   {manualInput ? 'Use Calendar' : 'Manual Entry'}
                 </Button>
               </div>
             )}
-            
+
             {/* Calendar/Manual Input Panel */}
             <div className="p-3">
               {manualInput ? (
@@ -365,7 +366,7 @@ export function DateRangePicker({
                     to: dateRange.to,
                   }}
                   onSelect={handleDateChange}
-                  numberOfMonths={2}
+                  numberOfMonths={isMobile ? 1 : 2}
                   disabled={(date) => {
                     if (minDate && isBefore(date, minDate)) return true
                     if (maxDate && isAfter(date, maxDate)) return true
@@ -375,7 +376,7 @@ export function DateRangePicker({
               )}
             </div>
           </div>
-          
+
           {/* Error Display */}
           {error && (
             <div className="border-t p-3 bg-red-50">
@@ -385,7 +386,7 @@ export function DateRangePicker({
               </div>
             </div>
           )}
-          
+
           {/* Info Display */}
           {dateRange.from && dateRange.to && !error && (
             <div className="border-t p-3 bg-gray-50">

@@ -10,8 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { PlusCircle, Bell, Menu, FileText, Clock, Calendar } from "lucide-react";
-import { EnterpriseAttendanceCheckIn } from "@/components/attendance/enterprise-attendance-check-in";
+import { PlusCircle, Bell, Menu, FileText, Clock, Calendar, Zap } from "lucide-react";
 import { useAuthContext } from "@/contexts/auth-context";
 
 interface HeaderProps {
@@ -28,7 +27,6 @@ interface MenuEntryOption {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const [location] = useLocation();
-  const [showCheckInModal, setShowCheckInModal] = useState(false);
   const { user } = useAuthContext();
 
   // Map of routes to display names
@@ -42,6 +40,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     "/user-management": "User Management",
     "/departments": "Departments",
     "/settings": "Settings",
+    "/employee-ot": "Overtime",
   };
 
   // Determine the current page title
@@ -49,17 +48,24 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   // New entry options based on current page
   const getNewEntryOptions = (): MenuEntryOption[] => {
+    const commonOptions = [
+      { label: "New Quotation", description: "Create a quotation", icon: <FileText className="h-4 w-4" />, href: "/quotations/new" },
+      { label: "Attendance", description: "All Attendance", icon: <Clock className="h-4 w-4" />, href: "/attendance" },
+      { label: "OT", description: "All Overtime", icon: <Zap className="h-4 w-4" />, href: "/employee-ot" }
+    ];
+
     switch (location) {
       case "/quotations":
-        return [{ label: "New Quotation", description: "Create a quotation", icon: <FileText className="h-4 w-4" />, href: "/quotations/new" }];
+        return commonOptions;
       case "/attendance":
-        return [{ label: "Check In/Out", description: "Mark your attendance", icon: <Clock className="h-4 w-4" />, onClick: () => setShowCheckInModal(true) }];
+        return commonOptions;
       case "/leave":
-        return [{ label: "Apply Leave", description: "Request leave", icon: <Calendar className="h-4 w-4" />, href: "/leave/new" }];
-      default:
         return [
-          { label: "New Quotation", description: "Create a quotation", icon: <FileText className="h-4 w-4" />, href: "/quotations/new" }
+          { label: "Apply Leave", description: "Request leave", icon: <Calendar className="h-4 w-4" />, href: "/leave/new" },
+          ...commonOptions
         ];
+      default:
+        return commonOptions;
     }
   };
 
@@ -135,12 +141,6 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
       </header>
-
-      <EnterpriseAttendanceCheckIn
-        isOpen={showCheckInModal}
-        onClose={() => setShowCheckInModal(false)}
-        onSuccess={() => setShowCheckInModal(false)}
-      />
     </>
   );
 }
