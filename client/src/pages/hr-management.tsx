@@ -67,9 +67,7 @@ type User = z.infer<typeof insertUserEnhancedSchema> & {
   updatedAt: Date;
 };
 
-const userFormSchema = insertUserEnhancedSchema.extend({
-  createLogin: z.boolean().nullish()
-}).omit({
+const userFormSchema = insertUserEnhancedSchema.omit({
   uid: true
 });
 
@@ -105,16 +103,27 @@ export default function HRManagement() {
         'emergencyContactNumber', 'permanentAddress', 'presentAddress', 'location',
         'bankAccountNumber', 'bankName', 'ifscCode', 'educationalQualification'
       ]);
-      const response = await apiRequest('/api/users', 'POST', sanitizedData);
+
+      // Use employee ID as default password, or generate a temporary one if not provided
+      const defaultPassword = sanitizedData.employeeId || `temp_${Date.now()}`;
+
+      const response = await apiRequest('/api/users', 'POST', {
+        ...sanitizedData,
+        createLogin: true,
+        password: defaultPassword
+      });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setIsCreateDialogOpen(false);
+      const employeeId = form.getValues('employeeId');
       form.reset();
       toast({
         title: "Success",
-        description: "Employee created successfully. If login was enabled, they will receive a password reset email.",
+        description: employeeId
+          ? `Employee created successfully. Default password is their Employee ID: ${employeeId}`
+          : "Employee created successfully. They can log in with their email and temporary password.",
       });
     },
     onError: (error: Error) => {
@@ -228,8 +237,7 @@ export default function HRManagement() {
       bankAccountNumber: "",
       bankName: "",
       ifscCode: "",
-      documents: undefined,
-      createLogin: false
+      documents: undefined
     },
   });
 
@@ -451,8 +459,7 @@ export default function HRManagement() {
         ...selectedUser,
         dateOfBirth: selectedUser.dateOfBirth ? new Date(selectedUser.dateOfBirth) : undefined,
         joinDate: selectedUser.joinDate ? new Date(selectedUser.joinDate) : undefined,
-        dateOfLeaving: selectedUser.dateOfLeaving ? new Date(selectedUser.dateOfLeaving) : undefined,
-        createLogin: false
+        dateOfLeaving: selectedUser.dateOfLeaving ? new Date(selectedUser.dateOfLeaving) : undefined
       });
     }
   }, [selectedUser, isEditDialogOpen, editForm]);
@@ -879,11 +886,80 @@ function UserForm({
   setAadharCardData: (data: string) => void;
   panCardData: string;
   setPanCardData: (data: string) => void;
+  setPanCardData: (data: string) => void;
 }) {
+  const [activeTab, setActiveTab] = useState("basic");
+  const { toast } = useToast();
+
+  const fieldTabMapping: Record<string, string> = {
+    // Basic Tab
+    email: 'basic',
+    displayName: 'basic',
+    employeeId: 'basic',
+    department: 'basic',
+    designation: 'basic',
+    employeeStatus: 'basic',
+    joinDate: 'basic',
+    dateOfLeaving: 'basic',
+    createLogin: 'basic',
+
+    // Personal Tab
+    fatherName: 'personal',
+    spouseName: 'personal',
+    dateOfBirth: 'personal',
+    age: 'personal',
+    gender: 'personal',
+    maritalStatus: 'personal',
+    bloodGroup: 'personal',
+    profilePhotoUrl: 'personal',
+    aadharCardUrl: 'personal',
+    panCardUrl: 'personal',
+
+    // Contact Tab
+    contactNumber: 'contact',
+    location: 'contact',
+    presentAddress: 'contact',
+    permanentAddress: 'contact',
+    emergencyContactPerson: 'contact',
+    emergencyContactNumber: 'contact',
+
+    // Statutory Tab
+    esiNumber: 'statutory',
+    epfNumber: 'statutory',
+    aadharNumber: 'statutory',
+    panNumber: 'statutory',
+
+    // Payroll Tab
+    bankName: 'payroll',
+    bankAccountNumber: 'payroll',
+    ifscCode: 'payroll',
+
+    // Professional Tab
+    educationalQualification: 'professional',
+    experienceYears: 'professional',
+    reportingManagerId: 'professional'
+  };
+
+  const onError = (errors: any) => {
+    const errorFields = Object.keys(errors);
+    if (errorFields.length > 0) {
+      const firstErrorField = errorFields[0];
+      const targetTab = fieldTabMapping[firstErrorField] || 'basic';
+
+      setActiveTab(targetTab);
+
+      toast({
+        title: "Validation Error",
+        description: `Please check the ${targetTab} tab for errors: ${errors[firstErrorField]?.message || 'Invalid field'}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Tabs defaultValue="basic" className="w-full">
+      <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="basic">Basic</TabsTrigger>
             <TabsTrigger value="personal">Personal</TabsTrigger>
@@ -1048,31 +1124,7 @@ function UserForm({
               />
             </div>
 
-            <div className="border-t pt-4 mt-4">
-              <FormField
-                control={form.control}
-                name="createLogin"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        data-testid="checkbox-createLogin"
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Create Login Credentials
-                      </FormLabel>
-                      <FormDescription>
-                        If checked, employee will be able to log in to the system. They will receive a password reset email to set their own password.
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </div>
+
           </TabsContent>
 
           <TabsContent value="personal" className="space-y-4">
@@ -1472,19 +1524,6 @@ function UserForm({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="reportingManagerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reporting Manager ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Manager's user ID" {...field} value={field.value || ''} data-testid="input-reportingManagerId" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
           </TabsContent>
         </Tabs>
@@ -1498,7 +1537,7 @@ function UserForm({
           </Button>
         </div>
       </form>
-    </Form>
+    </Form >
   );
 }
 

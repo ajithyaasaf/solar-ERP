@@ -14,8 +14,7 @@ import {
   Clock,
   User,
   Loader2,
-  AlertCircle,
-  ZoomIn
+  AlertCircle
 } from "lucide-react";
 import { TimeDisplay } from "@/components/time/time-display";
 
@@ -51,7 +50,6 @@ interface PhotoCardProps {
 function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }: PhotoCardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [isZoomed, setIsZoomed] = useState(false);
 
   const handleImageLoad = () => {
     setIsLoading(false);
@@ -116,15 +114,6 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsZoomed(!isZoomed)}
-                className="h-7 w-7 p-0"
-                title="Toggle zoom"
-              >
-                <ZoomIn className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
                 onClick={handleDownload}
                 className="h-7 w-7 p-0"
                 title="Download photo"
@@ -146,7 +135,7 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
               </div>
             </div>
           ) : (
-            <div className={`relative ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`} onClick={() => setIsZoomed(!isZoomed)}>
+            <div className="relative">
               {/* Loading state */}
               {isLoading && (
                 <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
@@ -176,8 +165,7 @@ function PhotoCard({ title, time, imageUrl, latitude, longitude, icon, variant }
               <img
                 src={imageUrl}
                 alt={`${title} verification photo`}
-                className={`w-full rounded-lg shadow-sm transition-all duration-300 ${isLoading ? 'hidden' : hasError ? 'hidden' : 'block'
-                  } ${isZoomed ? 'scale-110 shadow-lg' : 'hover:shadow-md'
+                className={`w-full rounded-lg shadow-sm hover:shadow-md transition-shadow ${isLoading ? 'hidden' : hasError ? 'hidden' : 'block'
                   }`}
                 style={{ aspectRatio: '16/9', objectFit: 'cover' }}
                 onLoad={handleImageLoad}
@@ -282,7 +270,7 @@ export function AttendancePhotoViewer({ isOpen, onClose, attendanceRecord }: Att
                 </span>
               </div>
               <div className="text-xs">
-                Click photos to zoom • Use action buttons to download or view externally
+                Use action buttons to download or view externally
               </div>
             </div>
           </div>

@@ -168,8 +168,10 @@ export class UserService {
           // Continue even if password reset fails
         }
       } else {
-        // Create a placeholder UID for users without login
-        userRecord = { uid: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` };
+        // Create a deterministic UID for users without login based on email
+        // This ensures the same email always gets the same UID
+        const emailHash = crypto.createHash('sha256').update(validatedData.email).digest('hex').substring(0, 28);
+        userRecord = { uid: `emp_${emailHash}` };
       }
 
       // Create user profile in Firestore with all employee data
@@ -253,7 +255,9 @@ export class UserService {
           email: firebaseUser.email || '',
           displayName: displayName,
           role: additionalData?.role || 'employee',
-          department: additionalData?.department || null
+          department: additionalData?.department || null,
+          isActive: true,
+          employeeStatus: 'active'
         });
         return { success: true, user: newUser, action: 'created' };
       }
