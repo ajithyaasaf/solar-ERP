@@ -94,7 +94,7 @@ export const bloodGroups = [
 
 // Employee status types for comprehensive lifecycle management
 export const employeeStatus = [
-  "active", "inactive", "probation", "notice_period", "terminated", "on_leave"
+  "active", "inactive"
 ] as const;
 
 // Payment mode options

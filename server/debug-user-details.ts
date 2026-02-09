@@ -27,3 +27,4 @@ async function analyze() {
 }
 
 analyze().then(() => process.exit(0));
+

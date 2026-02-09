@@ -8,6 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -83,6 +93,8 @@ export default function HRManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   // Document upload states
   const [profilePhotoData, setProfilePhotoData] = useState<string>("");
@@ -177,7 +189,11 @@ export default function HRManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (uid: string) => {
-      await apiRequest(`/api/users/${uid}`, 'DELETE');
+      const response = await apiRequest(`/api/users/${uid}`, 'DELETE');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete user');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
@@ -422,7 +438,9 @@ export default function HRManagement() {
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesDepartment = !selectedDepartment || selectedDepartment === "all" || user.department === selectedDepartment;
-    const matchesStatus = !selectedStatus || selectedStatus === "all" || user.employeeStatus === selectedStatus;
+    const matchesStatus = (!selectedStatus || selectedStatus === "all")
+      ? user.employeeStatus !== 'terminated' && user.employeeStatus !== 'inactive'
+      : user.employeeStatus === selectedStatus;
     const matchesDesignation = !selectedDesignation || selectedDesignation === "all" || user.designation === selectedDesignation;
 
     return matchesSearch && matchesDepartment && matchesStatus && matchesDesignation;
@@ -432,10 +450,6 @@ export default function HRManagement() {
     switch (status) {
       case "active": return "bg-green-100 text-green-800";
       case "inactive": return "bg-gray-100 text-gray-800";
-      case "probation": return "bg-yellow-100 text-yellow-800";
-      case "notice_period": return "bg-orange-100 text-orange-800";
-      case "terminated": return "bg-red-100 text-red-800";
-      case "on_leave": return "bg-blue-100 text-blue-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -690,10 +704,7 @@ export default function HRManagement() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button variant="outline" size="sm" data-testid="button-import">
-              <Upload className="mr-2 h-4 w-4" />
-              Import
-            </Button>
+
           </div>
         </CardHeader>
         <CardContent>
@@ -731,7 +742,10 @@ export default function HRManagement() {
                     setSelectedUser(user);
                     setIsEditDialogOpen(true);
                   }}
-                  onDelete={() => deleteUserMutation.mutate(user.uid)}
+                  onDelete={() => {
+                    setUserToDelete(user.uid);
+                    setIsDeleteDialogOpen(true);
+                  }}
                   getStatusColor={getStatusColor}
                   getDepartmentColor={getDepartmentColor}
                 />
@@ -779,6 +793,32 @@ export default function HRManagement() {
           </DialogContent>
         </Dialog>
       )}
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the employee
+              account and remove their data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (userToDelete) {
+                  deleteUserMutation.mutate(userToDelete);
+                  setUserToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -799,38 +839,38 @@ function UserCard({
   getDepartmentColor: (department: string) => string;
 }) {
   return (
-    <div className="flex items-center justify-between p-6 border rounded-lg hover:bg-muted/50 transition-colors" data-testid={`card-employee-${user.uid}`}>
-      <div className="flex items-center space-x-4">
-        <Avatar className="h-12 w-12">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 border rounded-lg hover:bg-muted/50 transition-colors gap-4" data-testid={`card-employee-${user.uid}`}>
+      <div className="flex items-start sm:items-center space-x-4 w-full sm:w-auto">
+        <Avatar className="h-12 w-12 flex-shrink-0">
           <AvatarImage src={user.photoURL || undefined} />
           <AvatarFallback>
             {getInitials(user.displayName)}
           </AvatarFallback>
         </Avatar>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold" data-testid={`text-employee-name-${user.uid}`}>{user.displayName}</h3>
+        <div className="space-y-1 flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold truncate" data-testid={`text-employee-name-${user.uid}`}>{user.displayName}</h3>
             <Badge className={getStatusColor(user.employeeStatus || 'active')}>
               {(user.employeeStatus || 'active').replace('_', ' ')}
             </Badge>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Building2 className="h-3 w-3" />
+              <Building2 className="h-3 w-3 flex-shrink-0" />
               {user.employeeId || 'No ID'}
             </span>
             <span className="flex items-center gap-1">
-              <Briefcase className="h-3 w-3" />
+              <Briefcase className="h-3 w-3 flex-shrink-0" />
               {user.designation?.toUpperCase() || 'No Designation'}
             </span>
-            <span className="flex items-center gap-1">
-              <Mail className="h-3 w-3" />
-              {user.email}
+            <span className="flex items-center gap-1 truncate">
+              <Mail className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{user.email}</span>
             </span>
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end w-full sm:w-auto gap-2 mt-2 sm:mt-0">
         {user.department && (
           <Badge className={getDepartmentColor(user.department)} variant="outline">
             {user.department}

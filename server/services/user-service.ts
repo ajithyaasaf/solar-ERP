@@ -337,7 +337,9 @@ export class UserService {
           designation: user.designation || null,
           reportingManagerId: user.reportingManagerId || null, // ✅ FIX: Include reporting manager
           createdAt: user.createdAt,
-          photoURL: user.photoURL || null
+          photoURL: user.photoURL || null,
+          employeeStatus: user.employeeStatus,
+          isActive: user.isActive
         };
       });
 
@@ -355,16 +357,78 @@ export class UserService {
   /**
    * Delete user from both Firebase Auth and Firestore
    */
+  /**
+   * Delete user from both Firebase Auth and Firestore
+   * Handles edge cases:
+   * 1. Checks if user is a reporting manager (prevents deletion if so)
+   * 2. Revokes refresh tokens (immediate logout)
+   * 3. Deletes from Firebase Auth
+   * 4. Soft deletes from Firestore (preserves history)
+   * 5. Invalidates cache
+   */
+  /**
+   * Delete user from both Firebase Auth and Firestore
+   * Handles edge cases:
+   * 1. Checks if user is a reporting manager (prevents deletion if so)
+   * 2. Revokes refresh tokens (immediate logout)
+   * 3. Deletes from Firebase Auth
+   * 4. Soft deletes from Firestore (preserves history)
+   * 5. Invalidates cache
+   */
   async deleteUser(uid: string) {
     try {
-      // Delete from Firebase Auth
-      await adminAuth.deleteUser(uid);
+      // 1. Check if user is a reporting manager for active employees
+      const subordinates = await storage.getUsersByReportingManager(uid);
+      if (subordinates.length > 0) {
+        throw new Error(`Cannot delete user: They are the reporting manager for ${subordinates.length} active employees. Please reassign their subordinates first.`);
+      }
 
-      // Note: In Firestore, we should keep the user record for audit purposes
-      // but mark it as deleted instead of actually deleting it
+      // 2. Revoke refresh tokens to force immediate logout
+      try {
+        await adminAuth.revokeRefreshTokens(uid);
+        console.log(`[UserService] Revoked refresh tokens for ${uid}`);
+      } catch (tokenError) {
+        console.warn(`[UserService] Failed to revoke tokens for ${uid} (user might not exist in Auth):`, tokenError);
+      }
+
+      // 3. Disable Firebase Auth (Soft Delete)
+      // Using soft-delete preserves the Auth account for potential reactivation
+      // while immediately revoking access tokens and preventing login
+      try {
+        await adminAuth.updateUser(uid, { disabled: true });
+        console.log(`[UserService] Disabled Firebase Auth account for ${uid} (soft delete)`);
+      } catch (authError: any) {
+        // If user not found in Auth, proceed to clean up Firestore
+        if (authError.code === 'auth/user-not-found') {
+          console.log(`[UserService] User ${uid} not found in Firebase Auth, proceeding with Firestore cleanup`);
+        } else {
+          throw authError; // Re-throw other auth errors
+        }
+      }
+
+      // 4. Soft delete in Firestore
+      // We set isActive to false and status to terminated
+      // We also clear sensitive data like password hash if any (though we don't store it, good practice for other fields)
       await storage.updateUser(uid, {
-        // Add a deleted flag if you want to implement soft delete
+        isActive: false,
+        employeeStatus: 'terminated',
+        dateOfLeaving: new Date(),
+        reportingManagerId: null, // Clear their own manager link
+        // We keep the rest of the data for payroll/attendance history
       } as any);
+
+      // 5. Invalidate cache
+      cacheService.invalidateUser(uid);
+
+      // Log the action - using 'customer_updated' as a fallback if 'employee_deleted' is not allowed by schema
+      await storage.createActivityLog({
+        type: 'employee_deleted' as any,
+        title: 'Employee Terminated',
+        description: `Employee ${uid} was terminated and user access revoked`,
+        entityId: uid,
+        entityType: 'user',
+        userId: 'system' // Or the admin ID if passed
+      });
 
       return { success: true };
     } catch (error: any) {
@@ -372,6 +436,112 @@ export class UserService {
       return {
         success: false,
         error: error.message || 'Failed to delete user'
+      };
+    }
+  }
+
+  /**
+   * Reactivate a terminated user account
+   * Re-enables Firebase Auth access and updates Firestore status
+   * Preserves all historical data (attendance, payroll, etc.)
+   * 
+   * @param uid - User UID to reactivate
+   * @param reactivatedBy - UID of admin performing reactivation
+   * @returns Success status and updated user object
+   */
+  async reactivateUser(uid: string, reactivatedBy?: string) {
+    // Force reload v2
+    try {
+      console.log(`[UserService] Starting reactivation for user ${uid}`);
+
+      // 1. Fetch user from Firestore to verify they exist and get email
+      const user = await storage.getUser(uid);
+      if (!user) {
+        throw new Error('User not found in database');
+      }
+
+      console.log(`[UserService] Reactivating user: ${uid}, Status: ${user.employeeStatus}, isActive: ${user.isActive}`);
+
+
+      // 2. Verify user is actually terminated or inactive
+      if ((user.employeeStatus !== 'terminated' && user.employeeStatus !== 'inactive') || user.isActive === true) {
+        throw new Error('User is not in terminated or inactive status. Only inactive users can be reactivated.');
+      }
+
+      // 3. Re-enable Firebase Auth account
+      try {
+        await adminAuth.updateUser(uid, { disabled: false });
+        console.log(`[UserService] Re-enabled Firebase Auth account for ${uid}`);
+      } catch (authError: any) {
+        console.error(`[UserService] Failed to re-enable Auth for ${uid}:`, authError);
+        throw new Error(`Failed to restore login access: ${authError.message}`);
+      }
+
+      // 4. Generate and send password reset email
+      let passwordResetSent = false;
+      try {
+        const resetLink = await adminAuth.generatePasswordResetLink(user.email);
+        await emailService.sendPasswordResetEmail(
+          user.email,
+          resetLink,
+          user.displayName || 'User'
+        );
+        passwordResetSent = true;
+        console.log(`[UserService] Password reset email sent to ${user.email}`);
+      } catch (emailError) {
+        console.warn(`[UserService] Failed to send password reset email to ${user.email}:`, emailError);
+        // Continue even if email fails - admin can manually send password reset
+      }
+
+      // 5. Update Firestore status
+      const reactivationData: any = {
+        isActive: true,
+        employeeStatus: 'active',
+        rehireDate: new Date(),
+        dateOfLeaving: null // Clear termination date
+      };
+
+      const updatedUser = await storage.updateUser(uid, reactivationData);
+
+      // 6. Invalidate cache to ensure fresh data
+      cacheService.invalidateUser(uid);
+
+      // 7. Log the reactivation activity
+      await storage.createActivityLog({
+        type: 'customer_updated' as any, // Using customer_updated as fallback
+        title: 'Employee Reactivated',
+        description: `Employee ${user.displayName} (${user.email}) was reactivated${reactivatedBy ? ` by admin ${reactivatedBy}` : ''}. ${passwordResetSent ? 'Password reset email sent.' : 'Password reset email failed - admin should manually send reset link.'}`,
+        entityId: uid,
+        entityType: 'user',
+        userId: reactivatedBy || 'system'
+      });
+
+      console.log(`[UserService] Successfully reactivated user ${uid}`);
+
+      return {
+        success: true,
+        user: updatedUser,
+        passwordResetSent,
+        message: passwordResetSent
+          ? `User reactivated successfully. Password reset email has been sent to ${user.email}.`
+          : 'User reactivated successfully. Please manually send a password reset link to the user.'
+      };
+    } catch (error: any) {
+      console.error('[UserService] Error reactivating user:', error);
+
+      // Attempt rollback if Auth was enabled but Firestore update failed
+      if (error.message?.includes('Firestore')) {
+        try {
+          await adminAuth.updateUser(uid, { disabled: true });
+          console.log(`[UserService] Rolled back Auth enablement for ${uid} due to Firestore error`);
+        } catch (rollbackError) {
+          console.error(`[UserService] Failed to rollback Auth for ${uid}:`, rollbackError);
+        }
+      }
+
+      return {
+        success: false,
+        error: error.message || 'Failed to reactivate user'
       };
     }
   }

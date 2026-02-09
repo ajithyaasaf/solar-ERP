@@ -1197,6 +1197,10 @@ export class FirestoreStorage implements IStorage {
     const docSnap = await userDoc.get();
     if (!docSnap.exists) return undefined;
     const data = docSnap.data();
+
+    // Debug logging
+    console.log(`[Storage.getUser] User ${id} employeeStatus from Firestore:`, data?.employeeStatus);
+
     return {
       id: docSnap.id,
       uid: data?.uid,
@@ -1210,6 +1214,7 @@ export class FirestoreStorage implements IStorage {
       payrollGrade: data?.payrollGrade,
       joinDate: data?.joinDate?.toDate ? data.joinDate.toDate() : undefined,
       isActive: data?.isActive !== false,
+      employeeStatus: data?.employeeStatus || 'active',
       createdAt: data?.createdAt?.toDate ? data.createdAt.toDate() : new Date(data?.createdAt || Date.now()),
       photoURL: data?.photoURL,
     } as User;
@@ -1266,6 +1271,7 @@ export class FirestoreStorage implements IStorage {
         isActive: data.isActive !== false,
         createdAt: createdAt,
         photoURL: data.photoURL,
+        employeeStatus: data.employeeStatus || 'active',
       } as User;
     });
   }

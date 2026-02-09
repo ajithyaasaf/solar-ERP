@@ -31,6 +31,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -49,6 +59,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function UserManagement() {
   const { user } = useAuthContext();
@@ -59,6 +70,9 @@ export default function UserManagement() {
   const [editUser, setEditUser] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [activeTab, setActiveTab] = useState("active");
+  const [userToReactivate, setUserToReactivate] = useState<any>(null);
+  const [showReactivateDialog, setShowReactivateDialog] = useState(false);
 
   // Only master_admin and admin can access this page
   if (user?.role !== "master_admin" && user?.role !== "admin") {
@@ -138,6 +152,35 @@ export default function UserManagement() {
     },
   });
 
+  // Reactivate user mutation
+  const reactivateUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest(`/api/users/${userId}/reactivate`, "POST", {});
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to reactivate user");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "User Reactivated Successfully",
+        description: data.passwordResetSent
+          ? `System access restored. Password reset email sent to ${data.user?.email}.`
+          : `System access restored. Please manually send password reset to ${data.user?.email}.`,
+        variant: "default",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Reactivation Failed",
+        description: error.message || "Failed to reactivate user. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Sync users with Firestore
   const handleSyncUsers = async () => {
     setIsSyncing(true);
@@ -206,9 +249,30 @@ export default function UserManagement() {
     }
   };
 
-  // Filter users by search query
+  // Handle reactivate user click
+  const handleReactivateUser = (user: any) => {
+    setUserToReactivate(user);
+    setShowReactivateDialog(true);
+  };
+
+  // Confirm and execute reactivation
+  const handleConfirmReactivation = () => {
+    if (userToReactivate) {
+      reactivateUserMutation.mutate(userToReactivate.id);
+      setShowReactivateDialog(false);
+      setUserToReactivate(null);
+    }
+  };
+
+  // Filter users by search query and tab selection
   const filteredUsers = Array.isArray(users)
     ? users.filter((user: any) => {
+      // Filter by tab selection
+      const isInactive = user.employeeStatus === 'terminated';
+      if (activeTab === 'active' && isInactive) return false;
+      if (activeTab === 'inactive' && !isInactive) return false;
+
+      // Apply search filter
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
       return (
@@ -218,6 +282,10 @@ export default function UserManagement() {
       );
     })
     : [];
+
+  // Count active and inactive users
+  const activeCount = Array.isArray(users) ? users.filter((u: any) => u.employeeStatus !== 'terminated').length : 0;
+  const inactiveCount = Array.isArray(users) ? users.filter((u: any) => u.employeeStatus === 'terminated').length : 0;
 
   // Role badge styles
   const roleStyles = {
@@ -303,139 +371,170 @@ export default function UserManagement() {
         </CardHeader>
 
         <CardContent className="px-6">
-          <div className="mb-4 flex items-center">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                placeholder="Search by name, email, or department"
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="active" className="flex items-center gap-2">
+                Active Users
+                <span className="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                  {activeCount}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="inactive" className="flex items-center gap-2">
+                Inactive Users
+                <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
+                  {inactiveCount}
+                </span>
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Designation</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
-                      <div className="flex justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-center py-8 text-gray-500"
-                    >
-                      {searchQuery
-                        ? "No users match your search"
-                        : "No users found"}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredUsers.map((userData: any) => (
-                    <TableRow key={userData.id}>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                            {userData.photoURL ? (
-                              <img
-                                src={userData.photoURL}
-                                alt={userData.displayName || "User"}
-                                className="h-10 w-10 rounded-full"
-                              />
-                            ) : (
-                              <span>
-                                {getInitials(
-                                  userData.displayName ||
-                                  userData.email ||
-                                  "User",
-                                )}
-                              </span>
-                            )}
-                          </div>
-                          <div className="ml-4">
-                            <div className="font-medium">
-                              {userData.displayName || "No Name"}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{userData.email || "No Email"}</TableCell>
-                      <TableCell>
-                        <Badge
-                          className={cn(
-                            "font-medium capitalize",
-                            userData.role in roleStyles
-                              ? roleStyles[
-                              userData.role as keyof typeof roleStyles
-                              ]
-                              : "bg-gray-100",
-                          )}
-                        >
-                          {userData.role?.replace("_", " ") || "Unknown"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {userData.department ? (
-                          departmentNames[userData.department] ||
-                          userData.department
-                        ) : (
-                          <div className="flex items-center text-amber-600">
-                            <AlertTriangle className="h-4 w-4 mr-1" />
-                            <span className="text-xs">Not assigned</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {userData.designation ? (
-                          designationNames[userData.designation] ||
-                          userData.designation
-                        ) : (
-                          <div className="flex items-center text-amber-600">
-                            <AlertTriangle className="h-4 w-4 mr-1" />
-                            <span className="text-xs">Not assigned</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {userData.createdAt
-                          ? formatDate(new Date(userData.createdAt))
-                          : "Unknown"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 p-2"
-                          onClick={() => handleEditUser(userData)}
-                        >
-                          <Pencil className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                      </TableCell>
+            <TabsContent value={activeTab} className="mt-0">
+              <div className="mb-4 flex items-center">
+                <div className="relative w-full md:w-96">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    placeholder="Search by name, email, or department"
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Designation</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <div className="flex justify-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-8 text-gray-500"
+                        >
+                          {searchQuery
+                            ? "No users match your search"
+                            : "No users found"}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredUsers.map((userData: any) => (
+                        <TableRow key={userData.id}>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+                                {userData.photoURL ? (
+                                  <img
+                                    src={userData.photoURL}
+                                    alt={userData.displayName || "User"}
+                                    className="h-10 w-10 rounded-full"
+                                  />
+                                ) : (
+                                  <span>
+                                    {getInitials(
+                                      userData.displayName ||
+                                      userData.email ||
+                                      "User",
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="ml-4">
+                                <div className="font-medium">
+                                  {userData.displayName || "No Name"}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{userData.email || "No Email"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={cn(
+                                "font-medium capitalize",
+                                userData.role in roleStyles
+                                  ? roleStyles[
+                                  userData.role as keyof typeof roleStyles
+                                  ]
+                                  : "bg-gray-100",
+                              )}
+                            >
+                              {userData.role?.replace("_", " ") || "Unknown"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {userData.department ? (
+                              departmentNames[userData.department] ||
+                              userData.department
+                            ) : (
+                              <div className="flex items-center text-amber-600">
+                                <AlertTriangle className="h-4 w-4 mr-1" />
+                                <span className="text-xs">Not assigned</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {userData.designation ? (
+                              designationNames[userData.designation] ||
+                              userData.designation
+                            ) : (
+                              <div className="flex items-center text-amber-600">
+                                <AlertTriangle className="h-4 w-4 mr-1" />
+                                <span className="text-xs">Not assigned</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {userData.createdAt
+                              ? formatDate(new Date(userData.createdAt))
+                              : "Unknown"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {userData.employeeStatus === 'terminated' ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 p-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => handleReactivateUser(userData)}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-1" />
+                                Reactivate
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 p-2"
+                                onClick={() => handleEditUser(userData)}
+                              >
+                                <Pencil className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -676,6 +775,42 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reactivate User Confirmation Dialog */}
+      <AlertDialog open={showReactivateDialog} onOpenChange={setShowReactivateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reactivate User Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reactivate <strong>{userToReactivate?.displayName || userToReactivate?.email}</strong>?
+              <br /><br />
+              This will:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Restore login access to the system</li>
+                <li>Change status from Inactive to Active</li>
+                <li>Send a password reset email to {userToReactivate?.email}</li>
+                <li>Preserve all historical data (attendance, payroll, etc.)</li>
+              </ul>
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-md text-amber-800 text-xs">
+                <strong>Attention:</strong> Payroll and bank details from previous tenure will be restored. Please review and update them in the <strong>HR Management</strong> section if salary or account details have changed.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReactivation}
+              disabled={reactivateUserMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {reactivateUserMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Reactivate User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -7,6 +7,10 @@ import { initializeCronJobs } from "./cron-scheduler";
 
 const app = express();
 
+// Force restart for hot reload
+const RESTART_TRIGGER = "version_fix_v2";
+
+
 // Configure CORS
 app.use(cors({
   origin: process.env.VITE_CLIENT_URL || true, // Allow all origins if not specified, or restrict to Vercel app

@@ -1066,6 +1066,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reactivate a terminated user
+  // Reactivate a terminated user
+  app.post("/api/users/:id/reactivate", verifyAuth, async (req, res) => {
+    try {
+      console.log(`[Reactivate API] Request received for user ${req.params.id} by ${req.authenticatedUser?.uid}`);
+
+      const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      // Only admins can reactivate users
+      if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "users.create"))) {
+        return res.status(403).json({ message: "Access denied. Only administrators can reactivate users." });
+      }
+
+      const result = await userService.reactivateUser(req.params.id, user.uid);
+      if (!result.success) {
+        console.error(`[Reactivate API] Failed: ${result.error}`);
+        return res.status(400).json({ message: result.error });
+      }
+
+      res.json({
+        message: result.message,
+        user: result.user,
+        passwordResetSent: result.passwordResetSent
+      });
+    } catch (error) {
+      console.error("Error reactivating user:", error);
+      res.status(500).json({ message: "Failed to reactivate user" });
+    }
+  });
+
+  // Debug endpoint to check user status
+  app.get("/api/debug/user/:id", verifyAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      res.json(user);
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   // Registration endpoint - DISABLED for public use
   // Employee accounts must be created by admins through /api/users
   app.post("/api/auth/register", verifyAuth, async (req, res) => {
@@ -1212,6 +1251,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user permissions:", error);
       res.status(500).json({ message: "Failed to fetch user permissions" });
+    }
+  });
+
+  // Delete user (Master Admin only)
+  app.delete("/api/users/:uid", verifyAuth, async (req, res) => {
+    try {
+      if (!req.authenticatedUser) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const requestingUser = await storage.getUser(req.authenticatedUser.uid);
+      if (!requestingUser || requestingUser.role !== "master_admin") {
+        return res.status(403).json({ message: "Access denied. Only master admin can delete users." });
+      }
+
+      const uid = req.params.uid;
+      const result = await userService.deleteUser(uid);
+
+      if (!result.success) {
+        // Check for specific error message about reporting manager
+        if (result.error && result.error.includes("reporting manager")) {
+          return res.status(400).json({ message: result.error });
+        }
+        return res.status(500).json({ message: result.error });
+      }
+
+      res.status(200).json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
