@@ -1,12 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { OfflineIndicator } from "@/components/offline/offline-indicator";
 import NotFound from "@/pages/not-found";
-import Login from "@/pages/login";
-import Register from "@/pages/register";
+
 import Dashboard from "@/pages/dashboard";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { AuthProvider, useAuthContext } from "@/contexts/auth-context";
@@ -45,16 +44,19 @@ const PageLoader = () => (
   </div>
 );
 
+import { AuthShell } from "@/components/auth/auth-shell";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { RootHandler } from "@/components/auth/root-handler";
 
 function Router() {
+  const [location] = useLocation();
+
+  if (location === "/login" || location === "/register") {
+    return <AuthShell />;
+  }
+
   return (
     <Switch>
-      {/* Public routes - no auth required */}
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-
       {/* Root route - intelligent redirect based on auth state */}
       <Route path="/" component={RootHandler} />
       <Route path="/dashboard">

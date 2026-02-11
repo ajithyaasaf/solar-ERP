@@ -3,8 +3,6 @@ import {
   getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
   signOut,
   updateProfile,
   onAuthStateChanged,
@@ -68,7 +66,6 @@ try {
   } as ReturnType<typeof getFirestore>;
   storage = {} as ReturnType<typeof getStorage>;
 }
-const googleProvider = new GoogleAuthProvider();
 
 // Authentication functions
 export const loginWithEmail = (email: string, password: string) => {
@@ -77,10 +74,6 @@ export const loginWithEmail = (email: string, password: string) => {
 
 export const registerWithEmail = (email: string, password: string) => {
   return createUserWithEmailAndPassword(auth, email, password);
-};
-
-export const loginWithGoogle = () => {
-  return signInWithPopup(auth, googleProvider);
 };
 
 export const logoutUser = () => {

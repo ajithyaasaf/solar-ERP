@@ -1,10 +1,10 @@
+
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { AuthForm } from "@/components/auth/auth-form";
 import { LoginForm } from "@/components/auth/login-form";
 import { auth } from "@/lib/firebase";
 import { AuthLoading } from "@/components/auth/auth-loading";
-import logoPath from "@assets/new logo 2.png";
+import { AuthLayout } from "@/components/auth/auth-layout";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -60,31 +60,20 @@ export default function Login() {
   }
 
   return (
-    <AuthForm
-      title="Log in to your account"
-      description="Enter your credentials to access your account"
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Enter your credentials to access your account"
       footer={
-        <div className="w-full flex flex-col items-center gap-4">
-          <div className="text-sm text-center">
-            Don't have an account?{" "}
-            <Link href="/register" className="text-secondary hover:underline">
-              Create an account
-            </Link>
-          </div>
-          <div className="text-center">
-            <a
-              href="https://godivatech.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-gray-400 hover:text-secondary transition-colors"
-            >
-              Powered by Godivatech
-            </a>
-          </div>
+        <div className="text-sm text-center text-muted-foreground">
+          Don't have an account?{" "}
+          <Link href="/register" className="text-primary font-medium hover:underline transition-all">
+            Create an account
+          </Link>
         </div>
       }
     >
       <LoginForm />
-    </AuthForm >
+    </AuthLayout>
   );
 }
+

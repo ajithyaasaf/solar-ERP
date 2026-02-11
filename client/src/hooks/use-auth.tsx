@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { updateProfile, getAdditionalUserInfo } from "firebase/auth";
+import { updateProfile } from "firebase/auth";
 import {
   loginWithEmail,
   registerWithEmail,
-  loginWithGoogle,
   logoutUser
 } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -109,44 +108,6 @@ export function useAuth() {
     }
   };
 
-  const loginWithGoogleProvider = async () => {
-    setIsLoading(true);
-    try {
-      const result = await loginWithGoogle();
-      const additionalUserInfo = getAdditionalUserInfo(result);
-
-      // If this is a new user, create their profile in the backend
-      if (additionalUserInfo?.isNewUser) {
-        await createUserProfile({
-          displayName: result.user.displayName || '',
-          role: "employee", // Default role for new users
-        });
-      }
-
-      toast({
-        title: "Login Successful",
-        description: "Welcome!",
-        variant: "default",
-      });
-      return true;
-    } catch (error: any) {
-      let message = "Failed to login with Google. Please try again.";
-
-      if (error.code === "auth/popup-closed-by-user") {
-        message = "Google login popup was closed. Please try again.";
-      }
-
-      toast({
-        title: "Login Failed",
-        description: message,
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -174,7 +135,6 @@ export function useAuth() {
     isLoading,
     login,
     register,
-    loginWithGoogle: loginWithGoogleProvider,
     logout,
   };
 }

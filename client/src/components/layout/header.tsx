@@ -132,12 +132,12 @@ export function Header({ onMenuClick }: HeaderProps) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="relative">
+            {/* <div className="relative">
               <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-full">
                 <Bell className="h-5 w-5 text-gray-600" />
                 <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full"></span>
               </Button>
-            </div>
+            </div> */}
           </div>
         </div>
       </header>

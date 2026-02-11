@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { AuthForm } from "@/components/auth/auth-form";
 import { RegisterForm } from "@/components/auth/register-form";
 import { useAuthContext } from "@/contexts/auth-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserX } from "lucide-react";
+import { AuthLayout } from "@/components/auth/auth-layout";
 
 export default function Register() {
   const { user, loading } = useAuthContext();
@@ -45,19 +45,31 @@ export default function Register() {
   }
 
   return (
-    <AuthForm
+    <AuthLayout
       title="Create an account"
-      description="Admin-only registration"
+      subtitle="Enter your details to create your account"
       footer={
-        <div className="text-sm text-center">
-          Already have an account?{" "}
-          <Link href="/login" className="text-secondary hover:underline">
-            Log in
-          </Link>
+        <div className="w-full flex flex-col items-center gap-4">
+          <div className="text-sm text-center text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="text-primary font-medium hover:underline transition-all">
+              Log in
+            </Link>
+          </div>
+          <div className="text-center">
+            <a
+              href="https://godivatech.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground/60 hover:text-primary transition-colors duration-200"
+            >
+              Powered by Godivatech
+            </a>
+          </div>
         </div>
       }
     >
       <RegisterForm />
-    </AuthForm>
+    </AuthLayout>
   );
 }
