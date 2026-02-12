@@ -74,7 +74,7 @@ export function AuthLayout({ children, title, subtitle, footer }: AuthLayoutProp
                                 rel="noopener noreferrer"
                                 className="text-xs text-muted-foreground/60 hover:text-primary transition-colors duration-200"
                             >
-                                Powered by Godivatech
+                                Developed by Godivatech
                             </a>
                         </div>
                     </motion.div>
@@ -102,6 +102,11 @@ export function AuthLayout({ children, title, subtitle, footer }: AuthLayoutProp
                         <footer className="text-sm font-medium opacity-70 tracking-wide pt-4 border-t border-white/20 inline-block mt-4">
                             Solar ERP Enterprise
                         </footer>
+                        <div className="flex items-center gap-4 mt-6 opacity-60">
+                            <div className="flex-1 border-t border-dashed border-white/50"></div>
+                            <div className="text-xs whitespace-nowrap">Developed by Godivatech</div>
+                            <div className="flex-1 border-t border-dashed border-white/50"></div>
+                        </div>
                     </blockquote>
                 </div>
 
