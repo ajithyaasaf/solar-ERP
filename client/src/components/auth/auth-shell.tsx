@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
+import ForgotPassword from "@/pages/forgot-password";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { auth } from "@/lib/firebase";
 import { AuthLoading } from "@/components/auth/auth-loading";
@@ -23,6 +24,7 @@ export function AuthShell() {
     });
 
     const isLogin = location === "/login";
+    const isForgotPassword = location === "/forgot-password";
 
     // Handle auth transition cleanup
     useEffect(() => {
@@ -42,10 +44,13 @@ export function AuthShell() {
         }
     }, []);
 
-    // Redirect if already authenticated
+    // Redirect if already authenticated (except for forgot password page)
     useEffect(() => {
         // If loading context, wait
         if (loading) return;
+
+        // Forgot password page is always accessible
+        if (isForgotPassword) return;
 
         if (user) {
             // Special check for register page logic (admin only)
@@ -69,11 +74,16 @@ export function AuthShell() {
                 setTimeout(() => setLocation("/dashboard"), 100);
             }
         }
-    }, [user, loading, location, setLocation]);
+    }, [user, loading, location, setLocation, isForgotPassword]);
 
     // Handle Loading States
     if (loading || isTransitioning || !showContent) {
         return <AuthLoading />;
+    }
+
+    // For forgot password page, render it directly without AuthLayout wrapper
+    if (isForgotPassword) {
+        return <ForgotPassword />;
     }
 
     // Define content based on route

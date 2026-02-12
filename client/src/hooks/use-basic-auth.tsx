@@ -25,16 +25,20 @@ export function useBasicAuth() {
         description: "Welcome back!",
         variant: "default",
       });
-      return true;
+      return { success: true, error: null };
     } catch (error: any) {
       let message = "Failed to login. Please try again.";
 
-      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
         message = "Invalid email or password.";
       } else if (error.code === "auth/too-many-requests") {
         message = "Too many failed login attempts. Please try again later.";
       } else if (error.code === "auth/network-request-failed") {
         message = "Network error. Please check your connection.";
+      } else if (error.code === "auth/user-disabled") {
+        message = "This account has been disabled. Please contact support.";
+      } else if (error.code === "auth/invalid-email") {
+        message = "Invalid email address format.";
       }
 
       toast({
@@ -42,7 +46,7 @@ export function useBasicAuth() {
         description: message,
         variant: "destructive",
       });
-      return false;
+      return { success: false, error: message };
     } finally {
       setIsLoading(false);
     }

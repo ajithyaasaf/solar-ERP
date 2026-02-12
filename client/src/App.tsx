@@ -51,7 +51,7 @@ import { RootHandler } from "@/components/auth/root-handler";
 function Router() {
   const [location] = useLocation();
 
-  if (location === "/login" || location === "/register") {
+  if (location === "/login" || location === "/register" || location === "/forgot-password") {
     return <AuthShell />;
   }
 

@@ -48,6 +48,8 @@ import { NotificationService } from "./services/notification-service";
 import { EnterpriseTimeService } from "./services/enterprise-time-service";
 import { insertNotificationSchema } from "@shared/schema";
 import { PayrollLockService } from "./services/payroll-lock-service";
+import { generateOTP, validateOTPFormat, OTP_CONFIG, otpStore } from "./utils/otp";
+import { emailService } from "./services/email-service";
 import { CloudinaryService } from './services/cloudinary-service';
 import { SiteVisitService } from './services/site-visit-service';
 import { ActivityService } from './services/activity-service';
@@ -1102,6 +1104,264 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (e) {
       res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // ==================== OTP VERIFICATION ENDPOINTS ====================
+
+  /**
+   * Send OTP to email for registration verification
+   */
+  app.post("/api/auth/send-otp", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      // Validate and normalize email
+      const normalized = email?.trim().toLowerCase();
+      if (!normalized) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Gmail validation
+      if (!normalized.endsWith('@gmail.com') && !normalized.endsWith('@googlemail.com')) {
+        return res.status(400).json({
+          message: "Only Gmail addresses (@gmail.com or @googlemail.com) are accepted"
+        });
+      }
+
+      // Basic email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalized)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      // Rate limiting: Check if can request new OTP
+      const rateLimitCheck = otpStore.canRequestNew(normalized);
+      if (!rateLimitCheck.allowed) {
+        return res.status(429).json({
+          message: `Please wait before requesting another code`,
+          retryAfter: rateLimitCheck.retryAfter
+        });
+      }
+
+      // Check if email already registered
+      try {
+        const existingUser = await storage.getUserByEmail(normalized);
+        if (existingUser) {
+          return res.status(400).json({
+            message: "This email is already registered. Please login instead."
+          });
+        }
+      } catch (error) {
+        // getUserByEmail might throw if user not found, that's okay
+        console.log("No existing user found, proceeding with OTP");
+      }
+
+      // Generate OTP
+      const otp = generateOTP(OTP_CONFIG.LENGTH);
+
+      // Store OTP
+      otpStore.set(normalized, otp);
+
+      // Send email
+      try {
+        await emailService.sendOTPEmail(normalized, otp);
+        console.log(`✅ OTP email sent successfully to: ${normalized}`);
+      } catch (emailError: any) {
+        console.error('❌ Email sending failed:', emailError.message);
+
+        // Development fallback: Log OTP to console
+        if (process.env.NODE_ENV === 'development') {
+          console.log('\n' + '='.repeat(60));
+          console.log('📧 EMAIL DELIVERY FAILED - DEVELOPMENT MODE FALLBACK');
+          console.log('='.repeat(60));
+          console.log(`📨 Email: ${normalized}`);
+          console.log(`🔑 OTP Code: ${otp}`);
+          console.log(`⏰ Expires in: ${OTP_CONFIG.EXPIRY_MINUTES} minutes`);
+          console.log(`💡 Copy this code to test the registration flow`);
+          console.log('='.repeat(60) + '\n');
+
+          // Continue without throwing error in development
+          console.log('⚠️  Note: In production, configure a verified domain at resend.com/domains');
+        } else {
+          // In production, fail if email can't be sent
+          otpStore.delete(normalized);
+          return res.status(500).json({
+            message: "Failed to send verification code. Please try again."
+          });
+        }
+      }
+
+      res.json({
+        message: "Verification code sent to your email",
+        expiresIn: OTP_CONFIG.EXPIRY_MINUTES * 60 // seconds
+      });
+
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      res.status(500).json({ message: "Failed to send verification code" });
+    }
+  });
+
+  /**
+   * Verify OTP code
+   */
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+
+      const normalized = email?.trim().toLowerCase();
+      if (!normalized || !otp) {
+        return res.status(400).json({ message: "Email and OTP are required" });
+      }
+
+      // Validate OTP format
+      if (!validateOTPFormat(otp)) {
+        return res.status(400).json({ message: "Invalid OTP format. Must be 6 digits." });
+      }
+
+      // Get stored OTP
+      const storedOTP = otpStore.get(normalized);
+      if (!storedOTP) {
+        return res.status(400).json({
+          message: "No verification code found. Please request a new one."
+        });
+      }
+
+      // Check expiration
+      if (otpStore.isExpired(normalized)) {
+        otpStore.delete(normalized);
+        return res.status(400).json({
+          message: "Verification code expired. Please request a new one."
+        });
+      }
+
+      // Check attempts
+      if (storedOTP.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
+        otpStore.delete(normalized);
+        return res.status(400).json({
+          message: "Too many failed attempts. Please request a new code."
+        });
+      }
+
+      // Verify OTP
+      if (storedOTP.otp !== otp) {
+        storedOTP.attempts++;
+        otpStore.update(normalized, { attempts: storedOTP.attempts });
+
+        const remaining = OTP_CONFIG.MAX_ATTEMPTS - storedOTP.attempts;
+        return res.status(400).json({
+          message: `Incorrect verification code. ${remaining} attempt(s) remaining.`
+        });
+      }
+
+      // Success! Mark as verified
+      otpStore.update(normalized, { verified: true });
+
+      res.json({
+        message: "Email verified successfully",
+        verified: true
+      });
+
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      res.status(500).json({ message: "Failed to verify code" });
+    }
+  });
+
+  /**
+   * Public registration endpoint with OTP verification
+   */
+  app.post("/api/auth/register-public", async (req, res) => {
+    try {
+      const { email, password, displayName } = req.body;
+
+      // Validate required fields
+      if (!email || !password || !displayName) {
+        return res.status(400).json({
+          message: "Email, password, and name are required"
+        });
+      }
+
+      // Normalize email
+      const normalized = email.trim().toLowerCase();
+
+      // Gmail validation
+      if (!normalized.endsWith('@gmail.com') && !normalized.endsWith('@googlemail.com')) {
+        return res.status(400).json({
+          message: "Only Gmail addresses are accepted"
+        });
+      }
+
+      // Check OTP verification
+      const otpRecord = otpStore.get(normalized);
+      if (!otpRecord || !otpRecord.verified) {
+        return res.status(400).json({
+          message: "Email not verified. Please complete OTP verification first."
+        });
+      }
+
+      // Check if OTP is still valid (not expired)
+      if (otpStore.isExpired(normalized)) {
+        otpStore.delete(normalized);
+        return res.status(400).json({
+          message: "Verification expired. Please start registration again."
+        });
+      }
+
+      // Create Firebase user
+      try {
+        const userRecord = await auth.createUser({
+          email: normalized,
+          password,
+          displayName,
+          emailVerified: true // Mark as verified since we verified via OTP
+        });
+
+        // Clean up OTP record
+        otpStore.delete(normalized);
+
+        // Create user in database
+        await storage.createUser({
+          uid: userRecord.uid,
+          email: normalized,
+          displayName,
+          role: 'employee', // Default role for public registration
+          isActive: true,
+          employeeStatus: 'active'
+        });
+
+        console.log(`Public registration successful for: ${normalized}`);
+
+        res.status(201).json({
+          message: "Registration successful! You can now log in.",
+          user: {
+            uid: userRecord.uid,
+            email: normalized,
+            displayName
+          }
+        });
+      } catch (firebaseError: any) {
+        console.error("Firebase user creation error:", firebaseError);
+
+        // Handle specific Firebase errors
+        if (firebaseError.code === 'auth/email-already-exists') {
+          return res.status(400).json({
+            message: "This email is already registered. Please login instead."
+          });
+        }
+
+        if (firebaseError.code === 'auth/weak-password') {
+          return res.status(400).json({
+            message: "Password is too weak. Please use at least 6 characters."
+          });
+        }
+
+        throw firebaseError;
+      }
+    } catch (error) {
+      console.error("Error in public registration:", error);
+      res.status(500).json({ message: "Registration failed. Please try again." });
     }
   });
 

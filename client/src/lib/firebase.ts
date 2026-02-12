@@ -6,6 +6,7 @@ import {
   signOut,
   updateProfile,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   type User
 } from "firebase/auth";
 import { getFirestore, collection, getDocs, doc, getDoc } from "firebase/firestore";
@@ -86,6 +87,13 @@ export const updateUserProfile = (user: User, profile: { displayName?: string | 
 
 export const onAuthChange = (callback: (user: User | null) => void) => {
   return onAuthStateChanged(auth, callback);
+};
+
+export const sendPasswordReset = (email: string) => {
+  return sendPasswordResetEmail(auth, email, {
+    url: window.location.origin + '/login',
+    handleCodeInApp: false
+  });
 };
 
 // Function to fetch all Firestore users
