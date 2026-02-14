@@ -94,7 +94,7 @@ export const bloodGroups = [
 
 // Employee status types for comprehensive lifecycle management
 export const employeeStatus = [
-  "active", "inactive"
+  "active", "inactive", "probation", "notice_period", "terminated", "on_leave"
 ] as const;
 
 // Payment mode options
@@ -130,9 +130,9 @@ export const insertUserEnhancedSchema = z.object({
   bloodGroup: z.enum(bloodGroups).nullish(),
 
   // Employee Document URLs
-  profilePhotoUrl: z.string().nullish(),
-  aadharCardUrl: z.string().nullish(),
-  panCardUrl: z.string().nullish(),
+  profilePhotoUrl: z.string().min(1, "Profile Photo is required"),
+  aadharCardUrl: z.string().min(1, "Aadhar Card is required"),
+  panCardUrl: z.string().min(1, "PAN Card is required"),
 
   // Professional Information
   educationalQualification: z.string().nullish(),

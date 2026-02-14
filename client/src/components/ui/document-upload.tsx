@@ -11,6 +11,7 @@ interface DocumentUploadProps {
   onRemove: () => void;
   maxSizeMB?: number;
   disabled?: boolean;
+  required?: boolean;
 }
 
 export function DocumentUpload({
@@ -20,7 +21,8 @@ export function DocumentUpload({
   onFileSelect,
   onRemove,
   maxSizeMB = 5,
-  disabled = false
+  disabled = false,
+  required = false
 }: DocumentUploadProps) {
   const [preview, setPreview] = useState<string | null>(currentUrl || null);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,15 +102,16 @@ export function DocumentUpload({
     <div className="space-y-2">
       <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
         {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      
+
       <div className="flex items-start gap-3">
         {/* Preview or Upload Button */}
         {preview ? (
           <div className="relative group">
             <div className="w-24 h-24 rounded-lg border-2 border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-800">
-              <img 
-                src={preview} 
+              <img
+                src={preview}
                 alt={label}
                 className="w-full h-full object-cover"
               />
@@ -142,7 +145,7 @@ export function DocumentUpload({
             className="hidden"
             disabled={disabled || isLoading}
           />
-          
+
           <Button
             type="button"
             variant="outline"

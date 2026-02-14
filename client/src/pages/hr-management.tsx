@@ -79,6 +79,10 @@ type User = z.infer<typeof insertUserEnhancedSchema> & {
 
 const userFormSchema = insertUserEnhancedSchema.omit({
   uid: true
+}).extend({
+  profilePhotoUrl: z.string().optional().nullable(),
+  aadharCardUrl: z.string().optional().nullable(),
+  panCardUrl: z.string().optional().nullable(),
 });
 
 export default function HRManagement() {
@@ -264,6 +268,10 @@ export default function HRManagement() {
   const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
     try {
       const finalValues = { ...values };
+
+      // Manual validation for required documents
+
+
       const employeeId = values.employeeId || 'temp_' + Date.now();
 
       // Upload documents if they exist
@@ -345,11 +353,78 @@ export default function HRManagement() {
     }
   };
 
+  const [isUploading, setIsUploading] = useState(false);
+
+  function requestUserEdit(user: User) {
+    if (!user) return;
+    setSelectedUser(user);
+    console.log("Opening edit for user:", user);
+
+    // Reset file upload states
+    setProfilePhotoData("");
+    setAadharCardData("");
+    setPanCardData("");
+
+    editForm.reset({
+      // Personal Details
+      displayName: user.displayName || '',
+      email: user.email || '',
+      employeeId: user.employeeId || '',
+      department: user.department || undefined,
+      designation: user.designation || undefined,
+      employeeStatus: user.employeeStatus || 'active',
+      joinDate: user.joinDate ? new Date(user.joinDate) : undefined,
+      dateOfLeaving: user.dateOfLeaving ? new Date(user.dateOfLeaving) : undefined,
+
+      fatherName: user.fatherName || '',
+      spouseName: user.spouseName || '',
+      dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : undefined,
+      gender: user.gender || undefined,
+      maritalStatus: user.maritalStatus || undefined,
+      bloodGroup: user.bloodGroup || undefined,
+      profilePhotoUrl: user.profilePhotoUrl || '',
+      aadharCardUrl: user.aadharCardUrl || '',
+      panCardUrl: user.panCardUrl || '',
+
+      // Contact Details
+      contactNumber: user.contactNumber || '',
+      location: user.location || '',
+      presentAddress: user.presentAddress || '',
+      permanentAddress: user.permanentAddress || '',
+      emergencyContactPerson: user.emergencyContactPerson || '',
+      emergencyContactNumber: user.emergencyContactNumber || '',
+
+      // Statutory Details
+      esiNumber: user.esiNumber || '',
+      epfNumber: user.epfNumber || '',
+      aadharNumber: user.aadharNumber || '',
+      panNumber: user.panNumber || '',
+
+      // Payroll Details
+      bankName: user.bankName || '',
+      bankAccountNumber: user.bankAccountNumber || '',
+      ifscCode: user.ifscCode || '',
+
+      // Professional Details
+      educationalQualification: user.educationalQualification || '',
+      experienceYears: user.experienceYears || undefined,
+      reportingManagerId: user.reportingManagerId || '',
+    });
+    setIsEditDialogOpen(true);
+  }
+
+
+
   const onEditSubmit = async (values: z.infer<typeof userFormSchema>) => {
     if (!selectedUser) return;
 
+    setIsUploading(true);
     try {
       const finalValues = { ...values };
+
+      // Manual validation for required documents (Enforce backfill)
+
+
       const employeeId = selectedUser.employeeId || selectedUser.uid;
 
       // Upload documents if they exist
@@ -415,7 +490,10 @@ export default function HRManagement() {
       }
 
       // Submit the form with document URLs
-      updateUserMutation.mutate({ uid: selectedUser.uid, data: finalValues });
+      console.log("Submitting update with finalValues:", finalValues);
+      updateUserMutation.mutate({ uid: selectedUser.uid, data: finalValues }, {
+        onSettled: () => setIsUploading(false)
+      });
 
       // Reset document states
       setProfilePhotoData("");
@@ -423,6 +501,7 @@ export default function HRManagement() {
       setPanCardData("");
 
     } catch (error) {
+      setIsUploading(false);
       toast({
         title: "Document Upload Failed",
         description: error instanceof Error ? error.message : "Failed to upload documents",
@@ -738,10 +817,7 @@ export default function HRManagement() {
                     setSelectedUser(user);
                     setIsViewDialogOpen(true);
                   }}
-                  onEdit={() => {
-                    setSelectedUser(user);
-                    setIsEditDialogOpen(true);
-                  }}
+                  onEdit={() => requestUserEdit(user)}
                   onDelete={() => {
                     setUserToDelete(user.uid);
                     setIsDeleteDialogOpen(true);
@@ -781,7 +857,7 @@ export default function HRManagement() {
             <UserForm
               form={editForm}
               onSubmit={onEditSubmit}
-              isLoading={updateUserMutation.isPending}
+              isLoading={updateUserMutation.isPending || isUploading}
               submitText="Update Employee"
               profilePhotoData={profilePhotoData}
               setProfilePhotoData={setProfilePhotoData}
@@ -926,7 +1002,6 @@ function UserForm({
   setAadharCardData: (data: string) => void;
   panCardData: string;
   setPanCardData: (data: string) => void;
-  setPanCardData: (data: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState("basic");
   const { toast } = useToast();
@@ -996,11 +1071,37 @@ function UserForm({
     }
   };
 
+  const handleLocalSubmit = (values: z.infer<typeof userFormSchema>) => {
+    // Manual validation for required documents
+    const missingDocs = [];
+
+    // Check if photo exists (either in currentUrl form value OR in new upload data)
+    const hasPhoto = values.profilePhotoUrl || profilePhotoData;
+    const hasAadhar = values.aadharCardUrl || aadharCardData;
+    const hasPan = values.panCardUrl || panCardData;
+
+    if (!hasPhoto) missingDocs.push("Profile Photo");
+    if (!hasAadhar) missingDocs.push("Aadhar Card");
+    if (!hasPan) missingDocs.push("PAN Card");
+
+    if (missingDocs.length > 0) {
+      setActiveTab("personal");
+      toast({
+        title: "Missing Required Documents",
+        description: `Please upload the following documents: ${missingDocs.join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    onSubmit(values);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit, onError)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleLocalSubmit, onError)} className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full h-auto grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
             <TabsTrigger value="basic">Basic</TabsTrigger>
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="contact">Contact</TabsTrigger>
@@ -1311,6 +1412,7 @@ function UserForm({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <DocumentUpload
                   label="Profile Photo"
+                  required={true}
                   documentType="photo"
                   currentUrl={form.getValues('profilePhotoUrl')}
                   onFileSelect={setProfilePhotoData}
@@ -1319,6 +1421,7 @@ function UserForm({
                 />
                 <DocumentUpload
                   label="Aadhar Card"
+                  required={true}
                   documentType="aadhar"
                   currentUrl={form.getValues('aadharCardUrl')}
                   onFileSelect={setAadharCardData}
@@ -1327,6 +1430,7 @@ function UserForm({
                 />
                 <DocumentUpload
                   label="PAN Card"
+                  required={true}
                   documentType="pan"
                   currentUrl={form.getValues('panCardUrl')}
                   onFileSelect={setPanCardData}
@@ -1582,15 +1686,19 @@ function UserForm({
 }
 
 function UserViewDetails({ user }: { user: User }) {
+  console.log("UserViewDetails rendering with:", user);
+  if (!user) return null;
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full h-auto grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="personal">Personal</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="statutory">Statutory</TabsTrigger>
           <TabsTrigger value="payroll">Payroll</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -1821,6 +1929,112 @@ function UserViewDetails({ user }: { user: User }) {
                     <span className="text-muted-foreground">Years of Experience:</span>
                     <span>{user.experienceYears || 'Not provided'}</span>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Employee Documents
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Profile Photo */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Profile Photo</h4>
+                <div className="border rounded-lg p-2 bg-gray-50 dark:bg-gray-800">
+                  {user.profilePhotoUrl ? (
+                    <div className="space-y-2">
+                      <div className="relative aspect-square w-full overflow-hidden rounded-md border bg-white dark:bg-black">
+                        <img
+                          src={user.profilePhotoUrl}
+                          alt="Profile Photo"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => window.open(user.profilePhotoUrl!, '_blank')}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Full Size
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed bg-white dark:bg-black text-muted-foreground">
+                      <span className="text-sm">Not uploaded</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Aadhar Card */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Aadhar Card</h4>
+                <div className="border rounded-lg p-2 bg-gray-50 dark:bg-gray-800">
+                  {user.aadharCardUrl ? (
+                    <div className="space-y-2">
+                      <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-white dark:bg-black">
+                        <img
+                          src={user.aadharCardUrl}
+                          alt="Aadhar Card"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => window.open(user.aadharCardUrl!, '_blank')}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Full Size
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-video w-full items-center justify-center rounded-md border border-dashed bg-white dark:bg-black text-muted-foreground">
+                      <span className="text-sm">Not uploaded</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/*  */}
+              { }
+              {/* PAN Card */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">PAN Card</h4>
+                <div className="border rounded-lg p-2 bg-gray-50 dark:bg-gray-800">
+                  {user.panCardUrl ? (
+                    <div className="space-y-2">
+                      <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-white dark:bg-black">
+                        <img
+                          src={user.panCardUrl}
+                          alt="PAN Card"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => window.open(user.panCardUrl!, '_blank')}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Full Size
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-video w-full items-center justify-center rounded-md border border-dashed bg-white dark:bg-black text-muted-foreground">
+                      <span className="text-sm">Not uploaded</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

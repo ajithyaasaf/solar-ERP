@@ -1011,10 +1011,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.log(`[isManager Debug] isManager = ${isManager}`);
 
-      res.json({
+      const responseUser = {
         ...targetUser,
-        isManager // Include in response
-      });
+        isManager
+      };
+
+      console.log(`[Debug API] Serving user ${req.params.id}:`, JSON.stringify({
+        profilePhotoUrl: responseUser.profilePhotoUrl,
+        aadharCardUrl: responseUser.aadharCardUrl,
+        panCardUrl: responseUser.panCardUrl
+      }, null, 2));
+
+      res.json(responseUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -1043,7 +1051,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/users/:id", verifyAuth, async (req, res) => {
     try {
+      console.log(`[PATCH /api/users/${req.params.id}] Request body:`, JSON.stringify(req.body, null, 2));
+
       const user = await storage.getUser(req.authenticatedUser?.uid || "");
+      console.log(`[PATCH /api/users/${req.params.id}] Authenticated user: ${user?.displayName} (${user?.uid}), Role: ${user?.role}`);
+
       // Check enterprise permissions for user editing
       if (!user || !(await storage.checkEffectiveUserPermission(user.uid, "users.edit"))) {
         return res.status(403).json({ message: "Access denied" });

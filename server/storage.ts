@@ -12,15 +12,6 @@ import {
 } from "firebase-admin/firestore";
 import { z } from "zod";
 import { getUTCMidnight, getUTCEndOfDay } from "./utils/timezone-helpers";
-import type {
-  User,
-  Attendance,
-  LeaveApplication,
-  Designation,
-  OfficeLocation,
-  FixedHoliday,
-  LeaveBalance
-} from "@shared/schema";
 import {
   insertAttendanceSchema,
   insertOfficeLocationSchema,
@@ -211,6 +202,11 @@ export interface User {
   epfNumber?: string;
   aadharNumber?: string;
   panNumber?: string;
+
+  // Employee Document URLs
+  profilePhotoUrl?: string;
+  aadharCardUrl?: string;
+  panCardUrl?: string;
 
   // Personal Details
   fatherName?: string;
@@ -1217,6 +1213,10 @@ export class FirestoreStorage implements IStorage {
       employeeStatus: data?.employeeStatus || 'active',
       createdAt: data?.createdAt?.toDate ? data.createdAt.toDate() : new Date(data?.createdAt || Date.now()),
       photoURL: data?.photoURL,
+      // Employee Document URLs
+      profilePhotoUrl: data?.profilePhotoUrl,
+      aadharCardUrl: data?.aadharCardUrl,
+      panCardUrl: data?.panCardUrl,
     } as User;
   }
 
@@ -1235,6 +1235,10 @@ export class FirestoreStorage implements IStorage {
       department: data.department,
       createdAt: data.createdAt.toDate(),
       photoURL: data.photoURL,
+      // Employee Document URLs
+      profilePhotoUrl: data.profilePhotoUrl,
+      aadharCardUrl: data.aadharCardUrl,
+      panCardUrl: data.panCardUrl,
     } as User;
   }
 
@@ -1271,6 +1275,10 @@ export class FirestoreStorage implements IStorage {
         isActive: data.isActive !== false,
         createdAt: createdAt,
         photoURL: data.photoURL,
+        // Employee Document URLs
+        profilePhotoUrl: data.profilePhotoUrl,
+        aadharCardUrl: data.aadharCardUrl,
+        panCardUrl: data.panCardUrl,
         employeeStatus: data.employeeStatus || 'active',
       } as User;
     });
@@ -1315,6 +1323,10 @@ export class FirestoreStorage implements IStorage {
         isActive: data.isActive !== false,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
         photoURL: data.photoURL,
+        // Employee Document URLs
+        profilePhotoUrl: data.profilePhotoUrl,
+        aadharCardUrl: data.aadharCardUrl,
+        panCardUrl: data.panCardUrl,
       } as User;
     });
   }
@@ -1339,6 +1351,10 @@ export class FirestoreStorage implements IStorage {
         isActive: data.isActive !== false,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
         photoURL: data.photoURL,
+        // Employee Document URLs
+        profilePhotoUrl: data.profilePhotoUrl,
+        aadharCardUrl: data.aadharCardUrl,
+        panCardUrl: data.panCardUrl,
       } as User;
     });
   }
@@ -1363,6 +1379,10 @@ export class FirestoreStorage implements IStorage {
         isActive: data.isActive !== false,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
         photoURL: data.photoURL,
+        // Employee Document URLs
+        profilePhotoUrl: data.profilePhotoUrl,
+        aadharCardUrl: data.aadharCardUrl,
+        panCardUrl: data.panCardUrl,
       } as User;
     });
   }
@@ -1374,6 +1394,8 @@ export class FirestoreStorage implements IStorage {
     if (data.createdAt) {
       updateData.createdAt = Timestamp.fromDate(data.createdAt);
     }
+
+    console.log(`[Storage.updateUser] Updating user ${id} with data:`, JSON.stringify(updateData, null, 2));
 
     await userDoc.update(updateData);
     const updatedDoc = await userDoc.get();
@@ -1396,6 +1418,10 @@ export class FirestoreStorage implements IStorage {
       isActive: updatedData.isActive !== false,
       createdAt: updatedData.createdAt?.toDate() || new Date(),
       photoURL: updatedData.photoURL,
+      // Employee Document URLs
+      profilePhotoUrl: updatedData.profilePhotoUrl,
+      aadharCardUrl: updatedData.aadharCardUrl,
+      panCardUrl: updatedData.panCardUrl,
     } as User;
   }
 
@@ -6054,6 +6080,10 @@ export class FirestoreStorage implements IStorage {
         isActive: data.isActive !== false,
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
         photoURL: data.photoURL,
+        // Employee Document URLs
+        profilePhotoUrl: data.profilePhotoUrl,
+        aadharCardUrl: data.aadharCardUrl,
+        panCardUrl: data.panCardUrl,
       } as User;
     });
   }

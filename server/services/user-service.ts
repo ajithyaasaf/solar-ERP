@@ -107,13 +107,19 @@ export const updateUserSchema = z.object({
   ifscCode: z.string().optional(),
 
   // Document Management
+  // Document Management
   documents: z.object({
     marksheets: z.array(z.string()).optional(),
     certificates: z.array(z.string()).optional(),
     idProofs: z.array(z.string()).optional(),
     bankDocuments: z.array(z.string()).optional(),
     others: z.array(z.string()).optional()
-  }).optional()
+  }).optional(),
+
+  // Employee Document URLs
+  profilePhotoUrl: z.string().optional(),
+  aadharCardUrl: z.string().optional(),
+  panCardUrl: z.string().optional()
 });
 
 export class UserService {
@@ -338,6 +344,10 @@ export class UserService {
           reportingManagerId: user.reportingManagerId || null, // ✅ FIX: Include reporting manager
           createdAt: user.createdAt,
           photoURL: user.photoURL || null,
+          // Employee Document URLs
+          profilePhotoUrl: user.profilePhotoUrl,
+          aadharCardUrl: user.aadharCardUrl,
+          panCardUrl: user.panCardUrl,
           employeeStatus: user.employeeStatus,
           isActive: user.isActive
         };
