@@ -1342,9 +1342,15 @@ export const getDesignationActionPermissions = (designation: Designation): Syste
     permissions.push("attendance.mark");
   }
 
-  // Level 2+ (Welder and above)
+  // Level 2+ (Welder and above) - NOW GRANTING OPERATIONAL ACCESS TO ALL
+  // Changed: Simplified RBAC to allow all field staff to create data
   if (level >= 2) {
-
+    permissions.push(
+      "customers.create", "customers.edit",
+      "quotations.create", "quotations.edit",
+      "invoices.create"
+      // Removed site_visit generic permissions, as they are department-specific
+    );
   }
 
   // Level 3+ (Technician and above)
@@ -1353,17 +1359,20 @@ export const getDesignationActionPermissions = (designation: Designation): Syste
 
   // Level 4+ (CRE and above)
   if (level >= 4) {
-    permissions.push("customers.create", "customers.edit", "quotations.create", "quotations.edit");
+    // Originally customers/quotations were here - moved to Level 2
   }
 
   // Level 5+ (Executive and above)
   if (level >= 5) {
-    permissions.push("invoices.create", "approve.quotations.basic", "attendance.view_team");
+    permissions.push("approve.quotations.basic", "attendance.view_team");
   }
 
   // Level 6+ (Team Leader and above)
   if (level >= 6) {
     permissions.push("approve.quotations.advanced", "approve.leave.team", "users.view", "reports.advanced");
+
+    // Also grant view all permissions for supervisors
+    permissions.push("customers.view", "quotations.view", "site_visit.view", "attendance.view_team");
   }
 
   // Level 7+ (Officer and above)
