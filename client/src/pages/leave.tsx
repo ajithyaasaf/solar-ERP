@@ -19,6 +19,18 @@ export default function Leave() {
 
   const isHR = user?.department === "hr";
 
+  if (!user?.isLeaveEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-4 h-[60vh]">
+        <Shield className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Access Denied</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          Leave management features have not been enabled for your account. Please contact your HR administrator or manager to request formal access.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 px-1 sm:px-0" data-testid="page-leave">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">

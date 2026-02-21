@@ -270,10 +270,15 @@ export default function HRManagement() {
     try {
       const finalValues = { ...values };
 
-      // Manual validation for required documents
-
-
-      const employeeId = values.employeeId || 'temp_' + Date.now();
+      const employeeId = values.employeeId;
+      if (!employeeId || employeeId.trim().length === 0) {
+        toast({
+          title: "Employee ID Required",
+          description: "Please enter a valid Employee ID before creating the employee.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Upload documents if they exist
       const uploadPromises = [];
@@ -1074,26 +1079,40 @@ function UserForm({
   };
 
   const handleLocalSubmit = (values: z.infer<typeof userFormSchema>) => {
-    // Manual validation for required documents
-    const missingDocs = [];
-
-    // Check if photo exists (either in currentUrl form value OR in new upload data)
-    const hasPhoto = values.profilePhotoUrl || profilePhotoData;
-    const hasAadhar = values.aadharCardUrl || aadharCardData;
-    const hasPan = values.panCardUrl || panCardData;
-
-    if (!hasPhoto) missingDocs.push("Profile Photo");
-    if (!hasAadhar) missingDocs.push("Aadhar Card");
-    if (!hasPan) missingDocs.push("PAN Card");
-
-    if (missingDocs.length > 0) {
-      setActiveTab("documents");
+    // Validate mandatory Employee ID
+    if (!values.employeeId || values.employeeId.trim().length === 0) {
+      setActiveTab("basic");
       toast({
-        title: "Missing Required Documents",
-        description: `Please upload the following documents: ${missingDocs.join(", ")}`,
+        title: "Employee ID Required",
+        description: "Please enter a valid Employee ID before creating the employee.",
         variant: "destructive",
       });
       return;
+    }
+
+    // Manual validation for required documents - ONLY strictly enforced for NEW employees
+    // This allows admins to edit/deactivate legacy records without getting blocked by missing ancient documents
+    if (!selectedUser) {
+      const missingDocs = [];
+
+      // Check if photo exists (either in currentUrl form value OR in new upload data)
+      const hasPhoto = values.profilePhotoUrl || profilePhotoData;
+      const hasAadhar = values.aadharCardUrl || aadharCardData;
+      const hasPan = values.panCardUrl || panCardData;
+
+      if (!hasPhoto) missingDocs.push("Profile Photo");
+      if (!hasAadhar) missingDocs.push("Aadhar Card");
+      if (!hasPan) missingDocs.push("PAN Card");
+
+      if (missingDocs.length > 0) {
+        setActiveTab("documents");
+        toast({
+          title: "Missing Required Documents",
+          description: `Please upload the following documents: ${missingDocs.join(", ")}`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     onSubmit(values);
@@ -1145,7 +1164,7 @@ function UserForm({
                 name="employeeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Employee ID</FormLabel>
+                    <FormLabel>Employee ID *</FormLabel>
                     <FormControl>
                       <Input placeholder="EMP001" {...field} data-testid="input-employeeId" />
                     </FormControl>

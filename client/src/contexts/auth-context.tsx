@@ -23,6 +23,7 @@ interface AuthUser {
   isActive: boolean;
   id?: number;
   isManager?: boolean; // ✅ FIX: Add manager status flag
+  isLeaveEnabled?: boolean;
   firebaseUser?: User;
 }
 
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isActive: userData.isActive !== false,
           id: userData.id,
           isManager: userData.isManager || false, // ✅ FIX: Include isManager
+          isLeaveEnabled: userData.isLeaveEnabled || false,
           firebaseUser: firebaseUser
         });
       } else {
@@ -111,7 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             payrollGrade: syncData.user.payrollGrade || null,
             joinDate: syncData.user.joinDate ? new Date(syncData.user.joinDate) : undefined,
             isActive: syncData.user.isActive !== false,
-            id: syncData.user.id
+            id: syncData.user.id,
+            isLeaveEnabled: syncData.user.isLeaveEnabled || false,
           });
         } else {
           // Fallback to basic user data
@@ -184,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           joinDate: newUserData.joinDate ? new Date(newUserData.joinDate) : undefined,
           isActive: newUserData.isActive !== false,
           id: newUserData.id,
+          isLeaveEnabled: newUserData.isLeaveEnabled || false,
         });
 
         // Show success toast
@@ -280,9 +284,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             reportingManagerId: userData?.reportingManagerId || null,
             payrollGrade: userData?.payrollGrade || null,
             joinDate: userData?.joinDate ? new Date(userData.joinDate) : undefined,
-            isActive: userData.isActive !== false,
-            id: userData.id,
+            isActive: userData?.isActive !== false,
+            id: userData?.id as number | undefined,
             isManager: userData?.isManager || false, // ✅ FIX: Include isManager
+            isLeaveEnabled: userData?.isLeaveEnabled || false,
           };
 
           // Set the complete user data
@@ -335,6 +340,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 displayName: userData.displayName,
                 employeeId: userData.employeeId,
                 reportingManagerId: userData.reportingManagerId,
+                isLeaveEnabled: userData.isLeaveEnabled,
               };
 
               setUser(updatedUser);

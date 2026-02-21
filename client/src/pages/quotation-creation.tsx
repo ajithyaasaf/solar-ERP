@@ -259,9 +259,9 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const brand = (project as any).brand || 'Standard';
       const litres = project.litre || 100;
       const model = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
-      const heatingCoil = (project as any).heatingCoil || 'Heating Coil';
+      const heatingCoilType = (project as any).heatingCoil === 'Yes' ? 'with Heating Coil' : 'without Heating Coil';
       const gstSuffix = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '\nIncluding GST';
-      return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoil}${gstSuffix}`;
+      return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoilType}${gstSuffix}`;
     }
 
     case 'water_pump': {
@@ -1075,7 +1075,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           ...newProject,
           brand: "venus",
           litre: 100,
-          heatingCoil: "",
+          heatingCoil: "No", // Default to "No"
           floor: "0",
           plumbingWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
@@ -1550,13 +1550,16 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     return Math.round(wattsAfterLoss);
   }, [project.batteryAH, project.batteryCount]);
 
-  // Helper function to calculate backup hours for all usage watts
+  // Helper function to calculate backup hours for all usage watts (base-60 format matching backend)
   const calculateBackupHours = useCallback((backupWatts: number, usageWattsList: number[]) => {
     return usageWattsList.map(usageWatts => {
       if (!backupWatts || !usageWatts || usageWatts === 0) {
-        return 0;
+        return '0.00';
       }
-      return parseFloat((backupWatts / usageWatts).toFixed(2));
+      const decimalHours = backupWatts / usageWatts;
+      const hours = Math.floor(decimalHours);
+      const minutes = Math.floor((decimalHours - hours) * 60);
+      return `${hours}.${minutes.toString().padStart(2, '0')}`;
     });
   }, []);
 
@@ -1596,7 +1599,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     // Reset manuallyEdited to false so auto-calculation continues working
     if (currentBackupSolutions.backupWatts !== calculatedBackupWatts) {
       const newUsageWatts = currentBackupSolutions.usageWatts || [];
-      const newBackupHours = calculateBackupHours(calculatedBackupWatts, newUsageWatts);
+      const newBackupHours = newUsageWatts.map((watts: number) => {
+        const decimalHours = calculatedBackupWatts / watts;
+        const hrs = Math.floor(decimalHours);
+        const mins = Math.floor((decimalHours - hrs) * 60);
+        return `${hrs}.${mins.toString().padStart(2, '0')}`;
+      });
 
       onUpdate({
         backupSolutions: {
@@ -1742,37 +1750,17 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Total Panel Count *</label>
+            <label className="text-sm font-medium">Total Panel Count * <span className="text-xs text-muted-foreground">(Auto-calculated from DCR + Non-DCR)</span></label>
             <Input
               type="number"
-              min="1"
-              value={project.panelCount ?? ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                const totalCount = value === '' ? '' : parseInt(value) || 0;
-                handleFieldChange('panelCount', totalCount);
-                if (totalCount !== '') {
-                  const currentNonDcr = project.nonDcrPanelCount || 0;
-                  if (totalCount < currentNonDcr) {
-                    handleFieldChange('nonDcrPanelCount', totalCount);
-                    handleFieldChange('dcrPanelCount', 0);
-                  } else {
-                    handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
-                  }
-                }
-              }}
-              onBlur={(e) => {
-                if (e.target.value === '') {
-                  handleFieldChange('panelCount', 0);
-                  handleFieldChange('dcrPanelCount', 0);
-                  handleFieldChange('nonDcrPanelCount', 0);
-                }
-              }}
-              className={project.panelCount === 0 || project.panelCount === '' ? "border-red-500" : ""}
+              value={project.panelCount ?? 0}
+              readOnly
+              disabled
+              className={`bg-muted cursor-not-allowed ${project.panelCount === 0 || project.panelCount === '' ? "border-red-500" : ""}`}
               data-testid={`input-panel-count-${projectIndex}`}
             />
             {(project.panelCount === 0 || project.panelCount === '') && (
-              <p className="text-xs text-red-600">Panel count is required for calculations</p>
+              <p className="text-xs text-red-600">Set DCR and/or Non-DCR panel counts below</p>
             )}
           </div>
 
@@ -2461,10 +2449,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       manuallyEdited: false
     };
 
-    // Calculate backup hours for a given usage watts
+    // Calculate backup hours for a given usage watts (base-60 format matching backend)
     const calculateBackupHours = (usageWatts: number) => {
       if (!backupSolutions.backupWatts || !usageWatts || usageWatts === 0) {
-        return "0.00";
+        return '0.00';
       }
       const decimalHours = backupSolutions.backupWatts / usageWatts;
       const hours = Math.floor(decimalHours);
@@ -2525,7 +2513,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
     // Update backup watts value
     const updateBackupWatts = (value: number) => {
-      const newBackupHours = recalculateBackupHours(backupSolutions.usageWatts);
+      const newBackupHours = backupSolutions.usageWatts.map((watts: number) => {
+        const decimalHours = value / watts;
+        const hrs = Math.floor(decimalHours);
+        const mins = Math.floor((decimalHours - hrs) * 60);
+        return `${hrs}.${mins.toString().padStart(2, '0')}`;
+      });
 
       handleFieldChange('backupSolutions', {
         ...backupSolutions,
@@ -2625,7 +2618,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                         className="h-6 w-6 p-0"
                         data-testid={`button-remove-usage-watts-${projectIndex}-${index}`}
                       >
-                        <Wrench className="h-3 w-3" />
+                        <X className="h-3 w-3" />
                       </Button>
                     </div>
 
@@ -2653,7 +2646,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-green-600">Backup Hours</label>
                       <div className="p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded text-sm font-semibold text-green-700 dark:text-green-300 text-center">
-                        {backupSolutions.backupHours[index]?.toFixed(2) || '0.00'} hrs
+                        {backupSolutions.backupHours[index] || '0.00'} hrs
                       </div>
                     </div>
                   </div>
@@ -2686,9 +2679,9 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     <td className="border border-gray-200 dark:border-gray-700 p-2 font-semibold text-primary">
                       {backupSolutions.backupWatts}W
                     </td>
-                    {backupSolutions.backupHours.map((hours: number, index: number) => (
+                    {backupSolutions.backupHours.map((hours: number | string, index: number) => (
                       <td key={index} className="border border-gray-200 dark:border-gray-700 p-2 text-center font-semibold text-green-600">
-                        {hours.toFixed(2)} hrs
+                        {hours || '0.00'} hrs
                       </td>
                     ))}
                   </tr>
@@ -2740,13 +2733,16 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Heating Coil Type</label>
-            <Input
-              value={project.heatingCoil || ''}
-              onChange={(e) => handleFieldChange('heatingCoil', e.target.value)}
-              placeholder="Standard, Premium, etc."
-              data-testid={`input-heating-coil-${projectIndex}`}
-            />
+            <label className="text-sm font-medium">Heating Coil *</label>
+            <Select value={project.heatingCoil || "No"} onValueChange={(value) => handleFieldChange('heatingCoil', value)}>
+              <SelectTrigger data-testid={`select-heater-coil-${projectIndex}`}>
+                <SelectValue placeholder="Select Yes or No" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Yes">Yes</SelectItem>
+                <SelectItem value="No">No</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -3051,32 +3047,13 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Total Panel Count *</label>
+              <label className="text-sm font-medium">Total Panel Count * <span className="text-xs text-muted-foreground">(Auto-calculated from DCR + Non-DCR)</span></label>
               <Input
                 type="number"
-                min="0"
-                value={project.panelCount ?? ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const totalCount = value === '' ? '' : parseInt(value) || 0;
-                  handleFieldChange('panelCount', totalCount);
-                  if (totalCount !== '') {
-                    const currentNonDcr = project.nonDcrPanelCount || 0;
-                    if (totalCount < currentNonDcr) {
-                      handleFieldChange('nonDcrPanelCount', totalCount);
-                      handleFieldChange('dcrPanelCount', 0);
-                    } else {
-                      handleFieldChange('dcrPanelCount', totalCount - currentNonDcr);
-                    }
-                  }
-                }}
-                onBlur={(e) => {
-                  if (e.target.value === '') {
-                    handleFieldChange('panelCount', 0);
-                    handleFieldChange('dcrPanelCount', 0);
-                    handleFieldChange('nonDcrPanelCount', 0);
-                  }
-                }}
+                value={project.panelCount ?? 0}
+                readOnly
+                disabled
+                className="bg-muted cursor-not-allowed"
                 data-testid={`input-pump-panel-count-${projectIndex}`}
               />
             </div>
