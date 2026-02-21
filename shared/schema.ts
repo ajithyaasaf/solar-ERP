@@ -141,6 +141,7 @@ export const insertUserEnhancedSchema = z.object({
   // Employment Lifecycle
   dateOfLeaving: z.date().nullish(),
   employeeStatus: z.enum(employeeStatus).default("active"),
+  isLeaveEnabled: z.boolean().default(false),
 
   // Contact Information
   contactNumber: z.string().nullish(),
@@ -239,10 +240,10 @@ export const inverterPhases = [
 ] as const;
 
 export const earthingTypes = [
-  "dc", "ac", "ac_dc"
+  "dc", "ac"
 ] as const;
 
-export const earthingTypesMulti = ["dc", "ac", "ac_dc"] as const;
+export const earthingTypesMulti = ["dc", "ac"] as const;
 
 export const panelWatts = [
   "210", "335", "410", "530", "535", "540", "550", "590", "610", "615"
@@ -412,7 +413,7 @@ export const hybridConfigSchema = offGridConfigSchema.extend({
 export const waterHeaterConfigSchema = z.object({
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
-  heatingCoil: z.string().nullish(),
+  heatingCoil: z.enum(['Yes', 'No']).nullish(),
   productImage: z.string().nullish(), // Optional product image URL
   projectValue: z.number().min(0),
   others: z.string().nullish(),
@@ -1297,7 +1298,7 @@ export const canApproveForDesignation = (userDesignation: Designation, targetDes
   return getDesignationLevel(userDesignation) > getDesignationLevel(targetDesignation);
 };
 
-export const getDepartmentModuleAccess = (department: Department): SystemPermission[] => {
+export const getDepartmentModuleAccess = (department: Department | string): SystemPermission[] => {
   // Basic permissions that ALL employees should have regardless of department
   const baseAccess: SystemPermission[] = [
     "dashboard.view",
@@ -1307,17 +1308,37 @@ export const getDepartmentModuleAccess = (department: Department): SystemPermiss
     "leave.request"             // All employees can request leave
   ];
 
-  switch (department) {
+  const normDept = (department || "").toLowerCase();
+
+  switch (normDept) {
     case "operations":
-      return [...baseAccess, "dashboard.full_access", "analytics.enterprise", "reports.advanced", "reports.export", "users.view", "departments.view"];
+      return [...baseAccess, "dashboard.full_access", "analytics.enterprise", "reports.advanced", "reports.export", "users.view", "departments.view",
+        "customers.view", "customers.create", "customers.edit",
+        "quotations.view", "quotations.create", "quotations.edit",
+        "invoices.view", "invoices.create"];
     case "admin":
-      return [...baseAccess, "users.view", "users.create", "users.edit", "departments.view", "designations.view", "analytics.departmental", "reports.basic", "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
+      return [...baseAccess, "users.view", "users.create", "users.edit", "departments.view", "designations.view", "analytics.departmental", "reports.basic",
+        "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports",
+        "customers.view", "customers.create", "customers.edit",
+        "quotations.view", "quotations.create", "quotations.edit",
+        "invoices.view", "invoices.create"];
     case "hr":
-      return [...baseAccess, "attendance.view_all", "leave.view_all", "leave.approve", "users.view", "users.create", "users.edit", "customers.view", "quotations.view", "invoices.view"];
+      return [...baseAccess, "attendance.view_all", "leave.view_all", "leave.approve", "users.view", "users.create", "users.edit",
+        "customers.view", "customers.create", "customers.edit",
+        "quotations.view", "quotations.create", "quotations.edit",
+        "invoices.view", "invoices.create"];
     case "marketing":
-      return [...baseAccess, "customers.view", "customers.create", "customers.edit", "quotations.view", "reports.basic", "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
+      return [...baseAccess,
+        "customers.view", "customers.create", "customers.edit",
+        "quotations.view", "quotations.create", "quotations.edit",
+        "reports.basic",
+        "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
     case "sales":
-      return [...baseAccess, "customers.view", "customers.create", "customers.edit", "quotations.view", "quotations.create", "quotations.edit", "reports.basic"];
+      return [...baseAccess,
+        "customers.view", "customers.create", "customers.edit",
+        "quotations.view", "quotations.create", "quotations.edit",
+        "invoices.view", "invoices.create",
+        "reports.basic"];
     case "technical":
       return [...baseAccess, "site_visit.view", "site_visit.create", "site_visit.edit", "site_visit.view_team", "site_visit.reports"];
     case "housekeeping":
@@ -1549,7 +1570,7 @@ export const subsidyTypes = [
 export const backupSolutionsSchema = z.object({
   backupWatts: z.number().min(0),
   usageWatts: z.array(z.number()).max(5).default([]),
-  backupHours: z.array(z.number()).default([])
+  backupHours: z.array(z.union([z.number(), z.string()])).default([])
 });
 
 // Individual project configuration schemas for quotations
@@ -1710,7 +1731,7 @@ export const quotationWaterHeaterProjectSchema = z.object({
   projectType: z.literal("water_heater"),
   brand: z.enum(waterHeaterBrands),
   litre: z.number().min(1),
-  heatingCoil: z.string().nullish(),
+  heatingCoil: z.enum(['Yes', 'No']).nullish(),
   productImage: z.string().nullish(), // Optional product image URL
   floor: z.enum(floorLevels).nullish(),
   plumbingWorkScope: z.enum(workScopeOptions).nullish(),

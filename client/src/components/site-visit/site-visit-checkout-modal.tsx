@@ -1118,12 +1118,17 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                   </CardContent>
                 </Card>
 
-                {!capturedPhotos.selfie && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                {(!capturedPhotos.selfie || capturedPhotos.sitePhotos.length === 0 || notes.trim().length === 0) && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 space-y-2">
                     <div className="flex items-center gap-2 text-red-700">
                       <AlertTriangle className="h-4 w-4" />
-                      <span className="text-xs sm:text-sm font-medium">Selfie photo required to complete checkout</span>
+                      <span className="text-xs sm:text-sm font-medium">Please complete all required fields below:</span>
                     </div>
+                    <ul className="list-disc list-inside text-xs sm:text-sm text-red-700 ml-6">
+                      {!capturedPhotos.selfie && <li>Selfie photo is required</li>}
+                      {capturedPhotos.sitePhotos.length === 0 && <li>At least one Site Completion photo is required</li>}
+                      {notes.trim().length === 0 && <li>Completion Notes are required</li>}
+                    </ul>
                   </div>
                 )}
 
@@ -1133,7 +1138,7 @@ export function SiteVisitCheckoutModal({ isOpen, onClose, siteVisit }: SiteVisit
                   </Button>
                   <Button
                     onClick={() => siteVisit.isFollowUp ? handleSubmit() : setStep(3)}
-                    disabled={!capturedPhotos.selfie}
+                    disabled={!capturedPhotos.selfie || capturedPhotos.sitePhotos.length === 0 || notes.trim().length === 0}
                     className="order-1 sm:order-2 w-full sm:w-auto"
                   >
                     {siteVisit.isFollowUp ? 'Complete Checkout' : 'Next: Visit Outcome'}

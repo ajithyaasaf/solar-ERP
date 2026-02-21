@@ -157,12 +157,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.authenticatedUser.maxApprovalAmount = null; // Unlimited
 
         }
-        // Calculate permissions if user has department and designation
-        else if (userProfile.department && userProfile.designation) {
+        // Calculate permissions based on department (designation is optional)
+        else if (userProfile.department) {
           try {
 
             const { getEffectivePermissions } = await import("@shared/schema");
-            const effectivePermissions = getEffectivePermissions(userProfile.department, userProfile.designation);
+            const effectivePermissions = getEffectivePermissions(userProfile.department, userProfile.designation || null);
             req.authenticatedUser.permissions = effectivePermissions;
 
 
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "gm": 8,
               "ceo": 9
             };
-            const level = designationLevels[userProfile.designation] || 1;
+            const level = userProfile.designation ? (designationLevels[userProfile.designation] || 1) : 1;
             req.authenticatedUser.canApprove = level >= 5;
             req.authenticatedUser.maxApprovalAmount = level >= 8 ? null : level >= 7 ? 1000000 : level >= 6 ? 500000 : level >= 5 ? 100000 : null;
           } catch (error) {
@@ -186,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Error details:", error.stack);
           }
         } else {
-          // New employee without department/designation gets default permissions
+          // New employee without department gets default permissions
 
           try {
             const { getNewEmployeePermissions } = await import("@shared/schema");
@@ -3433,7 +3433,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.authenticatedUser.permissions.includes("quotations.create") ||
         req.authenticatedUser.user.role === "master_admin";
 
+      console.log(`[QUOTATIONS API] User: ${req.authenticatedUser.displayName} Dept: ${req.authenticatedUser.department} Role: ${req.authenticatedUser.user.role}`);
+      console.log(`[QUOTATIONS API] Permissions count: ${req.authenticatedUser.permissions.length}, hasPermission: ${hasPermission}, includesView: ${req.authenticatedUser.permissions.includes("quotations.view")}`);
+
       if (!hasPermission) {
+        console.log(`[QUOTATIONS API] Access Denied - missing permissions`);
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -3447,6 +3451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get quotations
       const quotations = await storage.listQuotations();
+      console.log(`[QUOTATIONS API] Fetched ${quotations.length} raw quotations from DB`);
 
       // Apply search & status filter if provided
       let filteredQuotations = quotations;

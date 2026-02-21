@@ -2036,7 +2036,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     data-testid={`checkbox-earth-${type}-${projectIndex}`}
                   />
                   <label htmlFor={`earth-${type}-${projectIndex}`} className="text-sm cursor-pointer">
-                    {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                    {type.toUpperCase()}
                   </label>
                 </div>
               ))}
@@ -2464,9 +2464,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     // Calculate backup hours for a given usage watts
     const calculateBackupHours = (usageWatts: number) => {
       if (!backupSolutions.backupWatts || !usageWatts || usageWatts === 0) {
-        return 0;
+        return "0.00";
       }
-      return parseFloat((backupSolutions.backupWatts / usageWatts).toFixed(2));
+      const decimalHours = backupSolutions.backupWatts / usageWatts;
+      const hours = Math.floor(decimalHours);
+      const minutes = Math.floor((decimalHours - hours) * 60);
+      return `${hours}.${minutes.toString().padStart(2, '0')}`;
     };
 
     // Recalculate all backup hours when backup watts or usage watts change
@@ -3328,7 +3331,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                       data-testid={`checkbox-earth-${type}-pump-${projectIndex}`}
                     />
                     <label htmlFor={`earth-${type}-pump-${projectIndex}`} className="text-sm cursor-pointer">
-                      {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                      {type.toUpperCase()}
                     </label>
                   </div>
                 ))}
@@ -6654,7 +6657,7 @@ export default function QuotationCreation() {
                   </div>
 
                   {/* Documents Required - Hidden for service-only quotations */}
-                  {!isServiceOnlyQuotation && (
+                  {!isServiceOnlyQuotation && form.watch("projects")?.some((p: any) => p.projectType === 'on_grid') && (
                     <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
                       <h4 className="font-medium text-base">Documents Required for PM Surya Ghar</h4>
                       <div className="space-y-2 text-sm">

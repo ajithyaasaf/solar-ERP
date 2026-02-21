@@ -1727,15 +1727,15 @@ export class FirestoreStorage implements IStorage {
         return true;
       }
 
-      // If user doesn't have department or designation, deny access
-      if (!user.department || !user.designation) {
-        console.log(`SERVER PERMISSION CHECK: User missing department or designation, denying access`);
+      // If user doesn't have department, deny access (new employees have basic access but not via this check)
+      if (!user.department) {
+        console.log(`SERVER PERMISSION CHECK: User missing department, denying access`);
         return false;
       }
 
       // Import permission calculation logic from shared schema
       const { getEffectivePermissions } = await import("@shared/schema");
-      const effectivePermissions = getEffectivePermissions(user.department, user.designation);
+      const effectivePermissions = getEffectivePermissions(user.department, user.designation || null);
 
       const hasPermission = effectivePermissions.includes(permission as any);
       console.log(`SERVER PERMISSION CHECK: Effective permissions check result: ${hasPermission} for permission '${permission}'`);

@@ -247,6 +247,7 @@ export default function HRManagement() {
       experienceYears: undefined,
       dateOfLeaving: undefined,
       employeeStatus: "active",
+      isLeaveEnabled: false,
       contactNumber: "",
       emergencyContactPerson: "",
       emergencyContactNumber: "",
@@ -373,6 +374,7 @@ export default function HRManagement() {
       department: user.department || undefined,
       designation: user.designation || undefined,
       employeeStatus: user.employeeStatus || 'active',
+      isLeaveEnabled: user.isLeaveEnabled || false,
       joinDate: user.joinDate ? new Date(user.joinDate) : undefined,
       dateOfLeaving: user.dateOfLeaving ? new Date(user.dateOfLeaving) : undefined,
 
@@ -1085,7 +1087,7 @@ function UserForm({
     if (!hasPan) missingDocs.push("PAN Card");
 
     if (missingDocs.length > 0) {
-      setActiveTab("personal");
+      setActiveTab("documents");
       toast({
         title: "Missing Required Documents",
         description: `Please upload the following documents: ${missingDocs.join(", ")}`,
@@ -1222,6 +1224,26 @@ function UserForm({
                       </SelectContent>
                     </Select>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isLeaveEnabled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Leave System Access</FormLabel>
+                      <FormDescription>
+                        Allow this employee to use the leave application system.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

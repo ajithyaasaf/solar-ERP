@@ -251,9 +251,9 @@ export function SiteVisitDetailsModal({ isOpen, onClose, siteVisit }: SiteVisitD
     if (!value) return 'Not specified';
     if (Array.isArray(value)) {
       if (value.length === 0) return 'Not specified';
-      return value.map(v => v === 'ac_dc' ? 'AC/DC' : v.toUpperCase()).join(', ');
+      return value.map(v => v.toUpperCase()).join(', ');
     }
-    return value === 'ac_dc' ? 'AC/DC' : value.toUpperCase();
+    return value.toUpperCase();
   };
 
   const formatStructureType = (value: string | undefined): string => {

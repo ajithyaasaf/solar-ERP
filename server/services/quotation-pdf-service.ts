@@ -714,7 +714,7 @@ export class QuotationPDFService {
       </div>` : ''}
       ` : ''}
       
-      ${!isWaterUtility ? `
+      ${template.projectType === 'on_grid' ? `
       <!-- Documents Required -->
       <div class="documents-section">
         <h3 style="color: #228B22; margin-top: 0;">Documents Required for PM Surya Ghar</h3>

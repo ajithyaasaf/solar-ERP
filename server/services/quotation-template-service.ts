@@ -97,7 +97,7 @@ export interface QuotationTemplate {
   backupSolutions?: {
     backupWatts: number;
     usageWatts: number[];
-    backupHours: number[];
+    backupHours: (number | string)[];
   };
   billOfMaterials: BillOfMaterialsItem[];
   termsAndConditions: {
@@ -547,7 +547,7 @@ export class QuotationTemplateService {
   static calculateBackupSolutions(project: any): {
     backupWatts: number;
     usageWatts: number[];
-    backupHours: number[]
+    backupHours: (number | string)[]
   } {
     const batteryAH = parseInt(project.batteryAH || '100');
     const batteryQty = project.batteryCount || 1;
@@ -559,10 +559,13 @@ export class QuotationTemplateService {
     // Use provided usage watts or defaults
     const usageWatts = project.backupSolutions?.usageWatts || [800, 750, 550, 450, 200];
 
-    // Calculate backup hours for each usage watts
-    const backupHours = usageWatts.map((usage: number) =>
-      Math.round((backupWatts / usage) * 100) / 100
-    );
+    // Calculate backup hours for each usage watts, converting to HH.MM base-60 format
+    const backupHours = usageWatts.map((usage: number) => {
+      const decimalHours = backupWatts / usage;
+      const hours = Math.floor(decimalHours);
+      const minutes = Math.floor((decimalHours - hours) * 60);
+      return `${hours}.${minutes.toString().padStart(2, '0')}`;
+    });
 
     return { backupWatts, usageWatts, backupHours };
   }
@@ -785,18 +788,13 @@ export class QuotationTemplateService {
       const earthType = structureType; // Use same type as structure
 
       // Determine earthing quantity based on AC/DC cable selection
-      // Qty: 2 if both AC and DC are covered (either as 'ac_dc' or separate 'ac'+'dc')
-      // Qty: 1 if only one type is selected
+      // Qty: 2 if both AC and DC are selected, Qty: 1 if only one type is selected
       let earthQty = 1;
       if (Array.isArray(project.earth)) {
-        // Array format: check if 'ac_dc' is present OR both 'ac' and 'dc' are present
-        if (project.earth.includes('ac_dc') ||
-          (project.earth.includes('ac') && project.earth.includes('dc'))) {
+        // Array format: check if both 'ac' and 'dc' are present
+        if (project.earth.includes('ac') && project.earth.includes('dc')) {
           earthQty = 2;
         }
-      } else if (typeof project.earth === 'string') {
-        // Single string format (legacy): 'ac_dc' means both
-        earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
 
       items.push({
@@ -1046,12 +1044,9 @@ export class QuotationTemplateService {
       // Determine earthing quantity based on AC/DC cable selection
       let earthQty = 1;
       if (Array.isArray(project.earth)) {
-        if (project.earth.includes('ac_dc') ||
-          (project.earth.includes('ac') && project.earth.includes('dc'))) {
+        if (project.earth.includes('ac') && project.earth.includes('dc')) {
           earthQty = 2;
         }
-      } else if (typeof project.earth === 'string') {
-        earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
 
       items.push({
@@ -1299,12 +1294,9 @@ export class QuotationTemplateService {
       // Determine earthing quantity based on AC/DC cable selection
       let earthQty = 1;
       if (Array.isArray(project.earth)) {
-        if (project.earth.includes('ac_dc') ||
-          (project.earth.includes('ac') && project.earth.includes('dc'))) {
+        if (project.earth.includes('ac') && project.earth.includes('dc')) {
           earthQty = 2;
         }
-      } else if (typeof project.earth === 'string') {
-        earthQty = project.earth === 'ac_dc' ? 2 : 1;
       }
 
       items.push({
@@ -1388,10 +1380,10 @@ export class QuotationTemplateService {
     const waterHeaterBrand = project.brand || 'Standard';
     const capacityLitres = project.litre || 100;
     const waterHeaterModel = project.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
-    const heatingCoilType = project.heatingCoil || 'Heating Coil';
+    const heatingCoilType = project.heatingCoil === 'Yes' ? ' with Heating Coil' : project.heatingCoil === 'No' ? ' without Heating Coil' : (project.heatingCoil ? ` ${project.heatingCoil}` : ' Heating Coil');
     const gstSuffix = project.labourAndTransport ? ' And Transport Including GST' : ' Including GST';
 
-    const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${gstSuffix}`;
+    const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilType}${gstSuffix}`;
 
     // Calculate rate and amount from project values
     // projectValue is per-unit price (including GST)
@@ -1487,8 +1479,7 @@ export class QuotationTemplateService {
       conditionalItems.push('Lighting Arrester');
     }
     // Check if DC is selected in earth connection to add DC Cable
-    if (project.earth && Array.isArray(project.earth) &&
-      (project.earth.includes('dc') || project.earth.includes('ac_dc'))) {
+    if (project.earth && Array.isArray(project.earth) && project.earth.includes('dc')) {
       conditionalItems.push('DC Cable');
     }
     if (project.electricalAccessories) {
@@ -1711,10 +1702,10 @@ export class QuotationTemplateService {
         const waterHeaterBrand = (project as any).brand || 'Standard';
         const capacityLitres = litres;
         const waterHeaterModel = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
-        const heatingCoilType = (project as any).heatingCoil || 'Heating Coil';
+        const heatingCoilType = (project as any).heatingCoil === 'Yes' ? ' with Heating Coil' : (project as any).heatingCoil === 'No' ? ' without Heating Coil' : ((project as any).heatingCoil ? ` ${(project as any).heatingCoil}` : ' Heating Coil');
         const gstSuffix = (project as any).labourAndTransport ? ' And Transport Including GST' : ' Including GST';
 
-        description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank. ${heatingCoilType}${gstSuffix}`;
+        description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilType}${gstSuffix}`;
         break;
 
       case 'water_pump':
@@ -1864,7 +1855,7 @@ export class QuotationTemplateService {
     let backupSolutions: {
       backupWatts: number;
       usageWatts: number[];
-      backupHours: number[]
+      backupHours: (number | string)[]
     } | undefined = undefined;
 
     if (project.projectType === 'on_grid') {

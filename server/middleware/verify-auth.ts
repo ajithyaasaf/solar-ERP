@@ -122,18 +122,18 @@ export const verifyAuth = async (req: Request, res: Response, next: NextFunction
 
             console.log(`[AUTH] Master admin authenticated: ${userProfile.email || userProfile.displayName}`);
         }
-        // Users with department and designation → calculate from schema
-        else if (userProfile.department && userProfile.designation) {
+        // Users with department
+        else if (userProfile.department) {
             try {
                 const { getEffectivePermissions } = await import("@shared/schema");
                 const effectivePermissions = getEffectivePermissions(
                     userProfile.department,
-                    userProfile.designation
+                    userProfile.designation || null
                 );
                 req.authenticatedUser.permissions = effectivePermissions;
 
                 // Calculate approval capabilities based on designation level
-                const level = DESIGNATION_LEVELS[userProfile.designation] || 1;
+                const level = userProfile.designation ? (DESIGNATION_LEVELS[userProfile.designation] || 1) : 1;
                 req.authenticatedUser.canApprove = level >= 5; // Executive and above can approve
                 req.authenticatedUser.maxApprovalAmount = getMaxApprovalAmount(level);
 

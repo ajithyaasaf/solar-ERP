@@ -436,8 +436,8 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
       ((formData.projectType === 'on_grid' && formData.onGridConfig?.solarPanelMake && formData.onGridConfig.solarPanelMake.length > 0 && formData.onGridConfig?.inverterMake && formData.onGridConfig.inverterMake.length > 0 && (formData.onGridConfig?.panelCount || 0) > 0) ||
         (formData.projectType === 'off_grid' && formData.offGridConfig?.solarPanelMake && formData.offGridConfig.solarPanelMake.length > 0 && formData.offGridConfig?.inverterMake && formData.offGridConfig.inverterMake.length > 0 && formData.offGridConfig?.batteryBrand && (formData.offGridConfig?.panelCount || 0) > 0) ||
         (formData.projectType === 'hybrid' && formData.hybridConfig?.solarPanelMake && formData.hybridConfig.solarPanelMake.length > 0 && formData.hybridConfig?.inverterMake && formData.hybridConfig.inverterMake.length > 0 && formData.hybridConfig?.batteryBrand && (formData.hybridConfig?.panelCount || 0) > 0) ||
-        (formData.projectType === 'water_heater' && formData.waterHeaterConfig?.brand && (formData.waterHeaterConfig?.litre || 0) > 0) ||
-        (formData.projectType === 'water_pump' && formData.waterPumpConfig?.hp && formData.waterPumpConfig?.panelBrand && formData.waterPumpConfig.panelBrand.length > 0 && (formData.waterPumpConfig?.panelCount || 0) > 0)));
+        (formData.projectType === 'water_heater' && formData.waterHeaterConfig?.brand && formData.waterHeaterConfig?.heatingCoil && (formData.waterHeaterConfig?.litre || 0) > 0) ||
+        (formData.projectType === 'water_pump' && formData.waterPumpConfig?.hp && formData.waterPumpConfig?.panelBrand && formData.waterPumpConfig.panelBrand.length > 0 && formData.waterPumpConfig?.drive && (formData.waterPumpConfig?.panelCount || 0) > 0)));
 
   return (
     <div className="space-y-6">
@@ -697,7 +697,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                               }}
                             />
                             <Label htmlFor={`on-grid-earth-${type}`} className="text-sm">
-                              {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                              {type.toUpperCase()}
                             </Label>
                           </div>
                         ))}
@@ -1379,7 +1379,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                               }}
                             />
                             <Label htmlFor={`off-grid-earth-${type}`} className="text-sm">
-                              {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                              {type.toUpperCase()}
                             </Label>
                           </div>
                         ))}
@@ -1980,7 +1980,7 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                               }}
                             />
                             <Label htmlFor={`hybrid-earth-${type}`} className="text-sm">
-                              {type === 'ac_dc' ? 'AC/DC' : type.toUpperCase()}
+                              {type.toUpperCase()}
                             </Label>
                           </div>
                         ))}
@@ -2288,12 +2288,19 @@ export function MarketingSiteVisitForm({ onSubmit, onBack, isDisabled, isLoading
                     </div>
 
                     <div>
-                      <Label>Heating Coil Type</Label>
-                      <Input
+                      <Label>Heating Coil Type *</Label>
+                      <Select
                         value={formData.waterHeaterConfig.heatingCoil || ''}
-                        onChange={(e) => updateConfig('waterHeaterConfig', { heatingCoil: e.target.value })}
-                        placeholder="Standard, Premium, etc."
-                      />
+                        onValueChange={(value) => updateConfig('waterHeaterConfig', { heatingCoil: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Yes/No" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Yes">Yes</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
