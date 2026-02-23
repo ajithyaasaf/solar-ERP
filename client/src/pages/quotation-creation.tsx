@@ -259,9 +259,9 @@ const generateProjectDescription = (project: QuotationProject): string => {
       const brand = (project as any).brand || 'Standard';
       const litres = project.litre || 100;
       const model = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
-      const heatingCoilType = (project as any).heatingCoil === 'Yes' ? 'with Heating Coil' : 'without Heating Coil';
-      const gstSuffix = (project as any).labourAndTransport ? '\nAnd Transport Including GST' : '\nIncluding GST';
-      return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank.\n${heatingCoilType}${gstSuffix}`;
+      const heatingCoilType = (project as any).heatingCoil === 'Yes' ? ' with Heating Coil' : (project as any).heatingCoil === 'No' ? '' : ((project as any).heatingCoil ? ` ${(project as any).heatingCoil}` : '');
+      const gstSuffix = (project as any).labourAndTransport ? ' And Transport Including GST' : ' Including GST';
+      return `Supply and Installation of ${brand} make solar water heater ${litres} LPD commercial ${model} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilType}${gstSuffix}`;
     }
 
     case 'water_pump': {

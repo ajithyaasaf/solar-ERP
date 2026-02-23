@@ -1380,7 +1380,7 @@ export class QuotationTemplateService {
     const waterHeaterBrand = project.brand || 'Standard';
     const capacityLitres = project.litre || 100;
     const waterHeaterModel = project.waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
-    const heatingCoilType = project.heatingCoil === 'Yes' ? ' with Heating Coil' : project.heatingCoil === 'No' ? ' without Heating Coil' : (project.heatingCoil ? ` ${project.heatingCoil}` : ' Heating Coil');
+    const heatingCoilType = project.heatingCoil === 'Yes' ? ' with Heating Coil' : project.heatingCoil === 'No' ? '' : (project.heatingCoil ? ` ${project.heatingCoil}` : ' Heating Coil');
     const gstSuffix = project.labourAndTransport ? ' And Transport Including GST' : ' Including GST';
 
     const fullDescription = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilType}${gstSuffix}`;
@@ -1702,7 +1702,7 @@ export class QuotationTemplateService {
         const waterHeaterBrand = (project as any).brand || 'Standard';
         const capacityLitres = litres;
         const waterHeaterModel = (project as any).waterHeaterModel === 'pressurized' ? 'Pressurized' : 'Non-Pressurized';
-        const heatingCoilType = (project as any).heatingCoil === 'Yes' ? ' with Heating Coil' : (project as any).heatingCoil === 'No' ? ' without Heating Coil' : ((project as any).heatingCoil ? ` ${(project as any).heatingCoil}` : ' Heating Coil');
+        const heatingCoilType = (project as any).heatingCoil === 'Yes' ? ' with Heating Coil' : (project as any).heatingCoil === 'No' ? '' : ((project as any).heatingCoil ? ` ${(project as any).heatingCoil}` : ' Heating Coil');
         const gstSuffix = (project as any).labourAndTransport ? ' And Transport Including GST' : ' Including GST';
 
         description = `Supply and Installation of ${waterHeaterBrand} make solar water heater ${capacityLitres} LPD commercial ${waterHeaterModel} with corrosion resistant epoxy Coated Inner tank and powder coated outer tank${heatingCoilType}${gstSuffix}`;
