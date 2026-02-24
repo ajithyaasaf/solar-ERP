@@ -96,7 +96,7 @@ The requested features require precise modifications across the Zod schema layer
 **Target Files**:
 1. `server/services/quotation-pdf-service.ts`
 2. `client/src/pages/quotation-creation.tsx`
-
+>
 ### 6.1 Conditionally Rendered Blocks
 *   **Action**: The "Documents Required for PM Surya Ghar" block must render **only** for `on_grid` systems.
 *   **Execution**:

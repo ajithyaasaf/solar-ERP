@@ -711,7 +711,7 @@ export default function Quotations() {
                 </Card>
 
                 {/* Notes */}
-                {(selectedQuotation?.customerNotes || selectedQuotation?.internalNotes) && (
+                {(selectedQuotation?.customerNotes) && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
@@ -724,12 +724,6 @@ export default function Quotations() {
                         <div>
                           <p className="text-sm text-gray-500 font-medium mb-1">Customer Notes</p>
                           <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedQuotation.customerNotes}</p>
-                        </div>
-                      )}
-                      {selectedQuotation?.internalNotes && (
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium mb-1">Internal Notes</p>
-                          <p className="text-sm bg-gray-50 p-3 rounded-md">{selectedQuotation.internalNotes}</p>
                         </div>
                       )}
                     </CardContent>

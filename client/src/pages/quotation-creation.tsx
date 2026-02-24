@@ -213,17 +213,30 @@ const calculateSubsidy = (kw: number, propertyType: string, projectType: string)
   }
 };
 
+// Helper function to safely parse panel watts (remove whitespace and non-numeric chars, then parse)
+const parsePanelWattsGlobal = (value: any): number => {
+  if (!value) return 0;
+  const stringValue = String(value).trim();
+  const numericOnly = stringValue.replace(/[^\d]/g, '');
+  const parsed = parseInt(numericOnly, 10);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 // Helper function to generate project description based on project type and configuration
 const generateProjectDescription = (project: QuotationProject): string => {
   const projectType = project.projectType;
 
+  // Calculate system kW securely based on panel specs instead of trusting potentially stale `project.systemKW`
+  const panelWattsNumber = parsePanelWattsGlobal(project.panelWatts);
+  const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
+  const actualSystemKW = (panelWattsNumber && panelCountNumber) ? (panelWattsNumber * panelCountNumber) / 1000 : 0;
+  const computedSystemKW = formatKWForDisplay(roundSystemKW(actualSystemKW));
+
   switch (projectType) {
     case 'on_grid': {
-      const systemKW = (project as any).systemKW || 0;
-      const kw = formatKWForDisplay(systemKW);
-      const inverterKW = (project as any).inverterKW || kw;
+      const inverterKW = (project as any).inverterKW || computedSystemKW;
       const phase = project.inverterPhase === 'three_phase' ? '3-Phase' : '1-Phase';
-      return `Supply and Installation of ${kw} kw Solar Panel ${inverterKW} KW Inverter ${phase} ON-GRID Solar System`;
+      return `Supply and Installation of ${computedSystemKW} kw Solar Panel ${inverterKW} KW Inverter ${phase} ON-GRID Solar System`;
     }
 
     case 'off_grid': {
@@ -242,17 +255,15 @@ const generateProjectDescription = (project: QuotationProject): string => {
     }
 
     case 'hybrid': {
-      const systemKW = (project as any).systemKW || 0;
-      const totalKW = formatKWForDisplay(systemKW);
       const inverterKVA = (project as any).inverterKVA || (project as any).inverterKW || 1;
       const voltage = project.voltage || 24;
       const batteryCount = project.batteryCount || 1;
       const inverterVolt = (project as any).inverterVolt || (voltage * batteryCount);
-      const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
-      const batteryBrand = ((project as any).batteryBrand || 'Exide').toUpperCase();
       const batteryAH = project.batteryAH || 100;
-      const batteryType = (project as any).batteryType === 'lithium' ? 'Lithium Battery' : 'Lead Acid Battery';
-      return `Supply and Installation of ${totalKW} KW PANEL, ${inverterKVA}KVA/${inverterVolt}V ${phase} Phase Hybrid Inverter, ${batteryBrand} ${batteryAH}AH ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
+      const batteryType = project.batteryType || 'Tubular';
+      const batteryBrand = project.batteryMake || 'Standard';
+      const phase = project.inverterPhase === 'three_phase' ? '3' : '1';
+      return `Supply and Installation of ${computedSystemKW} KW PANEL, ${inverterKVA}KVA/${inverterVolt}V ${phase} Phase Hybrid Inverter, ${batteryBrand} ${batteryAH}AH ${batteryType}-${batteryCount} Nos, Hybrid Solar System`;
     }
 
     case 'water_heater': {
@@ -965,30 +976,28 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       case "on_grid":
         newProject = {
           ...newProject,
-          systemKW: 1,
+          systemKW: 0,
           pricePerKW: BUSINESS_RULES.pricing.onGridPerKW,
           solarPanelMake: [],
-          panelWatts: "530",
-          panelType: "bifacial",
-          dcrPanelCount: 6,
+          panelWatts: "",
+          panelType: undefined,
+          dcrPanelCount: 0,
           nonDcrPanelCount: 0,
-          panelCount: 6,
+          panelCount: 0,
           inverterMake: [],
-          inverterKW: 3,
+          inverterKW: 0,
           inverterQty: 1,
-          inverterPhase: "single_phase",
+          inverterPhase: undefined,
           lightningArrest: false,
           electricalAccessories: false,
-          earth: ["dc"],
-          floor: "0",
-          structureType: "gp_structure",
+          earth: [],
+          floor: undefined,
+          structureType: undefined,
           gpStructure: {
             lowerEndHeight: "0",
             higherEndHeight: "0"
           },
-          monoRail: {
-            type: "mini_rail"
-          },
+          monoRail: undefined,
           civilWorkScope: "customer_scope",
           netMeterScope: "customer_scope",
           others: ""
@@ -997,30 +1006,30 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       case "off_grid":
         newProject = {
           ...newProject,
-          systemKW: 1,
+          systemKW: 0,
           pricePerKW: BUSINESS_RULES.pricing.offGridPerKW,
           solarPanelMake: [],
-          panelWatts: "530",
-          panelType: "bifacial",
-          dcrPanelCount: 6,
+          panelWatts: "",
+          panelType: undefined,
+          dcrPanelCount: 0,
           nonDcrPanelCount: 0,
-          panelCount: 6,
+          panelCount: 0,
           inverterMake: [],
-          inverterKW: 3,
-          inverterKVA: "3",
+          inverterKW: 0,
+          inverterKVA: "",
           inverterQty: 1,
-          inverterPhase: "single_phase",
+          inverterPhase: undefined,
           lightningArrest: false,
           electricalAccessories: false,
-          earth: ["dc"],
-          floor: "0",
-          structureType: "gp_structure",
-          batteryBrand: "exide",
-          batteryType: "lead_acid",
-          batteryAH: "100",
-          voltage: 12,
-          batteryCount: 1,
-          batteryStands: "1",
+          earth: [],
+          floor: undefined,
+          structureType: undefined,
+          batteryBrand: "",
+          batteryType: undefined,
+          batteryAH: undefined,
+          voltage: 0,
+          batteryCount: 0,
+          batteryStands: "",
           electricalWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
           backupSolutions: {
@@ -1035,30 +1044,30 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       case "hybrid":
         newProject = {
           ...newProject,
-          systemKW: 1,
+          systemKW: 0,
           pricePerKW: BUSINESS_RULES.pricing.hybridPerKW,
           solarPanelMake: [],
-          panelWatts: "530",
-          panelType: "bifacial",
-          dcrPanelCount: 6,
+          panelWatts: "",
+          panelType: undefined,
+          dcrPanelCount: 0,
           nonDcrPanelCount: 0,
-          panelCount: 6,
+          panelCount: 0,
           inverterMake: [],
-          inverterKW: 3,
-          inverterKVA: "3",
+          inverterKW: 0,
+          inverterKVA: "",
           inverterQty: 1,
-          inverterPhase: "single_phase",
+          inverterPhase: undefined,
           lightningArrest: false,
           electricalAccessories: false,
-          earth: ["dc"],
-          floor: "0",
-          structureType: "gp_structure",
-          batteryBrand: "exide",
-          batteryType: "lead_acid",
-          batteryAH: "100",
-          voltage: 12,
-          batteryCount: 1,
-          batteryStands: "1",
+          earth: [],
+          floor: undefined,
+          structureType: undefined,
+          batteryBrand: "",
+          batteryType: undefined,
+          batteryAH: undefined,
+          voltage: 0,
+          batteryCount: 0,
+          batteryStands: "",
           electricalWorkScope: "customer_scope",
           netMeterScope: "customer_scope",
           backupSolutions: {
@@ -1073,14 +1082,14 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       case "water_heater":
         newProject = {
           ...newProject,
-          brand: "venus",
-          litre: 100,
-          heatingCoil: "No", // Default to "No"
-          floor: "0",
+          brand: undefined,
+          litre: 0,
+          heatingCoil: undefined,
+          floor: undefined,
           plumbingWorkScope: "customer_scope",
           civilWorkScope: "customer_scope",
           qty: 1,
-          waterHeaterModel: "non_pressurized",
+          waterHeaterModel: undefined,
           labourAndTransport: false,
           others: ""
         };
@@ -1088,25 +1097,23 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
       case "water_pump":
         newProject = {
           ...newProject,
-          hp: "1",
-          driveHP: "1",
-          drive: "vfd",
-          inverterPhase: "single_phase",
-          panelWatts: "530",
-          panelType: "bifacial",
-          structureType: "gp_structure",
+          hp: "",
+          driveHP: "",
+          drive: "",
+          inverterPhase: undefined,
+          panelWatts: "",
+          panelType: undefined,
+          structureType: undefined,
           panelBrand: [],
-          dcrPanelCount: 6,
+          dcrPanelCount: 0,
           nonDcrPanelCount: 0,
-          panelCount: 6,
+          panelCount: 0,
           qty: 1,
           gpStructure: {
             lowerEndHeight: "0",
             higherEndHeight: "0"
           },
-          monoRail: {
-            type: "mini_rail"
-          },
+          monoRail: undefined,
           plumbingWorkScope: "customer_scope",
           earthWork: "customer_scope",
           civilWorkScope: "customer_scope",
@@ -1175,7 +1182,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
     } else if (projectType === "water_pump") {
       // Set default pricing for water pump - GST is 0% by default for service-only quotations
       // Default projectValue calculation (user can override this manually)
-      const hpValue = parseFloat(newProject.hp) || 1;
+      const hpValue = parseFloat(newProject.hp) || 0;
       const defaultBaseValue = hpValue * BUSINESS_RULES.pricing.waterPumpPerHP;
       newProject.projectValue = Math.round(defaultBaseValue);
       newProject.gstPercentage = 0; // Water pump has 0% GST by default
@@ -1337,8 +1344,8 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h4 className="font-medium text-sm sm:text-base">Project Configuration</h4>
           <Select value={selectedProjectType || ""} onValueChange={setSelectedProjectType}>
-            <SelectTrigger className="w-full sm:w-56" data-testid="select-project-type">
-              <SelectValue placeholder="Add Project Type" />
+            <SelectTrigger className="w-full sm:w-[280px]" data-testid="select-project-type">
+              <span className="flex items-center text-base"><SelectValue placeholder="Add Project Type" /></span>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="on_grid">On-Grid Solar</SelectItem>
@@ -1456,7 +1463,7 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
                         data-testid={`button-configure-project-${index}`}
                         className="text-xs sm:text-sm"
                       >
-                        {activeProjectIndex === index ? 'Collapse' : 'Configure'}
+                        {activeProjectIndex === index ? 'Done' : 'Edit Details'}
                       </Button>
                       <Button
                         type="button"
@@ -1482,36 +1489,44 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
                   </CardContent>
                 )}
 
-                {activeProjectIndex !== index && (
-                  <CardContent className="p-3 sm:p-4 pt-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
-                      {project.systemKW && (
-                        <div>
-                          <span className="text-muted-foreground">System Capacity:</span>
-                          <div className="font-medium">{project.systemKW} kW</div>
-                        </div>
-                      )}
-                      {project.panelCount && (
-                        <div>
-                          <span className="text-muted-foreground">Solar Panels:</span>
-                          <div className="font-medium">{project.panelCount} panels</div>
-                        </div>
-                      )}
-                      {project.subsidyAmount > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">Govt. Subsidy:</span>
-                          <div className="font-medium text-green-600">₹{project.subsidyAmount.toLocaleString()}</div>
-                        </div>
-                      )}
-                      {project.customerPayment && (
-                        <div>
-                          <span className="text-muted-foreground">Customer Payment:</span>
-                          <div className="font-medium">₹{project.customerPayment.toLocaleString()}</div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                )}
+                {activeProjectIndex !== index && (() => {
+                  // Calculate real systemKW from panel data — single source of truth matching Configure form
+                  const cardPanelWatts = parseInt(String(project.panelWatts || '').replace(/[^\d]/g, ''), 10) || 0;
+                  const cardPanelCount = project.panelCount || 0;
+                  const cardCalcKW = cardPanelWatts > 0 && cardPanelCount > 0
+                    ? Math.round((cardPanelWatts * cardPanelCount / 1000) * 100) / 100
+                    : null;
+                  return (
+                    <CardContent className="p-3 sm:p-4 pt-0">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
+                        {cardCalcKW !== null && (
+                          <div>
+                            <span className="text-muted-foreground">System Capacity:</span>
+                            <div className="font-medium">{cardCalcKW} kW</div>
+                          </div>
+                        )}
+                        {project.panelCount > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Solar Panels:</span>
+                            <div className="font-medium">{project.panelCount} {project.panelCount === 1 ? 'panel' : 'panels'}</div>
+                          </div>
+                        )}
+                        {project.subsidyAmount > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Govt. Subsidy:</span>
+                            <div className="font-medium text-green-600">₹{project.subsidyAmount.toLocaleString()}</div>
+                          </div>
+                        )}
+                        {project.projectValue > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Project Total:</span>
+                            <div className="font-medium">₹{project.projectValue.toLocaleString()}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  );
+                })()}
               </Card>
             ))}
           </div>
@@ -1540,8 +1555,8 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
 
   // Helper function to calculate backup watts
   const calculateBackupWatts = useCallback(() => {
-    const batteryAH = parseInt(project.batteryAH) || 100;
-    const batteryQty = project.batteryCount || 1;
+    const batteryAH = project.batteryAH !== undefined && project.batteryAH !== '' ? parseInt(project.batteryAH) : 100;
+    const batteryQty = project.batteryCount !== undefined && project.batteryCount !== '' ? parseInt(project.batteryCount) : 1;
 
     // Formula: Battery AH × Battery Qty × 10 - 3% loss
     const rawWatts = batteryAH * batteryQty * 10;
@@ -1582,8 +1597,12 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       return;
     }
 
-    // Check if battery specs are available
-    if (!project.batteryAH || !project.batteryCount) {
+    // Assume defaults if not explicitly provided but only after confirming project type
+    const batteryAH = project.batteryAH ? parseInt(project.batteryAH) : 100;
+    const batteryCount = project.batteryCount ? parseInt(project.batteryCount) : 1;
+
+    // Safety check for invalid/zero values
+    if (batteryAH <= 0 || batteryCount <= 0) {
       return;
     }
 
@@ -3741,7 +3760,7 @@ export default function QuotationCreation() {
         return response.json();
       }
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       console.log(`✅ Quotation ${isEditMode ? 'updated' : 'created'} successfully:`, data);
       console.log("📄 Quotation Number:", data.quotation?.quotationNumber || data.quotationNumber);
       console.log("🆔 Quotation ID:", data.quotation?.id || data.id);
@@ -3749,8 +3768,8 @@ export default function QuotationCreation() {
         title: isEditMode ? "Quotation Updated" : "Quotation Created",
         description: `Quotation ${data.quotation?.quotationNumber || data.quotationNumber || 'new'} has been ${isEditMode ? 'updated' : 'created'} successfully.${isEditMode ? ` Revision: R${data.documentVersion || data.quotation?.documentVersion || 1}` : ''}`
       });
-      // Invalidate all quotation-related queries (including filtered ones)
-      queryClient.invalidateQueries({ queryKey: ["/api/quotations"], exact: false });
+      // Await invalidation so the list fully refetches before navigating
+      await queryClient.invalidateQueries({ queryKey: ["/api/quotations"], exact: false });
       console.log("🔄 Invalidated queries, redirecting to /quotations");
       setLocation("/quotations");
     },
@@ -5208,7 +5227,12 @@ export default function QuotationCreation() {
                               {solarProjects.map((project: any, originalIndex: number) => {
                                 // Get the actual index in the full projects array
                                 const index = projects.indexOf(project);
-                                const systemKW = project.systemKW || 0;
+                                // Dynamically calculate accurate System kW from panel data rather than relying on stale state
+                                const panelWattsNumber = parsePanelWattsGlobal(project.panelWatts);
+                                const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
+                                const calculatedActualSystemKW = (panelWattsNumber && panelCountNumber) ? (panelWattsNumber * panelCountNumber) / 1000 : 0;
+                                const systemKW = project.systemKW || calculatedActualSystemKW;
+
                                 const basePrice = project.basePrice || 0;
                                 const gstAmount = project.gstAmount || 0;
                                 const gstPercentage = project.gstPercentage || 18;
@@ -5381,7 +5405,12 @@ export default function QuotationCreation() {
                           {solarProjects.map((project: any, originalIndex: number) => {
                             // Get the actual index in the full projects array
                             const index = projects.indexOf(project);
-                            const systemKW = project.systemKW || 0;
+                            // Dynamically calculate accurate System kW from panel data rather than relying on stale state
+                            const panelWattsNumber = parsePanelWattsGlobal(project.panelWatts);
+                            const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
+                            const calculatedActualSystemKW = (panelWattsNumber && panelCountNumber) ? (panelWattsNumber * panelCountNumber) / 1000 : 0;
+                            const systemKW = project.systemKW || calculatedActualSystemKW;
+
                             const basePrice = project.basePrice || 0;
                             const gstAmount = project.gstAmount || 0;
                             const gstPercentage = project.gstPercentage || 18;
@@ -5886,26 +5915,7 @@ export default function QuotationCreation() {
                   {/* Additional Notes */}
                   <div className="space-y-4">
                     <h4 className="font-medium">Additional Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="internalNotes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Internal Notes</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Notes for internal team (not visible to customer)"
-                                className="min-h-[80px]"
-                                data-testid="textarea-internal-notes"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
+                    <div className="grid grid-cols-1 gap-4">
                       <FormField
                         control={form.control}
                         name="customerNotes"
