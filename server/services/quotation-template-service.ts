@@ -145,53 +145,81 @@ export class QuotationTemplateService {
     }
   };
 
-  // These will be generated dynamically from quotation data
-  private static generateWarrantyDetails(quotation: any, projectType?: string) {
+  // Generate warranty details dynamically based on project configuration.
+  // The `project` parameter carries user-selected warranty options (batteryWarrantyType,
+  // inverterWarrantyYears) specific to off-grid and hybrid system types.
+  private static generateWarrantyDetails(
+    quotation: any,
+    projectType?: string,
+    project?: any
+  ) {
     const warranty = quotation.detailedWarrantyTerms;
     const exclusions = quotation.physicalDamageExclusions;
 
-    let details = [];
+    const details: string[] = [];
 
-    // Physical damage exclusions
+    // Physical damage exclusions (applies to all project types)
     if (exclusions?.enabled) {
       details.push(exclusions.disclaimerText);
     }
 
     if (projectType === 'off_grid') {
-      // Off-Grid specific warranties
-      details.push("1. Solar (PV)Panel Modules (10-15 Years)");
-      details.push("   • 10 Years Manufacturing defect Warranty");
+      // ── Solar Panel Modules ──────────────────────────────────────────────
+      details.push("1. Solar (PV)Panel Modules (15 Years)");
+      details.push("   • 15 Years Manufacturing defect Warranty");
       details.push("   • 15 Years performance Warranty");
-      details.push("   • 90% Performance Warranty till the end of 10 years");
+      details.push("   • 90% Performance Warranty till the end of 15 years");
       details.push("   • 80% Performance Warranty till the end of 15 years");
 
-      // Off-grid Inverter warranty (2 Years)
-      details.push("2. Solar Off grid Inverter (2 Years)");
-      details.push("   • Replacement Warranty for 2 Years");
+      // ── Inverter Warranty (user-selectable: 2 or 5 years) ──────────────
+      const inverterYears = project?.inverterWarrantyYears === "5_years" ? 5 : 2;
+      details.push(`2. Solar Off grid Inverter (${inverterYears} Years)`);
+      details.push(`   • Replacement Warranty for ${inverterYears} Years`);
 
-      // Battery warranty (5 Years)
-      details.push("3. Solar Battery (5 Years)");
-      details.push("   • Replacement Warranty for 5 Years");
+      // ── Battery Warranty (user-selectable: 3+2, 5, or 8 years) ─────────
+      const batteryType: string = project?.batteryWarrantyType ?? "5";
+      if (batteryType === "3_plus_2") {
+        details.push("3. Solar Battery (5 Years)");
+        details.push("   • Replacement Warranty for 3 Years");
+        details.push("   • Service Warranty for 2 years");
+      } else if (batteryType === "8") {
+        details.push("3. Solar Battery (8 Years)");
+        details.push("   • Replacement Warranty for 8 Years");
+      } else {
+        // Default: 5 years replacement
+        details.push("3. Solar Battery (5 Years)");
+        details.push("   • Replacement Warranty for 5 Years");
+      }
+
     } else if (projectType === 'hybrid') {
-      // Hybrid specific warranties
-      // Solar panels warranty (30 Years - same as on-grid)
+      // ── Solar Panel Modules ──────────────────────────────────────────────
       details.push("1. Solar (PV)Panel Modules (30 Years)");
       details.push("   • 15 Years Manufacturing defect Warranty");
       details.push("   • 15 Years performance Warranty");
       details.push("   • 90% Performance Warranty till the end of 15 years");
       details.push("   • 80% Performance Warranty till the end of 15 years");
 
-      // Hybrid Inverter warranty (5 Years)
+      // ── Hybrid Inverter Warranty (fixed at 5 years) ─────────────────────
       details.push("2. Solar Hybrid Inverter (5 Years)");
       details.push("   • Warranty for 5 Years");
 
-      // Battery warranty (5 Years - split into replacement and service)
-      details.push("3. Solar Battery (5 Years)");
-      details.push("   • Replacement Warranty for 3 Years");
-      details.push("   • Service Warranty for 2 years");
+      // ── Battery Warranty (user-selectable: 3+2, 5, or 8 years) ─────────
+      const batteryType: string = project?.batteryWarrantyType ?? "3_plus_2";
+      if (batteryType === "8") {
+        details.push("3. Solar Battery (8 Years)");
+        details.push("   • Replacement Warranty for 8 Years");
+      } else if (batteryType === "5") {
+        details.push("3. Solar Battery (5 Years)");
+        details.push("   • Replacement Warranty for 5 Years");
+      } else {
+        // Default: 3+2 split
+        details.push("3. Solar Battery (5 Years)");
+        details.push("   • Replacement Warranty for 3 Years");
+        details.push("   • Service Warranty for 2 years");
+      }
+
     } else {
-      // On-Grid specific warranties
-      // Solar panels warranty (30 Years for on-grid)
+      // ── On-Grid: driven by detailedWarrantyTerms from quotation data ─────
       if (warranty?.solarPanels) {
         details.push("1. Solar (PV)Panel Modules (30 Years)");
         details.push(`   • ${warranty.solarPanels.manufacturingDefect}`);
@@ -201,7 +229,6 @@ export class QuotationTemplateService {
         });
       }
 
-      // On-grid Inverter warranty (15 Years)
       if (warranty?.inverter) {
         details.push("2. Solar On grid Inverter (15 Years)");
         details.push(`   • ${warranty.inverter.replacementWarranty}`);
@@ -563,7 +590,7 @@ export class QuotationTemplateService {
     const backupHours = usageWatts.map((usage: number) => {
       const decimalHours = backupWatts / usage;
       const hours = Math.floor(decimalHours);
-      const minutes = Math.floor((decimalHours - hours) * 60);
+      const minutes = Math.round((decimalHours - hours) * 60);
       return `${hours}.${minutes.toString().padStart(2, '0')}`;
     });
 
@@ -1838,7 +1865,7 @@ export class QuotationTemplateService {
     const projectTypeName = this.getProjectTypeDisplayName(project.projectType);
 
     // Generate dynamic content from quotation data
-    const warrantyDetails = this.generateWarrantyDetails(quotation, project.projectType);
+    const warrantyDetails = this.generateWarrantyDetails(quotation, project.projectType, project);
     const accountDetails = this.generateAccountDetails(quotation);
     const documentRequirements = this.generateDocumentRequirements(quotation);
 

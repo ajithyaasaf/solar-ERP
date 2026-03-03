@@ -161,7 +161,8 @@ export default function HRManagement() {
         'employeeId', 'esiNumber', 'epfNumber', 'aadharNumber', 'panNumber',
         'fatherName', 'spouseName', 'contactNumber', 'emergencyContactPerson',
         'emergencyContactNumber', 'permanentAddress', 'presentAddress', 'location',
-        'bankAccountNumber', 'bankName', 'ifscCode', 'educationalQualification'
+        'bankAccountNumber', 'bankName', 'ifscCode', 'educationalQualification',
+        'paymentMode', 'bloodGroup', 'gender', 'maritalStatus'
       ];
 
       emptyToNullFields.forEach(field => {
@@ -171,11 +172,20 @@ export default function HRManagement() {
       });
 
       const response = await apiRequest(`/api/users/${uid}`, 'PATCH', sanitizedData);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update user');
+      }
+
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setIsEditDialogOpen(false);
+      // Optional: don't clear selectedUser, let the new data sync map it if re-opened. 
+      // Or just clear it since we close the modal anyway. Setting it to null is fine here
+      // since `requestUserEdit` will load the fresh user from the list on next click.
       setSelectedUser(null);
       toast({
         title: "Success",
@@ -264,6 +274,49 @@ export default function HRManagement() {
 
   const editForm = useForm<z.infer<typeof userFormSchema>>({
     resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      email: "",
+      displayName: "",
+      role: "employee",
+      department: null,
+      designation: null,
+      employeeId: "",
+      reportingManagerId: null,
+      payrollGrade: null,
+      joinDate: undefined,
+      isActive: true,
+      photoURL: null,
+      esiNumber: "",
+      epfNumber: "",
+      aadharNumber: "",
+      panNumber: "",
+      fatherName: "",
+      spouseName: "",
+      dateOfBirth: undefined,
+      age: undefined,
+      gender: undefined,
+      maritalStatus: undefined,
+      bloodGroup: undefined,
+      profilePhotoUrl: "",
+      aadharCardUrl: "",
+      panCardUrl: "",
+      educationalQualification: "",
+      experienceYears: undefined,
+      dateOfLeaving: undefined,
+      employeeStatus: "active",
+      isLeaveEnabled: false,
+      contactNumber: "",
+      emergencyContactPerson: "",
+      emergencyContactNumber: "",
+      permanentAddress: "",
+      presentAddress: "",
+      location: "",
+      paymentMode: undefined,
+      bankAccountNumber: "",
+      bankName: "",
+      ifscCode: "",
+      documents: undefined
+    },
   });
 
   const onSubmit = async (values: z.infer<typeof userFormSchema>) => {
@@ -376,19 +429,19 @@ export default function HRManagement() {
       displayName: user.displayName || '',
       email: user.email || '',
       employeeId: user.employeeId || '',
-      department: user.department || undefined,
-      designation: user.designation || undefined,
+      department: user.department || null,
+      designation: user.designation || null,
       employeeStatus: user.employeeStatus || 'active',
-      isLeaveEnabled: user.isLeaveEnabled || false,
+      isLeaveEnabled: user.isLeaveEnabled === true,
       joinDate: user.joinDate ? new Date(user.joinDate) : undefined,
       dateOfLeaving: user.dateOfLeaving ? new Date(user.dateOfLeaving) : undefined,
 
       fatherName: user.fatherName || '',
       spouseName: user.spouseName || '',
       dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : undefined,
-      gender: user.gender || undefined,
-      maritalStatus: user.maritalStatus || undefined,
-      bloodGroup: user.bloodGroup || undefined,
+      gender: user.gender || null,
+      maritalStatus: user.maritalStatus || null,
+      bloodGroup: user.bloodGroup || null,
       profilePhotoUrl: user.profilePhotoUrl || '',
       aadharCardUrl: user.aadharCardUrl || '',
       panCardUrl: user.panCardUrl || '',
@@ -414,8 +467,9 @@ export default function HRManagement() {
 
       // Professional Details
       educationalQualification: user.educationalQualification || '',
-      experienceYears: user.experienceYears || undefined,
-      reportingManagerId: user.reportingManagerId || '',
+      experienceYears: user.experienceYears !== undefined && user.experienceYears !== null ? user.experienceYears : undefined,
+      reportingManagerId: user.reportingManagerId || null,
+      paymentMode: user.paymentMode || null,
     });
     setIsEditDialogOpen(true);
   }
@@ -424,6 +478,16 @@ export default function HRManagement() {
 
   const onEditSubmit = async (values: z.infer<typeof userFormSchema>) => {
     if (!selectedUser) return;
+
+    // Validate mandatory Employee ID
+    if (!values.employeeId || values.employeeId.trim().length === 0) {
+      toast({
+        title: "Employee ID Required",
+        description: "Please enter a valid Employee ID before updating the employee.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsUploading(true);
     try {
@@ -872,6 +936,7 @@ export default function HRManagement() {
               setAadharCardData={setAadharCardData}
               panCardData={panCardData}
               setPanCardData={setPanCardData}
+              isEditMode={true}
             />
           </DialogContent>
         </Dialog>
@@ -997,7 +1062,8 @@ function UserForm({
   aadharCardData,
   setAadharCardData,
   panCardData,
-  setPanCardData
+  setPanCardData,
+  isEditMode = false,
 }: {
   form: any;
   onSubmit: (values: z.infer<typeof userFormSchema>) => void;
@@ -1009,9 +1075,27 @@ function UserForm({
   setAadharCardData: (data: string) => void;
   panCardData: string;
   setPanCardData: (data: string) => void;
+  isEditMode?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState("basic");
   const { toast } = useToast();
+
+  // Auto-calculate age based on dateOfBirth
+  const dateOfBirth = form.watch("dateOfBirth");
+  useEffect(() => {
+    if (dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let newAge = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        newAge--;
+      }
+      form.setValue("age", newAge, { shouldValidate: true, shouldDirty: true });
+    } else {
+      form.setValue("age", undefined, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [dateOfBirth, form]);
 
   const fieldTabMapping: Record<string, string> = {
     // Basic Tab
@@ -1092,7 +1176,7 @@ function UserForm({
 
     // Manual validation for required documents - ONLY strictly enforced for NEW employees
     // This allows admins to edit/deactivate legacy records without getting blocked by missing ancient documents
-    if (!selectedUser) {
+    if (!isEditMode) {
       const missingDocs = [];
 
       // Check if photo exists (either in currentUrl form value OR in new upload data)
@@ -1131,7 +1215,7 @@ function UserForm({
             <TabsTrigger value="professional">Professional</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="basic" className="space-y-4">
+          <TabsContent forceMount value="basic" className={`space-y-4 ${activeTab !== "basic" ? "hidden" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -1140,7 +1224,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Email *</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="john@example.com" {...field} data-testid="input-email" />
+                      <Input type="email" placeholder="john@example.com" {...field} value={field.value || ""} data-testid="input-email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1153,7 +1237,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Display Name *</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} data-testid="input-displayName" />
+                      <Input placeholder="John Doe" {...field} value={field.value || ""} data-testid="input-displayName" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1166,7 +1250,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Employee ID *</FormLabel>
                     <FormControl>
-                      <Input placeholder="EMP001" {...field} data-testid="input-employeeId" />
+                      <Input placeholder="EMP001" {...field} value={field.value || ""} data-testid="input-employeeId" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1309,7 +1393,7 @@ function UserForm({
 
           </TabsContent>
 
-          <TabsContent value="personal" className="space-y-4">
+          <TabsContent forceMount value="personal" className={`space-y-4 ${activeTab !== "personal" ? "hidden" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -1318,7 +1402,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Father's Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Father's name" {...field} data-testid="input-fatherName" />
+                      <Input placeholder="Father's name" {...field} value={field.value || ""} data-testid="input-fatherName" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1331,7 +1415,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Spouse Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Spouse name" {...field} data-testid="input-spouseName" />
+                      <Input placeholder="Spouse name" {...field} value={field.value || ""} data-testid="input-spouseName" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1482,7 +1566,7 @@ function UserForm({
             </div>
           </TabsContent>
 
-          <TabsContent value="contact" className="space-y-4">
+          <TabsContent forceMount value="contact" className={`space-y-4 ${activeTab !== "contact" ? "hidden" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -1491,7 +1575,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Contact Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="+91 9876543210" {...field} data-testid="input-contactNumber" />
+                      <Input placeholder="+91 9876543210" {...field} value={field.value || ""} data-testid="input-contactNumber" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1504,7 +1588,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="Mumbai" {...field} data-testid="input-location" />
+                      <Input placeholder="Mumbai" {...field} value={field.value || ""} data-testid="input-location" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1548,7 +1632,7 @@ function UserForm({
                     <FormItem>
                       <FormLabel>Emergency Contact Person</FormLabel>
                       <FormControl>
-                        <Input placeholder="Contact person name" {...field} data-testid="input-emergencyContactPerson" />
+                        <Input placeholder="Contact person name" {...field} value={field.value || ""} data-testid="input-emergencyContactPerson" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1561,7 +1645,7 @@ function UserForm({
                     <FormItem>
                       <FormLabel>Emergency Contact Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="+91 9876543210" {...field} data-testid="input-emergencyContactNumber" />
+                        <Input placeholder="+91 9876543210" {...field} value={field.value || ""} data-testid="input-emergencyContactNumber" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1571,7 +1655,7 @@ function UserForm({
             </div>
           </TabsContent>
 
-          <TabsContent value="statutory" className="space-y-4">
+          <TabsContent forceMount value="statutory" className={`space-y-4 ${activeTab !== "statutory" ? "hidden" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -1580,7 +1664,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>ESI Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="ESI IP Number" {...field} data-testid="input-esiNumber" />
+                      <Input placeholder="ESI IP Number" {...field} value={field.value || ""} data-testid="input-esiNumber" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1593,7 +1677,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>EPF Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="EPF UAN Number" {...field} data-testid="input-epfNumber" />
+                      <Input placeholder="EPF UAN Number" {...field} value={field.value || ""} data-testid="input-epfNumber" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1606,7 +1690,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>AADHAR Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="123456789012 (12 digits)" {...field} maxLength={12} data-testid="input-aadharNumber" />
+                      <Input placeholder="123456789012 (12 digits)" {...field} maxLength={12} value={field.value || ""} data-testid="input-aadharNumber" />
                     </FormControl>
                     <FormDescription>Must be exactly 12 digits</FormDescription>
                     <FormMessage />
@@ -1620,7 +1704,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>PAN Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="ABCDE1234F" {...field} maxLength={10} data-testid="input-panNumber" />
+                      <Input placeholder="ABCDE1234F" {...field} maxLength={10} value={field.value || ""} data-testid="input-panNumber" />
                     </FormControl>
                     <FormDescription>Format: ABCDE1234F</FormDescription>
                     <FormMessage />
@@ -1630,7 +1714,7 @@ function UserForm({
             </div>
           </TabsContent>
 
-          <TabsContent value="payroll" className="space-y-4">
+          <TabsContent forceMount value="payroll" className={`space-y-4 ${activeTab !== "payroll" ? "hidden" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -1639,7 +1723,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Bank Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="State Bank of India" {...field} data-testid="input-bankName" />
+                      <Input placeholder="Bank Name" {...field} value={field.value || ""} data-testid="input-bankName" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1652,7 +1736,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>Bank Account Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="1234567890" {...field} data-testid="input-bankAccountNumber" />
+                      <Input placeholder="Account number" {...field} value={field.value || ""} data-testid="input-bankAccountNumber" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1665,7 +1749,7 @@ function UserForm({
                   <FormItem>
                     <FormLabel>IFSC Code</FormLabel>
                     <FormControl>
-                      <Input placeholder="SBIN0001234" {...field} data-testid="input-ifscCode" />
+                      <Input placeholder="IFSC Code" {...field} value={field.value || ""} data-testid="input-ifscCode" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1674,7 +1758,7 @@ function UserForm({
             </div>
           </TabsContent>
 
-          <TabsContent value="professional" className="space-y-4">
+          <TabsContent forceMount value="professional" className={`space-y-4 ${activeTab !== "professional" ? "hidden" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -1683,7 +1767,7 @@ function UserForm({
                   <FormItem className="md:col-span-2">
                     <FormLabel>Educational Qualification</FormLabel>
                     <FormControl>
-                      <Input placeholder="Bachelor of Engineering" {...field} data-testid="input-educationalQualification" />
+                      <Input placeholder="B.Tech, MBA, etc." {...field} value={field.value || ""} data-testid="input-educationalQualification" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

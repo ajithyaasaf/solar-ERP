@@ -87,6 +87,8 @@ export const insertUserSchema = z.object({
   // Employment Lifecycle
   dateOfLeaving: z.date().optional(),
   employeeStatus: z.enum(sharedEmployeeStatus).default("active"),
+  // Leave access control
+  isLeaveEnabled: z.boolean().optional().default(false),
 
   // Contact Information
   contactNumber: z.string().optional(),
@@ -223,6 +225,8 @@ export interface User {
   // Employment Lifecycle
   dateOfLeaving?: Date;
   employeeStatus?: "active" | "inactive" | "probation" | "notice_period" | "terminated" | "on_leave";
+  // Leave access control
+  isLeaveEnabled?: boolean;
 
   // Contact Information
   contactNumber?: string;
@@ -1198,6 +1202,7 @@ export class FirestoreStorage implements IStorage {
     console.log(`[Storage.getUser] User ${id} employeeStatus from Firestore:`, data?.employeeStatus);
 
     return {
+      ...data,
       id: docSnap.id,
       uid: data?.uid,
       email: data?.email,
@@ -1211,6 +1216,7 @@ export class FirestoreStorage implements IStorage {
       joinDate: data?.joinDate?.toDate ? data.joinDate.toDate() : undefined,
       isActive: data?.isActive !== false,
       employeeStatus: data?.employeeStatus || 'active',
+      isLeaveEnabled: data?.isLeaveEnabled === true,
       createdAt: data?.createdAt?.toDate ? data.createdAt.toDate() : new Date(data?.createdAt || Date.now()),
       photoURL: data?.photoURL,
       // Employee Document URLs
@@ -1261,6 +1267,7 @@ export class FirestoreStorage implements IStorage {
       }
 
       return {
+        ...data,
         id: doc.id,
         uid: data.uid,
         email: data.email,
@@ -1387,8 +1394,46 @@ export class FirestoreStorage implements IStorage {
     });
   }
 
+  async getUserByEmployeeId(employeeId: string): Promise<User | undefined> {
+    const usersRef = this.db.collection("users");
+    const snapshot = await usersRef.where("employeeId", "==", employeeId).limit(1).get();
+
+    if (snapshot.empty) return undefined;
+
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    return {
+      ...data,
+      id: doc.id,
+      uid: data.uid,
+      email: data.email,
+      displayName: data.displayName,
+      role: data.role,
+      department: data.department,
+      designation: data.designation || null,
+      employeeId: data.employeeId,
+      reportingManagerId: data.reportingManagerId || null,
+      payrollGrade: data.payrollGrade || null,
+      joinDate: data.joinDate ? (data.joinDate.toDate ? data.joinDate.toDate() : new Date(data.joinDate)) : undefined,
+      isActive: data.isActive !== false,
+      isLeaveEnabled: data.isLeaveEnabled === true,
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
+      photoURL: data.photoURL,
+    } as User;
+  }
+
   async updateUser(id: string, data: Partial<User>): Promise<User> {
     const userDoc = this.db.collection("users").doc(id);
+
+    // Check for employee ID uniqueness
+    if (data.employeeId) {
+      const existingUser = await this.getUserByEmployeeId(data.employeeId);
+      // If we found a user with this ID, and it's NOT the user we are currently updating, throw error
+      if (existingUser && existingUser.uid !== id) {
+        throw new Error("EMPLOYEE_ID_EXISTS");
+      }
+    }
+
     const updateData: any = { ...data, updatedAt: Timestamp.now() };
 
     if (data.createdAt) {
@@ -1404,6 +1449,7 @@ export class FirestoreStorage implements IStorage {
     const updatedData = updatedDoc.data() || {};
 
     return {
+      ...updatedData,
       id: updatedDoc.id,
       uid: updatedData.uid,
       email: updatedData.email,
@@ -1416,6 +1462,7 @@ export class FirestoreStorage implements IStorage {
       payrollGrade: updatedData.payrollGrade || null,
       joinDate: updatedData.joinDate ? (updatedData.joinDate.toDate ? updatedData.joinDate.toDate() : new Date(updatedData.joinDate)) : undefined,
       isActive: updatedData.isActive !== false,
+      isLeaveEnabled: updatedData.isLeaveEnabled === true,
       createdAt: updatedData.createdAt?.toDate() || new Date(),
       photoURL: updatedData.photoURL,
       // Employee Document URLs
@@ -5945,22 +5992,39 @@ export class FirestoreStorage implements IStorage {
         query = query.where('type', '==', filters.type);
       }
 
-      // Default sorting
-      query = query.orderBy('createdAt', 'desc');
-
+      // Limit before execution if possible, though in-memory sorting makes this less accurate
+      // For notifications it's usually fine since lists are small
       if (filters.limit) {
         query = query.limit(filters.limit);
       }
 
       const snapshot = await query.get();
 
-      return snapshot.docs.map(doc => this.convertFirestoreToNotification({
+      const notifications = snapshot.docs.map(doc => this.convertFirestoreToNotification({
         id: doc.id,
         ...doc.data()
       }));
+
+      // Sort in memory to avoid requiring a composite index in Firestore
+      return notifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
       console.error("Error fetching notifications:", error);
       return [];
+    }
+  }
+
+  async getNotificationById(id: string): Promise<Notification | null> {
+    try {
+      const doc = await this.db.collection('notifications').doc(id).get();
+      if (!doc.exists) return null;
+
+      return this.convertFirestoreToNotification({
+        id: doc.id,
+        ...doc.data()
+      });
+    } catch (error) {
+      console.error("Error fetching notification by ID:", error);
+      return null;
     }
   }
 

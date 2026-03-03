@@ -234,6 +234,7 @@ export const syncUser = async (uid: string, forceFull = false) => {
           department: firestoreUser.department || null,
           designation: firestoreUser.designation || null,
           isActive: firestoreUser.isActive !== false,
+          isLeaveEnabled: firestoreUser.isLeaveEnabled === true,
           isManager, // ✅ Include isManager flag
           createdAt: new Date()
         }
@@ -288,6 +289,7 @@ export const syncUser = async (uid: string, forceFull = false) => {
         department,
         designation,
         isActive: firestoreUser?.isActive !== false,
+        isLeaveEnabled: firestoreUser?.isLeaveEnabled === true,
         employeeId: firestoreUser?.employeeId || null,
         reportingManagerId: firestoreUser?.reportingManagerId || null,
         payrollGrade: firestoreUser?.payrollGrade || null,

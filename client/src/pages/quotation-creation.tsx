@@ -1034,10 +1034,13 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           civilWorkScope: "customer_scope",
           backupSolutions: {
             backupWatts: 0,
-            usageWatts: [],
-            backupHours: [],
+            usageWatts: [15000, 14000, 13000, 12000, 11000, 10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000],
+            backupHours: Array(15).fill('0.00'),
             manuallyEdited: false
           },
+          // Warranty defaults for off-grid
+          inverterWarrantyYears: "2_years",
+          batteryWarrantyType: "5",
           others: ""
         };
         break;
@@ -1072,10 +1075,12 @@ function ManualProjectConfiguration({ form, isServiceOnlyQuotation }: { form: an
           netMeterScope: "customer_scope",
           backupSolutions: {
             backupWatts: 0,
-            usageWatts: [],
-            backupHours: [],
+            usageWatts: [15000, 14000, 13000, 12000, 11000, 10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000],
+            backupHours: Array(15).fill('0.00'),
             manuallyEdited: false
           },
+          // Warranty defaults for hybrid (inverter is fixed at 5 yrs; battery defaults to 3+2)
+          batteryWarrantyType: "3_plus_2",
           others: ""
         };
         break;
@@ -1573,7 +1578,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       }
       const decimalHours = backupWatts / usageWatts;
       const hours = Math.floor(decimalHours);
-      const minutes = Math.floor((decimalHours - hours) * 60);
+      const minutes = Math.round((decimalHours - hours) * 60);
       return `${hours}.${minutes.toString().padStart(2, '0')}`;
     });
   }, []);
@@ -1621,7 +1626,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       const newBackupHours = newUsageWatts.map((watts: number) => {
         const decimalHours = calculatedBackupWatts / watts;
         const hrs = Math.floor(decimalHours);
-        const mins = Math.floor((decimalHours - hrs) * 60);
+        const mins = Math.round((decimalHours - hrs) * 60);
         return `${hrs}.${mins.toString().padStart(2, '0')}`;
       });
 
@@ -2456,6 +2461,63 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           />
         </div>
       </div>
+
+      {/* Warranty Configuration — applies to Off-Grid and Hybrid only */}
+      <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg space-y-4">
+        <h4 className="font-medium text-sm text-orange-900 dark:text-orange-100 flex items-center gap-2">
+          <span className="text-lg">🛡️</span> Warranty Configuration
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Inverter Warranty — Off-Grid only (Hybrid is fixed at 5 years) */}
+          {project.projectType === 'off_grid' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Inverter Warranty</label>
+              <Select
+                value={project.inverterWarrantyYears || '2_years'}
+                onValueChange={(value) => handleFieldChange('inverterWarrantyYears', value)}
+              >
+                <SelectTrigger data-testid={`select-inverter-warranty-${projectIndex}`}>
+                  <SelectValue placeholder="Select inverter warranty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2_years">2 Years (Replacement)</SelectItem>
+                  <SelectItem value="5_years">5 Years (Replacement)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Warranty period for the off-grid inverter
+              </p>
+            </div>
+          )}
+
+          {/* Battery Warranty — Both Off-Grid and Hybrid */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Battery Warranty</label>
+            <Select
+              value={project.batteryWarrantyType ||
+                (project.projectType === 'hybrid' ? '3_plus_2' : '5')
+              }
+              onValueChange={(value) => handleFieldChange('batteryWarrantyType', value)}
+            >
+              <SelectTrigger data-testid={`select-battery-warranty-${projectIndex}`}>
+                <SelectValue placeholder="Select battery warranty" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3_plus_2">5 Years (Replacement 3 + Service 2)</SelectItem>
+                <SelectItem value="5">5 Years (Full Replacement)</SelectItem>
+                <SelectItem value="8">8 Years (Full Replacement)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {project.batteryWarrantyType === '3_plus_2'
+                ? 'Replacement Warranty for 3 Years + Service Warranty for 2 Years'
+                : project.batteryWarrantyType === '8'
+                  ? 'Replacement Warranty for 8 Years'
+                  : 'Replacement Warranty for 5 Years'}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -2475,7 +2537,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
       }
       const decimalHours = backupSolutions.backupWatts / usageWatts;
       const hours = Math.floor(decimalHours);
-      const minutes = Math.floor((decimalHours - hours) * 60);
+      const minutes = Math.round((decimalHours - hours) * 60);
       return `${hours}.${minutes.toString().padStart(2, '0')}`;
     };
 
@@ -2533,9 +2595,10 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
     // Update backup watts value
     const updateBackupWatts = (value: number) => {
       const newBackupHours = backupSolutions.usageWatts.map((watts: number) => {
+        if (!watts || watts === 0) return '0.00';
         const decimalHours = value / watts;
         const hrs = Math.floor(decimalHours);
-        const mins = Math.floor((decimalHours - hrs) * 60);
+        const mins = Math.round((decimalHours - hrs) * 60);
         return `${hrs}.${mins.toString().padStart(2, '0')}`;
       });
 
@@ -2594,85 +2657,26 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
           </p>
         </div>
 
-        {/* Usage Watts Columns */}
+        {/* Usage Watts Scenarios — 15 fixed slots (15,000W → 1,000W), hours auto-calculated */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Usage Watts Scenarios</label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={addUsageWattsColumn}
-              disabled={backupSolutions.usageWatts.length >= 5}
-              data-testid={`button-add-usage-watts-${projectIndex}`}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add Scenario ({backupSolutions.usageWatts.length}/5)
-            </Button>
-          </div>
-
-          {backupSolutions.usageWatts.length === 0 && (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                Add usage watts scenarios to calculate backup hours. You can add up to 5 different scenarios.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {backupSolutions.usageWatts.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {backupSolutions.usageWatts.map((watts: number, index: number) => (
-                <Card key={index} className="p-3 bg-white dark:bg-gray-900">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Scenario {index + 1}
-                      </label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeUsageWattsColumn(index)}
-                        className="h-6 w-6 p-0"
-                        data-testid={`button-remove-usage-watts-${projectIndex}-${index}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium">Usage (W)</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={watts || ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          updateUsageWatts(index, value === '' ? 0 : parseInt(value) || 0);
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === '') {
-                            updateUsageWatts(index, 0);
-                          }
-                        }}
-                        placeholder="Enter usage watts"
-                        data-testid={`input-usage-watts-${projectIndex}-${index}`}
-                        className="text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-green-600">Backup Hours</label>
-                      <div className="p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded text-sm font-semibold text-green-700 dark:text-green-300 text-center">
-                        {backupSolutions.backupHours[index] || '0.00'} hrs
-                      </div>
+          <label className="text-sm font-medium">Usage Watts Scenarios</label>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {backupSolutions.usageWatts.map((watts: number, index: number) => (
+              <Card key={index} className="p-3 bg-white dark:bg-gray-900">
+                <div className="space-y-2 text-center">
+                  <div className="text-xs font-semibold text-muted-foreground">
+                    {watts.toLocaleString()} W
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-green-600">Backup Hours</label>
+                    <div className="p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded text-sm font-semibold text-green-700 dark:text-green-300">
+                      {(() => { const h = backupSolutions.backupHours[index]; return (h && !String(h).includes('Infinity') && !String(h).includes('NaN')) ? h : '0.00'; })()} hrs
                     </div>
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* Summary Table - Only show if there are usage watts */}
@@ -2700,7 +2704,7 @@ function ProjectConfigurationForm({ project, projectIndex, onUpdate }: {
                     </td>
                     {backupSolutions.backupHours.map((hours: number | string, index: number) => (
                       <td key={index} className="border border-gray-200 dark:border-gray-700 p-2 text-center font-semibold text-green-600">
-                        {hours || '0.00'} hrs
+                        {(hours && !String(hours).includes('Infinity') && !String(hours).includes('NaN')) ? hours : '0.00'} hrs
                       </td>
                     ))}
                   </tr>
@@ -5231,7 +5235,7 @@ export default function QuotationCreation() {
                                 const panelWattsNumber = parsePanelWattsGlobal(project.panelWatts);
                                 const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
                                 const calculatedActualSystemKW = (panelWattsNumber && panelCountNumber) ? (panelWattsNumber * panelCountNumber) / 1000 : 0;
-                                const systemKW = project.systemKW || calculatedActualSystemKW;
+                                const systemKW = calculatedActualSystemKW > 0 ? calculatedActualSystemKW : (project.systemKW || 0);
 
                                 const basePrice = project.basePrice || 0;
                                 const gstAmount = project.gstAmount || 0;
@@ -5267,78 +5271,11 @@ export default function QuotationCreation() {
                                         data-testid={`input-description-${index}`}
                                       />
                                     </td>
-                                    <td className="p-3 text-center">
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={formatKWForDisplay(systemKW)}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const newKW = value === '' ? 0 : (parseFloat(value) || 0);
-                                          const newRoundedKW = roundSystemKW(newKW);
-                                          const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
-                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                          const newProjectValue = newBasePrice + newGSTAmount;
-
-                                          // Recalculate subsidy based on new kW
-                                          const propertyType = getPropertyType();
-                                          const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
-                                          const newCustomerPayment = newProjectValue - newSubsidy;
-
-                                          // Update description if user hasn't customized it
-                                          if (!project.customDescription) {
-                                            const updatedProject = { ...project, systemKW: newKW };
-                                            const newDescription = generateProjectDescription(updatedProject);
-                                            form.setValue(`projects.${index}.customDescription`, newDescription);
-                                          }
-
-                                          form.setValue(`projects.${index}.systemKW`, newKW);
-                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                        }}
-                                        onBlur={(e) => {
-                                          if (e.target.value === '') {
-                                            form.setValue(`projects.${index}.systemKW`, 0);
-                                          }
-                                        }}
-                                        className="w-20 text-center"
-                                        data-testid={`input-systemkw-${index}`}
-                                      />
+                                    <td className="p-3 text-center font-medium">
+                                      {formatKWForDisplay(systemKW)}
                                     </td>
-                                    <td className="p-3 text-right">
-                                      <Input
-                                        type="number"
-                                        value={calculatedRatePerKW}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                          const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
-                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                          const newProjectValue = newBasePrice + newGSTAmount;
-
-                                          // Recalculate subsidy (subsidy doesn't change with price, only with kW)
-                                          const propertyType = getPropertyType();
-                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                          const newCustomerPayment = newProjectValue - newSubsidy;
-
-                                          form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
-                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                        }}
-                                        onBlur={(e) => {
-                                          if (e.target.value === '') {
-                                            form.setValue(`projects.${index}.pricePerKW`, 0);
-                                          }
-                                        }}
-                                        className="w-28 text-right"
-                                        data-testid={`input-priceperkw-${index}`}
-                                      />
+                                    <td className="p-3 text-right font-medium">
+                                      ₹{calculatedRatePerKW.toLocaleString()}
                                     </td>
                                     <td className="p-3 text-right font-medium">
                                       ₹{basePrice.toLocaleString()}
@@ -5346,35 +5283,8 @@ export default function QuotationCreation() {
                                     <td className="p-3 text-right">
                                       <span className="text-sm">{calculatedGSTPerKW.toLocaleString()}</span>
                                     </td>
-                                    <td className="p-3 text-right">
-                                      <Input
-                                        type="number"
-                                        value={gstPercentage}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                          const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
-                                          const newProjectValue = basePrice + newGSTAmount;
-
-                                          // Recalculate subsidy (subsidy doesn't change with GST)
-                                          const propertyType = getPropertyType();
-                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                          const newCustomerPayment = newProjectValue - newSubsidy;
-
-                                          form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
-                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                        }}
-                                        onBlur={(e) => {
-                                          if (e.target.value === '') {
-                                            form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
-                                          }
-                                        }}
-                                        className="w-20 text-right"
-                                        data-testid={`input-gstpercentage-${index}`}
-                                      />
+                                    <td className="p-3 text-right font-medium">
+                                      {gstPercentage}%
                                     </td>
                                     <td className="p-3 text-right font-medium">
                                       ₹{gstAmount.toLocaleString()}
@@ -5409,7 +5319,7 @@ export default function QuotationCreation() {
                             const panelWattsNumber = parsePanelWattsGlobal(project.panelWatts);
                             const panelCountNumber = project.panelCount ? parseInt(String(project.panelCount), 10) : 0;
                             const calculatedActualSystemKW = (panelWattsNumber && panelCountNumber) ? (panelWattsNumber * panelCountNumber) / 1000 : 0;
-                            const systemKW = project.systemKW || calculatedActualSystemKW;
+                            const systemKW = calculatedActualSystemKW > 0 ? calculatedActualSystemKW : (project.systemKW || 0);
 
                             const basePrice = project.basePrice || 0;
                             const gstAmount = project.gstAmount || 0;
@@ -5428,7 +5338,6 @@ export default function QuotationCreation() {
 
                             const defaultDescription = generateProjectDescription(project);
                             const description = project.customDescription || defaultDescription;
-
                             return (
                               <Card key={index} className="border-2" data-testid={`card-pricing-project-${index}`}>
                                 <CardContent className="p-4 space-y-4">
@@ -5446,79 +5355,15 @@ export default function QuotationCreation() {
                                     />
                                   </div>
 
-                                  {/* kW and Rate/kW */}
+                                  {/* kW and Rate/kW — read-only */}
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                       <label className="text-xs font-medium text-muted-foreground">kW</label>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={systemKW}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const newKW = value === '' ? 0 : (parseFloat(value) || 0);
-                                          const newRoundedKW = roundSystemKW(newKW);
-                                          const newBasePrice = Math.round(newRoundedKW * calculatedRatePerKW);
-                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                          const newProjectValue = newBasePrice + newGSTAmount;
-
-                                          const propertyType = getPropertyType();
-                                          const newSubsidy = calculateSubsidy(newKW, propertyType, project.projectType);
-                                          const newCustomerPayment = newProjectValue - newSubsidy;
-
-                                          if (!project.customDescription) {
-                                            const updatedProject = { ...project, systemKW: newKW };
-                                            const newDescription = generateProjectDescription(updatedProject);
-                                            form.setValue(`projects.${index}.customDescription`, newDescription);
-                                          }
-
-                                          form.setValue(`projects.${index}.systemKW`, newKW);
-                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                        }}
-                                        onBlur={(e) => {
-                                          if (e.target.value === '') {
-                                            form.setValue(`projects.${index}.systemKW`, 0);
-                                          }
-                                        }}
-                                        className="w-full"
-                                        data-testid={`input-systemkw-${index}`}
-                                      />
+                                      <div className="p-2 bg-muted rounded-md font-medium">{formatKWForDisplay(systemKW)}</div>
                                     </div>
                                     <div className="space-y-2">
                                       <label className="text-xs font-medium text-muted-foreground">Rate/kW (₹)</label>
-                                      <Input
-                                        type="number"
-                                        value={calculatedRatePerKW}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const newPricePerKW = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                          const newBasePrice = Math.round(roundedSystemKW * newPricePerKW);
-                                          const newGSTAmount = Math.round(newBasePrice * (gstPercentage / 100));
-                                          const newProjectValue = newBasePrice + newGSTAmount;
-
-                                          const propertyType = getPropertyType();
-                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                          const newCustomerPayment = newProjectValue - newSubsidy;
-
-                                          form.setValue(`projects.${index}.pricePerKW`, newPricePerKW);
-                                          form.setValue(`projects.${index}.basePrice`, newBasePrice);
-                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                        }}
-                                        onBlur={(e) => {
-                                          if (e.target.value === '') {
-                                            form.setValue(`projects.${index}.pricePerKW`, 0);
-                                          }
-                                        }}
-                                        className="w-full"
-                                        data-testid={`input-priceperkw-${index}`}
-                                      />
+                                      <div className="p-2 bg-muted rounded-md font-medium">₹{calculatedRatePerKW.toLocaleString()}</div>
                                     </div>
                                   </div>
 
@@ -5528,37 +5373,11 @@ export default function QuotationCreation() {
                                     <div className="p-2 bg-muted rounded-md font-medium">₹{basePrice.toLocaleString()}</div>
                                   </div>
 
-                                  {/* GST Details */}
+                                  {/* GST Details — read-only */}
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                       <label className="text-xs font-medium text-muted-foreground">GST %</label>
-                                      <Input
-                                        type="number"
-                                        value={gstPercentage}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          const newGSTPercentage = value === '' ? 0 : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
-                                          const newGSTAmount = Math.round(basePrice * (newGSTPercentage / 100));
-                                          const newProjectValue = basePrice + newGSTAmount;
-
-                                          const propertyType = getPropertyType();
-                                          const newSubsidy = calculateSubsidy(systemKW, propertyType, project.projectType);
-                                          const newCustomerPayment = newProjectValue - newSubsidy;
-
-                                          form.setValue(`projects.${index}.gstPercentage`, newGSTPercentage);
-                                          form.setValue(`projects.${index}.gstAmount`, newGSTAmount);
-                                          form.setValue(`projects.${index}.projectValue`, newProjectValue);
-                                          form.setValue(`projects.${index}.subsidyAmount`, newSubsidy);
-                                          form.setValue(`projects.${index}.customerPayment`, newCustomerPayment);
-                                        }}
-                                        onBlur={(e) => {
-                                          if (e.target.value === '') {
-                                            form.setValue(`projects.${index}.gstPercentage`, BUSINESS_RULES.gst.percentage);
-                                          }
-                                        }}
-                                        className="w-full"
-                                        data-testid={`input-gstpercentage-${index}`}
-                                      />
+                                      <div className="p-2 bg-muted rounded-md text-sm">{gstPercentage}%</div>
                                     </div>
                                     <div className="space-y-2">
                                       <label className="text-xs font-medium text-muted-foreground">GST/kW (₹)</label>
@@ -5641,10 +5460,47 @@ export default function QuotationCreation() {
 
                   {/* Warranty Details - Hidden for service-only quotations (water heater and water pump) */}
                   {!isServiceOnlyQuotation && (() => {
-                    // Check project types in quotation
+                    // Check project types in quotation and grab the first off-grid/hybrid project
+                    // to read the user-selected warranty options
                     const projects = form.watch("projects") || [];
-                    const hasOffGrid = projects.some((p: any) => p.projectType === 'off_grid');
-                    const hasHybrid = projects.some((p: any) => p.projectType === 'hybrid');
+                    const offGridProject = projects.find((p: any) => p.projectType === 'off_grid');
+                    const hybridProject = projects.find((p: any) => p.projectType === 'hybrid');
+                    const hasOffGrid = !!offGridProject;
+                    const hasHybrid = !!hybridProject;
+
+                    // --- Helper to render battery warranty lines based on type ---
+                    const renderBatteryWarranty = (batteryWarrantyType: string | undefined, defaultType: string) => {
+                      const bwt = batteryWarrantyType ?? defaultType;
+                      if (bwt === '3_plus_2') {
+                        return (
+                          <div className="space-y-1">
+                            <p className="font-semibold">3. Solar Battery (5 Years)</p>
+                            <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                              <li>Replacement Warranty for 3 Years</li>
+                              <li>Service Warranty for 2 years</li>
+                            </ul>
+                          </div>
+                        );
+                      } else if (bwt === '8') {
+                        return (
+                          <div className="space-y-1">
+                            <p className="font-semibold">3. Solar Battery (8 Years)</p>
+                            <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                              <li>Replacement Warranty for 8 Years</li>
+                            </ul>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="space-y-1">
+                            <p className="font-semibold">3. Solar Battery (5 Years)</p>
+                            <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                              <li>Replacement Warranty for 5 Years</li>
+                            </ul>
+                          </div>
+                        );
+                      }
+                    };
 
                     return (
                       <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -5656,32 +5512,33 @@ export default function QuotationCreation() {
                           <p className="font-medium text-yellow-800 dark:text-yellow-200">***Physical Damages will not be Covered***</p>
 
                           {hasOffGrid ? (
-                            // Off-Grid warranties
+                            // Off-Grid warranties — dynamic based on user selection
                             <>
                               <div className="space-y-1">
-                                <p className="font-semibold">1. Solar (PV)Panel Modules (10-15 Years)</p>
+                                <p className="font-semibold">1. Solar (PV)Panel Modules (15 Years)</p>
                                 <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                                  <li>10 Years Manufacturing defect Warranty</li>
+                                  <li>15 Years Manufacturing defect Warranty</li>
                                   <li>15 Years performance Warranty</li>
-                                  <li>90% Performance Warranty till the end of 10 years</li>
+                                  <li>90% Performance Warranty till the end of 15 years</li>
                                   <li>80% Performance Warranty till the end of 15 years</li>
                                 </ul>
                               </div>
-                              <div className="space-y-1">
-                                <p className="font-semibold">2. Solar Off grid Inverter (2 Years)</p>
-                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                                  <li>Replacement Warranty for 2 Years</li>
-                                </ul>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="font-semibold">3. Solar Battery (5 Years)</p>
-                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                                  <li>Replacement Warranty for 5 Years</li>
-                                </ul>
-                              </div>
+                              {/* Inverter warranty — dynamic: 2 or 5 years */}
+                              {(() => {
+                                const inverterYears = (offGridProject as any)?.inverterWarrantyYears === '5_years' ? 5 : 2;
+                                return (
+                                  <div className="space-y-1">
+                                    <p className="font-semibold">2. Solar Off grid Inverter ({inverterYears} Years)</p>
+                                    <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
+                                      <li>Replacement Warranty for {inverterYears} Years</li>
+                                    </ul>
+                                  </div>
+                                );
+                              })()}
+                              {renderBatteryWarranty((offGridProject as any)?.batteryWarrantyType, '5')}
                             </>
                           ) : hasHybrid ? (
-                            // Hybrid warranties
+                            // Hybrid warranties — battery is dynamic, inverter is fixed at 5 years
                             <>
                               <div className="space-y-1">
                                 <p className="font-semibold">1. Solar (PV)Panel Modules (30 Years)</p>
@@ -5698,16 +5555,10 @@ export default function QuotationCreation() {
                                   <li>Warranty for 5 Years</li>
                                 </ul>
                               </div>
-                              <div className="space-y-1">
-                                <p className="font-semibold">3. Solar Battery (5 Years)</p>
-                                <ul className="list-disc list-inside ml-4 space-y-0.5 text-muted-foreground">
-                                  <li>Replacement Warranty for 3 Years</li>
-                                  <li>Service Warranty for 2 years</li>
-                                </ul>
-                              </div>
+                              {renderBatteryWarranty((hybridProject as any)?.batteryWarrantyType, '3_plus_2')}
                             </>
                           ) : (
-                            // On-Grid warranties
+                            // On-Grid warranties (static)
                             <>
                               <div className="space-y-1">
                                 <p className="font-semibold">1. Solar (PV) Panel Modules (30 Years)</p>
@@ -5912,30 +5763,7 @@ export default function QuotationCreation() {
                     </div>
                   )}
 
-                  {/* Additional Notes */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Additional Information</h4>
-                    <div className="grid grid-cols-1 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="customerNotes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Customer Notes</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Special instructions or notes for customer"
-                                className="min-h-[80px]"
-                                data-testid="textarea-customer-notes"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
+
                 </CardContent>
               </Card>
             )}

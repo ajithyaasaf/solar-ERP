@@ -1553,8 +1553,17 @@ export const deliveryTimeframes = [
 
 // Warranty periods for different components
 export const warrantyPeriods = [
-  "1_year", "2_years", "5_years", "10_years", "25_years"
+  "1_year", "2_years", "5_years", "8_years", "10_years", "25_years"
 ] as const;
+
+// Battery warranty type options (for off-grid and hybrid)
+// "3_plus_2" = Replacement 3 yrs + Service 2 yrs; "5" = Replacement 5 yrs; "8" = Replacement 8 yrs
+export const batteryWarrantyTypes = ["3_plus_2", "5", "8"] as const;
+export type BatteryWarrantyType = typeof batteryWarrantyTypes[number];
+
+// Inverter warranty year options (for off-grid only; hybrid is fixed at 5)
+export const inverterWarrantyOptions = ["2_years", "5_years"] as const;
+export type InverterWarrantyOption = typeof inverterWarrantyOptions[number];
 
 // Pricing calculation mode
 export const pricingModes = [
@@ -1666,10 +1675,13 @@ export const quotationOffGridProjectSchema = z.object({
   installationNotes: z.string().nullish(),
   warranty: z.object({
     panel: z.enum(warrantyPeriods).default("25_years"),
-    inverter: z.enum(warrantyPeriods).default("5_years"),
-    battery: z.enum(warrantyPeriods).default("2_years"),
+    inverter: z.enum(warrantyPeriods).default("2_years"),
+    battery: z.enum(warrantyPeriods).default("5_years"),
     installation: z.enum(warrantyPeriods).default("2_years")
-  }).nullish()
+  }).nullish(),
+  // Off-grid specific warranty selectors
+  inverterWarrantyYears: z.enum(inverterWarrantyOptions).default("2_years"),
+  batteryWarrantyType: z.enum(batteryWarrantyTypes).default("5"),
 });
 
 export const quotationHybridProjectSchema = z.object({
@@ -1722,9 +1734,11 @@ export const quotationHybridProjectSchema = z.object({
   warranty: z.object({
     panel: z.enum(warrantyPeriods).default("25_years"),
     inverter: z.enum(warrantyPeriods).default("5_years"),
-    battery: z.enum(warrantyPeriods).default("2_years"),
+    battery: z.enum(warrantyPeriods).default("5_years"),
     installation: z.enum(warrantyPeriods).default("2_years")
-  }).nullish()
+  }).nullish(),
+  // Hybrid specific warranty selectors (inverter is fixed at 5 yrs, only battery is configurable)
+  batteryWarrantyType: z.enum(batteryWarrantyTypes).default("3_plus_2"),
 });
 
 export const quotationWaterHeaterProjectSchema = z.object({

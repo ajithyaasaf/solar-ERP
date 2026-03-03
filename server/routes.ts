@@ -8781,14 +8781,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const notificationId = req.params.id;
 
-      // Verify notification belongs to user
-      const notifications = await storage.getNotifications(userId);
-      const notification = notifications.find(n => n.id === notificationId);
+      // Verify notification exists
+      const notification = await storage.getNotificationById(notificationId);
 
       if (!notification) {
         return res.status(404).json({
           success: false,
-          message: "Notification not found or access denied"
+          message: "Notification not found"
+        });
+      }
+
+      // Check if user has permission to dismiss
+      const user = await storage.getUser(userId);
+      const isAdmin = user && (user.role === 'admin' || user.role === 'master_admin');
+
+      if (notification.userId !== userId && !isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied to dismiss this notification"
         });
       }
 

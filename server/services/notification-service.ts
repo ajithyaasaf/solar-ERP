@@ -46,7 +46,7 @@ export class NotificationService {
                 title: 'Attendance Review Required',
                 message: `${employeeName} has an auto-corrected attendance record for ${formattedDate} that needs your review.`,
                 actionLabel: 'Review Now',
-                actionUrl: `/admin/attendance?tab=pending-review&id=${recordId}`,
+                actionUrl: `/attendance-management?tab=pending-review&id=${recordId}`,
                 dismissible: true,
                 status: 'unread',
             })

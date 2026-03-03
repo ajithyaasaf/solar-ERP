@@ -19,7 +19,8 @@ export default function Leave() {
 
   const isHR = user?.department === "hr";
 
-  if (!user?.isLeaveEnabled) {
+  // master_admin always has access; for all others, require isLeaveEnabled to be true
+  if (!user?.isLeaveEnabled && user?.role !== "master_admin") {
     return (
       <div className="flex flex-col items-center justify-center p-8 space-y-4 h-[60vh]">
         <Shield className="h-12 w-12 text-muted-foreground" />

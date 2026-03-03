@@ -51,6 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<SystemPermission[]>([]);
   const [canApprove, setCanApprove] = useState(false);
   const [maxApprovalAmount, setMaxApprovalAmount] = useState<number | null>(null);
+  // A version counter that external callers can bump to force a permission re-compute
+  const [permissionVersion, setPermissionVersion] = useState(0);
   const { toast } = useToast();
 
   // Helper function for basic auth with unified data sync
@@ -330,7 +332,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (
               userData.department !== currentUser.department ||
               userData.designation !== currentUser.designation ||
-              userData.role !== currentUser.role
+              userData.role !== currentUser.role ||
+              userData.isLeaveEnabled !== currentUser.isLeaveEnabled
             ) {
               const updatedUser = {
                 ...currentUser,
@@ -470,55 +473,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return permissions.includes(viewPermission) || permissions.includes(fullAccessPermission);
   };
 
-  const refreshPermissions = async (): Promise<void> => {
-    if (!user?.uid) return;
-
-    try {
-      // Calculate permissions based on department + designation (or default for new employees)
-      const effectivePermissions = getEffectivePermissions(user.department, user.designation);
-
-      setPermissions(effectivePermissions);
-
-      // Set approval capabilities based on designation level
-      if (user.designation) {
-        const designationLevels = {
-          "trainee": 1,
-          "intern": 2,
-          "junior_executive": 3,
-          "executive": 4,
-          "senior_executive": 5,
-          "assistant_manager": 6,
-          "manager": 7,
-          "director": 8
-        };
-
-        const level = designationLevels[user.designation] || 1;
-        setCanApprove(level >= 5); // Senior Executive and above can approve
-        setMaxApprovalAmount(level >= 7 ? 1000000 : level >= 6 ? 500000 : level >= 5 ? 100000 : null);
-      } else {
-        // New employees cannot approve anything
-        setCanApprove(false);
-        setMaxApprovalAmount(null);
-      }
-
-    } catch (error) {
-      console.error("Error calculating permissions:", error);
-      setPermissions([]);
-      setCanApprove(false);
-      setMaxApprovalAmount(null);
-    }
+  /**
+   * Externally callable to force a permission re-compute (e.g. after an admin
+   * changes the user's role/department from another session).
+   * Safe: bumping the counter triggers the effect below with fresh values.
+   */
+  const refreshPermissions = (): Promise<void> => {
+    setPermissionVersion(v => v + 1);
+    return Promise.resolve();
   };
 
-  // Load permissions when user changes
+  /**
+   * Single source of truth for permission computation.
+   *
+   * SENIOR PATTERN — all values this effect depends on are explicit in the
+   * dependency array. No external function is called that could capture a
+   * stale `user` closure. Permissions are computed synchronously and set in
+   * one render cycle, avoiding the race condition that caused the access bug.
+   */
   useEffect(() => {
-    if (user?.uid) {
-      refreshPermissions();
-    } else {
+    if (!user?.uid) {
       setPermissions([]);
       setCanApprove(false);
       setMaxApprovalAmount(null);
+      return;
     }
-  }, [user?.uid, user?.department, user?.designation]);
+
+    // Snapshot the values we need — these are exactly what's in the dep array
+    const { department, designation } = user;
+
+    // Derive permissions purely from department + designation
+    const effectivePermissions = getEffectivePermissions(department ?? null, designation ?? null);
+    setPermissions(effectivePermissions);
+
+    // Derive approval capability from designation level
+    const designationLevelMap: Record<string, number> = {
+      "trainee": 1,
+      "intern": 2,
+      "junior_executive": 3,
+      "executive": 4,
+      "senior_executive": 5,
+      "assistant_manager": 6,
+      "manager": 7,
+      "director": 8,
+    };
+
+    const level = designation ? (designationLevelMap[designation] ?? 1) : 0;
+    setCanApprove(level >= 5);
+    setMaxApprovalAmount(
+      level >= 7 ? 1000000
+        : level >= 6 ? 500000
+          : level >= 5 ? 100000
+            : null
+    );
+    // permissionVersion lets callers force a re-compute without a stale closure
+  }, [user?.uid, user?.department, user?.designation, user?.role, permissionVersion]);
 
   return (
     <AuthContext.Provider

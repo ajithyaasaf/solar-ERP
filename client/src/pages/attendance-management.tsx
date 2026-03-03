@@ -216,8 +216,32 @@ export default function AttendanceManagement() {
     };
   }, [queryClient]);
 
-  // Update last updated timestamp
+  // Update last updated timestamp and handle URL parameters
   useEffect(() => {
+    // Check URL for tab and id parameters
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    const idParam = params.get('id');
+
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+
+    // Automatically open the review modal if an ID is provided and we're looking at pending reviews
+    if (tabParam === 'pending-review' && idParam && pendingReviews && pendingReviews.length > 0) {
+      const recordToReview = pendingReviews.find((r: any) => r.id === idParam);
+      if (recordToReview && !showReviewModal) {
+        setReviewingRecord(recordToReview);
+        setReviewForm({
+          action: 'accepted',
+          checkInTime: recordToReview.checkInTime ? new Date(recordToReview.checkInTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
+          checkOutTime: recordToReview.checkOutTime ? new Date(recordToReview.checkOutTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
+          notes: ''
+        });
+        setShowReviewModal(true);
+      }
+    }
+
     const updateTimestamp = () => {
       const now = new Date();
       setLastUpdated(now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }));

@@ -54,6 +54,7 @@ export const createUserSchema = z.object({
 
 // Import schemas from shared
 import { paymentModes, maritalStatus, bloodGroups, employeeStatus, insertUserEnhancedSchema } from '@shared/schema';
+import { type User } from '../storage';
 
 // User update schema - includes all employee fields
 export const updateUserSchema = z.object({
@@ -91,6 +92,8 @@ export const updateUserSchema = z.object({
   // Employment Lifecycle
   dateOfLeaving: z.date().optional(),
   employeeStatus: z.enum(employeeStatus).optional(),
+  // Leave access control
+  isLeaveEnabled: z.boolean().optional(),
 
   // Contact Information
   contactNumber: z.string().optional(),
@@ -245,11 +248,18 @@ export class UserService {
 
       if (existingUser) {
         // Update existing user with fresh Firebase Auth data
-        const updatedUser = await storage.updateUser(uid, {
+        const patchedData = { ...additionalData };
+        if (patchedData.photoURL === null) delete patchedData.photoURL;
+
+        const basePayload: any = {
           email: firebaseUser.email || existingUser.email,
           displayName: firebaseUser.displayName || existingUser.displayName,
-          ...additionalData
-        });
+          ...patchedData
+        };
+
+        const updatePayload = basePayload as Partial<User>;
+
+        const updatedUser = await storage.updateUser(uid, updatePayload);
         return { success: true, user: updatedUser, action: 'updated' };
       } else {
         // Create new user profile from Firebase Auth data
@@ -263,7 +273,8 @@ export class UserService {
           role: additionalData?.role || 'employee',
           department: additionalData?.department || null,
           isActive: true,
-          employeeStatus: 'active'
+          employeeStatus: 'active',
+          isLeaveEnabled: false
         });
         return { success: true, user: newUser, action: 'created' };
       }
@@ -283,9 +294,13 @@ export class UserService {
     try {
       // Validate update data
       const validatedData = updateUserSchema.parse(updateData);
+      const safeData: any = { ...validatedData };
+      if (safeData.photoURL === null) delete safeData.photoURL;
+
+      const safePayload = safeData as Partial<User>;
 
       // Update in our storage
-      const updatedUser = await storage.updateUser(uid, validatedData);
+      const updatedUser = await storage.updateUser(uid, safePayload);
 
       // Update cache with new user data
       cacheService.updateUser(uid, updatedUser);
@@ -310,9 +325,16 @@ export class UserService {
       return { success: true, user: updatedUser };
     } catch (error: any) {
       console.error('Error updating user profile:', error);
+
+      // Handle specific known errors
+      let errorMessage = error.message || 'Failed to update user profile';
+      if (errorMessage === 'EMPLOYEE_ID_EXISTS') {
+        errorMessage = 'This Employee ID is already assigned to another user. Please choose a unique ID.';
+      }
+
       return {
         success: false,
-        error: error.message || 'Failed to update user profile'
+        error: errorMessage
       };
     }
   }
@@ -334,6 +356,7 @@ export class UserService {
         cacheService.setUser(user.uid, user);
 
         return {
+          ...user,
           id: user.uid,
           uid: user.uid,
           email: user.email,

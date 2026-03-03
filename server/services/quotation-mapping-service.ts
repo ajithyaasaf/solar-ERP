@@ -772,10 +772,13 @@ export class SiteVisitDataMapper {
       subsidyAmount,
       customerPayment,
       installationNotes: config.others,
+      // Warranty configuration: prefer any stored value, else fall back to defaults
+      inverterWarrantyYears: config.inverterWarrantyYears || "2_years",
+      batteryWarrantyType: config.batteryWarrantyType || "5",
       warranty: {
         panel: "25_years",
-        inverter: "5_years",
-        battery: "2_years",
+        inverter: "2_years",
+        battery: "5_years",
         installation: "2_years"
       }
     };
@@ -847,10 +850,13 @@ export class SiteVisitDataMapper {
       subsidyAmount,
       customerPayment,
       installationNotes: config.others,
+      // Warranty configuration: prefer any stored value, else fall back to defaults
+      // Hybrid inverter is always 5 years (fixed), only battery is user-configurable
+      batteryWarrantyType: config.batteryWarrantyType || "3_plus_2",
       warranty: {
         panel: "25_years",
         inverter: "5_years",
-        battery: "2_years",
+        battery: "5_years",
         installation: "2_years"
       }
     };
