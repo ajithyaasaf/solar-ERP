@@ -159,6 +159,8 @@ export class QuotationPDFService {
           object-fit: contain;
         }
         
+        /* Removed previous total-container blocks as it is now inside table */
+        
         .company-logo-container {
           display: flex;
           align-items: center;
@@ -232,19 +234,35 @@ export class QuotationPDFService {
           width: 100%;
           border-collapse: collapse;
           margin: 20px 0;
+          font-size: 10px;
         }
         
-        .pricing-table th,
-        .pricing-table td {
-          border: 1px solid #333;
+        .pricing-table th, .pricing-table td {
+          border: 1px solid #444;
           padding: 8px;
           text-align: center;
         }
         
         .pricing-table th {
-          background: #228B22;
+          background: #1a7138;
           color: white;
-          font-weight: bold;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .pricing-table td[colspan="6"] {
+          text-align: right;
+          padding-right: 15px;
+        }
+
+        .pricing-table tfoot td {
+          border: 1px solid #444;
+        }
+
+        .pricing-table tfoot td:first-child {
+          text-align: right;
+          font-weight: 600;
+          padding-right: 10px;
         }
         
         .total-calculation {
@@ -462,7 +480,7 @@ export class QuotationPDFService {
       <table class="pricing-table">
         <thead>
           <tr>
-            <th>Sl NO</th>
+            <th>Sl no</th>
             <th>Description</th>
             <th>kw</th>
             <th>Rate Per kw Rs</th>
@@ -479,33 +497,69 @@ export class QuotationPDFService {
             <td>₹${template.pricingBreakdown.ratePerKw.toLocaleString()}</td>
             <td>₹${template.pricingBreakdown.gstPerKw.toLocaleString()}</td>
             <td>${template.pricingBreakdown.gstPercentage}</td>
-            <td>₹${template.pricingBreakdown.valueWithGST.toLocaleString()}.00</td>
+            <td>₹${template.pricingBreakdown.valueWithGST.toLocaleString()}</td>
           </tr>
           <tr>
-            <td colspan="6" style="text-align: right; font-weight: bold;">Roundoff:</td>
+            <td colspan="6" style="text-align: right; font-weight: bold; font-style: italic;">Roundoff:</td>
             <td>${template.pricingBreakdown.roundoff ? '₹' + template.pricingBreakdown.roundoff.toLocaleString() : '₹0.00'}</td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="text-align: center; color: #333; font-weight: bold;">Total Cost:</td>
+            <td colspan="1" style="text-align: center;">₹${template.pricingBreakdown.basePrice.toLocaleString()}</td>
+            <td colspan="1" style="text-align: center; color: #333; font-weight: bold;">Total Gst ${template.pricingBreakdown.gstPercentage}% :</td>
+            <td colspan="1" style="text-align: center; background-color: #e9ecef;">₹${template.pricingBreakdown.gstAmount.toLocaleString()}</td>
+            <td colspan="1" style="text-align: center; color: #333; font-weight: bold;">Total Amount in Rs:</td>
+            <td style="background-color: #ffff00; font-weight: bold; font-size: 13px; color: #000; text-align: center;">₹${template.pricingBreakdown.totalCost.toLocaleString()}.00</td>
+          </tr>
+          <tr>
+            <td colspan="1" style="text-align: center; color: #333;">Amount in<br>Words:</td>
+            <td colspan="6" style="text-align: center; font-weight: bold; font-size: 12px; color: #000;">${this.numberToWords(template.pricingBreakdown.totalCost)}</td>
+          </tr>
+        </tfoot>
       </table>
-      
-      <!-- Total Calculation -->
-      <div class="total-calculation">
-        <strong>Total Cost: ₹${template.pricingBreakdown.basePrice.toLocaleString()}</strong><br>
-        <strong>Total Gst ${template.pricingBreakdown.gstPercentage}%: ₹${template.pricingBreakdown.gstAmount.toLocaleString()}</strong><br>
-        <strong>Total Amount in Rs: ₹${template.pricingBreakdown.totalCost.toLocaleString()}.00</strong><br>
-        <strong>Amount in Words: ${this.numberToWords(template.pricingBreakdown.totalCost)}</strong>
-      </div>
 
-      
-      <div style="text-align: center; margin: 10px 0; font-weight: bold; font-size: 16px;">
-        <strong>Total Amount ${template.pricingBreakdown.totalCost.toLocaleString()} - Subsidy Amount ${template.pricingBreakdown.subsidyAmount.toLocaleString()} = ${template.pricingBreakdown.customerPayment.toLocaleString()}</strong>
-      </div>
-      
       ${template.pricingBreakdown.subsidyAmount > 0 ? `
-      <div class="subsidy-note">
-        <strong>${this.formatNumber(template.pricingBreakdown.kw)} kw Subsidy ${template.pricingBreakdown.subsidyAmount.toLocaleString()} Will be Credited to The Customer's Account</strong>
+      <div style="background: #e9f5ed; border-left: 5px solid #1a7138; padding: 15px; border-radius: 4px; margin: 20px 0;">
+         <div style="font-weight: bold; color: #1a7138; margin-bottom: 5px;">GOVERNMENT SUBSIDY APPLICABLE</div>
+         Estimated subsidy of <strong>₹${template.pricingBreakdown.subsidyAmount.toLocaleString()}</strong> will be credited directly to the customer's account upon successful commissioning.
+         <br><small>Final customer investment: ₹${template.pricingBreakdown.customerPayment.toLocaleString()}</small>
       </div>` : ''}
-      ` : ''}
+      ` : `
+      <table class="pricing-table">
+        <thead>
+          <tr>
+            <th>Sl</th>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Unit Rate</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(template.billOfMaterials || []).map(item => `
+            <tr>
+              <td>${item.slNo}</td>
+              <td style="text-align: left; padding-left: 15px;">${item.description}</td>
+              <td>${item.qty || 1}</td>
+              <td>₹${((item as any).rate || 0).toLocaleString()}</td>
+              <td style="font-weight: bold;">₹${((item as any).amount || 0).toLocaleString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" style="text-align: right; color: #333; font-weight: bold; border-right: 1px solid #444;">Total Amount in Rs:</td>
+            <td style="background-color: #ffff00; font-weight: bold; font-size: 13px; color: #000; text-align: center;">₹${template.pricingBreakdown.totalCost.toLocaleString()}.00</td>
+          </tr>
+          <tr>
+            <td colspan="1" style="text-align: center; color: #333;">Amount in<br>Words:</td>
+            <td colspan="4" style="text-align: left; padding-left: 10px; font-weight: bold; font-size: 12px; color: #000;">${this.numberToWords(template.pricingBreakdown.totalCost)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      `}
       
       <!-- Bill of Materials -->
       <div style="margin-top: 5px; page-break-inside: avoid;">
